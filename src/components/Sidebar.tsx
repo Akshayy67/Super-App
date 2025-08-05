@@ -1,14 +1,14 @@
-import React from 'react';
-import { 
-  FolderOpen, 
-  CheckSquare, 
-  StickyNote, 
-  MessageSquare, 
+import React from "react";
+import {
+  FolderOpen,
+  CheckSquare,
+  StickyNote,
+  MessageSquare,
   Brain,
   User,
-  LogOut
-} from 'lucide-react';
-import { authUtils } from '../utils/auth';
+  LogOut,
+} from "lucide-react";
+import { realTimeAuth } from "../utils/realTimeAuth";
 
 interface SidebarProps {
   activeView: string;
@@ -16,15 +16,19 @@ interface SidebarProps {
   onLogout: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, onLogout }) => {
-  const user = authUtils.getCurrentUser();
+export const Sidebar: React.FC<SidebarProps> = ({
+  activeView,
+  onViewChange,
+  onLogout,
+}) => {
+  const user = realTimeAuth.getCurrentUser();
 
   const menuItems = [
-    { id: 'files', label: 'File Manager', icon: FolderOpen },
-    { id: 'tasks', label: 'To-Do List', icon: CheckSquare },
-    { id: 'notes', label: 'Notes', icon: StickyNote },
-    { id: 'chat', label: 'AI Assistant', icon: MessageSquare },
-    { id: 'tools', label: 'Study Tools', icon: Brain },
+    { id: "files", label: "File Manager", icon: FolderOpen },
+    { id: "tasks", label: "To-Do List", icon: CheckSquare },
+    { id: "notes", label: "Notes", icon: StickyNote },
+    { id: "chat", label: "AI Assistant", icon: MessageSquare },
+    { id: "tools", label: "Study Tools", icon: Brain },
   ];
 
   return (
@@ -39,15 +43,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, onLo
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeView === item.id;
-            
+
             return (
               <li key={item.id}>
                 <button
                   onClick={() => onViewChange(item.id)}
                   className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-all ${
                     isActive
-                      ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                      ? "bg-blue-100 text-blue-700 border border-blue-200"
+                      : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                   }`}
                 >
                   <Icon className="w-5 h-5 mr-3" />
@@ -66,10 +70,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, onLo
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-900 truncate">
-              {user?.username || 'User'}
+              {user?.username || "User"}
             </p>
             <p className="text-xs text-gray-500 truncate">
-              {user?.email || 'user@example.com'}
+              {user?.email || "user@example.com"}
             </p>
           </div>
         </div>

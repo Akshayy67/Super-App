@@ -1,34 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { AuthForm } from './components/AuthForm';
-import { Sidebar } from './components/Sidebar';
-import { Dashboard } from './components/Dashboard';
-import { FileManager } from './components/FileManager';
-import { TaskManager } from './components/TaskManager';
-import { NotesManager } from './components/NotesManager';
-import { AIChat } from './components/AIChat';
-import { StudyTools } from './components/StudyTools';
-import { FilePreview } from './components/FilePreview';
-import { authUtils } from './utils/auth';
-import { FileItem } from './types';
+import React, { useState, useEffect } from "react";
+import { AuthForm } from "./components/AuthForm";
+import { Sidebar } from "./components/Sidebar";
+import { Dashboard } from "./components/Dashboard";
+import { FileManager } from "./components/FileManager";
+import { TaskManager } from "./components/TaskManager";
+import { NotesManager } from "./components/NotesManager";
+import { AIChat } from "./components/AIChat";
+import { StudyTools } from "./components/StudyTools";
+import { FilePreview } from "./components/FilePreview";
+import { realTimeAuth } from "./utils/realTimeAuth";
+import { FileItem, User } from "./types";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeView, setActiveView] = useState('dashboard');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [activeView, setActiveView] = useState("dashboard");
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
 
   useEffect(() => {
-    setIsAuthenticated(authUtils.isAuthenticated());
+    // Set up real-time auth state listener
+    const unsubscribe = realTimeAuth.onAuthStateChange((user) => {
+      setIsAuthenticated(!!user);
+      setCurrentUser(user);
+    });
+
+    // Clean up listener on component unmount
+    return unsubscribe;
   }, []);
 
   const handleAuthSuccess = () => {
-    setIsAuthenticated(true);
-    setActiveView('dashboard');
+    setActiveView("dashboard");
   };
 
-  const handleLogout = () => {
-    authUtils.logout();
-    setIsAuthenticated(false);
-    setActiveView('dashboard');
+  const handleLogout = async () => {
+    await realTimeAuth.logout();
+    setActiveView("dashboard");
   };
 
   const handleViewChange = (view: string) => {
@@ -41,17 +47,17 @@ function App() {
 
   const renderActiveView = () => {
     switch (activeView) {
-      case 'dashboard':
+      case "dashboard":
         return <Dashboard onViewChange={handleViewChange} />;
-      case 'files':
+      case "files":
         return <FileManager onPreviewFile={handlePreviewFile} />;
-      case 'tasks':
+      case "tasks":
         return <TaskManager />;
-      case 'notes':
+      case "notes":
         return <NotesManager />;
-      case 'chat':
+      case "chat":
         return <AIChat />;
-      case 'tools':
+      case "tools":
         return <StudyTools />;
       default:
         return <Dashboard onViewChange={handleViewChange} />;
@@ -79,10 +85,7 @@ function App() {
       </div>
 
       {/* File Preview Modal */}
-      <FilePreview
-        file={previewFile}
-        onClose={() => setPreviewFile(null)}
-      />
+      <FilePreview file={previewFile} onClose={() => setPreviewFile(null)} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { User, LogIn, Mail, Lock } from 'lucide-react';
-import { authUtils } from '../utils/auth';
+import React, { useState } from "react";
+import { User, LogIn, Mail, Lock } from "lucide-react";
+import { realTimeAuth } from "../utils/realTimeAuth";
 
 interface AuthFormProps {
   onAuthSuccess: () => void;
@@ -9,29 +9,33 @@ interface AuthFormProps {
 export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: ''
+    username: "",
+    email: "",
+    password: "",
   });
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       let result;
       if (isLogin) {
-        result = authUtils.login(formData.email, formData.password);
+        result = await realTimeAuth.login(formData.email, formData.password);
       } else {
         if (!formData.username.trim()) {
-          setError('Username is required');
+          setError("Username is required");
           setLoading(false);
           return;
         }
-        result = authUtils.register(formData.username, formData.email, formData.password);
+        result = await realTimeAuth.register(
+          formData.username,
+          formData.email,
+          formData.password
+        );
       }
 
       if (result.success) {
@@ -40,7 +44,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
         setError(result.message);
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      setError("An unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -49,7 +53,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -60,7 +64,9 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
           <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <User className="w-8 h-8 text-blue-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Super Study App</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Super Study App
+          </h1>
           <p className="text-gray-600">Your AI-Powered Academic Assistant</p>
         </div>
 
@@ -140,7 +146,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
             ) : (
               <div className="flex items-center justify-center">
                 <LogIn className="w-5 h-5 mr-2" />
-                {isLogin ? 'Sign In' : 'Create Account'}
+                {isLogin ? "Sign In" : "Create Account"}
               </div>
             )}
           </button>
@@ -150,12 +156,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
           <button
             onClick={() => {
               setIsLogin(!isLogin);
-              setError('');
-              setFormData({ username: '', email: '', password: '' });
+              setError("");
+              setFormData({ username: "", email: "", password: "" });
             }}
             className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
           >
-            {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+            {isLogin
+              ? "Don't have an account? Sign up"
+              : "Already have an account? Sign in"}
           </button>
         </div>
       </div>

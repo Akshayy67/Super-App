@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  FileText, 
-  CheckSquare, 
-  StickyNote, 
+import React, { useState, useEffect } from "react";
+import {
+  FileText,
+  CheckSquare,
+  StickyNote,
   TrendingUp,
   Calendar,
   Brain,
   Upload,
-  Clock
-} from 'lucide-react';
-import { storageUtils } from '../utils/storage';
-import { authUtils } from '../utils/auth';
-import { format, isAfter, startOfDay } from 'date-fns';
+  Clock,
+} from "lucide-react";
+import { storageUtils } from "../utils/storage";
+import { realTimeAuth } from "../utils/realTimeAuth";
+import { format, isAfter, startOfDay } from "date-fns";
 
 interface DashboardProps {
   onViewChange: (view: string) => void;
@@ -23,11 +23,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
     totalTasks: 0,
     completedTasks: 0,
     overdueTasks: 0,
-    totalNotes: 0
+    totalNotes: 0,
   });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
-  const user = authUtils.getCurrentUser();
+  const user = realTimeAuth.getCurrentUser();
 
   useEffect(() => {
     if (user) {
@@ -42,81 +42,89 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
     const tasks = storageUtils.getTasks(user.id);
     const notes = storageUtils.getNotes(user.id);
 
-    const overdueTasks = tasks.filter(task => 
-      task.status === 'pending' && 
-      isAfter(startOfDay(new Date()), startOfDay(new Date(task.dueDate)))
+    const overdueTasks = tasks.filter(
+      (task) =>
+        task.status === "pending" &&
+        isAfter(startOfDay(new Date()), startOfDay(new Date(task.dueDate)))
     );
 
     setStats({
-      totalFiles: files.filter(f => f.type === 'file').length,
+      totalFiles: files.filter((f) => f.type === "file").length,
       totalTasks: tasks.length,
-      completedTasks: tasks.filter(t => t.status === 'completed').length,
+      completedTasks: tasks.filter((t) => t.status === "completed").length,
       overdueTasks: overdueTasks.length,
-      totalNotes: notes.length
+      totalNotes: notes.length,
     });
 
     // Generate recent activity
     const activity = [
-      ...files.slice(-3).map(file => ({
-        type: 'file',
+      ...files.slice(-3).map((file) => ({
+        type: "file",
         title: `Uploaded ${file.name}`,
         timestamp: file.uploadedAt,
-        icon: FileText
+        icon: FileText,
       })),
-      ...tasks.slice(-3).map(task => ({
-        type: 'task',
-        title: `${task.status === 'completed' ? 'Completed' : 'Created'} task: ${task.title}`,
+      ...tasks.slice(-3).map((task) => ({
+        type: "task",
+        title: `${
+          task.status === "completed" ? "Completed" : "Created"
+        } task: ${task.title}`,
         timestamp: task.createdAt,
-        icon: CheckSquare
+        icon: CheckSquare,
       })),
-      ...notes.slice(-3).map(note => ({
-        type: 'note',
+      ...notes.slice(-3).map((note) => ({
+        type: "note",
         title: `Created note: ${note.title}`,
         timestamp: note.createdAt,
-        icon: StickyNote
-      }))
-    ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5);
+        icon: StickyNote,
+      })),
+    ]
+      .sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )
+      .slice(0, 5);
 
     setRecentActivity(activity);
   };
 
   const statCards = [
     {
-      title: 'Total Files',
+      title: "Total Files",
       value: stats.totalFiles,
       icon: FileText,
-      color: 'blue',
-      action: () => onViewChange('files')
+      color: "blue",
+      action: () => onViewChange("files"),
     },
     {
-      title: 'Active Tasks',
+      title: "Active Tasks",
       value: stats.totalTasks - stats.completedTasks,
       icon: CheckSquare,
-      color: 'green',
-      action: () => onViewChange('tasks')
+      color: "green",
+      action: () => onViewChange("tasks"),
     },
     {
-      title: 'Completed Tasks',
+      title: "Completed Tasks",
       value: stats.completedTasks,
       icon: TrendingUp,
-      color: 'purple',
-      action: () => onViewChange('tasks')
+      color: "purple",
+      action: () => onViewChange("tasks"),
     },
     {
-      title: 'Notes Created',
+      title: "Notes Created",
       value: stats.totalNotes,
       icon: StickyNote,
-      color: 'yellow',
-      action: () => onViewChange('notes')
-    }
+      color: "yellow",
+      action: () => onViewChange("notes"),
+    },
   ];
 
   const getColorClasses = (color: string) => {
     const colors = {
-      blue: 'bg-blue-100 text-blue-600',
-      green: 'bg-green-100 text-green-600',
-      purple: 'bg-purple-100 text-purple-600',
-      yellow: 'bg-yellow-100 text-yellow-600'
+      blue: "bg-blue-100 text-blue-600",
+      green: "bg-green-100 text-green-600",
+      purple: "bg-purple-100 text-purple-600",
+      yellow: "bg-yellow-100 text-yellow-600",
     };
     return colors[color as keyof typeof colors] || colors.blue;
   };
@@ -155,7 +163,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
                       {stat.value}
                     </p>
                   </div>
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${getColorClasses(stat.color)}`}>
+                  <div
+                    className={`w-12 h-12 rounded-full flex items-center justify-center ${getColorClasses(
+                      stat.color
+                    )}`}
+                  >
                     <Icon className="w-6 h-6" />
                   </div>
                 </div>
@@ -173,14 +185,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
               </div>
               <div className="flex-1">
                 <h3 className="text-sm font-medium text-red-800">
-                  {stats.overdueTasks} overdue task{stats.overdueTasks > 1 ? 's' : ''}
+                  {stats.overdueTasks} overdue task
+                  {stats.overdueTasks > 1 ? "s" : ""}
                 </h3>
                 <p className="text-sm text-red-600">
-                  You have tasks that are past their due date. Review them to stay on track.
+                  You have tasks that are past their due date. Review them to
+                  stay on track.
                 </p>
               </div>
               <button
-                onClick={() => onViewChange('tasks')}
+                onClick={() => onViewChange("tasks")}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 View Tasks
@@ -193,31 +207,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
           {/* Quick Actions */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Quick Actions
+              </h2>
               <div className="space-y-3">
                 <button
-                  onClick={() => onViewChange('files')}
+                  onClick={() => onViewChange("files")}
                   className="w-full flex items-center px-4 py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
                 >
                   <Upload className="w-5 h-5 mr-3" />
                   Upload New Files
                 </button>
                 <button
-                  onClick={() => onViewChange('tasks')}
+                  onClick={() => onViewChange("tasks")}
                   className="w-full flex items-center px-4 py-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors"
                 >
                   <CheckSquare className="w-5 h-5 mr-3" />
                   Add New Task
                 </button>
                 <button
-                  onClick={() => onViewChange('notes')}
+                  onClick={() => onViewChange("notes")}
                   className="w-full flex items-center px-4 py-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors"
                 >
                   <StickyNote className="w-5 h-5 mr-3" />
                   Create Note
                 </button>
                 <button
-                  onClick={() => onViewChange('chat')}
+                  onClick={() => onViewChange("chat")}
                   className="w-full flex items-center px-4 py-3 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors"
                 >
                   <Brain className="w-5 h-5 mr-3" />
@@ -230,14 +246,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
           {/* Recent Activity */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-              
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Recent Activity
+              </h2>
+
               {recentActivity.length === 0 ? (
                 <div className="text-center py-8">
                   <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500">No recent activity</p>
                   <p className="text-sm text-gray-400">
-                    Start by uploading files or creating tasks to see your activity here.
+                    Start by uploading files or creating tasks to see your
+                    activity here.
                   </p>
                 </div>
               ) : (
@@ -254,7 +273,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
                             {activity.title}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {format(new Date(activity.timestamp), 'MMM dd, yyyy • h:mm a')}
+                            {format(
+                              new Date(activity.timestamp),
+                              "MMM dd, yyyy • h:mm a"
+                            )}
                           </p>
                         </div>
                       </div>
@@ -268,7 +290,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
 
         {/* Study Progress */}
         <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Study Progress</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Study Progress
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
               <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -282,7 +306,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
                 <CheckSquare className="w-8 h-8 text-green-600" />
               </div>
               <h3 className="font-medium text-gray-900">
-                {stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0}%
+                {stats.totalTasks > 0
+                  ? Math.round((stats.completedTasks / stats.totalTasks) * 100)
+                  : 0}
+                %
               </h3>
               <p className="text-sm text-gray-600">Tasks Completed</p>
             </div>
