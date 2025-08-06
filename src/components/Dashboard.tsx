@@ -326,6 +326,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
             </div>
           </div>
         </div>
+
+        {/* Watermark */}
+        <div className="mt-8 flex justify-center">
+          <div className="flex items-center space-x-2 opacity-30 hover:opacity-60 transition-opacity">
+            <img 
+              src="/watermark.png" 
+              alt="Super Study Watermark" 
+              className="h-6 object-contain"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

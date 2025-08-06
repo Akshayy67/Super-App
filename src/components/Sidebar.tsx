@@ -41,7 +41,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Header */}
       {isMobile && (
         <div className="p-4 border-b border-gray-200 flex items-center justify-between lg:hidden">
-          <h1 className="text-xl font-bold text-gray-900">Super Study</h1>
+          <button
+            onClick={() => onViewChange("dashboard")}
+            className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+          >
+            <img
+              src="/SuperApp.png"
+              alt="Super Study Logo"
+              className="w-8 h-8 object-contain"
+            />
+            <span className="text-xl font-bold text-gray-900">Super Study</span>
+          </button>
           <button
             onClick={onCloseMobile}
             className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100"
@@ -57,8 +67,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           isMobile ? "hidden lg:block" : ""
         }`}
       >
-        <h1 className="text-xl font-bold text-gray-900">Super Study</h1>
-        <p className="text-sm text-gray-600 mt-1">AI Academic Assistant</p>
+        <button
+          onClick={() => onViewChange("dashboard")}
+          className="text-left hover:opacity-80 transition-opacity w-full"
+        >
+          <div className="flex items-center space-x-3 mb-2">
+            <img
+              src="/SuperApp.png"
+              alt="Super Study Logo"
+              className="w-10 h-10 object-contain"
+            />
+            <h1 className="text-xl font-bold text-gray-900">Super Study</h1>
+          </div>
+          <p className="text-sm text-gray-600 ml-13">AI Academic Assistant</p>
+        </button>
       </div>
 
       <nav className="flex-1 px-4 py-6 overflow-y-auto">

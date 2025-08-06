@@ -85,7 +85,17 @@ function App() {
       <div className="h-screen bg-gray-50 flex flex-col lg:flex-row">
         {/* Mobile Header */}
         <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 p-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">Super Study</h1>
+          <button
+            onClick={() => handleViewChange("dashboard")}
+            className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+          >
+            <img
+              src="/SuperApp.png"
+              alt="Super Study Logo"
+              className="w-8 h-8 object-contain"
+            />
+            <span className="text-xl font-bold text-gray-900">Super Study</span>
+          </button>
           <button
             onClick={toggleMobileMenu}
             className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100"
