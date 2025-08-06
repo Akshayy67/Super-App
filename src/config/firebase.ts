@@ -5,43 +5,23 @@ import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDF_LuEtxNFC1mj9qMtjdzGl2nIYKX7uzo",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "super-app-54ae9.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "super-app-54ae9",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "super-app-54ae9.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "305774764463",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:305774764463:web:50f80fbac56757cd998f5a",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-D25YP2476J",
 };
 
 // Debug logging for production
 console.log('Environment check:', {
-  hasApiKey: !!import.meta.env.VITE_FIREBASE_API_KEY,
-  hasAuthDomain: !!import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  hasProjectId: !!import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  mode: import.meta.env.MODE
+  hasApiKey: !!firebaseConfig.apiKey,
+  hasAuthDomain: !!firebaseConfig.authDomain,
+  hasProjectId: !!firebaseConfig.projectId,
+  mode: import.meta.env.MODE,
+  usingFallbacks: !import.meta.env.VITE_FIREBASE_API_KEY
 });
-
-// Validate that all required environment variables are present
-const requiredEnvVars = [
-  "VITE_FIREBASE_API_KEY",
-  "VITE_FIREBASE_AUTH_DOMAIN",
-  "VITE_FIREBASE_PROJECT_ID",
-  "VITE_FIREBASE_STORAGE_BUCKET",
-  "VITE_FIREBASE_MESSAGING_SENDER_ID",
-  "VITE_FIREBASE_APP_ID",
-];
-
-const missingVars = requiredEnvVars.filter(
-  (varName) => !import.meta.env[varName]
-);
-
-if (missingVars.length > 0) {
-  console.error('Missing environment variables:', missingVars);
-  throw new Error(
-    `Missing required environment variables: ${missingVars.join(", ")}`
-  );
-}
 
 // Initialize Firebase
 console.log('Initializing Firebase...');
