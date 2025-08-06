@@ -7,6 +7,7 @@ import {
   Brain,
   User,
   LogOut,
+  X,
 } from "lucide-react";
 import { realTimeAuth } from "../utils/realTimeAuth";
 
@@ -14,12 +15,16 @@ interface SidebarProps {
   activeView: string;
   onViewChange: (view: string) => void;
   onLogout: () => void;
+  isMobile?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeView,
   onViewChange,
   onLogout,
+  isMobile = false,
+  onCloseMobile,
 }) => {
   const user = realTimeAuth.getCurrentUser();
 
@@ -33,12 +38,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div className="bg-white h-full shadow-lg border-r border-gray-200 flex flex-col">
-      <div className="p-6 border-b border-gray-200">
+      {/* Mobile Header */}
+      {isMobile && (
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between lg:hidden">
+          <h1 className="text-xl font-bold text-gray-900">Super Study</h1>
+          <button
+            onClick={onCloseMobile}
+            className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
+      {/* Desktop Header */}
+      <div
+        className={`p-6 border-b border-gray-200 ${
+          isMobile ? "hidden lg:block" : ""
+        }`}
+      >
         <h1 className="text-xl font-bold text-gray-900">Super Study</h1>
         <p className="text-sm text-gray-600 mt-1">AI Academic Assistant</p>
       </div>
 
-      <nav className="flex-1 px-4 py-6">
+      <nav className="flex-1 px-4 py-6 overflow-y-auto">
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -54,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                   }`}
                 >
-                  <Icon className="w-5 h-5 mr-3" />
+                  <Icon className="w-5 h-5 mr-3 flex-shrink-0" />
                   <span className="font-medium">{item.label}</span>
                 </button>
               </li>

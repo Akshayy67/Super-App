@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -19,7 +19,7 @@ class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
+    console.error("Error caught by boundary:", error, errorInfo);
   }
 
   render() {
@@ -39,7 +39,7 @@ class ErrorBoundary extends React.Component<
               </summary>
               <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
                 {this.state.error?.message}
-                {'\n'}
+                {"\n"}
                 {this.state.error?.stack}
               </pre>
             </details>

@@ -58,19 +58,21 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+      <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-md mx-auto">
+        <div className="text-center mb-6 sm:mb-8">
           <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <User className="w-8 h-8 text-blue-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
             Super Study App
           </h1>
-          <p className="text-gray-600">Your AI-Powered Academic Assistant</p>
+          <p className="text-sm sm:text-base text-gray-600">
+            Your AI-Powered Academic Assistant
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
           {!isLogin && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -83,7 +85,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
                   name="username"
                   value={formData.username}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
                   placeholder="Enter your username"
                   required={!isLogin}
                 />
@@ -102,7 +104,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full pl-10 pr-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
                 placeholder="Enter your email"
                 required
               />
@@ -120,7 +122,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full pl-10 pr-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
                 placeholder="Enter your password"
                 required
               />
@@ -136,30 +138,30 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 sm:py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
           >
             {loading ? (
               <div className="flex items-center justify-center">
-                <div className="w-5 h-5 border-t-2 border-white rounded-full animate-spin mr-2"></div>
+                <div className="w-4 h-4 sm:w-5 sm:h-5 border-t-2 border-white rounded-full animate-spin mr-2"></div>
                 Processing...
               </div>
             ) : (
               <div className="flex items-center justify-center">
-                <LogIn className="w-5 h-5 mr-2" />
+                <LogIn className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 {isLogin ? "Sign In" : "Create Account"}
               </div>
             )}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-4 sm:mt-6 text-center">
           <button
             onClick={() => {
               setIsLogin(!isLogin);
               setError("");
               setFormData({ username: "", email: "", password: "" });
             }}
-            className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
+            className="text-blue-600 hover:text-blue-700 font-medium transition-colors text-sm sm:text-base"
           >
             {isLogin
               ? "Don't have an account? Sign up"
