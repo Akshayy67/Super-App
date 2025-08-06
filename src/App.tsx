@@ -8,6 +8,7 @@ import { NotesManager } from "./components/NotesManager";
 import { AIChat } from "./components/AIChat";
 import { StudyTools } from "./components/StudyTools";
 import { FilePreview } from "./components/FilePreview";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { realTimeAuth } from "./utils/realTimeAuth";
 import { FileItem, User } from "./types";
 
@@ -65,28 +66,34 @@ function App() {
   };
 
   if (!isAuthenticated) {
-    return <AuthForm onAuthSuccess={handleAuthSuccess} />;
+    return (
+      <ErrorBoundary>
+        <AuthForm onAuthSuccess={handleAuthSuccess} />
+      </ErrorBoundary>
+    );
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <div className="w-64 flex-shrink-0">
-        <Sidebar
-          activeView={activeView}
-          onViewChange={handleViewChange}
-          onLogout={handleLogout}
-        />
-      </div>
+    <ErrorBoundary>
+      <div className="h-screen bg-gray-50 flex">
+        {/* Sidebar */}
+        <div className="w-64 flex-shrink-0">
+          <Sidebar
+            activeView={activeView}
+            onViewChange={handleViewChange}
+            onLogout={handleLogout}
+          />
+        </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {renderActiveView()}
-      </div>
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {renderActiveView()}
+        </div>
 
-      {/* File Preview Modal */}
-      <FilePreview file={previewFile} onClose={() => setPreviewFile(null)} />
-    </div>
+        {/* File Preview Modal */}
+        <FilePreview file={previewFile} onClose={() => setPreviewFile(null)} />
+      </div>
+    </ErrorBoundary>
   );
 }
 

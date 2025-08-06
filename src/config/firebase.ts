@@ -14,6 +14,14 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
+// Debug logging for production
+console.log('Environment check:', {
+  hasApiKey: !!import.meta.env.VITE_FIREBASE_API_KEY,
+  hasAuthDomain: !!import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  hasProjectId: !!import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  mode: import.meta.env.MODE
+});
+
 // Validate that all required environment variables are present
 const requiredEnvVars = [
   "VITE_FIREBASE_API_KEY",
@@ -29,13 +37,16 @@ const missingVars = requiredEnvVars.filter(
 );
 
 if (missingVars.length > 0) {
+  console.error('Missing environment variables:', missingVars);
   throw new Error(
     `Missing required environment variables: ${missingVars.join(", ")}`
   );
 }
 
 // Initialize Firebase
+console.log('Initializing Firebase...');
 const app = initializeApp(firebaseConfig);
+console.log('Firebase initialized successfully');
 
 // Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app);
