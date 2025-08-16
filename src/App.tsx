@@ -90,7 +90,7 @@ function App() {
             className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
           >
             <img
-              src="/SuperApp.png"
+              src="/logo.png"
               alt="Super Study Logo"
               className="w-8 h-8 object-contain"
             />
