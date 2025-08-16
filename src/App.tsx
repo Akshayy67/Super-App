@@ -37,7 +37,7 @@ function App() {
 
   const handleLogout = async () => {
     await realTimeAuth.logout();
-    setActiveView("dashboard");
+    // setActiveView("dashboard");
   };
 
   const handleViewChange = (view: string) => {

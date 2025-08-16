@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import superAppLogo from "../../public/SuperApp.png";
 import { User, LogIn, Mail, Lock } from "lucide-react";
 import { realTimeAuth } from "../utils/realTimeAuth";
 
@@ -63,7 +64,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
         <div className="text-center mb-6 sm:mb-8">
           <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-white shadow-lg">
             <img
-              src="/SuperApp.png"
+              src={superAppLogo}
               alt="Super Study Logo"
               className="w-12 h-12 object-contain"
             />
@@ -110,7 +111,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
                 onChange={handleInputChange}
                 className="w-full pl-10 pr-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base"
                 placeholder="Enter your email"
-                required
+                // required
               />
             </div>
           </div>
