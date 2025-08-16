@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import superAppLogo from "../../public/SuperApp.png";
+
 import { User, LogIn, Mail, Lock } from "lucide-react";
 import { realTimeAuth } from "../utils/realTimeAuth";
 
@@ -64,7 +64,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
         <div className="text-center mb-6 sm:mb-8">
           <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-white shadow-lg">
             <img
-              src={superAppLogo}
+              src="/SuperApp.png"
               alt="Super Study Logo"
               className="w-12 h-12 object-contain"
             />
