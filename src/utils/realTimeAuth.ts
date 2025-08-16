@@ -4,6 +4,9 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, db } from "../config/firebase";
@@ -16,6 +19,39 @@ export interface AuthResult {
 }
 
 class RealTimeAuthService {
+  async resetPassword(email: string): Promise<AuthResult> {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return { success: true, message: "Password reset email sent" };
+    } catch (error: any) {
+      return { success: false, message: this.getErrorMessage(error.code) };
+    }
+  }
+
+  async signInWithGoogle(): Promise<AuthResult> {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const firebaseUser = result.user;
+      // Create or update user document in Firestore
+      const userData: User = {
+        id: firebaseUser.uid,
+        username: firebaseUser.displayName || "Google User",
+        email: firebaseUser.email || "",
+        createdAt: new Date().toISOString(),
+      };
+      await setDoc(doc(db, "users", firebaseUser.uid), userData, {
+        merge: true,
+      });
+      return {
+        success: true,
+        message: "Google sign-in successful",
+        user: userData,
+      };
+    } catch (error: any) {
+      return { success: false, message: this.getErrorMessage(error.code) };
+    }
+  }
   private currentUser: User | null = null;
   private authStateListeners: ((user: User | null) => void)[] = [];
 
@@ -106,6 +142,7 @@ class RealTimeAuthService {
         user: userData,
       };
     } catch (error: any) {
+      console.log("Login error:", error, "Error code:", error.code);
       return {
         success: false,
         message: this.getErrorMessage(error.code),
@@ -148,6 +185,8 @@ class RealTimeAuthService {
         return "No account found with this email address";
       case "auth/wrong-password":
         return "Incorrect password";
+      case "auth/invalid-credential":
+        return "Email or password is incorrect";
       case "auth/email-already-in-use":
         return "An account with this email already exists";
       case "auth/weak-password":
