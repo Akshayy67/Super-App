@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Task } from "../types";
 import { firestoreUserTasks } from "../utils/firestoreUserTasks";
-import { realTimeAuth } from "../utils/realTimeAuth";
+import { authUtils } from "../utils/auth";
 import { format, isAfter, startOfDay } from "date-fns";
 
 export const TaskManager: React.FC = () => {
@@ -28,7 +28,7 @@ export const TaskManager: React.FC = () => {
     priority: "medium" as "low" | "medium" | "high",
   });
 
-  const user = realTimeAuth.getCurrentUser();
+  const user = authUtils.getCurrentUser();
 
   if (!user) {
     return (
