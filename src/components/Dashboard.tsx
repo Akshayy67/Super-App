@@ -8,10 +8,14 @@ import {
   Brain,
   Upload,
   Clock,
+  AlertTriangle,
 } from "lucide-react";
 import { storageUtils } from "../utils/storage";
+import { firestoreUserTasks } from "../utils/firestoreUserTasks";
 import { realTimeAuth } from "../utils/realTimeAuth";
-import { format, isAfter, startOfDay } from "date-fns";
+import { format, isAfter, startOfDay, isToday, isTomorrow } from "date-fns";
+import { Task } from "../types";
+import { createDemoTasks } from "../utils/demoData";
 
 interface DashboardProps {
   onViewChange: (view: string) => void;
@@ -23,9 +27,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
     totalTasks: 0,
     completedTasks: 0,
     overdueTasks: 0,
+    todayTasks: 0,
+    tomorrowTasks: 0,
+    highPriorityTasks: 0,
     totalNotes: 0,
   });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([]);
 
   const user = realTimeAuth.getCurrentUser();
 
@@ -35,26 +43,59 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
     }
   }, [user]);
 
-  const loadDashboardData = () => {
+  const loadDashboardData = async () => {
     if (!user) return;
 
-    const files = storageUtils.getFiles(user.id);
-    const tasks = storageUtils.getTasks(user.id);
-    const notes = storageUtils.getNotes(user.id);
+    try {
+      const files = storageUtils.getFiles(user.id);
+      const tasks = await firestoreUserTasks.getTasks(user.id);
+      const notes = storageUtils.getNotes(user.id);
 
-    const overdueTasks = tasks.filter(
-      (task) =>
-        task.status === "pending" &&
+      const pendingTasks = tasks.filter((task) => task.status === "pending");
+
+      const overdueTasks = pendingTasks.filter((task) =>
         isAfter(startOfDay(new Date()), startOfDay(new Date(task.dueDate)))
-    );
+      );
 
-    setStats({
-      totalFiles: files.filter((f) => f.type === "file").length,
-      totalTasks: tasks.length,
-      completedTasks: tasks.filter((t) => t.status === "completed").length,
-      overdueTasks: overdueTasks.length,
-      totalNotes: notes.length,
-    });
+      const todayTasks = pendingTasks.filter((task) =>
+        isToday(new Date(task.dueDate))
+      );
+
+      const tomorrowTasks = pendingTasks.filter((task) =>
+        isTomorrow(new Date(task.dueDate))
+      );
+
+      const highPriorityTasks = pendingTasks.filter(
+        (task) => task.priority === "high"
+      );
+
+      // Get upcoming tasks (next 7 days, excluding overdue)
+      const upcoming = pendingTasks
+        .filter(
+          (task) =>
+            !isAfter(startOfDay(new Date()), startOfDay(new Date(task.dueDate)))
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+        )
+        .slice(0, 5);
+
+      setStats({
+        totalFiles: files.filter((f) => f.type === "file").length,
+        totalTasks: tasks.length,
+        completedTasks: tasks.filter((t) => t.status === "completed").length,
+        overdueTasks: overdueTasks.length,
+        todayTasks: todayTasks.length,
+        tomorrowTasks: tomorrowTasks.length,
+        highPriorityTasks: highPriorityTasks.length,
+        totalNotes: notes.length,
+      });
+
+      setUpcomingTasks(upcoming);
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+    }
 
     // Generate recent activity
     const activity = [
@@ -90,41 +131,47 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
 
   const statCards = [
     {
-      title: "Total Files",
-      value: stats.totalFiles,
-      icon: FileText,
-      color: "blue",
-      action: () => onViewChange("files"),
+      title: "Due Today",
+      value: stats.todayTasks,
+      icon: Calendar,
+      color: "orange",
+      action: () => onViewChange("tasks"),
+      urgent: stats.todayTasks > 0,
     },
     {
-      title: "Active Tasks",
-      value: stats.totalTasks - stats.completedTasks,
-      icon: CheckSquare,
+      title: "Due Tomorrow",
+      value: stats.tomorrowTasks,
+      icon: Clock,
+      color: "blue",
+      action: () => onViewChange("tasks"),
+    },
+    {
+      title: "High Priority",
+      value: stats.highPriorityTasks,
+      icon: AlertTriangle,
+      color: "red",
+      action: () => onViewChange("tasks"),
+      urgent: stats.highPriorityTasks > 0,
+    },
+    {
+      title: "Completed",
+      value: stats.completedTasks,
+      icon: TrendingUp,
       color: "green",
       action: () => onViewChange("tasks"),
     },
-    {
-      title: "Completed Tasks",
-      value: stats.completedTasks,
-      icon: TrendingUp,
-      color: "purple",
-      action: () => onViewChange("tasks"),
-    },
-    {
-      title: "Notes Created",
-      value: stats.totalNotes,
-      icon: StickyNote,
-      color: "yellow",
-      action: () => onViewChange("notes"),
-    },
   ];
 
-  const getColorClasses = (color: string) => {
+  const getColorClasses = (color: string, urgent?: boolean) => {
     const colors = {
       blue: "bg-blue-100 text-blue-600",
       green: "bg-green-100 text-green-600",
       purple: "bg-purple-100 text-purple-600",
       yellow: "bg-yellow-100 text-yellow-600",
+      orange: urgent
+        ? "bg-orange-100 text-orange-600"
+        : "bg-orange-50 text-orange-500",
+      red: urgent ? "bg-red-100 text-red-600" : "bg-red-50 text-red-500",
     };
     return colors[color as keyof typeof colors] || colors.blue;
   };
@@ -165,7 +212,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
                   </div>
                   <div
                     className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center ${getColorClasses(
-                      stat.color
+                      stat.color,
+                      stat.urgent
                     )}`}
                   >
                     <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -241,48 +289,123 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
                   <Brain className="w-5 h-5 mr-3 flex-shrink-0" />
                   Ask AI Assistant
                 </button>
+                {/* Demo Data Button - Remove in production */}
+                <button
+                  onClick={async () => {
+                    if (
+                      user &&
+                      window.confirm(
+                        "Add demo tasks for testing? This will create sample tasks."
+                      )
+                    ) {
+                      await createDemoTasks(user.id);
+                      await loadDashboardData();
+                    }
+                  }}
+                  className="w-full flex items-center px-3 sm:px-4 py-3 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-sm border border-gray-200"
+                >
+                  <CheckSquare className="w-5 h-5 mr-3 flex-shrink-0" />
+                  Add Demo Tasks
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Recent Activity */}
+          {/* Upcoming Tasks */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Recent Activity
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Upcoming Tasks
+                </h2>
+                <button
+                  onClick={() => onViewChange("tasks")}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  View All
+                </button>
+              </div>
 
-              {recentActivity.length === 0 ? (
+              {upcomingTasks.length === 0 ? (
                 <div className="text-center py-6 sm:py-8">
-                  <Calendar className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mx-auto mb-3" />
+                  <CheckSquare className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500 text-sm sm:text-base">
-                    No recent activity
+                    No upcoming tasks
                   </p>
                   <p className="text-xs sm:text-sm text-gray-400">
-                    Start by uploading files or creating tasks to see your
-                    activity here.
+                    Great! You're all caught up. Create new tasks to stay
+                    organized.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3 sm:space-y-4">
-                  {recentActivity.map((activity, index) => {
-                    const Icon = activity.icon;
+                <div className="space-y-3">
+                  {upcomingTasks.map((task) => {
+                    const isTaskToday = isToday(new Date(task.dueDate));
+                    const isTaskTomorrow = isTomorrow(new Date(task.dueDate));
+                    const isTaskOverdue = isAfter(
+                      startOfDay(new Date()),
+                      startOfDay(new Date(task.dueDate))
+                    );
+
                     return (
-                      <div key={index} className="flex items-center space-x-3">
-                        <div className="bg-gray-100 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-                        </div>
+                      <div
+                        key={task.id}
+                        className={`flex items-center space-x-3 p-3 rounded-lg border ${
+                          isTaskOverdue
+                            ? "bg-red-50 border-red-200"
+                            : isTaskToday
+                            ? "bg-orange-50 border-orange-200"
+                            : "bg-gray-50 border-gray-200"
+                        }`}
+                      >
+                        <div
+                          className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                            task.priority === "high"
+                              ? "bg-red-500"
+                              : task.priority === "medium"
+                              ? "bg-yellow-500"
+                              : "bg-green-500"
+                          }`}
+                        />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
-                            {activity.title}
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {task.title}
                           </p>
-                          <p className="text-xs text-gray-500">
-                            {format(
-                              new Date(activity.timestamp),
-                              "MMM dd, yyyy • h:mm a"
-                            )}
-                          </p>
+                          <div className="flex items-center space-x-2 text-xs text-gray-500">
+                            <span>{task.subject}</span>
+                            <span>•</span>
+                            <span
+                              className={
+                                isTaskOverdue
+                                  ? "text-red-600 font-medium"
+                                  : isTaskToday
+                                  ? "text-orange-600 font-medium"
+                                  : isTaskTomorrow
+                                  ? "text-blue-600 font-medium"
+                                  : ""
+                              }
+                            >
+                              {isTaskOverdue
+                                ? "Overdue"
+                                : isTaskToday
+                                ? "Due Today"
+                                : isTaskTomorrow
+                                ? "Due Tomorrow"
+                                : format(new Date(task.dueDate), "MMM d")}
+                            </span>
+                          </div>
                         </div>
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full ${
+                            task.priority === "high"
+                              ? "bg-red-100 text-red-600"
+                              : task.priority === "medium"
+                              ? "bg-yellow-100 text-yellow-600"
+                              : "bg-green-100 text-green-600"
+                          }`}
+                        >
+                          {task.priority}
+                        </span>
                       </div>
                     );
                   })}

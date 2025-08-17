@@ -1,25 +1,55 @@
 import React, { useState, useEffect } from "react";
 import {
   Plus,
-  Calendar,
   CheckCircle2,
-  Circle,
-  Edit3,
-  Trash2,
-  AlertTriangle,
+  ArrowUpDown,
+  Filter,
+  Smartphone,
 } from "lucide-react";
 import { Task } from "../types";
 import { firestoreUserTasks } from "../utils/firestoreUserTasks";
 import { realTimeAuth } from "../utils/realTimeAuth";
-import { format, isAfter, startOfDay } from "date-fns";
+import { isAfter, startOfDay, isToday, isTomorrow, parseISO } from "date-fns";
+import SwipeableTaskItem from "./SwipeableTaskItem";
+import { TaskCelebration } from "./TaskCelebration";
+import { AchievementNotification } from "./AchievementNotification";
+import { StreakDisplay } from "./StreakDisplay";
+import { MotivationalToast } from "./MotivationalToast";
+import { VibrationSettings } from "./VibrationSettings";
+import { StreakTracker, Achievement, StreakData } from "../utils/streakTracker";
+import { TaskFeedback } from "../utils/soundEffects";
+import { VibrationManager } from "../utils/vibrationSettings";
 
 export const TaskManager: React.FC = () => {
+  const user = realTimeAuth.getCurrentUser();
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showAddTask, setShowAddTask] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [filter, setFilter] = useState<
-    "all" | "pending" | "completed" | "overdue"
+    | "all"
+    | "pending"
+    | "completed"
+    | "overdue"
+    | "today"
+    | "tomorrow"
+    | "high-priority"
   >("all");
+  const [sortBy, setSortBy] = useState<
+    "smart" | "dueDate" | "priority" | "created" | "alphabetical"
+  >("smart");
+  const [showSortOptions, setShowSortOptions] = useState(false);
+  const [showFilterOptions, setShowFilterOptions] = useState(false);
+  const [celebrationTask, setCelebrationTask] = useState<Task | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [newAchievement, setNewAchievement] = useState<Achievement | null>(
+    null
+  );
+  const [streakData, setStreakData] = useState<StreakData>(() =>
+    StreakTracker.getStreakData(user?.id || "")
+  );
+  const [showMotivationalToast, setShowMotivationalToast] = useState(false);
+  const [showVibrationSettings, setShowVibrationSettings] = useState(false);
   const [taskForm, setTaskForm] = useState({
     title: "",
     description: "",
@@ -27,8 +57,6 @@ export const TaskManager: React.FC = () => {
     dueDate: "",
     priority: "medium" as "low" | "medium" | "high",
   });
-
-  const user = realTimeAuth.getCurrentUser();
 
   if (!user) {
     return (
@@ -47,15 +75,26 @@ export const TaskManager: React.FC = () => {
     loadTasks();
   }, [user]);
 
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest(".dropdown-container")) {
+        setShowSortOptions(false);
+        setShowFilterOptions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   const loadTasks = async () => {
     try {
       const userTasks = await firestoreUserTasks.getTasks(user.id);
-      setTasks(
-        userTasks.sort(
-          (a, b) =>
-            new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-        )
-      );
+      setTasks(userTasks);
     } catch (error) {
       console.error("Error loading tasks:", error);
     }
@@ -135,9 +174,59 @@ export const TaskManager: React.FC = () => {
 
   const toggleTaskStatus = async (task: Task) => {
     try {
+      const newStatus = task.status === "completed" ? "pending" : "completed";
+
       await firestoreUserTasks.updateTask(user.id, task.id, {
-        status: task.status === "completed" ? "pending" : "completed",
+        status: newStatus,
       });
+
+      // If task is being completed, trigger celebration
+      if (newStatus === "completed") {
+        // Play completion feedback
+        TaskFeedback.taskCompleted(task.priority);
+
+        // Update streak and check achievements
+        const { newAchievements, streakData: updatedStreakData } =
+          StreakTracker.updateStreak(user.id, task);
+
+        // Update streak data state
+        setStreakData(updatedStreakData);
+
+        // Show celebration
+        setCelebrationTask(task);
+        setShowCelebration(true);
+
+        // Show achievement if any
+        if (newAchievements.length > 0) {
+          // Trigger special achievement feedback
+          TaskFeedback.achievement();
+
+          // Show the first new achievement
+          setTimeout(() => {
+            setNewAchievement(newAchievements[0]);
+          }, 2500); // Show after celebration
+        }
+
+        // Check for streak milestones and trigger special feedback
+        if (
+          updatedStreakData.currentStreak > 0 &&
+          updatedStreakData.currentStreak % 7 === 0
+        ) {
+          // Weekly streak milestone - extra celebration
+          setTimeout(() => {
+            TaskFeedback.streakMilestone();
+          }, 1000);
+        }
+
+        // Show motivational toast after celebration
+        setTimeout(() => {
+          setShowMotivationalToast(true);
+        }, 3000);
+      } else {
+        // Task uncompleted - play undo feedback
+        TaskFeedback.taskUndone();
+      }
+
       await loadTasks();
     } catch (error) {
       console.error("Error toggling task status:", error);
@@ -146,14 +235,12 @@ export const TaskManager: React.FC = () => {
   };
 
   const deleteTask = async (taskId: string) => {
-    if (window.confirm("Are you sure you want to delete this task?")) {
-      try {
-        await firestoreUserTasks.deleteTask(user.id, taskId);
-        await loadTasks();
-      } catch (error) {
-        console.error("Error deleting task:", error);
-        alert("Failed to delete task. Please try again.");
-      }
+    try {
+      await firestoreUserTasks.deleteTask(user.id, taskId);
+      await loadTasks();
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      alert("Failed to delete task. Please try again.");
     }
   };
 
@@ -173,17 +260,116 @@ export const TaskManager: React.FC = () => {
     return isAfter(startOfDay(new Date()), startOfDay(new Date(task.dueDate)));
   };
 
+  const sortTasks = (tasks: Task[]) => {
+    const sortedTasks = [...tasks];
+
+    switch (sortBy) {
+      case "smart":
+        return sortedTasks.sort((a, b) => {
+          const aDate = new Date(a.dueDate);
+          const bDate = new Date(b.dueDate);
+
+          // First, sort by completion status (pending tasks first)
+          if (a.status !== b.status) {
+            return a.status === "pending" ? -1 : 1;
+          }
+
+          // For pending tasks, apply smart sorting
+          if (a.status === "pending") {
+            const aIsToday = isToday(aDate);
+            const bIsToday = isToday(bDate);
+            const aIsTomorrow = isTomorrow(aDate);
+            const bIsTomorrow = isTomorrow(bDate);
+
+            // Today tasks first
+            if (aIsToday && !bIsToday) return -1;
+            if (!aIsToday && bIsToday) return 1;
+
+            // Then tomorrow tasks
+            if (aIsTomorrow && !bIsTomorrow && !bIsToday) return -1;
+            if (!aIsTomorrow && bIsTomorrow && !aIsToday) return 1;
+
+            // Within same day category, sort by priority (high first)
+            if ((aIsToday && bIsToday) || (aIsTomorrow && bIsTomorrow)) {
+              const priorityOrder = { high: 3, medium: 2, low: 1 };
+              const priorityDiff =
+                priorityOrder[b.priority] - priorityOrder[a.priority];
+              if (priorityDiff !== 0) return priorityDiff;
+            }
+
+            // Finally, sort by due date (earliest first)
+            return aDate.getTime() - bDate.getTime();
+          }
+
+          // For completed tasks, sort by completion date (most recent first)
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        });
+
+      case "dueDate":
+        return sortedTasks.sort(
+          (a, b) =>
+            new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+        );
+
+      case "priority":
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        return sortedTasks.sort((a, b) => {
+          const priorityDiff =
+            priorityOrder[b.priority] - priorityOrder[a.priority];
+          if (priorityDiff !== 0) return priorityDiff;
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        });
+
+      case "created":
+        return sortedTasks.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+
+      case "alphabetical":
+        return sortedTasks.sort((a, b) => a.title.localeCompare(b.title));
+
+      default:
+        return sortedTasks;
+    }
+  };
+
   const getFilteredTasks = () => {
+    let filteredTasks: Task[];
+
     switch (filter) {
       case "pending":
-        return tasks.filter((task) => task.status === "pending");
+        filteredTasks = tasks.filter((task) => task.status === "pending");
+        break;
       case "completed":
-        return tasks.filter((task) => task.status === "completed");
+        filteredTasks = tasks.filter((task) => task.status === "completed");
+        break;
       case "overdue":
-        return tasks.filter((task) => isOverdue(task));
+        filteredTasks = tasks.filter((task) => isOverdue(task));
+        break;
+      case "today":
+        filteredTasks = tasks.filter(
+          (task) => task.status === "pending" && isToday(new Date(task.dueDate))
+        );
+        break;
+      case "tomorrow":
+        filteredTasks = tasks.filter(
+          (task) =>
+            task.status === "pending" && isTomorrow(new Date(task.dueDate))
+        );
+        break;
+      case "high-priority":
+        filteredTasks = tasks.filter(
+          (task) => task.status === "pending" && task.priority === "high"
+        );
+        break;
       default:
-        return tasks;
+        filteredTasks = tasks;
     }
+
+    return sortTasks(filteredTasks);
   };
 
   const getPriorityColor = (priority: string) => {
@@ -205,6 +391,15 @@ export const TaskManager: React.FC = () => {
       pending: tasks.filter((t) => t.status === "pending").length,
       completed: tasks.filter((t) => t.status === "completed").length,
       overdue: tasks.filter((t) => isOverdue(t)).length,
+      today: tasks.filter(
+        (t) => t.status === "pending" && isToday(new Date(t.dueDate))
+      ).length,
+      tomorrow: tasks.filter(
+        (t) => t.status === "pending" && isTomorrow(new Date(t.dueDate))
+      ).length,
+      "high-priority": tasks.filter(
+        (t) => t.status === "pending" && t.priority === "high"
+      ).length,
     };
   };
 
@@ -213,30 +408,168 @@ export const TaskManager: React.FC = () => {
   return (
     <div className="bg-white h-full flex flex-col">
       {/* Header */}
-      <div className="border-b border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">To-Do List</h2>
-          <button
-            onClick={() => setShowAddTask(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Task
-          </button>
+      <div className="border-b border-gray-200 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 space-y-4 sm:space-y-0">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+              To-Do List
+            </h2>
+            <div className="overflow-x-auto">
+              <StreakDisplay streakData={streakData} className="min-w-max" />
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
+            {/* Sort Dropdown */}
+            <div className="relative dropdown-container">
+              <button
+                onClick={() => setShowSortOptions(!showSortOptions)}
+                className="flex items-center px-2 sm:px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors text-sm"
+              >
+                <ArrowUpDown className="w-4 h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Sort</span>
+              </button>
+              {showSortOptions && (
+                <div className="absolute right-0 mt-2 w-44 sm:w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                  <div className="py-1">
+                    {[
+                      { key: "smart", label: "Smart (Recommended)" },
+                      { key: "dueDate", label: "Due Date" },
+                      { key: "priority", label: "Priority" },
+                      { key: "created", label: "Date Created" },
+                      { key: "alphabetical", label: "Alphabetical" },
+                    ].map((option) => (
+                      <button
+                        key={option.key}
+                        onClick={() => {
+                          setSortBy(option.key as any);
+                          setShowSortOptions(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
+                          sortBy === option.key
+                            ? "bg-blue-50 text-blue-600"
+                            : "text-gray-700"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Filter Dropdown */}
+            <div className="relative dropdown-container">
+              <button
+                onClick={() => setShowFilterOptions(!showFilterOptions)}
+                className="flex items-center px-2 sm:px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors text-sm"
+              >
+                <Filter className="w-4 h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Filter</span>
+              </button>
+              {showFilterOptions && (
+                <div className="absolute right-0 mt-2 w-44 sm:w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                  <div className="py-1">
+                    {[
+                      { key: "all", label: "All Tasks", count: counts.all },
+                      { key: "today", label: "Due Today", count: counts.today },
+                      {
+                        key: "tomorrow",
+                        label: "Due Tomorrow",
+                        count: counts.tomorrow,
+                      },
+                      {
+                        key: "high-priority",
+                        label: "High Priority",
+                        count: counts["high-priority"],
+                      },
+                      {
+                        key: "pending",
+                        label: "Pending",
+                        count: counts.pending,
+                      },
+                      {
+                        key: "completed",
+                        label: "Completed",
+                        count: counts.completed,
+                      },
+                      {
+                        key: "overdue",
+                        label: "Overdue",
+                        count: counts.overdue,
+                      },
+                    ].map((option) => (
+                      <button
+                        key={option.key}
+                        onClick={() => {
+                          setFilter(option.key as any);
+                          setShowFilterOptions(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center justify-between ${
+                          filter === option.key
+                            ? "bg-blue-50 text-blue-600"
+                            : "text-gray-700"
+                        }`}
+                      >
+                        <span>{option.label}</span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            option.key === "overdue" && option.count > 0
+                              ? "bg-red-100 text-red-600"
+                              : option.key === "today" && option.count > 0
+                              ? "bg-orange-100 text-orange-600"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {option.count}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Vibration Settings Button (Mobile Only) */}
+            {VibrationManager.isSupported() && (
+              <button
+                onClick={() => setShowVibrationSettings(true)}
+                className="flex items-center px-2 sm:px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors text-sm"
+                title="Vibration Settings"
+              >
+                <Smartphone className="w-4 h-4" />
+              </button>
+            )}
+
+            <button
+              onClick={() => setShowAddTask(true)}
+              className="flex items-center px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm sm:text-base"
+            >
+              <Plus className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Add Task</span>
+              <span className="xs:hidden">Add</span>
+            </button>
+          </div>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+        {/* Quick Filter Tabs */}
+        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg overflow-x-auto scrollbar-hide">
           {[
             { key: "all", label: "All", count: counts.all },
+            { key: "today", label: "Today", count: counts.today },
+            { key: "tomorrow", label: "Tomorrow", count: counts.tomorrow },
+            {
+              key: "high-priority",
+              label: "High Priority",
+              count: counts["high-priority"],
+            },
             { key: "pending", label: "Pending", count: counts.pending },
-            { key: "completed", label: "Completed", count: counts.completed },
             { key: "overdue", label: "Overdue", count: counts.overdue },
           ].map((tab) => (
             <button
               key={tab.key}
               onClick={() => setFilter(tab.key as any)}
-              className={`flex-1 flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-shrink-0 flex items-center justify-center px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                 filter === tab.key
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-600 hover:text-gray-900"
@@ -247,6 +580,10 @@ export const TaskManager: React.FC = () => {
                 className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
                   tab.key === "overdue" && tab.count > 0
                     ? "bg-red-100 text-red-600"
+                    : tab.key === "today" && tab.count > 0
+                    ? "bg-orange-100 text-orange-600"
+                    : tab.key === "high-priority" && tab.count > 0
+                    ? "bg-purple-100 text-purple-600"
                     : "bg-gray-200 text-gray-600"
                 }`}
               >
@@ -258,116 +595,55 @@ export const TaskManager: React.FC = () => {
       </div>
 
       {/* Task List */}
-      <div className="flex-1 overflow-auto p-6">
-        <div className="space-y-4">
+      <div className="flex-1 overflow-auto p-4 sm:p-6">
+        <div className="space-y-3 sm:space-y-4">
           {getFilteredTasks().map((task) => (
-            <div
+            <SwipeableTaskItem
               key={task.id}
-              className={`border rounded-lg p-4 transition-all hover:shadow-md ${
-                task.status === "completed"
-                  ? "bg-gray-50 border-gray-200"
-                  : isOverdue(task)
-                  ? "bg-red-50 border-red-200"
-                  : "bg-white border-gray-200"
-              }`}
-            >
-              <div className="flex items-start space-x-3">
-                <button
-                  onClick={() => toggleTaskStatus(task)}
-                  className="mt-1 text-blue-600 hover:text-blue-700 transition-colors"
-                >
-                  {task.status === "completed" ? (
-                    <CheckCircle2 className="w-5 h-5" />
-                  ) : (
-                    <Circle className="w-5 h-5" />
-                  )}
-                </button>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3
-                        className={`font-medium ${
-                          task.status === "completed"
-                            ? "text-gray-500 line-through"
-                            : "text-gray-900"
-                        }`}
-                      >
-                        {task.title}
-                        {isOverdue(task) && (
-                          <AlertTriangle className="inline w-4 h-4 text-red-500 ml-2" />
-                        )}
-                      </h3>
-                      {task.description && (
-                        <p
-                          className={`text-sm mt-1 ${
-                            task.status === "completed"
-                              ? "text-gray-400"
-                              : "text-gray-600"
-                          }`}
-                        >
-                          {task.description}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center space-x-2 ml-4">
-                      <button
-                        onClick={() => startEditing(task)}
-                        className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => deleteTask(task.id)}
-                        className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-4 mt-3">
-                    {task.subject && (
-                      <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full">
-                        {task.subject}
-                      </span>
-                    )}
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(
-                        task.priority
-                      )}`}
-                    >
-                      {task.priority} priority
-                    </span>
-                    <div className="flex items-center text-xs text-gray-500">
-                      <Calendar className="w-3 h-3 mr-1" />
-                      {format(new Date(task.dueDate), "MMM dd, yyyy")}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+              task={task}
+              onToggleStatus={toggleTaskStatus}
+              onEdit={startEditing}
+              onDelete={deleteTask}
+              getPriorityColor={getPriorityColor}
+            />
           ))}
         </div>
 
         {getFilteredTasks().length === 0 && (
-          <div className="text-center py-12">
-            <CheckCircle2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {filter === "all" ? "No tasks yet" : `No ${filter} tasks`}
+          <div className="text-center py-8 sm:py-12 px-4">
+            <CheckCircle2 className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
+            <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
+              {filter === "all"
+                ? "No tasks yet"
+                : filter === "today"
+                ? "No tasks due today"
+                : filter === "tomorrow"
+                ? "No tasks due tomorrow"
+                : filter === "high-priority"
+                ? "No high priority tasks"
+                : `No ${filter} tasks`}
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 max-w-sm mx-auto">
               {filter === "all"
                 ? "Create your first task to get started with organized studying"
+                : filter === "today"
+                ? "Great! You have no tasks due today. Enjoy your free time!"
+                : filter === "tomorrow"
+                ? "No tasks scheduled for tomorrow yet."
+                : filter === "high-priority"
+                ? "No high priority tasks at the moment."
+                : filter === "completed"
+                ? "No completed tasks yet. Start working on your pending tasks!"
+                : filter === "overdue"
+                ? "Great! No overdue tasks. Keep up the good work!"
                 : `You don't have any ${filter} tasks at the moment`}
             </p>
             {filter === "all" && (
               <button
                 onClick={() => setShowAddTask(true)}
-                className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm sm:text-base"
               >
-                <Plus className="w-5 h-5 mr-2" />
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Add Your First Task
               </button>
             )}
@@ -378,14 +654,14 @@ export const TaskManager: React.FC = () => {
       {/* Add/Edit Task Modal */}
       {(showAddTask || editingTask) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-lg">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold">
+          <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-4 sm:p-6 border-b border-gray-200">
+              <h3 className="text-base sm:text-lg font-semibold">
                 {editingTask ? "Edit Task" : "Add New Task"}
               </h3>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Title *
@@ -396,7 +672,7 @@ export const TaskManager: React.FC = () => {
                   onChange={(e) =>
                     setTaskForm({ ...taskForm, title: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                   placeholder="Enter task title"
                 />
               </div>
@@ -468,7 +744,7 @@ export const TaskManager: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3 p-6 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 p-4 sm:p-6 border-t border-gray-200">
               <button
                 onClick={() => {
                   if (editingTask) {
@@ -478,14 +754,14 @@ export const TaskManager: React.FC = () => {
                   }
                   resetForm();
                 }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="w-full sm:w-auto px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors text-sm sm:text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={editingTask ? handleEditTask : handleAddTask}
                 disabled={!taskForm.title.trim() || !taskForm.dueDate}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
               >
                 {editingTask ? "Update" : "Add"} Task
               </button>
@@ -493,6 +769,36 @@ export const TaskManager: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Task Celebration */}
+      <TaskCelebration
+        isVisible={showCelebration}
+        taskTitle={celebrationTask?.title || ""}
+        priority={celebrationTask?.priority || "medium"}
+        onComplete={() => {
+          setShowCelebration(false);
+          setCelebrationTask(null);
+        }}
+      />
+
+      {/* Achievement Notification */}
+      <AchievementNotification
+        achievement={newAchievement}
+        onClose={() => setNewAchievement(null)}
+      />
+
+      {/* Motivational Toast */}
+      <MotivationalToast
+        streakData={streakData}
+        isVisible={showMotivationalToast}
+        onClose={() => setShowMotivationalToast(false)}
+      />
+
+      {/* Vibration Settings */}
+      <VibrationSettings
+        isOpen={showVibrationSettings}
+        onClose={() => setShowVibrationSettings(false)}
+      />
     </div>
   );
 };
