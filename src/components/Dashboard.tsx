@@ -15,7 +15,6 @@ import { firestoreUserTasks } from "../utils/firestoreUserTasks";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { format, isAfter, startOfDay, isToday, isTomorrow } from "date-fns";
 import { Task } from "../types";
-import { createDemoTasks } from "../utils/demoData";
 
 interface DashboardProps {
   onViewChange: (view: string) => void;
@@ -95,38 +94,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
       setUpcomingTasks(upcoming);
     } catch (error) {
       console.error("Error loading dashboard data:", error);
+      return;
     }
-
-    // Generate recent activity
-    const activity = [
-      ...files.slice(-3).map((file) => ({
-        type: "file",
-        title: `Uploaded ${file.name}`,
-        timestamp: file.uploadedAt,
-        icon: FileText,
-      })),
-      ...tasks.slice(-3).map((task) => ({
-        type: "task",
-        title: `${
-          task.status === "completed" ? "Completed" : "Created"
-        } task: ${task.title}`,
-        timestamp: task.createdAt,
-        icon: CheckSquare,
-      })),
-      ...notes.slice(-3).map((note) => ({
-        type: "note",
-        title: `Created note: ${note.title}`,
-        timestamp: note.createdAt,
-        icon: StickyNote,
-      })),
-    ]
-      .sort(
-        (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      )
-      .slice(0, 5);
-
-    setRecentActivity(activity);
   };
 
   const statCards = [
@@ -288,24 +257,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
                 >
                   <Brain className="w-5 h-5 mr-3 flex-shrink-0" />
                   Ask AI Assistant
-                </button>
-                {/* Demo Data Button - Remove in production */}
-                <button
-                  onClick={async () => {
-                    if (
-                      user &&
-                      window.confirm(
-                        "Add demo tasks for testing? This will create sample tasks."
-                      )
-                    ) {
-                      await createDemoTasks(user.id);
-                      await loadDashboardData();
-                    }
-                  }}
-                  className="w-full flex items-center px-3 sm:px-4 py-3 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-sm border border-gray-200"
-                >
-                  <CheckSquare className="w-5 h-5 mr-3 flex-shrink-0" />
-                  Add Demo Tasks
                 </button>
               </div>
             </div>

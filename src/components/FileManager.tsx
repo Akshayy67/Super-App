@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Upload, 
-  Folder, 
-  File, 
-  Search, 
-  MoreVertical, 
+import React, { useState, useEffect } from "react";
+import {
+  Upload,
+  Folder,
+  File,
+  Search,
+  MoreVertical,
   Plus,
   FolderPlus,
   Trash2,
@@ -12,12 +12,12 @@ import {
   Download,
   Brain,
   ArrowLeft,
-  FolderOpen
-} from 'lucide-react';
-import { FileItem } from '../types';
-import { storageUtils } from '../utils/storage';
-import { authUtils } from '../utils/auth';
-import { aiService } from '../utils/aiService';
+  FolderOpen,
+} from "lucide-react";
+import { FileItem } from "../types";
+import { storageUtils } from "../utils/storage";
+import { realTimeAuth } from "../utils/realTimeAuth";
+import { unifiedAIService } from "../utils/aiConfig";
 
 interface FileManagerProps {
   onPreviewFile: (file: FileItem) => void;
@@ -25,14 +25,18 @@ interface FileManagerProps {
 
 export const FileManager: React.FC<FileManagerProps> = ({ onPreviewFile }) => {
   const [files, setFiles] = useState<FileItem[]>([]);
-  const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(undefined);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(
+    undefined
+  );
+  const [searchQuery, setSearchQuery] = useState("");
   const [showNewFolder, setShowNewFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
-  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [newFolderName, setNewFolderName] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<{
+    [key: string]: number;
+  }>({});
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
 
-  const user = authUtils.getCurrentUser();
+  const user = realTimeAuth.getCurrentUser();
 
   useEffect(() => {
     if (user) {
@@ -47,26 +51,26 @@ export const FileManager: React.FC<FileManagerProps> = ({ onPreviewFile }) => {
   };
 
   const getCurrentFolderFiles = () => {
-    return files.filter(file => file.parentId === currentFolderId);
+    return files.filter((file) => file.parentId === currentFolderId);
   };
 
   const getFilteredFiles = () => {
     const currentFiles = getCurrentFolderFiles();
     if (!searchQuery.trim()) return currentFiles;
-    
-    return currentFiles.filter(file =>
+
+    return currentFiles.filter((file) =>
       file.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   };
 
   const getCurrentPath = () => {
-    if (!currentFolderId) return ['Home'];
-    
-    const path = ['Home'];
+    if (!currentFolderId) return ["Home"];
+
+    const path = ["Home"];
     let folderId = currentFolderId;
-    
+
     while (folderId) {
-      const folder = files.find(f => f.id === folderId);
+      const folder = files.find((f) => f.id === folderId);
       if (folder) {
         path.unshift(folder.name);
         folderId = folder.parentId;
@@ -74,58 +78,60 @@ export const FileManager: React.FC<FileManagerProps> = ({ onPreviewFile }) => {
         break;
       }
     }
-    
+
     return path;
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const uploadedFiles = Array.from(event.target.files || []);
     if (!user) return;
 
     for (const file of uploadedFiles) {
       const fileId = storageUtils.generateId();
-      
+
       // Simulate upload progress
-      setUploadProgress(prev => ({ ...prev, [fileId]: 0 }));
-      
+      setUploadProgress((prev) => ({ ...prev, [fileId]: 0 }));
+
       const reader = new FileReader();
       reader.onload = async (e) => {
         const content = e.target?.result as string;
-        
+
         // Simulate progress updates
         for (let progress = 0; progress <= 100; progress += 20) {
-          setUploadProgress(prev => ({ ...prev, [fileId]: progress }));
-          await new Promise(resolve => setTimeout(resolve, 100));
+          setUploadProgress((prev) => ({ ...prev, [fileId]: progress }));
+          await new Promise((resolve) => setTimeout(resolve, 100));
         }
 
         const newFile: FileItem = {
           id: fileId,
           name: file.name,
-          type: 'file',
+          type: "file",
           mimeType: file.type,
           size: file.size,
           parentId: currentFolderId,
           content,
           uploadedAt: new Date().toISOString(),
-          userId: user.id
+          userId: user.id,
         };
 
         storageUtils.storeFile(newFile);
         loadFiles();
-        
+
         // Remove progress after completion
-        setUploadProgress(prev => {
+        setUploadProgress((prev) => {
           const newProgress = { ...prev };
           delete newProgress[fileId];
           return newProgress;
         });
       };
-      
+
       reader.readAsDataURL(file);
     }
-    
+
     // Reset input
-    event.target.value = '';
+    event.target.value = "";
   };
 
   const createFolder = () => {
@@ -134,20 +140,20 @@ export const FileManager: React.FC<FileManagerProps> = ({ onPreviewFile }) => {
     const newFolder: FileItem = {
       id: storageUtils.generateId(),
       name: newFolderName.trim(),
-      type: 'folder',
+      type: "folder",
       parentId: currentFolderId,
       uploadedAt: new Date().toISOString(),
-      userId: user.id
+      userId: user.id,
     };
 
     storageUtils.storeFile(newFolder);
-    setNewFolderName('');
+    setNewFolderName("");
     setShowNewFolder(false);
     loadFiles();
   };
 
   const deleteFile = (fileId: string) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
+    if (window.confirm("Are you sure you want to delete this item?")) {
       storageUtils.deleteFile(fileId);
       loadFiles();
     }
@@ -155,42 +161,54 @@ export const FileManager: React.FC<FileManagerProps> = ({ onPreviewFile }) => {
 
   const analyzeWithAI = async (file: FileItem) => {
     if (!file.content) return;
-    
+
     try {
-      let extractedText = '';
-      
-      if (file.mimeType?.startsWith('image/')) {
-        const ocrResult = await aiService.extractTextFromImage(file.content);
+      let extractedText = "";
+
+      if (file.mimeType?.startsWith("image/")) {
+        const ocrResult = await unifiedAIService.extractTextFromImage(
+          file.content
+        );
         if (ocrResult.success) {
           extractedText = ocrResult.data;
         }
-      } else if (file.mimeType === 'text/plain') {
+      } else if (file.mimeType === "text/plain") {
         // For text files, decode base64
         try {
-          extractedText = atob(file.content.split(',')[1]);
+          extractedText = atob(file.content.split(",")[1]);
         } catch (e) {
           extractedText = file.content;
         }
       }
 
       if (extractedText) {
-        const summaryResult = await aiService.summarizeText(extractedText);
-        const conceptsResult = await aiService.extractConcepts(extractedText);
-        
+        const summaryResult = await unifiedAIService.summarizeText(
+          extractedText
+        );
+        const conceptsResult = await unifiedAIService.extractConcepts(
+          extractedText
+        );
+
         if (summaryResult.success) {
-          alert(`AI Analysis Complete!\n\nSummary: ${summaryResult.data}\n\nKey Concepts: ${conceptsResult.data || 'Analysis in progress...'}`);
+          alert(
+            `AI Analysis Complete!\n\nSummary: ${
+              summaryResult.data
+            }\n\nKey Concepts: ${
+              conceptsResult.data || "Analysis in progress..."
+            }`
+          );
         }
       }
     } catch (error) {
-      alert('AI analysis failed. Please try again.');
+      alert("AI analysis failed. Please try again.");
     }
   };
 
   const formatFileSize = (bytes?: number) => {
-    if (!bytes) return 'Unknown';
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    if (!bytes) return "Unknown";
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+    return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + " " + sizes[i];
   };
 
   return (
@@ -286,14 +304,14 @@ export const FileManager: React.FC<FileManagerProps> = ({ onPreviewFile }) => {
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
-              onKeyPress={(e) => e.key === 'Enter' && createFolder()}
+              onKeyPress={(e) => e.key === "Enter" && createFolder()}
               autoFocus
             />
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => {
                   setShowNewFolder(false);
-                  setNewFolderName('');
+                  setNewFolderName("");
                 }}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
               >
@@ -314,7 +332,11 @@ export const FileManager: React.FC<FileManagerProps> = ({ onPreviewFile }) => {
       <div className="flex-1 overflow-auto p-6">
         {currentFolderId && (
           <button
-            onClick={() => setCurrentFolderId(files.find(f => f.id === currentFolderId)?.parentId)}
+            onClick={() =>
+              setCurrentFolderId(
+                files.find((f) => f.id === currentFolderId)?.parentId
+              )
+            }
             className="flex items-center mb-4 text-blue-600 hover:text-blue-700 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -330,30 +352,36 @@ export const FileManager: React.FC<FileManagerProps> = ({ onPreviewFile }) => {
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center">
-                  {file.type === 'folder' ? (
+                  {file.type === "folder" ? (
                     <Folder className="w-8 h-8 text-blue-500 mr-3" />
                   ) : (
                     <File className="w-8 h-8 text-gray-500 mr-3" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-900 truncate">{file.name}</h3>
-                    {file.type === 'file' && (
-                      <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                    <h3 className="font-medium text-gray-900 truncate">
+                      {file.name}
+                    </h3>
+                    {file.type === "file" && (
+                      <p className="text-xs text-gray-500">
+                        {formatFileSize(file.size)}
+                      </p>
                     )}
                   </div>
                 </div>
-                
+
                 <div className="relative">
                   <button
-                    onClick={() => setSelectedFile(selectedFile === file.id ? null : file.id)}
+                    onClick={() =>
+                      setSelectedFile(selectedFile === file.id ? null : file.id)
+                    }
                     className="p-1 hover:bg-gray-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <MoreVertical className="w-4 h-4 text-gray-400" />
                   </button>
-                  
+
                   {selectedFile === file.id && (
                     <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1 min-w-[160px]">
-                      {file.type === 'folder' ? (
+                      {file.type === "folder" ? (
                         <button
                           onClick={() => {
                             setCurrentFolderId(file.id);
@@ -402,14 +430,14 @@ export const FileManager: React.FC<FileManagerProps> = ({ onPreviewFile }) => {
                   )}
                 </div>
               </div>
-              
-              {file.type === 'folder' ? (
+
+              {file.type === "folder" ? (
                 <button
                   onClick={() => setCurrentFolderId(file.id)}
                   className="w-full text-left"
                 >
                   <p className="text-sm text-gray-600">
-                    {files.filter(f => f.parentId === file.id).length} items
+                    {files.filter((f) => f.parentId === file.id).length} items
                   </p>
                 </button>
               ) : (
@@ -441,13 +469,12 @@ export const FileManager: React.FC<FileManagerProps> = ({ onPreviewFile }) => {
           <div className="text-center py-12">
             <FolderOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {searchQuery ? 'No files found' : 'No files yet'}
+              {searchQuery ? "No files found" : "No files yet"}
             </h3>
             <p className="text-gray-600 mb-6">
-              {searchQuery 
-                ? 'Try adjusting your search terms' 
-                : 'Upload your first document to get started with AI-powered study assistance'
-              }
+              {searchQuery
+                ? "Try adjusting your search terms"
+                : "Upload your first document to get started with AI-powered study assistance"}
             </p>
             {!searchQuery && (
               <label className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors">

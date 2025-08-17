@@ -40,23 +40,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <div className="bg-white h-full shadow-lg border-r border-gray-200 flex flex-col">
       {/* Mobile Header */}
       {isMobile && (
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between lg:hidden">
+        <div className="p-3 sm:p-4 border-b border-gray-200 flex items-center justify-between lg:hidden">
           <button
             onClick={() => onViewChange("dashboard")}
-            className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+            className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity min-w-0 flex-1"
           >
             <img
               src="/SuperApp.png"
               alt="Super Study Logo"
-              className="w-8 h-8 object-contain"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0"
+              onError={(e) => {
+                console.error("Sidebar logo failed to load:", e);
+                e.currentTarget.style.display = "none";
+              }}
             />
-            <span className="text-xl font-bold text-gray-900">Super Study</span>
+            <span className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+              Super Study
+            </span>
           </button>
           <button
             onClick={onCloseMobile}
-            className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 flex-shrink-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
       )}
@@ -75,7 +81,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <img
               src="/SuperApp.png"
               alt="Super Study Logo"
-              className="w-10 h-10 object-contain"
+              className="w-10 h-10 object-contain flex-shrink-0"
+              onError={(e) => {
+                console.error("Desktop sidebar logo failed to load:", e);
+                e.currentTarget.style.display = "none";
+              }}
             />
             <h1 className="text-xl font-bold text-gray-900">Super Study</h1>
           </div>

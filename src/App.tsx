@@ -84,26 +84,32 @@ function App() {
     <ErrorBoundary>
       <div className="h-screen bg-gray-50 flex flex-col lg:flex-row">
         {/* Mobile Header */}
-        <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 p-4 flex items-center justify-between">
+        <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 p-3 sm:p-4 flex items-center justify-between">
           <button
             onClick={() => handleViewChange("dashboard")}
-            className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+            className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity min-w-0 flex-1"
           >
             <img
-              src="/logo.png"
+              src="/SuperApp.png"
               alt="Super Study Logo"
-              className="w-8 h-8 object-contain"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0"
+              onError={(e) => {
+                console.error("Logo failed to load:", e);
+                e.currentTarget.style.display = "none";
+              }}
             />
-            <span className="text-xl font-bold text-gray-900">Super Study</span>
+            <span className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+              Super Study
+            </span>
           </button>
           <button
             onClick={toggleMobileMenu}
-            className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 flex-shrink-0"
           >
             {isMobileMenuOpen ? (
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
             ) : (
-              <Menu className="w-6 h-6" />
+              <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
             )}
           </button>
         </div>

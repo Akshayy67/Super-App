@@ -1,22 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit3, Trash2, Tag, FileText, Clock } from 'lucide-react';
-import { Note } from '../types';
-import { storageUtils } from '../utils/storage';
-import { authUtils } from '../utils/auth';
-import { format } from 'date-fns';
+import React, { useState, useEffect } from "react";
+import {
+  Plus,
+  Search,
+  Edit3,
+  Trash2,
+  Tag,
+  FileText,
+  Clock,
+} from "lucide-react";
+import { Note } from "../types";
+import { storageUtils } from "../utils/storage";
+import { realTimeAuth } from "../utils/realTimeAuth";
+import { format } from "date-fns";
 
 export const NotesManager: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [showEditor, setShowEditor] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [noteForm, setNoteForm] = useState({
-    title: '',
-    content: '',
-    tags: ''
+    title: "",
+    content: "",
+    tags: "",
   });
 
-  const user = authUtils.getCurrentUser();
+  const user = realTimeAuth.getCurrentUser();
 
   useEffect(() => {
     if (user) {
@@ -27,60 +35,86 @@ export const NotesManager: React.FC = () => {
   const loadNotes = () => {
     if (!user) return;
     const userNotes = storageUtils.getNotes(user.id);
-    setNotes(userNotes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+    setNotes(
+      userNotes.sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      )
+    );
   };
 
   const getFilteredNotes = () => {
     if (!searchQuery.trim()) return notes;
-    
+
     const query = searchQuery.toLowerCase();
-    return notes.filter(note =>
-      note.title.toLowerCase().includes(query) ||
-      note.content.toLowerCase().includes(query) ||
-      note.tags.some(tag => tag.toLowerCase().includes(query))
+    return notes.filter(
+      (note) =>
+        note.title.toLowerCase().includes(query) ||
+        note.content.toLowerCase().includes(query) ||
+        note.tags.some((tag) => tag.toLowerCase().includes(query))
     );
   };
 
   const resetForm = () => {
     setNoteForm({
-      title: '',
-      content: '',
-      tags: ''
+      title: "",
+      content: "",
+      tags: "",
     });
   };
 
   const handleSaveNote = () => {
-    if (!user || !noteForm.title.trim()) return;
+    console.log("handleSaveNote called", { user, noteForm });
 
-    const tags = noteForm.tags
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag.length > 0);
-
-    if (editingNote) {
-      const updates = {
-        title: noteForm.title.trim(),
-        content: noteForm.content.trim(),
-        tags
-      };
-      storageUtils.updateNote(editingNote.id, updates);
-    } else {
-      const newNote: Note = {
-        id: storageUtils.generateId(),
-        title: noteForm.title.trim(),
-        content: noteForm.content.trim(),
-        tags,
-        userId: user.id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      storageUtils.storeNote(newNote);
+    if (!user) {
+      console.error("No user found");
+      return;
     }
 
-    resetForm();
-    setShowEditor(false);
-    setEditingNote(null);
-    loadNotes();
+    if (!noteForm.title.trim()) {
+      console.error("No title provided");
+      alert("Please enter a title for your note.");
+      return;
+    }
+
+    const tags = noteForm.tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0);
+
+    try {
+      if (editingNote) {
+        console.log("Updating existing note:", editingNote.id);
+        const updates = {
+          title: noteForm.title.trim(),
+          content: noteForm.content.trim(),
+          tags,
+        };
+        storageUtils.updateNote(editingNote.id, updates);
+      } else {
+        console.log("Creating new note");
+        const newNote: Note = {
+          id: storageUtils.generateId(),
+          title: noteForm.title.trim(),
+          content: noteForm.content.trim(),
+          tags,
+          userId: user.id,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        console.log("New note object:", newNote);
+        storageUtils.storeNote(newNote);
+        console.log("Note stored successfully");
+      }
+
+      resetForm();
+      setShowEditor(false);
+      setEditingNote(null);
+      loadNotes();
+      console.log("Note save completed");
+    } catch (error) {
+      console.error("Error saving note:", error);
+    }
   };
 
   const startEditing = (note: Note) => {
@@ -88,13 +122,13 @@ export const NotesManager: React.FC = () => {
     setNoteForm({
       title: note.title,
       content: note.content,
-      tags: note.tags.join(', ')
+      tags: note.tags.join(", "),
     });
     setShowEditor(true);
   };
 
   const deleteNote = (noteId: string) => {
-    if (window.confirm('Are you sure you want to delete this note?')) {
+    if (window.confirm("Are you sure you want to delete this note?")) {
       storageUtils.deleteNote(noteId);
       loadNotes();
     }
@@ -102,7 +136,7 @@ export const NotesManager: React.FC = () => {
 
   const truncateContent = (content: string, maxLength: number = 150) => {
     if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
+    return content.substring(0, maxLength) + "...";
   };
 
   return (
@@ -189,7 +223,7 @@ export const NotesManager: React.FC = () => {
               <div className="flex items-center justify-between text-xs text-gray-500">
                 <div className="flex items-center">
                   <Clock className="w-3 h-3 mr-1" />
-                  {format(new Date(note.updatedAt), 'MMM dd, yyyy')}
+                  {format(new Date(note.updatedAt), "MMM dd, yyyy")}
                 </div>
                 <button
                   onClick={() => startEditing(note)}
@@ -206,13 +240,12 @@ export const NotesManager: React.FC = () => {
           <div className="text-center py-12">
             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {searchQuery ? 'No notes found' : 'No notes yet'}
+              {searchQuery ? "No notes found" : "No notes yet"}
             </h3>
             <p className="text-gray-600 mb-6">
-              {searchQuery 
-                ? 'Try adjusting your search terms' 
-                : 'Create your first note to organize your study thoughts and insights'
-              }
+              {searchQuery
+                ? "Try adjusting your search terms"
+                : "Create your first note to organize your study thoughts and insights"}
             </p>
             {!searchQuery && (
               <button
@@ -233,10 +266,10 @@ export const NotesManager: React.FC = () => {
           <div className="bg-white rounded-lg w-full max-w-4xl h-5/6 flex flex-col">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold">
-                {editingNote ? 'Edit Note' : 'Create New Note'}
+                {editingNote ? "Edit Note" : "Create New Note"}
               </h3>
             </div>
-            
+
             <div className="flex-1 p-6 space-y-4 overflow-auto">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -245,7 +278,9 @@ export const NotesManager: React.FC = () => {
                 <input
                   type="text"
                   value={noteForm.title}
-                  onChange={(e) => setNoteForm({ ...noteForm, title: e.target.value })}
+                  onChange={(e) =>
+                    setNoteForm({ ...noteForm, title: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter note title"
                 />
@@ -258,26 +293,30 @@ export const NotesManager: React.FC = () => {
                 <input
                   type="text"
                   value={noteForm.tags}
-                  onChange={(e) => setNoteForm({ ...noteForm, tags: e.target.value })}
+                  onChange={(e) =>
+                    setNoteForm({ ...noteForm, tags: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter tags separated by commas (e.g., math, calculus, derivatives)"
                 />
               </div>
-              
+
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Content *
                 </label>
                 <textarea
                   value={noteForm.content}
-                  onChange={(e) => setNoteForm({ ...noteForm, content: e.target.value })}
+                  onChange={(e) =>
+                    setNoteForm({ ...noteForm, content: e.target.value })
+                  }
                   rows={12}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   placeholder="Write your note content here..."
                 />
               </div>
             </div>
-            
+
             <div className="flex justify-end space-x-3 p-6 border-t border-gray-200">
               <button
                 onClick={() => {
@@ -291,10 +330,10 @@ export const NotesManager: React.FC = () => {
               </button>
               <button
                 onClick={handleSaveNote}
-                disabled={!noteForm.title.trim() || !noteForm.content.trim()}
+                disabled={!noteForm.title.trim()}
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {editingNote ? 'Update' : 'Save'} Note
+                {editingNote ? "Update" : "Save"} Note
               </button>
             </div>
           </div>
