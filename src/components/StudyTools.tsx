@@ -8,7 +8,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { unifiedAIService } from "../utils/aiConfig";
-import { storageUtils } from "../utils/storage";
+import { driveStorageUtils } from "../utils/driveStorage";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { AIStatus } from "./AIStatus";
 
@@ -29,11 +29,19 @@ export const StudyTools: React.FC = () => {
   const user = realTimeAuth.getCurrentUser();
 
   React.useEffect(() => {
-    if (user) {
-      const files = storageUtils.getFiles(user.id);
-      const documents = files.filter((file) => file.type === "file");
-      setAvailableDocuments(documents);
-    }
+    const loadDocuments = async () => {
+      if (user) {
+        try {
+          const files = await driveStorageUtils.getFiles(user.id);
+          const documents = files.filter((file) => file.type === "file");
+          setAvailableDocuments(documents);
+        } catch (error) {
+          console.error("Error loading documents:", error);
+        }
+      }
+    };
+
+    loadDocuments();
   }, [user]);
 
   const tools = [

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { X, Download, ZoomIn, ZoomOut } from 'lucide-react';
-import { FileItem } from '../types';
+import React, { useState } from "react";
+import { X, Download, ZoomIn, ZoomOut, ExternalLink } from "lucide-react";
+import { FileItem } from "../types";
+import { driveStorageUtils } from "../utils/driveStorage";
 
 interface FilePreviewProps {
   file: FileItem | null;
@@ -9,18 +10,56 @@ interface FilePreviewProps {
 
 export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
   const [zoom, setZoom] = useState(100);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   if (!file) return null;
 
-  const downloadFile = () => {
-    if (!file.content) return;
-    
-    const link = document.createElement('a');
-    link.href = file.content;
-    link.download = file.name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadFile = async () => {
+    if (isDownloading) return;
+
+    setIsDownloading(true);
+    try {
+      // Check if it's a Google Drive file
+      if (file.driveFileId && driveStorageUtils.isUsingGoogleDrive()) {
+        // For Google Drive files, use the webContentLink if available
+        if (file.webContentLink) {
+          window.open(file.webContentLink, "_blank");
+        } else {
+          // Download through our API
+          const content = await driveStorageUtils.downloadFile(
+            file.driveFileId
+          );
+          if (content instanceof Blob) {
+            const url = URL.createObjectURL(content);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = file.name;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }
+        }
+      } else if (file.content) {
+        // Local file with base64 content
+        const link = document.createElement("a");
+        link.href = file.content;
+        link.download = file.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const openInGoogleDrive = () => {
+    if (file.webViewLink) {
+      window.open(file.webViewLink, "_blank");
+    }
   };
 
   const renderPreview = () => {
@@ -33,7 +72,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
     }
 
     // Image preview
-    if (file.mimeType?.startsWith('image/')) {
+    if (file.mimeType?.startsWith("image/")) {
       return (
         <div className="flex items-center justify-center h-full p-4">
           <img
@@ -47,12 +86,12 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
     }
 
     // Text preview
-    if (file.mimeType === 'text/plain') {
+    if (file.mimeType === "text/plain") {
       try {
-        const textContent = atob(file.content.split(',')[1]);
+        const textContent = atob(file.content.split(",")[1]);
         return (
           <div className="h-full p-6 overflow-auto">
-            <pre 
+            <pre
               className="whitespace-pre-wrap font-mono text-sm text-gray-800 leading-relaxed"
               style={{ fontSize: `${zoom}%` }}
             >
@@ -70,18 +109,23 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
     }
 
     // PDF preview (simplified - in production would use react-pdf)
-    if (file.mimeType === 'application/pdf') {
+    if (file.mimeType === "application/pdf") {
       return (
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M4 18h12V6l-4-4H4v16zm8-14v3h3l-3-3z"/>
+              <svg
+                className="w-8 h-8 text-red-600"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path d="M4 18h12V6l-4-4H4v16zm8-14v3h3l-3-3z" />
               </svg>
             </div>
             <p className="text-gray-600 mb-4">PDF Preview</p>
             <p className="text-sm text-gray-500 mb-4">
-              Full PDF preview requires additional setup.<br />
+              Full PDF preview requires additional setup.
+              <br />
               Click download to view the file.
             </p>
             <button
@@ -100,8 +144,12 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M4 18h12V6l-4-4H4v16zm8-14v3h3l-3-3z"/>
+            <svg
+              className="w-8 h-8 text-gray-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path d="M4 18h12V6l-4-4H4v16zm8-14v3h3l-3-3z" />
             </svg>
           </div>
           <p className="text-gray-600 mb-2">Preview not available</p>
@@ -119,7 +167,8 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
     );
   };
 
-  const canZoom = file.mimeType?.startsWith('image/') || file.mimeType === 'text/plain';
+  const canZoom =
+    file.mimeType?.startsWith("image/") || file.mimeType === "text/plain";
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
@@ -131,11 +180,13 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
               {file.name}
             </h3>
             <p className="text-sm text-gray-500">
-              {file.size ? `${Math.round(file.size / 1024)} KB` : 'Unknown size'} • 
-              {file.mimeType || 'Unknown type'}
+              {file.size
+                ? `${Math.round(file.size / 1024)} KB`
+                : "Unknown size"}{" "}
+              •{file.mimeType || "Unknown type"}
             </p>
           </div>
-          
+
           <div className="flex items-center space-x-2 ml-4">
             {canZoom && (
               <>
@@ -146,9 +197,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
                 >
                   <ZoomOut className="w-4 h-4" />
                 </button>
-                <span className="text-sm text-gray-600 px-2">
-                  {zoom}%
-                </span>
+                <span className="text-sm text-gray-600 px-2">{zoom}%</span>
                 <button
                   onClick={() => setZoom(Math.min(200, zoom + 25))}
                   className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
@@ -158,14 +207,26 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
                 </button>
               </>
             )}
-            
+
+            {file.webViewLink && (
+              <button
+                onClick={openInGoogleDrive}
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Open in Google Drive"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </button>
+            )}
+
             <button
               onClick={downloadFile}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              disabled={isDownloading}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+              title={isDownloading ? "Downloading..." : "Download"}
             >
               <Download className="w-4 h-4" />
             </button>
-            
+
             <button
               onClick={onClose}
               className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
@@ -176,9 +237,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
         </div>
 
         {/* Preview Content */}
-        <div className="flex-1 overflow-hidden">
-          {renderPreview()}
-        </div>
+        <div className="flex-1 overflow-hidden">{renderPreview()}</div>
       </div>
     </div>
   );

@@ -14,13 +14,17 @@ export interface AuthToken {
 export interface FileItem {
   id: string;
   name: string;
-  type: 'file' | 'folder';
+  type: "file" | "folder";
   mimeType?: string;
   size?: number;
   parentId?: string;
-  content?: string; // Base64 for files
+  content?: string; // Base64 for files (localStorage fallback)
   uploadedAt: string;
   userId: string;
+  // Google Drive specific properties
+  driveFileId?: string;
+  webViewLink?: string;
+  webContentLink?: string;
 }
 
 export interface Task {
@@ -29,8 +33,8 @@ export interface Task {
   description: string;
   subject: string;
   dueDate: string;
-  priority: 'low' | 'medium' | 'high';
-  status: 'pending' | 'completed';
+  priority: "low" | "medium" | "high";
+  status: "pending" | "completed";
   userId: string;
   createdAt: string;
 }

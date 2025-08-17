@@ -15,7 +15,7 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { FileItem } from "../types";
-import { storageUtils } from "../utils/storage";
+import { driveStorageUtils } from "../utils/driveStorage";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { unifiedAIService } from "../utils/aiConfig";
 
@@ -35,23 +35,59 @@ export const FileManager: React.FC<FileManagerProps> = ({ onPreviewFile }) => {
     [key: string]: number;
   }>({});
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [storageStatus, setStorageStatus] = useState<{
+    type: "localStorage" | "googleDrive";
+    hasAccess: boolean;
+  }>({ type: "localStorage", hasAccess: false });
 
   const user = realTimeAuth.getCurrentUser();
 
   useEffect(() => {
     if (user) {
       loadFiles();
+      // Update storage status
+      const status = driveStorageUtils.getStorageStatus();
+      setStorageStatus(status);
     }
   }, [user, currentFolderId]);
 
-  const loadFiles = () => {
+  const loadFiles = async () => {
     if (!user) return;
-    const allFiles = storageUtils.getFiles(user.id);
-    setFiles(allFiles);
+    console.log("🔄 FileManager: Loading files...");
+    try {
+      const allFiles = await driveStorageUtils.getFiles(user.id);
+      console.log("📁 FileManager: Received files:", allFiles);
+      setFiles(allFiles);
+
+      // Update storage status after loading files
+      const status = driveStorageUtils.getStorageStatus();
+      setStorageStatus(status);
+      console.log(
+        "✅ FileManager: Files state updated, count:",
+        allFiles.length
+      );
+    } catch (error) {
+      console.error("❌ FileManager: Error loading files:", error);
+    }
   };
 
   const getCurrentFolderFiles = () => {
-    return files.filter((file) => file.parentId === currentFolderId);
+    // TEMPORARY: Show all files for debugging
+    const allFiles = files;
+    const filteredFiles = files.filter(
+      (file) => file.parentId === currentFolderId
+    );
+
+    console.log("📂 Current folder files:", {
+      totalFiles: files.length,
+      currentFolderId,
+      filteredFiles: filteredFiles.length,
+      showingAllFiles: allFiles.length,
+      files: files.map((f) => ({ name: f.name, parentId: f.parentId })),
+    });
+
+    // TEMPORARY: Return all files instead of filtered ones
+    return allFiles;
   };
 
   const getFilteredFiles = () => {
@@ -89,35 +125,33 @@ export const FileManager: React.FC<FileManagerProps> = ({ onPreviewFile }) => {
     if (!user) return;
 
     for (const file of uploadedFiles) {
-      const fileId = storageUtils.generateId();
+      const fileId = driveStorageUtils.generateId();
 
-      // Simulate upload progress
+      // Show upload progress
       setUploadProgress((prev) => ({ ...prev, [fileId]: 0 }));
 
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const content = e.target?.result as string;
-
+      try {
         // Simulate progress updates
-        for (let progress = 0; progress <= 100; progress += 20) {
+        for (let progress = 0; progress <= 80; progress += 20) {
           setUploadProgress((prev) => ({ ...prev, [fileId]: progress }));
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 200));
         }
 
-        const newFile: FileItem = {
-          id: fileId,
-          name: file.name,
-          type: "file",
-          mimeType: file.type,
-          size: file.size,
-          parentId: currentFolderId,
-          content,
-          uploadedAt: new Date().toISOString(),
-          userId: user.id,
-        };
+        // Upload file to Google Drive or localStorage
+        const uploadedFile = await driveStorageUtils.uploadFile(
+          file,
+          user.id,
+          currentFolderId
+        );
 
-        storageUtils.storeFile(newFile);
-        loadFiles();
+        if (uploadedFile) {
+          // Complete progress
+          setUploadProgress((prev) => ({ ...prev, [fileId]: 100 }));
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          // Reload files
+          await loadFiles();
+        }
 
         // Remove progress after completion
         setUploadProgress((prev) => {
@@ -125,37 +159,50 @@ export const FileManager: React.FC<FileManagerProps> = ({ onPreviewFile }) => {
           delete newProgress[fileId];
           return newProgress;
         });
-      };
-
-      reader.readAsDataURL(file);
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        setUploadProgress((prev) => {
+          const newProgress = { ...prev };
+          delete newProgress[fileId];
+          return newProgress;
+        });
+      }
     }
 
     // Reset input
     event.target.value = "";
   };
 
-  const createFolder = () => {
+  const createFolder = async () => {
     if (!user || !newFolderName.trim()) return;
 
-    const newFolder: FileItem = {
-      id: storageUtils.generateId(),
-      name: newFolderName.trim(),
-      type: "folder",
-      parentId: currentFolderId,
-      uploadedAt: new Date().toISOString(),
-      userId: user.id,
-    };
+    try {
+      const newFolder = await driveStorageUtils.createFolder(
+        newFolderName.trim(),
+        user.id,
+        currentFolderId
+      );
 
-    storageUtils.storeFile(newFolder);
-    setNewFolderName("");
-    setShowNewFolder(false);
-    loadFiles();
+      if (newFolder) {
+        setNewFolderName("");
+        setShowNewFolder(false);
+        await loadFiles();
+      }
+    } catch (error) {
+      console.error("Error creating folder:", error);
+    }
   };
 
-  const deleteFile = (fileId: string) => {
+  const deleteFile = async (fileId: string) => {
     if (window.confirm("Are you sure you want to delete this item?")) {
-      storageUtils.deleteFile(fileId);
-      loadFiles();
+      try {
+        const success = await driveStorageUtils.deleteFile(fileId);
+        if (success) {
+          await loadFiles();
+        }
+      } catch (error) {
+        console.error("Error deleting file:", error);
+      }
     }
   };
 
@@ -216,7 +263,42 @@ export const FileManager: React.FC<FileManagerProps> = ({ onPreviewFile }) => {
       {/* Header */}
       <div className="border-b border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-gray-900">File Manager</h2>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">File Manager</h2>
+            <div className="flex items-center mt-1">
+              <div
+                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                  storageStatus.type === "googleDrive"
+                    ? "bg-green-100 text-green-800"
+                    : "bg-yellow-100 text-yellow-800"
+                }`}
+              >
+                {storageStatus.type === "googleDrive" ? (
+                  <>
+                    <svg
+                      className="w-3 h-3 mr-1"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M6.28 3l5.72 10 5.72-10H6.28zm7.32 11L9 24h11l-6.4-10zm-7.2 0L0 24h9l-2.6-10z" />
+                    </svg>
+                    Google Drive
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-3 h-3 mr-1"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                    </svg>
+                    Local Storage
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setShowNewFolder(true)}
@@ -350,15 +432,35 @@ export const FileManager: React.FC<FileManagerProps> = ({ onPreviewFile }) => {
               key={file.id}
               className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow group relative"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center">
+              <div className="flex flex-col space-y-3">
+                <div
+                  className={`flex items-center space-x-3 ${
+                    file.type === "folder"
+                      ? "cursor-pointer hover:bg-gray-50 p-2 rounded-lg -m-2"
+                      : ""
+                  }`}
+                  onClick={() => {
+                    if (file.type === "folder") {
+                      console.log(
+                        "📁 Opening folder:",
+                        file.name,
+                        "ID:",
+                        file.id
+                      );
+                      setCurrentFolderId(file.id);
+                    }
+                  }}
+                >
                   {file.type === "folder" ? (
-                    <Folder className="w-8 h-8 text-blue-500 mr-3" />
+                    <Folder className="w-8 h-8 text-blue-500 flex-shrink-0" />
                   ) : (
-                    <File className="w-8 h-8 text-gray-500 mr-3" />
+                    <File className="w-8 h-8 text-gray-500 flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-900 truncate">
+                    <h3
+                      className="font-medium text-gray-900 truncate text-sm"
+                      title={file.name}
+                    >
                       {file.name}
                     </h3>
                     {file.type === "file" && (

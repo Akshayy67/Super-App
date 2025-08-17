@@ -1,16 +1,13 @@
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   onAuthStateChanged,
-  updateProfile,
-  sendPasswordResetEmail,
   GoogleAuthProvider,
-  signInWithPopup,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
-import { auth, db } from "../config/firebase";
+import { auth, db, googleProvider } from "../config/firebase";
 import { User } from "../types";
+import { googleDriveService } from "./googleDriveService";
 
 export interface AuthResult {
   success: boolean;
@@ -19,43 +16,106 @@ export interface AuthResult {
 }
 
 class RealTimeAuthService {
-  async resetPassword(email: string): Promise<AuthResult> {
-    try {
-      await sendPasswordResetEmail(auth, email);
-      return { success: true, message: "Password reset email sent" };
-    } catch (error: any) {
-      return { success: false, message: this.getErrorMessage(error.code) };
-    }
-  }
+  private googleAccessToken: string | null = null;
 
   async signInWithGoogle(): Promise<AuthResult> {
     try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
-      // Create or update user document in Firestore
+
+      // Get Google access token from credential
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential && credential.accessToken) {
+        this.googleAccessToken = credential.accessToken;
+        console.log(
+          "✅ Google OAuth successful with access token:",
+          !!this.googleAccessToken
+        );
+
+        // Store token in localStorage for persistence
+        localStorage.setItem("google_access_token", this.googleAccessToken);
+      } else {
+        console.log("❌ No Google access token received");
+        this.googleAccessToken = null;
+      }
+
+      // Create or update user document in Firestore with additional security info
       const userData: User = {
         id: firebaseUser.uid,
         username: firebaseUser.displayName || "Google User",
         email: firebaseUser.email || "",
         createdAt: new Date().toISOString(),
       };
-      await setDoc(doc(db, "users", firebaseUser.uid), userData, {
-        merge: true,
-      });
+
+      // Store user data with last login timestamp
+      await setDoc(
+        doc(db, "users", firebaseUser.uid),
+        {
+          ...userData,
+          lastLoginAt: new Date().toISOString(),
+          authProvider: "google",
+          hasGoogleDriveAccess: !!this.googleAccessToken,
+        },
+        {
+          merge: true,
+        }
+      );
+
+      // Initialize Google Drive app folder if user has access
+      if (this.googleAccessToken) {
+        try {
+          await googleDriveService.getAppFolder();
+          console.log("Google Drive app folder initialized");
+        } catch (error) {
+          console.error("Error initializing Google Drive folder:", error);
+        }
+      }
+
       return {
         success: true,
         message: "Google sign-in successful",
         user: userData,
       };
     } catch (error: any) {
+      console.error("Google sign-in error:", error);
       return { success: false, message: this.getErrorMessage(error.code) };
     }
+  }
+
+  // Get Google access token for Drive API
+  getGoogleAccessToken(): string | null {
+    // Check memory first
+    if (this.googleAccessToken) {
+      return this.googleAccessToken;
+    }
+
+    // Check localStorage as fallback
+    const storedToken = localStorage.getItem("google_access_token");
+    if (storedToken) {
+      this.googleAccessToken = storedToken;
+      return storedToken;
+    }
+
+    return null;
+  }
+
+  // Check if user has Google Drive access
+  hasGoogleDriveAccess(): boolean {
+    const token = this.getGoogleAccessToken();
+    console.log("🔍 Checking Google Drive access, token exists:", !!token);
+    return !!token;
   }
   private currentUser: User | null = null;
   private authStateListeners: ((user: User | null) => void)[] = [];
 
   constructor() {
+    // Initialize Google access token from localStorage
+    const storedToken = localStorage.getItem("google_access_token");
+    if (storedToken) {
+      this.googleAccessToken = storedToken;
+      console.log("🔄 Restored Google access token from localStorage");
+    }
+
     // Set up real-time auth state listener
     onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -63,6 +123,9 @@ class RealTimeAuthService {
         this.currentUser = userData;
       } else {
         this.currentUser = null;
+        // Clear Google token when user signs out
+        this.googleAccessToken = null;
+        localStorage.removeItem("google_access_token");
       }
 
       // Notify all listeners about auth state change
@@ -81,73 +144,6 @@ class RealTimeAuthService {
         this.authStateListeners.splice(index, 1);
       }
     };
-  }
-
-  async register(
-    username: string,
-    email: string,
-    password: string
-  ): Promise<AuthResult> {
-    try {
-      // Create user account
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const firebaseUser = userCredential.user;
-
-      // Update display name
-      await updateProfile(firebaseUser, {
-        displayName: username,
-      });
-
-      // Create user document in Firestore
-      const userData: User = {
-        id: firebaseUser.uid,
-        username,
-        email,
-        createdAt: new Date().toISOString(),
-      };
-
-      await setDoc(doc(db, "users", firebaseUser.uid), userData);
-
-      return {
-        success: true,
-        message: "Registration successful",
-        user: userData,
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        message: this.getErrorMessage(error.code),
-      };
-    }
-  }
-
-  async login(email: string, password: string): Promise<AuthResult> {
-    try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const firebaseUser = userCredential.user;
-
-      const userData = await this.getUserData(firebaseUser.uid);
-
-      return {
-        success: true,
-        message: "Login successful",
-        user: userData,
-      };
-    } catch (error: any) {
-      console.log("Login error:", error, "Error code:", error.code);
-      return {
-        success: false,
-        message: this.getErrorMessage(error.code),
-      };
-    }
   }
 
   async logout(): Promise<void> {
@@ -181,22 +177,20 @@ class RealTimeAuthService {
   // Convert Firebase error codes to user-friendly messages
   private getErrorMessage(errorCode: string): string {
     switch (errorCode) {
-      case "auth/user-not-found":
-        return "No account found with this email address";
-      case "auth/wrong-password":
-        return "Incorrect password";
-      case "auth/invalid-credential":
-        return "Email or password is incorrect";
-      case "auth/email-already-in-use":
-        return "An account with this email already exists";
-      case "auth/weak-password":
-        return "Password should be at least 6 characters";
-      case "auth/invalid-email":
-        return "Invalid email address";
+      case "auth/popup-closed-by-user":
+        return "Sign-in was cancelled";
+      case "auth/popup-blocked":
+        return "Pop-up was blocked. Please allow pop-ups and try again";
+      case "auth/cancelled-popup-request":
+        return "Sign-in was cancelled";
+      case "auth/account-exists-with-different-credential":
+        return "An account already exists with this email using a different sign-in method";
+      case "auth/network-request-failed":
+        return "Network error. Please check your connection and try again";
       case "auth/too-many-requests":
         return "Too many failed attempts. Please try again later";
       default:
-        return "An error occurred. Please try again";
+        return "An error occurred during sign-in. Please try again";
     }
   }
 

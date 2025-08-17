@@ -1,6 +1,6 @@
 // Firebase configuration
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
@@ -42,5 +42,20 @@ export const auth = getAuth(app);
 
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
+
+// Configure Google Auth Provider with necessary scopes
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope("https://www.googleapis.com/auth/userinfo.email");
+googleProvider.addScope("https://www.googleapis.com/auth/userinfo.profile");
+googleProvider.addScope("https://www.googleapis.com/auth/drive.file");
+
+// Set custom parameters for Google OAuth
+googleProvider.setCustomParameters({
+  prompt: "select_account",
+});
+
+// Set the client ID for Google OAuth (optional, Firebase handles this automatically)
+// but we can access it for debugging
+export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 export default app;

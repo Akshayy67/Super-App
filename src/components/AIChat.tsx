@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Loader, Brain, FileText } from "lucide-react";
 import { unifiedAIService } from "../utils/aiConfig";
-import { storageUtils } from "../utils/storage";
+import { driveStorageUtils } from "../utils/driveStorage";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { AIStatus } from "./AIStatus";
 
@@ -31,13 +31,21 @@ export const AIChat: React.FC = () => {
   const user = realTimeAuth.getCurrentUser();
 
   useEffect(() => {
-    if (user) {
-      const files = storageUtils.getFiles(user.id);
-      const documentNames = files
-        .filter((file) => file.type === "file")
-        .map((file) => file.name);
-      setAvailableDocuments(documentNames);
-    }
+    const loadDocuments = async () => {
+      if (user) {
+        try {
+          const files = await driveStorageUtils.getFiles(user.id);
+          const documentNames = files
+            .filter((file) => file.type === "file")
+            .map((file) => file.name);
+          setAvailableDocuments(documentNames);
+        } catch (error) {
+          console.error("Error loading documents:", error);
+        }
+      }
+    };
+
+    loadDocuments();
   }, [user]);
 
   useEffect(() => {
@@ -75,19 +83,9 @@ export const AIChat: React.FC = () => {
       // Try to get context from uploaded documents
       let context = "";
       if (user) {
-        const files = storageUtils.getFiles(user.id);
-        const analyses = storageUtils.getAIAnalysis(user.id);
-
-        // Simple context matching - in production, this would use vector similarity
-        const relevantAnalysis = analyses.find((analysis) =>
-          userMessage
-            .toLowerCase()
-            .includes(analysis.extractedText.toLowerCase().slice(0, 50))
-        );
-
-        if (relevantAnalysis) {
-          context = relevantAnalysis.extractedText;
-        }
+        // For now, we'll skip context matching since AI analysis is stored in localStorage
+        // In a future update, we can implement this with Google Drive integration
+        context = "";
       }
 
       const response = await unifiedAIService.generateResponse(
@@ -98,7 +96,7 @@ export const AIChat: React.FC = () => {
       if (response.success) {
         addMessage(
           "ai",
-          response.data,
+          response.data ?? "",
           context ? "Based on your uploaded documents" : undefined
         );
       } else {
@@ -268,7 +266,7 @@ export const AIChat: React.FC = () => {
             <textarea
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
               placeholder="Ask me anything about your study materials..."
               rows={1}
               className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
