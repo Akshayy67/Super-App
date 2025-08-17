@@ -5,15 +5,18 @@ import { driveStorageUtils } from "../utils/driveStorage";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { AIStatus } from "./AIStatus";
 
-interface ChatMessage {
+type ChatMessage = {
   id: string;
   type: "user" | "ai";
   content: string;
   timestamp: string;
   context?: string;
-}
+};
 
-export const AIChat: React.FC = () => {
+interface AIChatProps {
+  file?: any;
+}
+export const AIChat: React.FC<AIChatProps> = ({ file }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
@@ -136,6 +139,16 @@ export const AIChat: React.FC = () => {
     "Explain a complex topic I'm studying",
   ];
 
+  // Show file context if provided
+  const fileContext = file ? (
+    <div className="mb-4 p-2 bg-gray-50 rounded-lg text-sm text-gray-700 flex items-center">
+      <FileText className="w-4 h-4 mr-2 text-blue-600" />
+      <span>
+        Analyzing file: <span className="font-semibold">{file.name}</span>
+      </span>
+    </div>
+  ) : null;
+
   return (
     <div className="bg-white h-full flex flex-col">
       {/* Header */}
@@ -154,7 +167,7 @@ export const AIChat: React.FC = () => {
           </div>
           <AIStatus />
         </div>
-
+        {fileContext}
         {availableDocuments.length > 0 && (
           <div className="mt-4 p-3 bg-blue-50 rounded-lg">
             <div className="flex items-center text-sm text-blue-700">

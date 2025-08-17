@@ -9,11 +9,34 @@ interface FilePreviewProps {
 }
 
 export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
+  const [showAIChat, setShowAIChat] = useState(false);
   const [zoom, setZoom] = useState(100);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const previewRef = React.useRef<HTMLDivElement>(null);
 
   if (!file) return null;
 
+  // Fullscreen API handlers
+  const handleFullScreen = () => {
+    if (!isFullScreen && previewRef.current) {
+      previewRef.current.requestFullscreen?.();
+      setIsFullScreen(true);
+    } else if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+      setIsFullScreen(false);
+    }
+  };
+
+  React.useEffect(() => {
+    const onFullScreenChange = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", onFullScreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullScreenChange);
+    };
+  }, []);
   const downloadFile = async () => {
     if (isDownloading) return;
 
@@ -171,8 +194,22 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
     file.mimeType?.startsWith("image/") || file.mimeType === "text/plain";
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full h-full max-w-6xl max-h-5xl mx-4 my-4 flex flex-col">
+    <div
+      ref={previewRef}
+      className={
+        isFullScreen
+          ? "fixed left-0 top-0 w-screen h-screen bg-white z-50 flex flex-col"
+          : "fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+      }
+    >
+      <div
+        className={`bg-white rounded-lg flex flex-col ${
+          isFullScreen
+            ? "w-full h-full" // Remove all constraints in full screen
+            : "w-full h-full max-w-6xl max-h-5xl mx-4 my-4"
+        }`}
+        style={isFullScreen ? { borderRadius: 0 } : {}}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex-1 min-w-0">
@@ -188,6 +225,14 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
           </div>
 
           <div className="flex items-center space-x-2 ml-4">
+            <button
+              onClick={() => setShowAIChat((prev) => !prev)}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title={showAIChat ? "Close AI Analysis" : "AI Analysis"}
+            >
+              {/* You can use a chat or analysis icon here if available */}
+              <span className="font-bold">AI</span>
+            </button>
             {canZoom && (
               <>
                 <button
@@ -226,6 +271,13 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
             >
               <Download className="w-4 h-4" />
             </button>
+            <button
+              onClick={handleFullScreen}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
+            >
+              <ExternalLink className="w-4 h-4" />
+            </button>
 
             <button
               onClick={onClose}
@@ -236,8 +288,40 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
           </div>
         </div>
 
-        {/* Preview Content */}
-        <div className="flex-1 overflow-hidden">{renderPreview()}</div>
+        {/* Side-by-side layout when AI Analysis is open */}
+        {showAIChat ? (
+          <div className="flex flex-1 overflow-hidden min-h-0">
+            <div
+              className="h-full overflow-auto border-r border-gray-200"
+              style={{ width: "60%", minWidth: 0 }}
+            >
+              {renderPreview()}
+            </div>
+            <div
+              className="h-full overflow-auto"
+              style={{ width: "40%", minWidth: 0 }}
+            >
+              {/* AIChat component side-by-side */}
+              {/* @ts-ignore */}
+              <AIChat file={file} />
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-hidden relative">
+            {renderPreview()}
+            {/* Second Full Screen Button (bottom right corner) */}
+            {!isFullScreen && (
+              <button
+                onClick={handleFullScreen}
+                className="absolute bottom-4 right-4 p-3 bg-gray-100 rounded-full shadow-lg hover:bg-gray-200 transition-colors"
+                title="Full Screen"
+                style={{ zIndex: 10 }}
+              >
+                <ExternalLink className="w-6 h-6 text-gray-700" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
