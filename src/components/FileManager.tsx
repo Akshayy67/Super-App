@@ -1000,8 +1000,11 @@ export const FileManager: React.FC<FileManagerProps> = () => {
                       src={previewContent}
                       alt={previewFile.name}
                       style={{
-                        maxWidth: "100%",
+                        maxWidth: "90vw",
+                        maxHeight: "75vh",
+                        width: "auto",
                         height: "auto",
+                        objectFit: "contain",
                         transform: `scale(${previewZoom / 100})`,
                         borderRadius: "8px",
                         boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",

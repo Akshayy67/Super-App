@@ -3,6 +3,9 @@ export interface User {
   username: string;
   email: string;
   createdAt: string;
+  authProvider?: string;
+  hasGoogleDriveAccess?: boolean;
+  lastLoginAt?: string;
 }
 
 export interface AuthToken {

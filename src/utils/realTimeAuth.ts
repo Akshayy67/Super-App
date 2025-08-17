@@ -86,24 +86,57 @@ class RealTimeAuthService {
   getGoogleAccessToken(): string | null {
     // Check memory first
     if (this.googleAccessToken) {
+      console.log("✅ Found Google access token in memory");
       return this.googleAccessToken;
     }
 
     // Check localStorage as fallback
     const storedToken = localStorage.getItem("google_access_token");
     if (storedToken) {
+      console.log(
+        "✅ Found Google access token in localStorage, restoring to memory"
+      );
       this.googleAccessToken = storedToken;
       return storedToken;
     }
 
+    console.log("❌ No Google access token found in memory or localStorage");
     return null;
+  }
+
+  // Clear Google access token when expired
+  clearGoogleAccessToken(): void {
+    this.googleAccessToken = null;
+    localStorage.removeItem("google_access_token");
+    console.log("🧹 Cleared expired Google access token");
   }
 
   // Check if user has Google Drive access
   hasGoogleDriveAccess(): boolean {
     const token = this.getGoogleAccessToken();
-    console.log("🔍 Checking Google Drive access, token exists:", !!token);
-    return !!token;
+    const hasAccess = !!token;
+    console.log("🔍 Checking Google Drive access:", {
+      tokenExists: !!token,
+      tokenLength: token?.length,
+      hasAccess,
+      currentUser: !!this.currentUser,
+      firebaseUser: !!auth.currentUser,
+    });
+    return hasAccess;
+  }
+
+  // Check if user originally signed in with Google and should have Drive access
+  shouldHaveGoogleDriveAccess(): boolean {
+    if (!this.currentUser) return false;
+    return (
+      this.currentUser.authProvider === "google" &&
+      this.currentUser.hasGoogleDriveAccess === true
+    );
+  }
+
+  // Check if user needs to re-authenticate for Google Drive
+  needsGoogleDriveReauth(): boolean {
+    return this.shouldHaveGoogleDriveAccess() && !this.hasGoogleDriveAccess();
   }
   private currentUser: User | null = null;
   private authStateListeners: ((user: User | null) => void)[] = [];

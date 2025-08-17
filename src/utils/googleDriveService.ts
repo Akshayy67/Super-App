@@ -40,19 +40,45 @@ class GoogleDriveService {
     }
 
     // Get Google access token from realTimeAuth service
-    const accessToken = realTimeAuth.getGoogleAccessToken();
+    let accessToken = realTimeAuth.getGoogleAccessToken();
+
+    // If no token, user needs to re-authenticate
     if (!accessToken) {
       console.error("No Google Drive access token available");
-      // For debugging, let's try to get a fresh token
-      try {
-        const firebaseToken = await user.getIdToken(true);
-        console.log("Using Firebase token as fallback");
-        return firebaseToken;
-      } catch (error) {
+      throw new Error(
+        "No Google Drive access token available. Please sign in again."
+      );
+    }
+
+    // Test the token by making a simple API call
+    try {
+      const testResponse = await fetch(
+        `${this.DRIVE_API_BASE}/files?pageSize=1`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      // If token is expired or invalid, clear it and ask user to re-authenticate
+      if (!testResponse.ok && testResponse.status === 401) {
+        console.warn("Google Drive access token expired or invalid");
+        localStorage.removeItem("google_access_token");
+        realTimeAuth.clearGoogleAccessToken();
         throw new Error(
-          "No Google Drive access token available. Please sign in again."
+          "Your Google Drive access has expired. Please sign out and sign in again to refresh your access."
         );
       }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("expired")) {
+        throw error;
+      }
+      // If it's a network error, continue with the token
+      console.warn(
+        "Token validation failed due to network error, continuing..."
+      );
     }
 
     return accessToken;
@@ -92,9 +118,25 @@ class GoogleDriveService {
       return { success: true, data: folder };
     } catch (error) {
       console.error("Error creating app folder:", error);
+
+      // Handle specific error cases
+      if (error instanceof Error) {
+        if (error.message.includes("expired")) {
+          return {
+            success: false,
+            error:
+              "Your Google Drive access has expired. Please sign out and sign in again to refresh your access.",
+          };
+        }
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "Unknown error occurred while accessing Google Drive",
       };
     }
   }
@@ -147,6 +189,12 @@ class GoogleDriveService {
       }
 
       const folderId = parentFolderId || (await this.getAppFolder());
+      console.log("📁 Google Drive upload - using folderId:", {
+        parentFolderId,
+        appFolderId: await this.getAppFolder(),
+        finalFolderId: folderId,
+      });
+
       if (!folderId) {
         return { success: false, error: "Could not access app folder" };
       }
@@ -155,6 +203,8 @@ class GoogleDriveService {
         name: file.name,
         parents: [folderId],
       };
+
+      console.log("📄 Upload metadata:", metadata);
 
       const form = new FormData();
       form.append(
@@ -189,23 +239,28 @@ class GoogleDriveService {
     }
   }
 
-  // List files in a folder
-  async listFiles(folderId?: string): Promise<DriveApiResponse> {
+  // List all files recursively from the app folder and its subfolders
+  async listFiles(_folderId?: string): Promise<DriveApiResponse> {
     try {
       const accessToken = await this.getAccessToken();
       if (!accessToken) {
         return { success: false, error: "No access token available" };
       }
 
-      const targetFolderId = folderId || (await this.getAppFolder());
-      if (!targetFolderId) {
-        return { success: false, error: "Could not access folder" };
+      const appFolderId = await this.getAppFolder();
+      if (!appFolderId) {
+        return { success: false, error: "Could not access app folder" };
       }
 
-      const query = `'${targetFolderId}' in parents and trashed=false`;
+      // Get all files that are descendants of the app folder
+      // This query finds all files where the app folder is anywhere in the parent hierarchy
+      const query = `'${appFolderId}' in parents and trashed=false`;
       const fields =
         "files(id,name,mimeType,size,createdTime,modifiedTime,parents,webViewLink,webContentLink)";
 
+      console.log("🔍 Listing files with query:", query);
+
+      // First, get direct children of app folder
       const response = await fetch(
         `${this.DRIVE_API_BASE}/files?q=${encodeURIComponent(
           query
@@ -222,13 +277,96 @@ class GoogleDriveService {
       }
 
       const result = await response.json();
-      return { success: true, data: result.files || [] };
+      let allFiles = result.files || [];
+
+      // Now get files from all subfolders recursively
+      const folders = allFiles.filter(
+        (file: any) => file.mimeType === "application/vnd.google-apps.folder"
+      );
+
+      for (const folder of folders) {
+        const subfolderFiles = await this.getFilesFromFolder(
+          folder.id,
+          accessToken
+        );
+        allFiles = allFiles.concat(subfolderFiles);
+      }
+
+      console.log("📁 Total files found:", allFiles.length);
+      return { success: true, data: allFiles };
     } catch (error) {
       console.error("Error listing files:", error);
+
+      // Handle specific error cases
+      if (error instanceof Error) {
+        if (error.message.includes("expired")) {
+          return {
+            success: false,
+            error:
+              "Your Google Drive access has expired. Please sign out and sign in again to refresh your access.",
+          };
+        }
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : "List failed",
+        error: "Failed to list files from Google Drive",
       };
+    }
+  }
+
+  // Helper method to recursively get files from a folder
+  private async getFilesFromFolder(
+    folderId: string,
+    accessToken: string
+  ): Promise<any[]> {
+    try {
+      const query = `'${folderId}' in parents and trashed=false`;
+      const fields =
+        "files(id,name,mimeType,size,createdTime,modifiedTime,parents,webViewLink,webContentLink)";
+
+      const response = await fetch(
+        `${this.DRIVE_API_BASE}/files?q=${encodeURIComponent(
+          query
+        )}&fields=${fields}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error(
+          `Failed to list files from folder ${folderId}:`,
+          response.status
+        );
+        return [];
+      }
+
+      const result = await response.json();
+      let files = result.files || [];
+
+      // Recursively get files from subfolders
+      const subfolders = files.filter(
+        (file: any) => file.mimeType === "application/vnd.google-apps.folder"
+      );
+      for (const subfolder of subfolders) {
+        const subfolderFiles = await this.getFilesFromFolder(
+          subfolder.id,
+          accessToken
+        );
+        files = files.concat(subfolderFiles);
+      }
+
+      return files;
+    } catch (error) {
+      console.error(`Error getting files from folder ${folderId}:`, error);
+      return [];
     }
   }
 

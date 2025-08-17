@@ -66,13 +66,13 @@ export const driveStorageUtils = {
 
   // Convert DriveFile to FileItem
   driveFileToFileItem(driveFile: DriveFile, userId: string): FileItem {
-    const fileItem = {
+    const fileItem: FileItem = {
       id: driveFile.id,
       name: driveFile.name,
       type:
         driveFile.mimeType === "application/vnd.google-apps.folder"
-          ? "folder"
-          : "file",
+          ? ("folder" as const)
+          : ("file" as const),
       mimeType: driveFile.mimeType,
       size: driveFile.size,
       parentId: driveFile.parents?.[0],
@@ -97,6 +97,14 @@ export const driveStorageUtils = {
     console.log("🔍 Getting files for user:", userId);
 
     try {
+      // Check if user should have Google Drive access but needs re-authentication
+      if (realTimeAuth.needsGoogleDriveReauth()) {
+        console.log("🔄 User needs Google Drive re-authentication");
+        throw new Error(
+          "Google Drive access expired. Please sign out and sign in again to refresh your access."
+        );
+      }
+
       // Check if user has Google Drive access
       if (!realTimeAuth.hasGoogleDriveAccess()) {
         console.log("📱 No Google Drive access, using localStorage");
@@ -132,6 +140,10 @@ export const driveStorageUtils = {
       }
 
       console.log("❌ No files returned from Google Drive");
+      // If Google Drive fails, propagate the error for better error handling
+      if (result.error && result.error.includes("expired")) {
+        throw new Error(result.error);
+      }
       return [];
     } catch (error) {
       console.error("Error getting files:", error);
@@ -147,6 +159,13 @@ export const driveStorageUtils = {
     userId: string,
     parentFolderId?: string
   ): Promise<FileItem | null> {
+    console.log("🔄 driveStorage.uploadFile called:", {
+      fileName: file.name,
+      userId,
+      parentFolderId,
+      hasGoogleDriveAccess: realTimeAuth.hasGoogleDriveAccess(),
+    });
+
     try {
       if (!realTimeAuth.hasGoogleDriveAccess()) {
         // Fallback to localStorage with base64 encoding
@@ -177,11 +196,20 @@ export const driveStorageUtils = {
       }
 
       // Upload to Google Drive
+      console.log(
+        "☁️ Uploading to Google Drive with parentFolderId:",
+        parentFolderId
+      );
       const result = await googleDriveService.uploadFile(file, parentFolderId);
+      console.log("📁 Google Drive upload result:", result);
+
       if (result.success && result.data) {
         // Clear cache since we added a new file
+        console.log("🗑️ Clearing cache after upload");
         this.clearCache();
-        return this.driveFileToFileItem(result.data, userId);
+        const fileItem = this.driveFileToFileItem(result.data, userId);
+        console.log("✅ Created FileItem:", fileItem);
+        return fileItem;
       }
 
       return null;
@@ -356,11 +384,92 @@ export const driveStorageUtils = {
   getStorageStatus(): {
     type: "localStorage" | "googleDrive";
     hasAccess: boolean;
+    needsReauth?: boolean;
   } {
     const hasAccess = realTimeAuth.hasGoogleDriveAccess();
-    return {
-      type: hasAccess ? "googleDrive" : "localStorage",
+    const needsReauth = realTimeAuth.needsGoogleDriveReauth();
+
+    const status = {
+      type: hasAccess ? ("googleDrive" as const) : ("localStorage" as const),
       hasAccess,
+      needsReauth,
     };
+    console.log("📊 Storage status:", {
+      ...status,
+      shouldHaveAccess: realTimeAuth.shouldHaveGoogleDriveAccess(),
+    });
+    return status;
+  },
+
+  // Download file content from Google Drive
+  async downloadFileContent(fileId: string): Promise<string | null> {
+    if (!realTimeAuth.hasGoogleDriveAccess()) {
+      console.log("❌ No Google Drive access available");
+      return null;
+    }
+
+    try {
+      console.log("🔽 Downloading content for file ID:", fileId);
+      const result = await googleDriveService.downloadFile(fileId);
+
+      if (result.success && result.data) {
+        // Convert blob to text or data URL depending on type
+        const blob = result.data as Blob;
+
+        if (
+          blob.type.startsWith("text/") ||
+          blob.type.includes("json") ||
+          blob.type.includes("csv")
+        ) {
+          // For text files, return as text
+          const text = await blob.text();
+          console.log("✅ Downloaded text content, length:", text.length);
+          return text;
+        } else if (blob.type.startsWith("image/")) {
+          // For images, convert to data URL
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const result = e.target?.result as string;
+              console.log("✅ Downloaded image content as data URL");
+              resolve(result);
+            };
+            reader.onerror = () => {
+              console.error("❌ Error converting image to data URL");
+              resolve(null);
+            };
+            reader.readAsDataURL(blob);
+          });
+        } else if (
+          blob.type === "application/pdf" ||
+          blob.type === "application/x-pdf"
+        ) {
+          // For PDFs, convert to data URL for inline preview
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const result = e.target?.result as string;
+              console.log("✅ Downloaded PDF content as data URL");
+              resolve(result);
+            };
+            reader.onerror = () => {
+              console.error("❌ Error converting PDF to data URL");
+              resolve(null);
+            };
+            reader.readAsDataURL(blob);
+          });
+        } else {
+          // For other file types, we can't preview the content
+          console.log("ℹ️ File type not suitable for preview:", blob.type);
+          return null;
+        }
+      } else {
+        console.error("❌ Failed to download file:", result.error);
+        return null;
+      }
+    } catch (error) {
+      console.error("❌ Error downloading file content:", error);
+      return null;
+    }
   },
 };
