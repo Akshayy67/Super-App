@@ -36,13 +36,17 @@ export default async function handler(req: any, res: any) {
       ? `Context: ${context}\n\nQuestion: ${prompt}\n\nPlease provide a helpful answer based on the context provided.`
       : prompt;
 
-    // Preferred models ordered by availability / access; allow override via body.model
+    // Preferred models ordered by availability / access; allow override via body.model or env GEMINI_MODEL
+    const configuredModel = process.env.GEMINI_MODEL?.trim();
     const modelCandidates = [
-      model?.trim(),
+      model?.trim(), // explicit request
+      configuredModel, // env override
+      "gemini-2.0-flash", // newest fast multimodal
+      "gemini-2.0-flash-exp", // experimental variant if enabled
       "gemini-1.5-flash-latest",
       "gemini-1.5-flash",
-      "gemini-1.5-pro-latest", // if user has higher tier
-      "gemini-pro", // legacy
+      "gemini-1.5-pro-latest", // higher tier
+      "gemini-pro", // legacy fallback
     ].filter(Boolean) as string[];
 
     let lastError: any = null;

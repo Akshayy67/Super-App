@@ -52,8 +52,10 @@ export const aiService = {
       // Fallback: if 404 (proxy missing) and we have a direct key, call Gemini directly (dev + optional production)
       // NOTE: Using a client key in production exposes it to users. Prefer server proxy. Use only if you accept that risk.
       if (response.status === 404 && DIRECT_KEY) {
+        const directModel =
+          import.meta.env.VITE_GEMINI_MODEL || "gemini-2.0-flash"; // allow override
         response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${DIRECT_KEY}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${directModel}:generateContent?key=${DIRECT_KEY}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
