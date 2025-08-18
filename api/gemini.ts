@@ -52,6 +52,7 @@ export default async function handler(req: any, res: any) {
     let lastError: any = null;
     for (const m of modelCandidates) {
       try {
+        console.log(`[gemini] attempting model=${m}`);
         const upstream = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`,
           {
@@ -72,6 +73,11 @@ export default async function handler(req: any, res: any) {
         );
 
         const data = await upstream.json();
+
+        console.log(
+          `[gemini] model=${m} status=${upstream.status} keys=` +
+            Object.keys(data || {}).slice(0, 5).join(",")
+        );
 
         if (upstream.status === 403) {
           // Permission / model access denied – try next model
@@ -95,12 +101,18 @@ export default async function handler(req: any, res: any) {
 
     // All attempts failed
     const status = lastError?.status || 502;
+    console.error("[gemini] all attempts failed", {
+      status,
+      lastError: lastError?.detail || lastError?.message || lastError,
+      tried: modelCandidates,
+    });
     res.status(status).json({
       error: "All model attempts failed",
       detail: lastError?.detail || lastError?.message || lastError,
       tried: modelCandidates,
     });
   } catch (err: any) {
+    console.error("[gemini] unhandled error", err);
     res
       .status(500)
       .json({ error: "Gemini request failed", detail: err?.message });
