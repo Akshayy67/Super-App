@@ -49,8 +49,9 @@ export const aiService = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: fullPrompt }),
       });
-      // Fallback: if local dev 404 and we have a direct key, call Gemini directly
-      if (DEV && response.status === 404 && DIRECT_KEY) {
+      // Fallback: if 404 (proxy missing) and we have a direct key, call Gemini directly (dev + optional production)
+      // NOTE: Using a client key in production exposes it to users. Prefer server proxy. Use only if you accept that risk.
+      if (response.status === 404 && DIRECT_KEY) {
         response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${DIRECT_KEY}`,
           {
