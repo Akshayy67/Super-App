@@ -29,10 +29,37 @@ export const AIChat: React.FC<AIChatProps> = ({ file }) => {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [availableDocuments, setAvailableDocuments] = useState<string[]>([]);
-  const [aiConfigured] = useState<boolean>(unifiedAIService.isConfigured());
+  const [aiConfigured, setAiConfigured] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const user = realTimeAuth.getCurrentUser();
+
+  useEffect(() => {
+    // Check AI configuration status
+    const checkAIConfig = () => {
+      const configured = unifiedAIService.isConfigured();
+      setAiConfigured(configured);
+    };
+    
+    checkAIConfig();
+    
+    // Check again after a short delay to ensure environment variables are loaded
+    const timer = setTimeout(checkAIConfig, 1000);
+    
+    // Also check when the component becomes visible (for production builds)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        checkAIConfig();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   useEffect(() => {
     const loadDocuments = async () => {
@@ -182,9 +209,8 @@ export const AIChat: React.FC<AIChatProps> = ({ file }) => {
         )}
         {!aiConfigured && (
           <div className="mt-4 p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm">
-            <strong className="font-semibold">Demo mode:</strong> Real AI not
-            configured. Add VITE_GOOGLE_AI_API_KEY / VITE_OPENAI_API_KEY /
-            VITE_CLAUDE_API_KEY in .env and restart for full answers.
+            <strong className="font-semibold">Demo mode:</strong> Google Gemini AI not
+            configured. Add VITE_GOOGLE_AI_API_KEY in .env and restart for full answers.
           </div>
         )}
       </div>

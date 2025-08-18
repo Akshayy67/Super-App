@@ -42,7 +42,7 @@ export const aiService = {
     if (!API_KEY) {
       return { 
         success: false, 
-        error: "API key not configured. Please set VITE_GOOGLE_AI_API_KEY in your environment." 
+        error: "API key not configured. Please set VITE_GOOGLE_AI_API_KEY in your environment variables." 
       };
     }
 
@@ -75,6 +75,14 @@ export const aiService = {
       const result = await response.json();
 
       if (!response.ok) {
+        // Check if it's an API key issue
+        if (response.status === 400 && result.error?.message?.includes('API key')) {
+          return { 
+            success: false, 
+            error: "Invalid API key. Please check your VITE_GOOGLE_AI_API_KEY configuration." 
+          };
+        }
+        
         return { 
           success: false, 
           error: `API Error: ${result.error?.message || response.statusText}` 
