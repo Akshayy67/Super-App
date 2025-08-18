@@ -1,6 +1,5 @@
-// AI service: prefer serverless proxy (/api/*). In local dev, if proxy 404s and a direct key is present, fallback to direct Gemini call.
-const DEV = import.meta.env.DEV;
-const DIRECT_KEY = import.meta.env.VITE_GOOGLE_AI_API_KEY || "";
+// AI service for Google Gemini API
+const API_KEY = import.meta.env.VITE_GOOGLE_AI_API_KEY || "";
 
 export interface AIResponse {
   success: boolean;
@@ -40,47 +39,45 @@ export const aiService = {
     prompt: string,
     context?: string
   ): Promise<AIResponse> {
+    if (!API_KEY) {
+      return { 
+        success: false, 
+        error: "API key not configured. Please set VITE_GOOGLE_AI_API_KEY in your environment." 
+      };
+    }
+
     try {
       const fullPrompt = context
         ? `Context: ${context}\n\nQuestion: ${prompt}\n\nPlease provide a helpful answer based on the context provided.`
         : prompt;
-      let response = await fetch("/api/gemini", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: fullPrompt }),
-      });
-      // Fallback: if 404 (proxy missing) and we have a direct key, call Gemini directly (dev + optional production)
-      // NOTE: Using a client key in production exposes it to users. Prefer server proxy. Use only if you accept that risk.
-      if (response.status === 404 && DIRECT_KEY) {
-        const directModel =
-          import.meta.env.VITE_GEMINI_MODEL || "gemini-2.0-flash"; // allow override
-        response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${directModel}:generateContent?key=${DIRECT_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [
-                    {
-                      text: fullPrompt,
-                    },
-                  ],
-                },
-              ],
-            }),
-          }
-        );
-      }
 
-      const result = await response.json().catch(() => ({}));
+      const model = import.meta.env.VITE_GEMINI_MODEL || "gemini-2.0-flash";
+      
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: fullPrompt,
+                  },
+                ],
+              },
+            ],
+          }),
+        }
+      );
 
-      if (response.status === 404 && !DEV) {
-        return {
-          success: false,
-          error:
-            "AI endpoint missing (404). Ensure api/gemini.ts is deployed and not excluded from build, and Vercel functions config present in vercel.json.",
+      const result = await response.json();
+
+      if (!response.ok) {
+        return { 
+          success: false, 
+          error: `API Error: ${result.error?.message || response.statusText}` 
         };
       }
 
