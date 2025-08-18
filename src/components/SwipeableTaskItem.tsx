@@ -11,7 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Task } from "../types";
-import { format, isAfter, startOfDay } from "date-fns";
+import { format, isAfter, startOfDay, isToday, isTomorrow } from "date-fns";
 import { TaskFeedback } from "../utils/soundEffects";
 import "./SwipeableTaskItem.css";
 
@@ -57,7 +57,7 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
     const deltaX = currentX.current - startX.current;
 
     // Limit swipe distance
-    const maxSwipe = 120;
+    const maxSwipe = 120; // Keep in sync with color interpolation logic
     const clampedDelta = Math.max(-maxSwipe, Math.min(maxSwipe, deltaX));
     setSwipeOffset(clampedDelta);
   };
@@ -116,14 +116,6 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
     handleStart(e.clientX);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    handleMove(e.clientX);
-  };
-
-  const handleMouseUp = () => {
-    handleEnd();
-  };
-
   // Touch events
   const handleTouchStart = (e: React.TouchEvent) => {
     handleStart(e.touches[0].clientX);
@@ -158,6 +150,59 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
     }
   }, [isDragging]);
 
+  // Dynamic color classes based on swipe direction & progress
+  const computeSwipeColorClasses = () => {
+    if (swipeOffset === 0) return "";
+    const maxSwipe = 120; // Same as in handleMove
+    const progress = Math.min(Math.abs(swipeOffset) / maxSwipe, 1);
+
+    // Threshold steps for intensifying color
+    const step = progress < 0.33 ? 0 : progress < 0.66 ? 1 : 2;
+
+    if (swipeOffset > 0) {
+      // Swipe right (complete / undo) => green emphasis (or yellow if undoing completed?)
+      // If task is completed and user is undoing (swipe right), we can use yellow accents
+      if (task.status === "completed") {
+        return [
+          "bg-yellow-50 border-yellow-200",
+          "bg-yellow-100 border-yellow-300",
+          "bg-yellow-200 border-yellow-400",
+        ][step];
+      }
+      return [
+        "bg-green-50 border-green-200",
+        "bg-green-100 border-green-300",
+        "bg-green-200 border-green-400",
+      ][step];
+    } else {
+      // Swipe left (delete) => red emphasis
+      return [
+        "bg-red-50 border-red-200",
+        "bg-red-100 border-red-300",
+        "bg-red-200 border-red-400",
+      ][step];
+    }
+  };
+
+  const swipeColorClasses = computeSwipeColorClasses();
+
+  // Opacity for action labels based on swipe distance
+  const actionLabelOpacity = Math.min(Math.abs(swipeOffset) / 40, 1);
+
+  // Base status/overdue classes (used when not actively swiping)
+  const baseStateClasses =
+    task.status === "completed"
+      ? "bg-gray-50 border-gray-200"
+      : isOverdue(task)
+      ? "bg-red-50 border-red-200"
+      : "bg-white border-gray-200";
+
+  // Date category caching
+  const dueDateObj = new Date(task.dueDate);
+  const isTaskToday = isToday(dueDateObj);
+  const isTaskTomorrow = isTomorrow(dueDateObj);
+  const overdue = isOverdue(task);
+
   return (
     <div className="relative overflow-hidden rounded-lg swipeable-task-item">
       {/* Background Actions */}
@@ -168,9 +213,16 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
             task.status === "completed" ? "bg-yellow-500" : "bg-green-500"
           } ${showActions === "right" ? "swipe-action-active" : ""}`}
         >
-          <div className="text-white text-center">
-            <Check className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1" />
-            <span className="text-xs font-medium">
+          <div className="flex flex-col items-center text-white select-none">
+            <Check className="w-6 h-6 sm:w-7 sm:h-7" />
+            <span
+              className="text-[10px] sm:text-xs font-semibold tracking-wide mt-1"
+              style={{
+                opacity: swipeOffset > 5 ? actionLabelOpacity : 0,
+                transform: `translateY(${swipeOffset > 5 ? 0 : 4}px)`,
+                transition: "opacity 0.15s ease, transform 0.2s ease",
+              }}
+            >
               {task.status === "completed" ? "Undo" : "Done"}
             </span>
           </div>
@@ -185,9 +237,18 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
             showActions === "left" ? "swipe-action-active" : ""
           }`}
         >
-          <div className="text-white text-center">
-            <X className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1" />
-            <span className="text-xs font-medium">Delete</span>
+          <div className="flex flex-col items-center text-white select-none">
+            <X className="w-6 h-6 sm:w-7 sm:h-7" />
+            <span
+              className="text-[10px] sm:text-xs font-semibold tracking-wide mt-1"
+              style={{
+                opacity: swipeOffset < -5 ? actionLabelOpacity : 0,
+                transform: `translateY(${swipeOffset < -5 ? 0 : 4}px)`,
+                transition: "opacity 0.15s ease, transform 0.2s ease",
+              }}
+            >
+              Delete
+            </span>
           </div>
         </div>
       </div>
@@ -195,15 +256,9 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
       {/* Main Task Content */}
       <div
         ref={containerRef}
-        className={`relative bg-white border rounded-lg p-3 sm:p-4 transition-all cursor-grab active:cursor-grabbing ${
+        className={`relative border rounded-lg p-3 sm:p-4 transition-all cursor-grab active:cursor-grabbing ${
           isDragging ? "shadow-lg dragging" : "hover:shadow-md"
-        } ${
-          task.status === "completed"
-            ? "bg-gray-50 border-gray-200"
-            : isOverdue(task)
-            ? "bg-red-50 border-red-200"
-            : "bg-white border-gray-200"
-        }`}
+        } ${swipeOffset !== 0 ? swipeColorClasses : baseStateClasses}`}
         style={{
           transform: `translateX(${swipeOffset}px)`,
           transition: isDragging ? "none" : "transform 0.3s ease-out",
@@ -283,6 +338,24 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 sm:mt-3">
+              {task.status === "pending" && overdue && (
+                <span className="px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-gradient-to-r from-rose-500 to-red-600 text-white shadow flex items-center gap-1 animate-pulse">
+                  <AlertTriangle className="w-3 h-3" /> Overdue
+                </span>
+              )}
+              {task.status === "pending" && !overdue && isTaskToday && (
+                <span className="px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow flex items-center gap-1">
+                  Today
+                </span>
+              )}
+              {task.status === "pending" &&
+                !overdue &&
+                !isTaskToday &&
+                isTaskTomorrow && (
+                  <span className="px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-gradient-to-r from-sky-400 to-blue-500 text-white shadow flex items-center gap-1">
+                    Tomorrow
+                  </span>
+                )}
               {task.subject && (
                 <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full flex-shrink-0">
                   {task.subject}
@@ -308,26 +381,7 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
           </div>
         </div>
 
-        {/* Swipe Hint */}
-        {!isDragging && swipeOffset === 0 && (
-          <div className="absolute top-2 right-2 text-xs text-gray-400 opacity-50 pointer-events-none">
-            ← Delete | Complete →
-          </div>
-        )}
-
-        {/* Swipe Progress Indicator */}
-        {isDragging && (
-          <div className="absolute top-2 right-2 text-xs font-medium pointer-events-none">
-            {swipeOffset > 30 && (
-              <span className="text-green-600 animate-pulse">
-                {task.status === "completed" ? "Undo" : "Complete"}
-              </span>
-            )}
-            {swipeOffset < -30 && (
-              <span className="text-red-600 animate-pulse">Delete</span>
-            )}
-          </div>
-        )}
+        {/* (Removed textual swipe hint and progress labels as requested) */}
 
         {/* Sparkle Effects for Completion */}
         {showSparkles && (

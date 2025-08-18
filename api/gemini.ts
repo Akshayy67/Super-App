@@ -7,6 +7,7 @@
 interface GeminiRequestBody {
   prompt?: string;
   context?: string;
+  model?: string; // optional override
 }
 
 export default async function handler(req: any, res: any) {
@@ -24,9 +25,9 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const body: GeminiRequestBody = req.body || {};
-    const { prompt, context } = body;
-    if (!prompt) {
+    const body: GeminiRequestBody = (req.body || {}) as GeminiRequestBody;
+    const { prompt, context, model } = body;
+    if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
       res.status(400).json({ error: "Missing prompt" });
       return;
     }
@@ -35,35 +36,66 @@ export default async function handler(req: any, res: any) {
       ? `Context: ${context}\n\nQuestion: ${prompt}\n\nPlease provide a helpful answer based on the context provided.`
       : prompt;
 
-    const upstream = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
+    // Preferred models ordered by availability / access; allow override via body.model
+    const modelCandidates = [
+      model?.trim(),
+      "gemini-1.5-flash-latest",
+      "gemini-1.5-flash",
+      "gemini-1.5-pro-latest", // if user has higher tier
+      "gemini-pro", // legacy
+    ].filter(Boolean) as string[];
+
+    let lastError: any = null;
+    for (const m of modelCandidates) {
+      try {
+        const upstream = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [
                 {
-                  text: fullPrompt,
+                  parts: [
+                    {
+                      text: fullPrompt,
+                    },
+                  ],
                 },
               ],
-            },
-          ],
-        }),
+            }),
+          }
+        );
+
+        const data = await upstream.json();
+
+        if (upstream.status === 403) {
+          // Permission / model access denied – try next model
+          lastError = { status: 403, detail: data };
+          continue;
+        }
+
+        if (!upstream.ok) {
+          lastError = { status: upstream.status, detail: data };
+          continue; // attempt next candidate
+        }
+
+        // Success
+        res.status(200).json({ ...data, modelUsed: m });
+        return;
+      } catch (innerErr: any) {
+        lastError = innerErr;
+        continue;
       }
-    );
-
-    const data = await upstream.json();
-
-    if (!upstream.ok) {
-      res
-        .status(upstream.status)
-        .json({ error: "Upstream error", detail: data });
-      return;
     }
 
-    res.status(200).json(data);
+    // All attempts failed
+    const status = lastError?.status || 502;
+    res.status(status).json({
+      error: "All model attempts failed",
+      detail: lastError?.detail || lastError?.message || lastError,
+      tried: modelCandidates,
+    });
   } catch (err: any) {
     res
       .status(500)

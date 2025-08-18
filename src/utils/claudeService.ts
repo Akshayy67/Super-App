@@ -1,5 +1,6 @@
-// Anthropic Claude Service Alternative
-const CLAUDE_API_KEY = import.meta.env.VITE_CLAUDE_API_KEY || "";
+// Anthropic Claude Service: prefer serverless proxy (/api/claude). In local dev, if proxy 404s and a direct key is present, fallback to direct Claude call.
+const DEV = import.meta.env.DEV;
+const CLAUDE_DIRECT_KEY = import.meta.env.VITE_CLAUDE_API_KEY || "";
 
 export interface ClaudeResponse {
   success: boolean;
@@ -8,43 +9,56 @@ export interface ClaudeResponse {
 }
 
 export const claudeService = {
-  async generateResponse(prompt: string, context?: string): Promise<ClaudeResponse> {
+  async generateResponse(
+    prompt: string,
+    context?: string
+  ): Promise<ClaudeResponse> {
     try {
-      const fullPrompt = context 
+      const fullPrompt = context
         ? `Context: ${context}\n\nQuestion: ${prompt}\n\nPlease provide a helpful answer based on the context provided.`
         : prompt;
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': CLAUDE_API_KEY,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-3-sonnet-20240229',
-          max_tokens: 1000,
-          messages: [
-            {
-              role: 'user',
-              content: fullPrompt
-            }
-          ]
-        })
+      // Prefer serverless proxy
+      let response = await fetch("/api/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: fullPrompt }),
       });
 
-      const result = await response.json();
-      
+      // Fallback in local dev only
+      if (DEV && response.status === 404 && CLAUDE_DIRECT_KEY) {
+        response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": CLAUDE_DIRECT_KEY,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: "claude-3-haiku-20240307",
+            max_tokens: 1000,
+            messages: [
+              {
+                role: "user",
+                content: fullPrompt,
+              },
+            ],
+          }),
+        });
+      }
+
+      const result = await response.json().catch(() => ({}));
+
       if (result.content && result.content[0] && result.content[0].text) {
         return {
           success: true,
-          data: result.content[0].text
+          data: result.content[0].text,
         };
       }
 
-      return { success: false, error: 'No response generated' };
+      return { success: false, error: "No response generated" };
     } catch (error) {
-      return { success: false, error: 'AI response generation failed' };
+      return { success: false, error: "AI response generation failed" };
     }
   },
 
@@ -63,8 +77,13 @@ export const claudeService = {
     return this.generateResponse(prompt);
   },
 
-  async explainConcept(concept: string, context?: string): Promise<ClaudeResponse> {
-    const prompt = `Explain the concept "${concept}" in simple, clear terms. ${context ? `Use this context: ${context}` : ''}`;
+  async explainConcept(
+    concept: string,
+    context?: string
+  ): Promise<ClaudeResponse> {
+    const prompt = `Explain the concept "${concept}" in simple, clear terms. ${
+      context ? `Use this context: ${context}` : ""
+    }`;
     return this.generateResponse(prompt);
-  }
+  },
 };

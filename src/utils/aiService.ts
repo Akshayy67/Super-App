@@ -1,8 +1,6 @@
-// AI Service wrapper now prefers calling secure serverless proxy endpoints.
-// We keep legacy direct key path for local dev if user still has VITE_GOOGLE_AI_API_KEY defined.
+// AI service: prefer serverless proxy (/api/*). In local dev, if proxy 404s and a direct key is present, fallback to direct Gemini call.
+const DEV = import.meta.env.DEV;
 const DIRECT_KEY = import.meta.env.VITE_GOOGLE_AI_API_KEY || "";
-// Only allow direct browser calls in development to avoid exposing key in production bundles.
-const HAS_DIRECT = !!DIRECT_KEY && import.meta.env.DEV;
 
 export interface AIResponse {
   success: boolean;
@@ -13,25 +11,11 @@ export interface AIResponse {
 export const aiService = {
   async extractTextFromImage(imageBase64: string): Promise<AIResponse> {
     try {
-      const response = await fetch(
-        HAS_DIRECT
-          ? `https://vision.googleapis.com/v1/images:annotate?key=${DIRECT_KEY}`
-          : "/api/vision",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: HAS_DIRECT
-            ? JSON.stringify({
-                requests: [
-                  {
-                    image: { content: imageBase64.split(",")[1] },
-                    features: [{ type: "TEXT_DETECTION", maxResults: 1 }],
-                  },
-                ],
-              })
-            : JSON.stringify({ imageBase64 }),
-        }
-      );
+      const response = await fetch("/api/vision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64 }),
+      });
 
       const result = await response.json();
 
@@ -60,31 +44,34 @@ export const aiService = {
       const fullPrompt = context
         ? `Context: ${context}\n\nQuestion: ${prompt}\n\nPlease provide a helpful answer based on the context provided.`
         : prompt;
+      let response = await fetch("/api/gemini", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: fullPrompt }),
+      });
+      // Fallback: if local dev 404 and we have a direct key, call Gemini directly
+      if (DEV && response.status === 404 && DIRECT_KEY) {
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${DIRECT_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: fullPrompt,
+                    },
+                  ],
+                },
+              ],
+            }),
+          }
+        );
+      }
 
-      const response = await fetch(
-        HAS_DIRECT
-          ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${DIRECT_KEY}`
-          : "/api/gemini",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: HAS_DIRECT
-            ? JSON.stringify({
-                contents: [
-                  {
-                    parts: [
-                      {
-                        text: fullPrompt,
-                      },
-                    ],
-                  },
-                ],
-              })
-            : JSON.stringify({ prompt: fullPrompt }),
-        }
-      );
-
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
 
       if (
         result.candidates &&
@@ -99,7 +86,7 @@ export const aiService = {
 
       return { success: false, error: "No response generated" };
     } catch (error) {
-      return { success: false, error: "AI response generation failed" };
+  return { success: false, error: "AI response generation failed" };
     }
   },
 

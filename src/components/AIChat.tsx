@@ -29,6 +29,7 @@ export const AIChat: React.FC<AIChatProps> = ({ file }) => {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [availableDocuments, setAvailableDocuments] = useState<string[]>([]);
+  const [aiConfigured] = useState<boolean>(unifiedAIService.isConfigured());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const user = realTimeAuth.getCurrentUser();
@@ -177,6 +178,13 @@ export const AIChat: React.FC<AIChatProps> = ({ file }) => {
                 and can answer questions about them.
               </span>
             </div>
+          </div>
+        )}
+        {!aiConfigured && (
+          <div className="mt-4 p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm">
+            <strong className="font-semibold">Demo mode:</strong> Real AI not
+            configured. Add VITE_GOOGLE_AI_API_KEY / VITE_OPENAI_API_KEY /
+            VITE_CLAUDE_API_KEY in .env and restart for full answers.
           </div>
         )}
       </div>

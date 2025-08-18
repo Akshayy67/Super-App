@@ -1,5 +1,6 @@
-// OpenAI Service Alternative
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
+// OpenAI Service: prefer serverless proxy (/api/openai). In local dev, if proxy 404s and a direct key is present, fallback to direct OpenAI call.
+const DEV = import.meta.env.DEV;
+const OPENAI_DIRECT_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
 
 export interface OpenAIResponse {
   success: boolean;
@@ -8,43 +9,56 @@ export interface OpenAIResponse {
 }
 
 export const openaiService = {
-  async generateResponse(prompt: string, context?: string): Promise<OpenAIResponse> {
+  async generateResponse(
+    prompt: string,
+    context?: string
+  ): Promise<OpenAIResponse> {
     try {
-      const fullPrompt = context 
+      const fullPrompt = context
         ? `Context: ${context}\n\nQuestion: ${prompt}\n\nPlease provide a helpful answer based on the context provided.`
         : prompt;
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            {
-              role: 'user',
-              content: fullPrompt
-            }
-          ],
-          max_tokens: 1000,
-          temperature: 0.7
-        })
+      // Prefer serverless proxy to keep API key server-side
+      let response = await fetch("/api/openai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: fullPrompt }),
       });
 
-      const result = await response.json();
-      
+      // Fallback in local dev only: call OpenAI directly if proxy is missing
+      if (DEV && response.status === 404 && OPENAI_DIRECT_KEY) {
+        response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${OPENAI_DIRECT_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+              {
+                role: "user",
+                content: fullPrompt,
+              },
+            ],
+            max_tokens: 1000,
+            temperature: 0.7,
+          }),
+        });
+      }
+
+      const result = await response.json().catch(() => ({}));
+
       if (result.choices && result.choices[0] && result.choices[0].message) {
         return {
           success: true,
-          data: result.choices[0].message.content
+          data: result.choices[0].message.content,
         };
       }
 
-      return { success: false, error: 'No response generated' };
+      return { success: false, error: "No response generated" };
     } catch (error) {
-      return { success: false, error: 'AI response generation failed' };
+      return { success: false, error: "AI response generation failed" };
     }
   },
 
@@ -63,8 +77,13 @@ export const openaiService = {
     return this.generateResponse(prompt);
   },
 
-  async explainConcept(concept: string, context?: string): Promise<OpenAIResponse> {
-    const prompt = `Explain the concept "${concept}" in simple, clear terms. ${context ? `Use this context: ${context}` : ''}`;
+  async explainConcept(
+    concept: string,
+    context?: string
+  ): Promise<OpenAIResponse> {
+    const prompt = `Explain the concept "${concept}" in simple, clear terms. ${
+      context ? `Use this context: ${context}` : ""
+    }`;
     return this.generateResponse(prompt);
-  }
+  },
 };

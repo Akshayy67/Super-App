@@ -5,11 +5,13 @@ import {
   ArrowUpDown,
   Filter,
   Smartphone,
+  ArrowLeftRight,
+  X,
 } from "lucide-react";
 import { Task } from "../types";
 import { firestoreUserTasks } from "../utils/firestoreUserTasks";
 import { realTimeAuth } from "../utils/realTimeAuth";
-import { isAfter, startOfDay, isToday, isTomorrow, parseISO } from "date-fns";
+import { isAfter, startOfDay, isToday, isTomorrow } from "date-fns";
 import SwipeableTaskItem from "./SwipeableTaskItem";
 import { TaskCelebration } from "./TaskCelebration";
 import { AchievementNotification } from "./AchievementNotification";
@@ -269,42 +271,60 @@ export const TaskManager: React.FC = () => {
           const aDate = new Date(a.dueDate);
           const bDate = new Date(b.dueDate);
 
-          // First, sort by completion status (pending tasks first)
+          // 1. Pending before completed
           if (a.status !== b.status) {
             return a.status === "pending" ? -1 : 1;
           }
 
-          // For pending tasks, apply smart sorting
-          if (a.status === "pending") {
-            const aIsToday = isToday(aDate);
-            const bIsToday = isToday(bDate);
-            const aIsTomorrow = isTomorrow(aDate);
-            const bIsTomorrow = isTomorrow(bDate);
+          // If both completed keep most recently created first (fallback behaviour)
+          if (a.status === "completed" && b.status === "completed") {
+            return (
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+          }
 
-            // Today tasks first
-            if (aIsToday && !bIsToday) return -1;
-            if (!aIsToday && bIsToday) return 1;
+          // Both pending -> apply new smart grouping
+          const priorityOrder = { high: 3, medium: 2, low: 1 } as const;
+          const group = (t: Task) => {
+            const d = new Date(t.dueDate);
+            if (isOverdue(t)) return 0; // Overdue
+            if (isToday(d)) return 1; // Today
+            if (isTomorrow(d)) return 2; // Tomorrow
+            // Future (after tomorrow) grouped by priority sequence
+            if (t.priority === "high") return 3; // Future High
+            if (t.priority === "medium") return 4; // Future Medium
+            return 5; // Future Low (or any other)
+          };
 
-            // Then tomorrow tasks
-            if (aIsTomorrow && !bIsTomorrow && !bIsToday) return -1;
-            if (!aIsTomorrow && bIsTomorrow && !aIsToday) return 1;
+          const aGroup = group(a);
+          const bGroup = group(b);
+          if (aGroup !== bGroup) return aGroup - bGroup;
 
-            // Within same day category, sort by priority (high first)
-            if ((aIsToday && bIsToday) || (aIsTomorrow && bIsTomorrow)) {
-              const priorityOrder = { high: 3, medium: 2, low: 1 };
-              const priorityDiff =
-                priorityOrder[b.priority] - priorityOrder[a.priority];
-              if (priorityDiff !== 0) return priorityDiff;
-            }
+          // Within same group rules
+          if (aGroup === 0) {
+            // Overdue
+            // Earlier due date first (older overdue first) then priority
+            const dateDiff = aDate.getTime() - bDate.getTime();
+            if (dateDiff !== 0) return dateDiff;
+            return priorityOrder[b.priority] - priorityOrder[a.priority];
+          }
 
-            // Finally, sort by due date (earliest first)
+          if (aGroup === 1 || aGroup === 2) {
+            // Today / Tomorrow
+            // Higher priority first then earlier time
+            const prDiff =
+              priorityOrder[b.priority] - priorityOrder[a.priority];
+            if (prDiff !== 0) return prDiff;
             return aDate.getTime() - bDate.getTime();
           }
 
-          // For completed tasks, sort by completion date (most recent first)
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
+          if (aGroup >= 3 && aGroup <= 5) {
+            // Future grouped by priority segments
+            // Already separated by priority: just earliest due date inside each segment
+            return aDate.getTime() - bDate.getTime();
+          }
+
+          return 0; // Fallback
         });
 
       case "dueDate":
@@ -404,6 +424,20 @@ export const TaskManager: React.FC = () => {
   };
 
   const counts = getStatusCounts();
+  const [showSwipeTip, setShowSwipeTip] = useState<boolean>(() => {
+    try {
+      return !localStorage.getItem("hideSwipeTip");
+    } catch {
+      return true;
+    }
+  });
+
+  const dismissSwipeTip = () => {
+    setShowSwipeTip(false);
+    try {
+      localStorage.setItem("hideSwipeTip", "1");
+    } catch {}
+  };
 
   return (
     <div className="bg-white h-full flex flex-col">
@@ -596,6 +630,21 @@ export const TaskManager: React.FC = () => {
 
       {/* Task List */}
       <div className="flex-1 overflow-auto p-4 sm:p-6">
+        {showSwipeTip && (
+          <div className="mb-4 sm:mb-5 animate-fadeSlideIn relative">
+            <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-dashed border-gray-300 text-[11px] sm:text-xs text-gray-600 italic">
+              <ArrowLeftRight className="w-3.5 h-3.5 text-gray-400" />
+              <span>Swipe right to complete, left to delete.</span>
+              <button
+                onClick={dismissSwipeTip}
+                className="absolute top-1 right-1 p-1 text-gray-400 hover:text-gray-600"
+                aria-label="Dismiss swipe tip"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        )}
         <div className="space-y-3 sm:space-y-4">
           {getFilteredTasks().map((task) => (
             <SwipeableTaskItem
