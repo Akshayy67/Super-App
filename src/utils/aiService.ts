@@ -73,6 +73,14 @@ export const aiService = {
 
       const result = await response.json().catch(() => ({}));
 
+      if (response.status === 404 && !DEV) {
+        return {
+          success: false,
+          error:
+            "AI endpoint missing (404). Ensure api/gemini.ts is deployed and not excluded from build, and Vercel functions config present in vercel.json.",
+        };
+      }
+
       if (
         result.candidates &&
         result.candidates[0] &&
@@ -86,7 +94,7 @@ export const aiService = {
 
       return { success: false, error: "No response generated" };
     } catch (error) {
-  return { success: false, error: "AI response generation failed" };
+      return { success: false, error: "AI response generation failed" };
     }
   },
 
