@@ -10,7 +10,8 @@ import {
   Clock,
   AlertTriangle,
 } from "lucide-react";
-import { storageUtils } from "../utils/storage";
+import { storageUtils } from "../utils/storage"; // still used for notes
+import { driveStorageUtils } from "../utils/driveStorage"; // for accurate file count (Drive or local fallback)
 import { firestoreUserTasks } from "../utils/firestoreUserTasks";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { format, isAfter, startOfDay, isToday, isTomorrow } from "date-fns";
@@ -31,7 +32,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
     highPriorityTasks: 0,
     totalNotes: 0,
   });
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([]);
 
   const user = realTimeAuth.getCurrentUser();
@@ -46,7 +46,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
     if (!user) return;
 
     try {
-      const files = storageUtils.getFiles(user.id);
+      // Use driveStorageUtils (async, Drive-aware with fallback) for file list
+      const files = await driveStorageUtils.getFiles(user.id);
       const tasks = await firestoreUserTasks.getTasks(user.id);
       const notes = storageUtils.getNotes(user.id);
 

@@ -1,5 +1,8 @@
-// AI Service for Google Cloud API integration
-const API_KEY = import.meta.env.VITE_GOOGLE_AI_API_KEY || ""; // Get from environment variable
+// AI Service wrapper now prefers calling secure serverless proxy endpoints.
+// We keep legacy direct key path for local dev if user still has VITE_GOOGLE_AI_API_KEY defined.
+const DIRECT_KEY = import.meta.env.VITE_GOOGLE_AI_API_KEY || "";
+// Only allow direct browser calls in development to avoid exposing key in production bundles.
+const HAS_DIRECT = !!DIRECT_KEY && import.meta.env.DEV;
 
 export interface AIResponse {
   success: boolean;
@@ -11,27 +14,22 @@ export const aiService = {
   async extractTextFromImage(imageBase64: string): Promise<AIResponse> {
     try {
       const response = await fetch(
-        `https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}`,
+        HAS_DIRECT
+          ? `https://vision.googleapis.com/v1/images:annotate?key=${DIRECT_KEY}`
+          : "/api/vision",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            requests: [
-              {
-                image: {
-                  content: imageBase64.split(",")[1], // Remove data:image/...;base64, prefix
-                },
-                features: [
+          headers: { "Content-Type": "application/json" },
+          body: HAS_DIRECT
+            ? JSON.stringify({
+                requests: [
                   {
-                    type: "TEXT_DETECTION",
-                    maxResults: 1,
+                    image: { content: imageBase64.split(",")[1] },
+                    features: [{ type: "TEXT_DETECTION", maxResults: 1 }],
                   },
                 ],
-              },
-            ],
-          }),
+              })
+            : JSON.stringify({ imageBase64 }),
         }
       );
 
@@ -64,23 +62,25 @@ export const aiService = {
         : prompt;
 
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
+        HAS_DIRECT
+          ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${DIRECT_KEY}`
+          : "/api/gemini",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
+          headers: { "Content-Type": "application/json" },
+          body: HAS_DIRECT
+            ? JSON.stringify({
+                contents: [
                   {
-                    text: fullPrompt,
+                    parts: [
+                      {
+                        text: fullPrompt,
+                      },
+                    ],
                   },
                 ],
-              },
-            ],
-          }),
+              })
+            : JSON.stringify({ prompt: fullPrompt }),
         }
       );
 
