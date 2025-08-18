@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { AuthForm } from "./components/AuthForm";
 import { Sidebar } from "./components/Sidebar";
 import { Dashboard } from "./components/Dashboard";
@@ -7,24 +7,24 @@ import { TaskManager } from "./components/TaskManager";
 import { NotesManager } from "./components/NotesManager";
 import { AIChat } from "./components/AIChat";
 import { StudyTools } from "./components/StudyTools";
-import { FilePreview } from "./components/FilePreview";
+// Removed unused FilePreview import
 import ErrorBoundary from "./components/ErrorBoundary";
 import { realTimeAuth } from "./utils/realTimeAuth";
-import { FileItem, User } from "./types";
+// Removed unused FileItem and User imports
 import { Menu, X } from "lucide-react";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // Removed unused currentUser state
   const [activeView, setActiveView] = useState("dashboard");
-  const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
+  // Removed unused previewFile state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Set up real-time auth state listener
     const unsubscribe = realTimeAuth.onAuthStateChange((user) => {
       setIsAuthenticated(!!user);
-      setCurrentUser(user);
+      // Removed unused setCurrentUser
     });
 
     // Clean up listener on component unmount
@@ -49,16 +49,14 @@ function App() {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  const handlePreviewFile = (file: FileItem) => {
-    setPreviewFile(file);
-  };
+  // Removed unused handlePreviewFile
 
   const renderActiveView = () => {
     switch (activeView) {
       case "dashboard":
         return <Dashboard onViewChange={handleViewChange} />;
       case "files":
-        return <FileManager onPreviewFile={handlePreviewFile} />;
+        return <FileManager />;
       case "tasks":
         return <TaskManager />;
       case "notes":
@@ -152,7 +150,7 @@ function App() {
         </div>
 
         {/* File Preview Modal */}
-        <FilePreview file={previewFile} onClose={() => setPreviewFile(null)} />
+        {/* Removed FilePreview usage since previewFile and setPreviewFile are removed */}
       </div>
     </ErrorBoundary>
   );
