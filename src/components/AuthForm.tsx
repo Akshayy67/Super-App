@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { PrivacyNotice } from "./PrivacyNotice";
+import { ParticleField } from "./ParticleField";
 
 interface AuthFormProps {
   onAuthSuccess: () => void;
@@ -46,7 +47,27 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+    <div className="relative min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 overflow-hidden bg-[radial-gradient(circle_at_30%_30%,rgba(199,210,254,0.6),transparent_60%),radial-gradient(circle_at_70%_70%,rgba(165,180,252,0.5),transparent_55%)] bg-indigo-50">
+      {/* Particle Field Background */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <ParticleField
+          className="absolute inset-0"
+          baseCount={220}
+          maxMultiplier={3.5}
+          maxLineParticles={650}
+          targetLines={1800}
+          speedFactor={3}
+          sizeFactor={2}
+          brightness={1.6}
+          lineWidthFactor={1.8}
+          particleColor="#60a5fa"
+          glowColor="#bfdbfe"
+          lineColor="#3b82f6"
+        />
+        {/* Light overlay toned down so particles remain visible */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-indigo-100/20" />
+      </div>
+
       {/* Toast Notification */}
       {toast && (
         <div
@@ -67,8 +88,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-md mx-auto">
-        <div className="text-center mb-6 sm:mb-8">
+      <div className="bg-white/80 backdrop-blur-xl ring-1 ring-indigo-200/40 rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-md mx-auto relative overflow-hidden will-change-transform transition-transform">
+        <div className="text-center mb-6 sm:mb-8 relative z-10">
           <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-white shadow-lg">
             <img
               src="/SuperApp.png"
@@ -76,7 +97,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
               className="w-12 h-12 object-contain"
             />
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 tracking-tight">
             Super Study App
           </h1>
           <p className="text-sm sm:text-base text-gray-600">
@@ -84,7 +105,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
           </p>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 relative z-10">
           <div className="text-center">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">
               Sign in to continue
@@ -99,7 +120,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
             type="button"
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="w-full bg-white border-2 border-gray-300 hover:border-gray-400 hover:shadow-md text-gray-700 font-medium py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-white/90 backdrop-blur border-2 border-gray-300/70 hover:border-indigo-300 hover:shadow-md text-gray-700 font-medium py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Sign in with Google"
           >
             {loading ? (
