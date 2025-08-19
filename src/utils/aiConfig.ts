@@ -44,9 +44,40 @@ export const unifiedAIService = {
     return aiService.explainConcept(concept, context);
   },
 
-  // OCR is available with Google Vision API
+  // OCR: Use in-browser Tesseract first to avoid server dependency; no /api/vision call needed
   async extractTextFromImage(imageBase64: string): Promise<AIResponse> {
-    return aiService.extractTextFromImage(imageBase64);
+    // Load Tesseract from CDN at runtime to avoid bundler import errors
+    const loadTesseractFromCdn = async (): Promise<any> => {
+      if (typeof window !== "undefined" && (window as any).Tesseract) {
+        return (window as any).Tesseract;
+      }
+      await new Promise<void>((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.0.3/dist/tesseract.min.js";
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("Failed to load Tesseract.js"));
+        document.head.appendChild(script);
+      });
+      return (window as any).Tesseract;
+    };
+
+    try {
+      const Tesseract = await loadTesseractFromCdn();
+      const result = await Tesseract.recognize(imageBase64, "eng");
+      const text: string = (result?.data?.text || "").trim();
+      if (text) {
+        return { success: true, data: text };
+      }
+      return { success: false, error: "No text found in image" };
+    } catch (e) {
+      // Final fallback to server OCR if available
+      try {
+        return await aiService.extractTextFromImage(imageBase64);
+      } catch {
+        return { success: false, error: "OCR unavailable" };
+      }
+    }
   },
 
   // Check if AI is configured

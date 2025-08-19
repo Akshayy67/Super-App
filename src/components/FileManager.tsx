@@ -648,7 +648,6 @@ export const FileManager: React.FC<FileManagerProps> = () => {
               className="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
             >
               <FolderPlus className="w-4 h-4 mr-2" />
-              <FolderPlus className="w-4 h-4 mr-2" />
               New Folder
             </button>
             <label className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors">

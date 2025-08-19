@@ -9,6 +9,10 @@ export interface AIResponse {
 
 export const aiService = {
   async extractTextFromImage(imageBase64: string): Promise<AIResponse> {
+    const enabled = import.meta.env.VITE_ENABLE_SERVER_OCR === "true";
+    if (!enabled) {
+      return { success: false, error: "Server OCR disabled" };
+    }
     try {
       const response = await fetch("/api/vision", {
         method: "POST",
