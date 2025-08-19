@@ -20,6 +20,7 @@ import { FileItem } from "../types";
 import { driveStorageUtils } from "../utils/driveStorage";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { unifiedAIService } from "../utils/aiConfig";
+import { extractTextFromPdfDataUrl } from "../utils/pdfText";
 import { FilePreviewModal } from "./FileManager/FilePreviewModal";
 
 interface FileManagerProps {
@@ -411,6 +412,10 @@ export const FileManager: React.FC<FileManagerProps> = () => {
           }
 
           setPreviewContent(decodedContent);
+          // Print decoded text content to console once when previewed
+          try {
+            console.log("\n===== Preview Text: " + (file.name || "Untitled") + " =====\n" + decodedContent + "\n===== End Preview Text =====\n");
+          } catch {}
         } catch (e) {
           console.error("Error decoding text content:", e);
           setPreviewContent(
@@ -425,6 +430,23 @@ export const FileManager: React.FC<FileManagerProps> = () => {
         ) {
           // If it's a data URL, use it directly for embedding
           setPreviewContent(content);
+
+          // Also try to extract and print text from the PDF once for debugging/verification
+          (async () => {
+            try {
+              const text = await extractTextFromPdfDataUrl(content);
+              if (text) {
+                console.log(
+                  "\n===== Preview PDF Text: " + (file.name || "Untitled") +
+                    " =====\n" +
+                    text +
+                    "\n===== End Preview PDF Text =====\n"
+                );
+              }
+            } catch (e) {
+              console.warn("Could not extract text from PDF for console output.");
+            }
+          })();
         } else {
           // If it's not a data URL but we have content, convert it
           try {
@@ -432,6 +454,23 @@ export const FileManager: React.FC<FileManagerProps> = () => {
               ? content
               : `data:application/pdf;base64,${content}`;
             setPreviewContent(pdfDataUrl);
+
+            // Attempt to extract and print text from the newly formed data URL
+            (async () => {
+              try {
+                const text = await extractTextFromPdfDataUrl(pdfDataUrl);
+                if (text) {
+                  console.log(
+                    "\n===== Preview PDF Text: " + (file.name || "Untitled") +
+                      " =====\n" +
+                      text +
+                      "\n===== End Preview PDF Text =====\n"
+                  );
+                }
+              } catch (e) {
+                console.warn("Could not extract text from PDF for console output.");
+              }
+            })();
           } catch (error) {
             console.error("Error processing PDF content:", error);
             setPreviewContent("PDF_DOWNLOAD_ONLY");

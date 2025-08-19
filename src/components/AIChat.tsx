@@ -4,6 +4,7 @@ import { unifiedAIService } from "../utils/aiConfig";
 import { driveStorageUtils } from "../utils/driveStorage";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { AIStatus } from "./AIStatus";
+import { extractTextFromPdfDataUrl } from "../utils/pdfText";
 
 type ChatMessage = {
   id: string;
@@ -15,8 +16,10 @@ type ChatMessage = {
 
 interface AIChatProps {
   file?: any;
+  fileContent?: string;
+  initialPrompt?: string;
 }
-export const AIChat: React.FC<AIChatProps> = ({ file }) => {
+export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
@@ -30,7 +33,9 @@ export const AIChat: React.FC<AIChatProps> = ({ file }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [availableDocuments, setAvailableDocuments] = useState<string[]>([]);
   const [aiConfigured, setAiConfigured] = useState<boolean>(false);
+  const [fileContextText, setFileContextText] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hasSentInitialPromptRef = useRef<boolean>(false);
 
   const user = realTimeAuth.getCurrentUser();
 
@@ -63,21 +68,218 @@ export const AIChat: React.FC<AIChatProps> = ({ file }) => {
 
   useEffect(() => {
     const loadDocuments = async () => {
-      if (user) {
-        try {
-          const files = await driveStorageUtils.getFiles(user.id);
-          const documentNames = files
-            .filter((file) => file.type === "file")
-            .map((file) => file.name);
-          setAvailableDocuments(documentNames);
-        } catch (error) {
-          console.error("Error loading documents:", error);
-        }
+      // Respect privacy: when in file preview context, do not enumerate other documents
+      if (!user || file) return;
+      try {
+        const files = await driveStorageUtils.getFiles(user.id);
+        const documentNames = files
+          .filter((file) => file.type === "file")
+          .map((file) => file.name);
+        setAvailableDocuments(documentNames);
+      } catch (error) {
+        console.error("Error loading documents:")
       }
     };
 
     loadDocuments();
-  }, [user]);
+  }, [user, file]);
+
+  // Build context from the currently previewed file
+  useEffect(() => {
+    const buildContext = async () => {
+      if (!file) {
+        setFileContextText("");
+        return;
+      }
+
+      try {
+        // Prefer decoded/processed preview content if provided
+        if (fileContent && typeof fileContent === "string") {
+          if (file?.mimeType?.startsWith("image/")) {
+            // Run OCR on image data URL/base64
+            const imageData = file?.content || fileContent;
+            const ocr = await unifiedAIService.extractTextFromImage(imageData);
+            setFileContextText(ocr.success && ocr.data ? ocr.data : "");
+          } else if (
+            file?.mimeType?.includes("pdf") ||
+            (file?.name && file.name.endsWith(".pdf"))
+          ) {
+            // Try to extract text from PDF data URL
+            if (fileContent.startsWith("data:")) {
+              try {
+                const pdfText = await extractTextFromPdfDataUrl(fileContent);
+                setFileContextText(pdfText);
+              } catch {
+                setFileContextText("");
+              }
+            } else {
+              setFileContextText("");
+            }
+          } else {
+            // Text-based previewContent is already decoded
+            setFileContextText(fileContent);
+          }
+          return;
+        }
+
+        // Fall back to file.content (may be data URL)
+        if (file?.content && typeof file.content === "string") {
+          if (file?.mimeType?.startsWith("image/")) {
+            const ocr = await unifiedAIService.extractTextFromImage(file.content);
+            setFileContextText(ocr.success && ocr.data ? ocr.data : "");
+          } else if (
+            file?.mimeType === "text/plain" ||
+            file?.name?.match(/\.(txt|md|json|js|ts|html|css|csv)$/i) ||
+            file?.mimeType?.includes("text/")
+          ) {
+            try {
+              if (file.content.startsWith("data:")) {
+                const base64 = file.content.split(",")[1];
+                setFileContextText(atob(base64));
+              } else {
+                // Might already be plain text
+                try {
+                  setFileContextText(atob(file.content));
+                } catch {
+                  setFileContextText(file.content);
+                }
+              }
+            } catch {
+              setFileContextText("");
+            }
+          } else {
+            setFileContextText("");
+          }
+          return;
+        }
+
+        // As a last resort, try fetching from Drive if we have an ID
+        if (file?.driveFileId) {
+          const downloaded = await driveStorageUtils.downloadFileContent(file.driveFileId);
+          if (downloaded && typeof downloaded === "string") {
+            if (
+              (file?.mimeType?.includes("pdf") || file?.name?.endsWith(".pdf")) &&
+              downloaded.startsWith("data:")
+            ) {
+              try {
+                const pdfText = await extractTextFromPdfDataUrl(downloaded);
+                setFileContextText(pdfText);
+              } catch {
+                setFileContextText("");
+              }
+            } else {
+              setFileContextText(downloaded);
+            }
+            return;
+          }
+        }
+
+        setFileContextText("");
+      } finally {
+      }
+    };
+
+    buildContext();
+  }, [file, fileContent]);
+
+  // Build current file context on-demand (used when user asks before effect finishes)
+  const ensureCurrentFileContext = async (): Promise<string> => {
+    if (fileContextText) return fileContextText;
+
+    if (!file) return "";
+
+    try {
+      // Prefer provided preview content
+      if (fileContent && typeof fileContent === "string") {
+        if (file?.mimeType?.startsWith("image/")) {
+          const imageData = file?.content || fileContent;
+          const ocr = await unifiedAIService.extractTextFromImage(imageData);
+          const text = ocr.success && ocr.data ? ocr.data : "";
+          setFileContextText(text);
+          return text;
+        } else if (
+          file?.mimeType?.includes("pdf") ||
+          (file?.name && file.name.endsWith(".pdf"))
+        ) {
+          if (fileContent.startsWith("data:")) {
+            try {
+              const pdfText = await extractTextFromPdfDataUrl(fileContent);
+              setFileContextText(pdfText);
+              return pdfText;
+            } catch {}
+          }
+        } else {
+          setFileContextText(fileContent);
+          return fileContent;
+        }
+      }
+
+      // Fallbacks
+      if (file?.content && typeof file.content === "string") {
+        if (file?.mimeType?.startsWith("image/")) {
+          const ocr = await unifiedAIService.extractTextFromImage(file.content);
+          const text = ocr.success && ocr.data ? ocr.data : "";
+          setFileContextText(text);
+          return text;
+        } else if (
+          file?.mimeType === "text/plain" ||
+          file?.name?.match(/\.(txt|md|json|js|ts|html|css|csv)$/i) ||
+          file?.mimeType?.includes("text/")
+        ) {
+          try {
+            if (file.content.startsWith("data:")) {
+              const base64 = file.content.split(",")[1];
+              const text = atob(base64);
+              setFileContextText(text);
+              return text;
+            } else {
+              try {
+                const text = atob(file.content);
+                setFileContextText(text);
+                return text;
+              } catch {
+                setFileContextText(file.content);
+                return file.content;
+              }
+            }
+          } catch {}
+        } else if (
+          (file?.mimeType?.includes("pdf") || file?.name?.endsWith(".pdf")) &&
+          file.content.startsWith("data:")
+        ) {
+          try {
+            const pdfText = await extractTextFromPdfDataUrl(file.content);
+            setFileContextText(pdfText);
+            return pdfText;
+          } catch {}
+        }
+      }
+
+      if (file?.driveFileId) {
+        const downloaded = await driveStorageUtils.downloadFileContent(
+          file.driveFileId
+        );
+        if (downloaded && typeof downloaded === "string") {
+          if (
+            (file?.mimeType?.includes("pdf") || file?.name?.endsWith(".pdf")) &&
+            downloaded.startsWith("data:")
+          ) {
+            try {
+              const pdfText = await extractTextFromPdfDataUrl(downloaded);
+              setFileContextText(pdfText);
+              return pdfText;
+            } catch {}
+          }
+          setFileContextText(downloaded);
+          return downloaded;
+        }
+      }
+
+      return "";
+    } catch {
+      return "";
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -102,6 +304,65 @@ export const AIChat: React.FC<AIChatProps> = ({ file }) => {
     setMessages((prev) => [...prev, newMessage]);
   };
 
+  // Programmatically send a message with current file context
+  const sendMessageWithText = async (text: string) => {
+    if (!text.trim() || isLoading) return;
+    setInputMessage("");
+    addMessage("user", text.trim());
+    setIsLoading(true);
+    try {
+      const built = await ensureCurrentFileContext();
+      const context = built ? built.toString().slice(0, 8000) : "";
+      const wantsSummary = /\b(summarize|summary|summarise|summarization)\b/i.test(
+        text
+      );
+      if (wantsSummary && context) {
+        const result = await unifiedAIService.summarizeText(
+          context.slice(0, 12000)
+        );
+        if (result.success && result.data) {
+          addMessage("ai", result.data, "Based on the current file preview");
+        } else {
+          addMessage(
+            "ai",
+            result.error || "Summarization failed. Please try again."
+          );
+        }
+        return;
+      }
+      const response = await unifiedAIService.generateResponse(text, context);
+      if (response.success) {
+        addMessage(
+          "ai",
+          response.data ?? "",
+          context ? "Based on the current file preview" : undefined
+        );
+      } else {
+        addMessage(
+          "ai",
+          "I apologize, but I encountered an error processing your request. Please try again."
+        );
+      }
+    } catch {
+      addMessage(
+        "ai",
+        "I'm experiencing technical difficulties. Please try again in a moment."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Auto-send initial prompt once (e.g., "Summarize this file") when provided
+  useEffect(() => {
+    if (!initialPrompt || hasSentInitialPromptRef.current) return;
+    hasSentInitialPromptRef.current = true;
+    void sendMessageWithText(initialPrompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPrompt]);
+
+  // No multi-document aggregation: we only use the currently previewed file
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
 
@@ -111,12 +372,27 @@ export const AIChat: React.FC<AIChatProps> = ({ file }) => {
     setIsLoading(true);
 
     try {
-      // Try to get context from uploaded documents
-      let context = "";
-      if (user) {
-        // For now, we'll skip context matching since AI analysis is stored in localStorage
-        // In a future update, we can implement this with Google Drive integration
-        context = "";
+      // Use only the current file's context. If not ready, build it now.
+      const built = await ensureCurrentFileContext();
+      const context = built ? built.toString().slice(0, 8000) : "";
+
+      // If the user asks for a summary and we have context, call summarize API for higher quality
+      const wantsSummary = /\b(summarize|summary|summarise|summarization)\b/i.test(
+        userMessage
+      );
+      if (wantsSummary && context) {
+        const result = await unifiedAIService.summarizeText(
+          context.slice(0, 12000)
+        );
+        if (result.success && result.data) {
+          addMessage("ai", result.data, "Based on the current file preview");
+        } else {
+          addMessage(
+            "ai",
+            result.error || "Summarization failed. Please try again."
+          );
+        }
+        return;
       }
 
       const response = await unifiedAIService.generateResponse(
@@ -128,7 +404,7 @@ export const AIChat: React.FC<AIChatProps> = ({ file }) => {
         addMessage(
           "ai",
           response.data ?? "",
-          context ? "Based on your uploaded documents" : undefined
+          context ? "Based on the current file preview" : undefined
         );
       } else {
         addMessage(
@@ -160,12 +436,19 @@ export const AIChat: React.FC<AIChatProps> = ({ file }) => {
     });
   };
 
-  const suggestedQuestions = [
-    "Summarize my uploaded documents",
-    "What are the key concepts in my study materials?",
-    "Generate flashcards from my notes",
-    "Explain a complex topic I'm studying",
-  ];
+  const suggestedQuestions = file
+    ? [
+        "Summarize this file",
+        "What are the key concepts in this file?",
+        "Generate flashcards from this file",
+        "Explain the main idea in this file",
+      ]
+    : [
+        "Summarize my uploaded documents",
+        "What are the key concepts in my study materials?",
+        "Generate flashcards from my notes",
+        "Explain a complex topic I'm studying",
+      ];
 
   // Show file context if provided
   const fileContext = file ? (

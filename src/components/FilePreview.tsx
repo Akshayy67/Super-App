@@ -303,7 +303,21 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
             >
               {/* AIChat component side-by-side */}
               {/* @ts-ignore */}
-              <AIChat file={file} />
+              <AIChat file={file} fileContent={
+                // Try to reuse rendered/decoded content where possible
+                (() => {
+                  if (!file?.content) return "";
+                  if (file?.mimeType?.startsWith("image/")) return file.content;
+                  if (file?.mimeType === "text/plain") {
+                    try {
+                      return atob(file.content.split(",")[1]);
+                    } catch {
+                      return "";
+                    }
+                  }
+                  return "";
+                })()
+              } />
             </div>
           </div>
         ) : (

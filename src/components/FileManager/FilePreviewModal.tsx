@@ -269,7 +269,11 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
             >
               {/* AIChat component side-by-side */}
               {/* @ts-ignore */}
-              <AIChat file={previewFile} />
+              <AIChat
+                file={previewFile}
+                fileContent={previewContent}
+                initialPrompt={"Summarize this file"}
+              />
             </div>
           </div>
         ) : (
