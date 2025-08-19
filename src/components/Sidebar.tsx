@@ -8,6 +8,7 @@ import {
   User,
   LogOut,
   X,
+  BookOpen,
 } from "lucide-react";
 import { realTimeAuth } from "../utils/realTimeAuth";
 
@@ -34,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: "notes", label: "Notes", icon: StickyNote },
     { id: "chat", label: "AI Assistant", icon: MessageSquare },
     { id: "tools", label: "Study Tools", icon: Brain },
+    { id: "flashcards", label: "Flash Cards", icon: BookOpen },
   ];
 
   return (

@@ -7,6 +7,7 @@ import { TaskManager } from "./components/TaskManager";
 import { NotesManager } from "./components/NotesManager";
 import { AIChat } from "./components/AIChat";
 import { StudyTools } from "./components/StudyTools";
+import { FlashCards } from "./components/FlashCards";
 // Removed unused FilePreview import
 import ErrorBoundary from "./components/ErrorBoundary";
 import { realTimeAuth } from "./utils/realTimeAuth";
@@ -65,6 +66,8 @@ function App() {
         return <AIChat />;
       case "tools":
         return <StudyTools />;
+      case "flashcards":
+        return <FlashCards />;
       default:
         return <Dashboard onViewChange={handleViewChange} />;
     }

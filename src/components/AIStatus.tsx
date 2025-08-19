@@ -19,7 +19,7 @@ export const AIStatus: React.FC = () => {
       )}
       <Brain className="w-3 h-3 mr-1" />
       <span>
-        Google Gemini {isConfigured ? '✓' : '⚠️'}
+        Super AI {isConfigured ? '✓' : '⚠️'}
       </span>
     </div>
   );

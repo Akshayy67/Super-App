@@ -11,6 +11,7 @@ import { unifiedAIService } from "../utils/aiConfig";
 import { driveStorageUtils } from "../utils/driveStorage";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { AIStatus } from "./AIStatus";
+import { extractTextFromPdfDataUrl } from "../utils/pdfText";
 
 interface ToolResult {
   type: "summary" | "concepts" | "flashcards" | "explanation";
@@ -85,18 +86,93 @@ export const StudyTools: React.FC = () => {
     return colors[color as keyof typeof colors] || colors.blue;
   };
 
-  const getDocumentContent = (documentId: string): string => {
+  const getDocumentContent = async (documentId: string): Promise<string> => {
     const file = availableDocuments.find((doc) => doc.id === documentId);
-    if (!file || !file.content) return "";
+    if (!file) return "";
+
+    const decodeTextFromDataUrl = (dataUrl: string): string => {
+      try {
+        if (dataUrl.startsWith("data:")) {
+          const base64 = dataUrl.split(",")[1];
+          return atob(base64);
+        }
+        return atob(dataUrl);
+      } catch {
+        return dataUrl;
+      }
+    };
 
     try {
-      // For text files, decode base64
-      if (file.mimeType === "text/plain") {
-        return atob(file.content.split(",")[1]);
+      // If we already have inline content (localStorage fallback)
+      if (typeof file.content === "string" && file.content.length > 0) {
+        const mime = file.mimeType || "";
+        if (mime.startsWith("image/") || file.content.startsWith("data:image")) {
+          const ocr = await unifiedAIService.extractTextFromImage(file.content);
+          return ocr.success && ocr.data ? ocr.data : "";
+        }
+        if (
+          mime.includes("pdf") ||
+          (file.name && file.name.toLowerCase().endsWith(".pdf"))
+        ) {
+          if (file.content.startsWith("data:")) {
+            try {
+              return await extractTextFromPdfDataUrl(file.content);
+            } catch {
+              return "";
+            }
+          }
+          return "";
+        }
+
+        if (
+          mime === "text/plain" ||
+          mime.startsWith("text/") ||
+          (file.name && file.name.match(/\.(txt|md|json|js|ts|html|css|csv)$/i))
+        ) {
+          return decodeTextFromDataUrl(file.content);
+        }
+
+        // Fallback: unknown type; try to decode as text
+        return decodeTextFromDataUrl(file.content);
       }
-      // For other files, we would need proper text extraction
-      // This is a simplified version for demo purposes
-      return file.content;
+
+      // Otherwise, try downloading from Drive if available
+      if (file.driveFileId) {
+        const downloaded = await driveStorageUtils.downloadFileContent(
+          file.driveFileId
+        );
+        if (typeof downloaded === "string" && downloaded.length > 0) {
+          const mime = file.mimeType || "";
+          if (
+            mime.includes("pdf") ||
+            (file.name && file.name.toLowerCase().endsWith(".pdf"))
+          ) {
+            if (downloaded.startsWith("data:")) {
+              try {
+                return await extractTextFromPdfDataUrl(downloaded);
+              } catch {
+                return "";
+              }
+            }
+            return "";
+          }
+          if (mime.startsWith("image/") || downloaded.startsWith("data:image")) {
+            const ocr = await unifiedAIService.extractTextFromImage(downloaded);
+            return ocr.success && ocr.data ? ocr.data : "";
+          }
+          if (
+            mime === "text/plain" ||
+            mime.startsWith("text/") ||
+            (file.name && file.name.match(/\.(txt|md|json|js|ts|html|css|csv)$/i))
+          ) {
+            return decodeTextFromDataUrl(downloaded);
+          }
+          // Fallback: unknown type
+          return decodeTextFromDataUrl(downloaded);
+        }
+      }
+
+      return "";
     } catch (e) {
       return "";
     }
@@ -107,7 +183,7 @@ export const StudyTools: React.FC = () => {
 
     let content = inputText;
     if (selectedDocument) {
-      content = getDocumentContent(selectedDocument);
+      content = await getDocumentContent(selectedDocument);
       if (!content) {
         alert(
           "Could not extract text from the selected document. Please try with a text file or paste the content manually."
@@ -166,27 +242,81 @@ export const StudyTools: React.FC = () => {
 
   const formatResult = (result: ToolResult) => {
     if (result.type === "flashcards") {
-      const flashcards = result.content
+      type ParsedCard = { question: string; answer: string; reasoning?: string };
+      const lines = result.content
         .split("\n")
-        .filter((line) => line.includes("|"));
-      return (
-        <div className="space-y-3">
-          {flashcards.map((card, index) => {
-            const [question, answer] = card
-              .split("|")
-              .map((part) => part.replace(/^[QA]:\s*/, "").trim());
-            return (
+        .map((l) => l.trim())
+        .filter((l) => l && l.includes("|"));
+
+      const parsed: ParsedCard[] = lines.map((line) => {
+        const parts = line.split("|").map((p) => p.trim());
+        const qPart = parts.find((p) => /^Q:/i.test(p)) || parts[0] || "";
+        const aPart = parts.find((p) => /^A:/i.test(p)) || parts[1] || "";
+        const rPart = parts.find((p) => /^R:/i.test(p)) || parts[2] || "";
+        const clean = (s: string) => s.replace(/^[QAR]:\s*/i, "").trim();
+        return {
+          question: clean(qPart),
+          answer: clean(aPart),
+          reasoning: clean(rPart) || undefined,
+        };
+      });
+
+      const Flashcard: React.FC<{ card: ParsedCard; idx: number }> = ({ card, idx }) => {
+        const [flipped, setFlipped] = React.useState(false);
+        const toggle = () => setFlipped((f) => !f);
+        return (
+          <div className="relative" style={{ perspective: 1000 }}>
+            <div
+              className="relative w-full h-40 md:h-48"
+              style={{
+                transformStyle: "preserve-3d",
+                transition: "transform 400ms ease",
+                transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+              }}
+            >
               <div
-                key={index}
-                className="border border-gray-200 rounded-lg p-4"
+                className="absolute inset-0 border border-gray-200 rounded-xl bg-white p-4 flex flex-col justify-between"
+                style={{ backfaceVisibility: "hidden" }}
               >
-                <div className="font-medium text-gray-900 mb-2">
-                  Q: {question}
+                <div className="text-xs text-gray-500">Card {idx + 1}</div>
+                <div className="font-medium text-gray-900 line-clamp-4">{card.question}</div>
+                <div className="flex items-center justify-end">
+                  <button
+                    onClick={toggle}
+                    className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 hover:border-gray-300 text-gray-700"
+                  >
+                    Flip
+                  </button>
                 </div>
-                <div className="text-gray-700">A: {answer}</div>
               </div>
-            );
-          })}
+              <div
+                className="absolute inset-0 border border-gray-200 rounded-xl bg-white p-4"
+                style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+              >
+                <div className="text-xs text-gray-500 mb-1">Answer</div>
+                <div className="font-medium text-gray-900 mb-2">{card.answer}</div>
+                {card.reasoning ? (
+                  <div className="text-sm text-gray-600">{card.reasoning}</div>
+                ) : null}
+                <div className="absolute bottom-4 right-4">
+                  <button
+                    onClick={toggle}
+                    className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 hover:border-gray-300 text-gray-700"
+                  >
+                    Flip back
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      return (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {parsed.map((c, i) => (
+            <Flashcard key={`${c.question}-${i}`} card={c} idx={i} />
+          ))}
         </div>
       );
     }

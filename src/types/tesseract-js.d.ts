@@ -1,3 +1,5 @@
 declare module "tesseract.js";
 
 
+
+

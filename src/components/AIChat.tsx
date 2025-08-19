@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Loader, Brain, FileText } from "lucide-react";
 import { unifiedAIService } from "../utils/aiConfig";
 import { driveStorageUtils } from "../utils/driveStorage";
-import { realTimeAuth } from "../utils/realTimeAuth";
 import { AIStatus } from "./AIStatus";
 import { extractTextFromPdfDataUrl } from "../utils/pdfText";
 
@@ -31,13 +30,14 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [availableDocuments, setAvailableDocuments] = useState<string[]>([]);
+  // Removed cross-document access banner; no need to track other documents
+  
   const [aiConfigured, setAiConfigured] = useState<boolean>(false);
   const [fileContextText, setFileContextText] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasSentInitialPromptRef = useRef<boolean>(false);
 
-  const user = realTimeAuth.getCurrentUser();
+  
 
   useEffect(() => {
     // Check AI configuration status
@@ -66,23 +66,22 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
     };
   }, []);
 
-  useEffect(() => {
-    const loadDocuments = async () => {
-      // Respect privacy: when in file preview context, do not enumerate other documents
-      if (!user || file) return;
-      try {
-        const files = await driveStorageUtils.getFiles(user.id);
-        const documentNames = files
-          .filter((file) => file.type === "file")
-          .map((file) => file.name);
-        setAvailableDocuments(documentNames);
-      } catch (error) {
-        console.error("Error loading documents:")
-      }
-    };
-
-    loadDocuments();
-  }, [user, file]);
+  // Remove loading of other documents to avoid showing cross-document access notice
+  // useEffect(() => {
+  //   const loadDocuments = async () => {
+  //     if (!user || file) return;
+  //     try {
+  //       const files = await driveStorageUtils.getFiles(user.id);
+  //       const documentNames = files
+  //         .filter((file) => file.type === "file")
+  //         .map((file) => file.name);
+  //       setAvailableDocuments(documentNames);
+  //     } catch (error) {
+  //       console.error("Error loading documents:")
+  //     }
+  //   };
+  //   loadDocuments();
+  // }, [user, file]);
 
   // Build context from the currently previewed file
   useEffect(() => {
@@ -479,21 +478,11 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
           <AIStatus />
         </div>
         {fileContext}
-        {availableDocuments.length > 0 && (
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-            <div className="flex items-center text-sm text-blue-700">
-              <FileText className="w-4 h-4 mr-2" />
-              <span>
-                I have access to {availableDocuments.length} of your documents
-                and can answer questions about them.
-              </span>
-            </div>
-          </div>
-        )}
+        {/* Removed cross-document access banner */}
         {!aiConfigured && (
           <div className="mt-4 p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm">
-            <strong className="font-semibold">Demo mode:</strong> Google Gemini AI not
-            configured. Add VITE_GOOGLE_AI_API_KEY in .env and restart for full answers.
+            <strong className="font-semibold">Demo mode:</strong> Super AI not configured.
+            Add VITE_GOOGLE_AI_API_KEY in .env and restart for full answers.
           </div>
         )}
       </div>

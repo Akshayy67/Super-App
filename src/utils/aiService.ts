@@ -121,7 +121,7 @@ export const aiService = {
   },
 
   async generateFlashcards(text: string): Promise<AIResponse> {
-    const prompt = `Create flashcards from the following text. Format each flashcard as "Q: [question] | A: [answer]" with each flashcard on a new line:\n\n${text}`;
+    const prompt = `Create concise study flashcards from the following text. For each card, include a short, clear question, a direct answer, and a brief reasoning/explanation that justifies the answer. Use EXACTLY this format per line: \nQ: [question] | A: [answer] | R: [reasoning]\nReturn multiple lines (one per card) and nothing else.\n\nText:\n${text}`;
     return this.generateResponse(prompt);
   },
 
