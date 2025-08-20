@@ -153,6 +153,67 @@ export const driveStorageUtils = {
     }
   },
 
+  // Short notes management methods
+  async saveShortNotesToDrive(shortNotes: any[], userId: string): Promise<boolean> {
+    try {
+      if (!realTimeAuth.hasGoogleDriveAccess()) {
+        console.log("📱 No Google Drive access, saving to localStorage only");
+        // Save to localStorage as fallback
+        localStorage.setItem("super_study_shortnotes", JSON.stringify(shortNotes));
+        return false;
+      }
+
+      console.log("☁️ Saving short notes to Google Drive...");
+      const result = await googleDriveService.uploadShortNotes(shortNotes);
+      
+      if (result.success) {
+        console.log("✅ Short notes saved to Google Drive successfully");
+        // Also save to localStorage as backup
+        localStorage.setItem("super_study_shortnotes", JSON.stringify(shortNotes));
+        return true;
+      } else {
+        console.error("❌ Failed to save short notes to Drive:", result.error);
+        // Fallback to localStorage
+        localStorage.setItem("super_study_shortnotes", JSON.stringify(shortNotes));
+        return false;
+      }
+    } catch (error) {
+      console.error("Error saving short notes to Drive:", error);
+      // Fallback to localStorage
+      localStorage.setItem("super_study_shortnotes", JSON.stringify(shortNotes));
+      return false;
+    }
+  },
+
+  async loadShortNotesFromDrive(userId: string): Promise<any[]> {
+    try {
+      if (!realTimeAuth.hasGoogleDriveAccess()) {
+        console.log("📱 No Google Drive access, loading from localStorage");
+        const stored = localStorage.getItem("super_study_shortnotes");
+        return stored ? JSON.parse(stored) : [];
+      }
+
+      console.log("☁️ Loading short notes from Google Drive...");
+      const result = await googleDriveService.downloadShortNotes();
+      
+      if (result.success && result.data) {
+        console.log("✅ Short notes loaded from Google Drive successfully");
+        // Update localStorage with Drive data
+        localStorage.setItem("super_study_shortnotes", JSON.stringify(result.data));
+        return result.data;
+      } else {
+        console.log("📱 Falling back to localStorage for short notes");
+        const stored = localStorage.getItem("super_study_shortnotes");
+        return stored ? JSON.parse(stored) : [];
+      }
+    } catch (error) {
+      console.error("Error loading short notes from Drive:", error);
+      // Fallback to localStorage
+      const stored = localStorage.getItem("super_study_shortnotes");
+      return stored ? JSON.parse(stored) : [];
+    }
+  },
+
   // File Management with Google Drive
   async getFiles(userId: string): Promise<FileItem[]> {
     console.log("🔍 Getting files for user:", userId);

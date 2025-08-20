@@ -9,7 +9,7 @@ interface LoadingGlobeProps {
 export const LoadingGlobe: React.FC<LoadingGlobeProps> = ({
   size = 60,
   className = "",
-  color = "rgb(147, 51, 234)", // Default purple
+  color = "rgb(30, 41, 59)", // Default dark slate
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
@@ -36,11 +36,11 @@ export const LoadingGlobe: React.FC<LoadingGlobeProps> = ({
       const centerY = size / 2;
       const radius = size * 0.3;
 
-      // Draw rotating wireframe globe
+      // Draw rotating wireframe globe with darker colors
       ctx.strokeStyle = `${color
         .replace("rgb", "rgba")
-        .replace(")", ", 0.6)")}`;
-      ctx.lineWidth = 1;
+        .replace(")", ", 0.9)")}`;
+      ctx.lineWidth = 1.5;
 
       // Longitudinal lines
       for (let i = 0; i < 6; i++) {
@@ -98,7 +98,7 @@ export const LoadingGlobe: React.FC<LoadingGlobeProps> = ({
           const pulse = Math.sin(time * 4) * 0.3 + 0.7;
           const nodeSize = 2 * pulse;
 
-          // Glow effect
+          // Darker glow effect
           const gradient = ctx.createRadialGradient(
             x,
             y,
@@ -109,7 +109,11 @@ export const LoadingGlobe: React.FC<LoadingGlobeProps> = ({
           );
           gradient.addColorStop(
             0,
-            `${color.replace("rgb", "rgba").replace(")", ", 0.8)")}`
+            `${color.replace("rgb", "rgba").replace(")", ", 1)")}`
+          );
+          gradient.addColorStop(
+            0.5,
+            `${color.replace("rgb", "rgba").replace(")", ", 0.6)")}`
           );
           gradient.addColorStop(
             1,
@@ -121,8 +125,8 @@ export const LoadingGlobe: React.FC<LoadingGlobeProps> = ({
           ctx.arc(x, y, nodeSize * 2, 0, Math.PI * 2);
           ctx.fill();
 
-          // Solid center
-          ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+          // Darker solid center
+          ctx.fillStyle = `${color.replace("rgb", "rgba").replace(")", ", 0.95)")}`;
           ctx.beginPath();
           ctx.arc(x, y, nodeSize * 0.3, 0, Math.PI * 2);
           ctx.fill();

@@ -1,43 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { BookOpen, Search, Filter, Play, Settings } from "lucide-react";
+import { Question } from "./InterviewSubjects";
+import { QuestionCard } from "./QuestionCard";
 import {
-  Search,
-  Filter,
-  BookOpen,
-  Briefcase,
-  Users,
-  Brain,
-  Target,
-  Lightbulb,
-  ChevronRight,
-  Star,
-  Clock,
-  CheckCircle,
-  Copy,
-  Volume2,
-  Eye,
-  EyeOff,
-  Hash,
-  Code,
-  TrendingUp,
-  Heart,
-  Zap,
-  Award,
-  Bookmark,
-  Play,
-  BarChart3,
-} from "lucide-react";
-
-interface Question {
-  id: string;
-  question: string;
-  category: string;
-  difficulty: "easy" | "medium" | "hard";
-  type: "behavioral" | "technical" | "situational" | "general";
-  sampleAnswer?: string;
-  tips?: string[];
-  followUps?: string[];
-  tags?: string[];
-}
+  allQuestions,
+  questionsBySubject,
+  getQuestionsBySubject,
+  getQuestionsByTags,
+} from "./bank";
 
 interface QuestionCategory {
   id: string;
@@ -49,6 +19,12 @@ interface QuestionCategory {
 }
 
 export const QuestionBank: React.FC = () => {
+  // Debug logging for imports
+  console.log("QuestionBank component rendered");
+  console.log("allQuestions imported:", allQuestions.length);
+  console.log("questionsBySubject imported:", Object.keys(questionsBySubject));
+  console.log("Sample questions:", allQuestions.slice(0, 2));
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
@@ -56,320 +32,142 @@ export const QuestionBank: React.FC = () => {
   const [showAnswers, setShowAnswers] = useState<Record<string, boolean>>({});
   const [practicedQuestions, setPracticedQuestions] = useState<string[]>([]);
   const [favoriteQuestions, setFavoriteQuestions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Add useEffect to handle loading state
+  useEffect(() => {
+    // Check if questions are loaded
+    if (allQuestions.length > 0) {
+      setIsLoading(false);
+      console.log("Questions loaded successfully:", allQuestions.length);
+    } else {
+      console.error("No questions found in allQuestions array");
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Define questions based on selected category
+  const questions = useMemo(() => {
+    if (selectedCategory && selectedCategory !== "all") {
+      const subjectMap: Record<string, string> = {
+        webdev: "Frontend Development",
+        database: "Databases",
+        algorithm: "Algorithms & Data Structures",
+        system: "System Design",
+        cloud: "Cloud & DevOps",
+        react: "React",
+        frontend: "Frontend Development",
+        javascript: "JavaScript",
+        behavioral: "Behavioral",
+        os: "Operating Systems",
+      };
+
+      const subject = subjectMap[selectedCategory];
+      const subjectQuestions = subject
+        ? getQuestionsBySubject(subject)
+        : allQuestions;
+
+      // Debug logging
+      console.log(`Selected category: ${selectedCategory}`);
+      console.log(`Subject: ${subject}`);
+      console.log(`Questions found: ${subjectQuestions.length}`);
+      console.log("Sample questions:", subjectQuestions.slice(0, 2));
+
+      return subjectQuestions;
+    }
+
+    // Debug logging for all questions
+    console.log(`Showing all questions: ${allQuestions.length}`);
+    console.log("Sample all questions:", allQuestions.slice(0, 2));
+
+    return allQuestions;
+  }, [selectedCategory]);
+
+  // Categories
   const categories: QuestionCategory[] = [
-    {
-      id: "general",
-      name: "General Questions",
-      icon: Briefcase,
-      color: "blue",
-      description: "Common interview questions asked across all industries",
-      questionCount: 25,
-    },
     {
       id: "behavioral",
       name: "Behavioral Questions",
-      icon: Users,
+      icon: BookOpen,
       color: "purple",
-      description: "Questions about past experiences and how you handle situations",
-      questionCount: 30,
+      description:
+        "Questions about past experiences and how you handle situations",
+      questionCount: questionsBySubject["Behavioral"]?.length || 0,
     },
     {
-      id: "technical",
-      name: "Technical Questions",
-      icon: Code,
-      color: "green",
-      description: "Role-specific technical and skill-based questions",
-      questionCount: 40,
+      id: "webdev",
+      name: "Web Development",
+      icon: BookOpen,
+      color: "indigo",
+      description:
+        "Frontend, backend, and full-stack web development questions",
+      questionCount: questionsBySubject["Frontend Development"]?.length || 0,
     },
     {
-      id: "leadership",
-      name: "Leadership & Management",
-      icon: Target,
+      id: "database",
+      name: "Database Systems",
+      icon: BookOpen,
+      color: "blue",
+      description: "SQL, NoSQL, and database design questions",
+      questionCount: questionsBySubject["Databases"]?.length || 0,
+    },
+    {
+      id: "algorithms",
+      name: "Algorithms & Data Structures",
+      icon: BookOpen,
+      color: "amber",
+      description: "Algorithmic problem-solving and optimization",
+      questionCount:
+        questionsBySubject["Algorithms & Data Structures"]?.length || 0,
+    },
+    {
+      id: "systemdesign",
+      name: "System Design",
+      icon: BookOpen,
+      color: "violet",
+      description: "Scalable and distributed systems design",
+      questionCount: questionsBySubject["System Design"]?.length || 0,
+    },
+    {
+      id: "cloud",
+      name: "Cloud Computing",
+      icon: BookOpen,
+      color: "cyan",
+      description: "Cloud platforms, serverless, and DevOps",
+      questionCount: questionsBySubject["Cloud & DevOps"]?.length || 0,
+    },
+    {
+      id: "react",
+      name: "React",
+      icon: BookOpen,
+      color: "blue",
+      description: "React framework specific questions",
+      questionCount: questionsBySubject["React"]?.length || 0,
+    },
+    {
+      id: "frontend",
+      name: "Frontend Development",
+      icon: BookOpen,
       color: "orange",
-      description: "Questions about leadership experience and management style",
-      questionCount: 20,
+      description: "Frontend development, UI/UX, and browser technologies",
+      questionCount: questionsBySubject["Frontend Development"]?.length || 0,
     },
     {
-      id: "culture",
-      name: "Culture Fit",
-      icon: Heart,
-      color: "pink",
-      description: "Questions to assess alignment with company values",
-      questionCount: 15,
+      id: "javascript",
+      name: "JavaScript",
+      icon: BookOpen,
+      color: "yellow",
+      description: "JavaScript language, concepts and patterns",
+      questionCount: questionsBySubject["JavaScript"]?.length || 0,
     },
     {
-      id: "problem",
-      name: "Problem Solving",
-      icon: Brain,
+      id: "os",
+      name: "Operating Systems",
+      icon: BookOpen,
       color: "teal",
-      description: "Analytical and problem-solving scenario questions",
-      questionCount: 25,
-    },
-  ];
-
-  const questions: Question[] = [
-    // General Questions
-    {
-      id: "gen-1",
-      question: "Tell me about yourself.",
-      category: "general",
-      difficulty: "easy",
-      type: "general",
-      sampleAnswer:
-        "I'm a [profession] with [X years] of experience in [industry/field]. In my current role at [Company], I [key achievement]. I'm particularly passionate about [relevant interest] and I'm excited about this opportunity because [specific reason related to the company/role].",
-      tips: [
-        "Keep it professional and relevant to the role",
-        "Structure: Present → Past → Future",
-        "Limit to 2-3 minutes",
-        "End with why you're interested in this role",
-      ],
-      tags: ["opening", "essential"],
-    },
-    {
-      id: "gen-2",
-      question: "Why do you want to work here?",
-      category: "general",
-      difficulty: "medium",
-      type: "general",
-      sampleAnswer:
-        "I'm impressed by [specific company achievement/value]. Your commitment to [specific initiative] aligns with my values. I believe my skills in [relevant skills] would contribute to [specific team/project], and I'm excited about the opportunity to [specific growth opportunity].",
-      tips: [
-        "Research the company thoroughly",
-        "Mention specific projects or values",
-        "Connect your skills to their needs",
-        "Show genuine enthusiasm",
-      ],
-      tags: ["motivation", "research"],
-    },
-    {
-      id: "gen-3",
-      question: "What are your greatest strengths?",
-      category: "general",
-      difficulty: "easy",
-      type: "general",
-      sampleAnswer:
-        "One of my key strengths is [strength]. For example, in my previous role, I [specific example demonstrating the strength]. This resulted in [positive outcome]. I believe this strength would be particularly valuable in this role because [connection to job requirements].",
-      tips: [
-        "Choose strengths relevant to the job",
-        "Back up with specific examples",
-        "Show impact and results",
-        "Be authentic",
-      ],
-      followUps: ["Can you give another example?", "How would this strength help in this role?"],
-    },
-    {
-      id: "gen-4",
-      question: "What is your biggest weakness?",
-      category: "general",
-      difficulty: "hard",
-      type: "general",
-      sampleAnswer:
-        "I used to struggle with [genuine weakness]. I recognized this was limiting my effectiveness, so I [specific action taken]. Now, I [current improved state]. I continue to work on this by [ongoing improvement strategy].",
-      tips: [
-        "Be honest but strategic",
-        "Show self-awareness",
-        "Demonstrate improvement efforts",
-        "Don't say 'perfectionism' or 'working too hard'",
-      ],
-      tags: ["challenging", "self-awareness"],
-    },
-    {
-      id: "gen-5",
-      question: "Where do you see yourself in 5 years?",
-      category: "general",
-      difficulty: "medium",
-      type: "general",
-      sampleAnswer:
-        "In five years, I see myself having grown significantly in [relevant skills]. I'd like to have taken on more responsibilities in [area], potentially moving into [realistic position]. I'm excited about the growth opportunities here and contributing to [company goal].",
-      tips: [
-        "Be ambitious but realistic",
-        "Align with company growth",
-        "Show commitment to the field",
-        "Focus on skills and contributions",
-      ],
-    },
-
-    // Behavioral Questions
-    {
-      id: "beh-1",
-      question: "Describe a time when you had to work with a difficult team member.",
-      category: "behavioral",
-      difficulty: "medium",
-      type: "behavioral",
-      sampleAnswer:
-        "Situation: At [Company], I worked with a colleague who often missed deadlines. Task: We needed to deliver a critical project. Action: I initiated a one-on-one conversation to understand their challenges, suggested a new workflow with clear milestones, and offered support. Result: We delivered on time and improved our working relationship.",
-      tips: [
-        "Use STAR method",
-        "Focus on resolution, not conflict",
-        "Show empathy and professionalism",
-        "Highlight positive outcome",
-      ],
-      tags: ["teamwork", "conflict-resolution"],
-    },
-    {
-      id: "beh-2",
-      question: "Tell me about a time you failed.",
-      category: "behavioral",
-      difficulty: "hard",
-      type: "behavioral",
-      sampleAnswer:
-        "Situation: I underestimated the complexity of a project. Task: Deliver a new feature by deadline. Action: When I realized we'd miss the deadline, I immediately informed stakeholders, presented a revised timeline, and implemented better project planning processes. Result: While we missed the initial deadline, we delivered a higher quality product and I learned valuable lessons about project estimation.",
-      tips: [
-        "Choose a real failure",
-        "Take responsibility",
-        "Focus on learning and growth",
-        "Show how you've applied the lesson",
-      ],
-      tags: ["challenging", "growth"],
-    },
-    {
-      id: "beh-3",
-      question: "Give an example of when you went above and beyond.",
-      category: "behavioral",
-      difficulty: "medium",
-      type: "behavioral",
-      sampleAnswer:
-        "Situation: Our client was facing a critical issue outside business hours. Task: While not on-call, I noticed the alert. Action: I spent my evening diagnosing and fixing the issue, documented the solution, and created a prevention plan. Result: We retained a major client and received commendation from leadership.",
-      tips: [
-        "Show initiative and ownership",
-        "Quantify impact when possible",
-        "Demonstrate commitment",
-        "Link to company values",
-      ],
-      tags: ["initiative", "dedication"],
-    },
-
-    // Technical Questions (Generic)
-    {
-      id: "tech-1",
-      question: "How do you stay updated with industry trends and technologies?",
-      category: "technical",
-      difficulty: "easy",
-      type: "technical",
-      sampleAnswer:
-        "I maintain a multi-faceted approach: I follow industry leaders on social media, subscribe to relevant newsletters like [specific examples], attend webinars and conferences, participate in online communities, and dedicate time each week to learning new skills through courses and documentation.",
-      tips: [
-        "Be specific about resources",
-        "Show continuous learning",
-        "Mention recent learnings",
-        "Connect to role requirements",
-      ],
-      tags: ["learning", "growth"],
-    },
-    {
-      id: "tech-2",
-      question: "Describe your experience with [specific technology/tool].",
-      category: "technical",
-      difficulty: "medium",
-      type: "technical",
-      sampleAnswer:
-        "I have [duration] of experience with [technology]. In my recent project, I used it to [specific application]. I'm proficient in [specific features/aspects] and have also explored [advanced features]. One challenge I solved was [specific example].",
-      tips: [
-        "Be honest about skill level",
-        "Provide concrete examples",
-        "Show depth of knowledge",
-        "Express willingness to learn more",
-      ],
-    },
-
-    // Leadership Questions
-    {
-      id: "lead-1",
-      question: "How would you describe your leadership style?",
-      category: "leadership",
-      difficulty: "medium",
-      type: "behavioral",
-      sampleAnswer:
-        "I practice servant leadership, focusing on empowering my team. I believe in setting clear expectations, providing resources and support, and removing obstacles. For example, [specific example]. I adapt my style based on team member needs and situations.",
-      tips: [
-        "Have a clear philosophy",
-        "Provide examples",
-        "Show adaptability",
-        "Align with company culture",
-      ],
-      tags: ["management", "leadership"],
-    },
-    {
-      id: "lead-2",
-      question: "How do you motivate underperforming team members?",
-      category: "leadership",
-      difficulty: "hard",
-      type: "situational",
-      sampleAnswer:
-        "First, I have a private conversation to understand root causes. I work with them to create a clear improvement plan with measurable goals. I provide additional support, training, or resources as needed. I give regular feedback and recognition for progress. If issues persist, I involve HR while maintaining dignity and respect.",
-      tips: [
-        "Show empathy and support",
-        "Be systematic in approach",
-        "Focus on improvement",
-        "Know when to escalate",
-      ],
-    },
-
-    // Culture Fit Questions
-    {
-      id: "cult-1",
-      question: "What type of work environment do you thrive in?",
-      category: "culture",
-      difficulty: "medium",
-      type: "general",
-      sampleAnswer:
-        "I thrive in collaborative environments where innovation is encouraged and diverse perspectives are valued. I appreciate clear communication, mutual respect, and a balance between autonomy and teamwork. I'm energized by challenges and continuous learning opportunities.",
-      tips: [
-        "Research company culture first",
-        "Be authentic",
-        "Give specific examples",
-        "Show flexibility",
-      ],
-      tags: ["culture", "fit"],
-    },
-    {
-      id: "cult-2",
-      question: "How do you handle work-life balance?",
-      category: "culture",
-      difficulty: "easy",
-      type: "general",
-      sampleAnswer:
-        "I believe in working efficiently during work hours to deliver quality results. I prioritize tasks, use time management techniques, and maintain clear boundaries. This allows me to recharge and bring my best self to work. When needed for critical deadlines, I'm flexible.",
-      tips: [
-        "Show you're dedicated but balanced",
-        "Demonstrate time management",
-        "Be realistic",
-        "Align with company expectations",
-      ],
-    },
-
-    // Problem Solving Questions
-    {
-      id: "prob-1",
-      question: "How would you approach a problem you've never encountered before?",
-      category: "problem",
-      difficulty: "medium",
-      type: "situational",
-      sampleAnswer:
-        "I start by gathering information and understanding the problem fully. I research similar issues and solutions, consult with experts or colleagues, break down the problem into smaller parts, develop multiple potential solutions, test them systematically, and document my findings for future reference.",
-      tips: [
-        "Show systematic thinking",
-        "Demonstrate resourcefulness",
-        "Include collaboration",
-        "Emphasize learning",
-      ],
-      tags: ["analytical", "problem-solving"],
-    },
-    {
-      id: "prob-2",
-      question: "Describe a complex problem you solved.",
-      category: "problem",
-      difficulty: "hard",
-      type: "behavioral",
-      sampleAnswer:
-        "Situation: [Complex problem description]. Task: [What needed to be achieved]. Action: I analyzed the problem, identified root causes, developed a solution strategy, implemented it in phases, and monitored results. Result: [Quantified positive outcome and lessons learned].",
-      tips: [
-        "Choose genuinely complex problem",
-        "Show analytical process",
-        "Highlight creativity",
-        "Quantify results",
-      ],
+      description:
+        "Operating system concepts, memory management, and processes",
+      questionCount: questionsBySubject["Operating Systems"]?.length || 0,
     },
   ];
 
@@ -398,7 +196,6 @@ export const QuestionBank: React.FC = () => {
 
   const copyQuestion = (question: string) => {
     navigator.clipboard.writeText(question);
-    // You could add a toast notification here
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -429,41 +226,173 @@ export const QuestionBank: React.FC = () => {
     }
   };
 
-  const getCategoryColor = (color: string) => {
-    const colors: Record<string, string> = {
-      blue: "bg-blue-100 text-blue-600 border-blue-200",
-      purple: "bg-purple-100 text-purple-600 border-purple-200",
-      green: "bg-green-100 text-green-600 border-green-200",
-      orange: "bg-orange-100 text-orange-600 border-orange-200",
-      pink: "bg-pink-100 text-pink-600 border-pink-200",
-      teal: "bg-teal-100 text-teal-600 border-teal-200",
-    };
-    return colors[color] || "bg-gray-100 text-gray-600 border-gray-200";
-  };
-
   // Filter questions
   const filteredQuestions = questions.filter((q) => {
     const matchesSearch =
       searchQuery === "" ||
       q.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      q.tags?.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCategory = selectedCategory === "all" || q.category === selectedCategory;
-    const matchesDifficulty = selectedDifficulty === "all" || q.difficulty === selectedDifficulty;
+      q.tags?.some((tag) =>
+        tag.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
+    // Handle category filtering based on subject selection
+    let matchesCategory = true;
+    if (selectedCategory && selectedCategory !== "all") {
+      const subjectMap: Record<string, string[]> = {
+        webdev: ["frontend", "backend", "fullstack", "web", "html", "css"],
+        database: [
+          "database",
+          "sql",
+          "nosql",
+          "db",
+          "mysql",
+          "postgresql",
+          "mongodb",
+        ],
+        algorithm: [
+          "algorithms",
+          "data structures",
+          "algorithm",
+          "array",
+          "list",
+          "tree",
+          "graph",
+          "sorting",
+          "searching",
+          "complexity",
+          "big o",
+        ],
+        system: [
+          "system design",
+          "architecture",
+          "scalability",
+          "distributed",
+          "microservices",
+          "load balancing",
+          "caching",
+          "database design",
+        ],
+        cloud: [
+          "cloud",
+          "devops",
+          "infrastructure",
+          "aws",
+          "azure",
+          "gcp",
+          "docker",
+          "kubernetes",
+          "ci/cd",
+        ],
+        react: ["react", "jsx", "hooks", "component", "state", "props"],
+        frontend: [
+          "frontend",
+          "ui",
+          "ux",
+          "html",
+          "css",
+          "javascript",
+          "browser",
+          "dom",
+        ],
+        javascript: [
+          "javascript",
+          "js",
+          "es6",
+          "async",
+          "promise",
+          "closure",
+          "prototype",
+        ],
+        behavioral: [
+          "behavioral",
+          "experience",
+          "situation",
+          "teamwork",
+          "leadership",
+          "conflict",
+        ],
+        os: [
+          "operating systems",
+          "os",
+          "kernel",
+          "process",
+          "thread",
+          "memory management",
+          "virtual memory",
+          "scheduling",
+          "deadlock",
+          "paging",
+          "segmentation",
+          "file system",
+        ],
+      };
+
+      const allowedCategories = subjectMap[selectedCategory] || [];
+
+      // More flexible matching - check if any tag contains any of the allowed categories
+      matchesCategory = allowedCategories.some((cat) => {
+        const catLower = cat.toLowerCase();
+        return (
+          // Check if any tag contains the category
+          q.tags?.some((tag) => tag.toLowerCase().includes(catLower)) ||
+          // Check if question text contains the category
+          q.question.toLowerCase().includes(catLower) ||
+          // Check if answer contains the category (if available)
+          (q.sampleAnswer && q.sampleAnswer.toLowerCase().includes(catLower)) ||
+          // Check if category field matches
+          q.category?.toLowerCase().includes(catLower)
+        );
+      });
+
+      // Debug logging for category matching
+      if (!matchesCategory) {
+        console.log(
+          `Question "${q.question.substring(
+            0,
+            50
+          )}..." doesn't match category ${selectedCategory}`
+        );
+        console.log(`Question tags:`, q.tags);
+        console.log(`Question category:`, q.category);
+        console.log(`Question text contains:`, q.question.toLowerCase());
+        console.log(`Allowed categories:`, allowedCategories);
+      }
+    }
+
+    const matchesDifficulty =
+      selectedDifficulty === "all" || q.difficulty === selectedDifficulty;
     const matchesType = selectedType === "all" || q.type === selectedType;
 
-    return matchesSearch && matchesCategory && matchesDifficulty && matchesType;
+    const matches =
+      matchesSearch && matchesCategory && matchesDifficulty && matchesType;
+
+    // Debug logging for overall filtering
+    if (selectedCategory !== "all" && matches) {
+      console.log(
+        `Question "${q.question.substring(0, 50)}..." matches all filters`
+      );
+    }
+
+    return matches;
   });
+
+  // Debug logging for filtered results
+  console.log(`Filtered questions count: ${filteredQuestions.length}`);
+  console.log(`Total questions before filtering: ${questions.length}`);
 
   return (
     <div className="space-y-8">
       {/* Header Section */}
       <div className="text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mb-4">
-          <BookOpen className="w-8 h-8 text-white" />
+        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-500 via-purple-600 to-pink-500 rounded-full mb-6 shadow-lg">
+          <BookOpen className="w-10 h-10 text-white" />
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Interview Question Bank</h1>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Practice with our comprehensive collection of interview questions across various categories and difficulty levels
+        <h1 className="text-4xl font-bold text-gray-900 mb-3">
+          Interview Question Bank
+        </h1>
+        <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+          Master your interview skills with our comprehensive collection of
+          questions
         </p>
       </div>
 
@@ -475,13 +404,14 @@ export const QuestionBank: React.FC = () => {
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search questions or tags..."
+                placeholder="Search questions, tags, or keywords..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
               />
             </div>
           </div>
+
           <div className="flex gap-3">
             <select
               value={selectedCategory}
@@ -491,10 +421,11 @@ export const QuestionBank: React.FC = () => {
               <option value="all">All Categories</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
-                  {cat.name}
+                  {cat.name} ({cat.questionCount})
                 </option>
               ))}
             </select>
+
             <select
               value={selectedDifficulty}
               onChange={(e) => setSelectedDifficulty(e.target.value)}
@@ -505,6 +436,7 @@ export const QuestionBank: React.FC = () => {
               <option value="medium">Medium</option>
               <option value="hard">Hard</option>
             </select>
+
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
@@ -523,52 +455,43 @@ export const QuestionBank: React.FC = () => {
       {/* Stats Bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Hash className="w-5 h-5 text-blue-600" />
-              </div>
-              <span className="text-sm text-gray-600">Total</span>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-gray-900">
+              {questions.length}
             </div>
-            <span className="text-2xl font-bold text-gray-900">{questions.length}</span>
+            <div className="text-sm text-gray-600">Total Questions</div>
           </div>
         </div>
+
         <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              </div>
-              <span className="text-sm text-gray-600">Practiced</span>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-gray-900">
+              {practicedQuestions.length}
             </div>
-            <span className="text-2xl font-bold text-gray-900">{practicedQuestions.length}</span>
+            <div className="text-sm text-gray-600">Practiced</div>
           </div>
         </div>
+
         <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Star className="w-5 h-5 text-yellow-600" />
-              </div>
-              <span className="text-sm text-gray-600">Favorites</span>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-gray-900">
+              {favoriteQuestions.length}
             </div>
-            <span className="text-2xl font-bold text-gray-900">{favoriteQuestions.length}</span>
+            <div className="text-sm text-gray-600">Favorites</div>
           </div>
         </div>
+
         <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Filter className="w-5 h-5 text-purple-600" />
-              </div>
-              <span className="text-sm text-gray-600">Filtered</span>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-gray-900">
+              {filteredQuestions.length}
             </div>
-            <span className="text-2xl font-bold text-gray-900">{filteredQuestions.length}</span>
+            <div className="text-sm text-gray-600">Filtered</div>
           </div>
         </div>
       </div>
 
-      {/* Category Cards (when no search/filter) */}
+      {/* Category Cards */}
       {searchQuery === "" && selectedCategory === "all" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {categories.map((category) => {
@@ -580,29 +503,22 @@ export const QuestionBank: React.FC = () => {
                 className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-all duration-300 text-left group hover:border-blue-200"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className={`p-3 rounded-xl border ${getCategoryColor(category.color)}`}>
+                  <div className="p-3 rounded-xl border bg-blue-100 text-blue-600 border-blue-200">
                     <Icon className="w-6 h-6" />
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">{category.name}</h3>
-                <p className="text-sm text-gray-600 mb-4 leading-relaxed">{category.description}</p>
+
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  {category.name}
+                </h3>
+                <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                  {category.description}
+                </p>
+
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500 font-medium">{category.questionCount} questions</span>
-                  <div className="flex -space-x-1">
-                    {["easy", "medium", "hard"].map((diff) => (
-                      <span
-                        key={diff}
-                        className={`w-3 h-3 rounded-full border-2 border-white ${
-                          diff === "easy"
-                            ? "bg-green-400"
-                            : diff === "medium"
-                            ? "bg-yellow-400"
-                            : "bg-red-400"
-                        }`}
-                      />
-                    ))}
-                  </div>
+                  <span className="text-sm text-gray-500 font-medium">
+                    {category.questionCount} questions
+                  </span>
                 </div>
               </button>
             );
@@ -610,209 +526,259 @@ export const QuestionBank: React.FC = () => {
         </div>
       )}
 
-      {/* Questions List */}
-      <div className="space-y-6">
-        {filteredQuestions.map((question, index) => {
-          const isExpanded = showAnswers[question.id];
-          const isPracticed = practicedQuestions.includes(question.id);
-          const isFavorite = favoriteQuestions.includes(question.id);
-
-          return (
-            <div
-              key={question.id}
-              className={`bg-white rounded-2xl border transition-all duration-300 ${
-                isPracticed ? "border-green-200 bg-green-50 shadow-sm" : "border-gray-200 shadow-sm hover:shadow-md"
-              }`}
-            >
-              <div className="p-6">
-                {/* Question Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-3">
-                      <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                        Question #{index + 1}
-                      </span>
-                      <span
-                        className={`text-xs px-3 py-1 rounded-full border ${getDifficultyColor(
-                          question.difficulty
-                        )}`}
-                      >
-                        {question.difficulty}
-                      </span>
-                      <span
-                        className={`text-xs px-3 py-1 rounded-full border ${getTypeColor(
-                          question.type
-                        )}`}
-                      >
-                        {question.type}
-                      </span>
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-3 leading-relaxed">{question.question}</h3>
-                    {question.tags && (
-                      <div className="flex flex-wrap gap-2">
-                        {question.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded-full border border-gray-200"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-2 ml-4">
-                    <button
-                      onClick={() => toggleFavorite(question.id)}
-                      className={`p-3 rounded-xl transition-all duration-300 ${
-                        isFavorite
-                          ? "bg-yellow-100 text-yellow-600 border border-yellow-200"
-                          : "bg-gray-100 text-gray-400 hover:text-gray-600 border border-gray-200"
-                      }`}
-                    >
-                      <Star className="w-5 h-5" fill={isFavorite ? "currentColor" : "none"} />
-                    </button>
-                    <button
-                      onClick={() => togglePracticed(question.id)}
-                      className={`p-3 rounded-xl transition-all duration-300 ${
-                        isPracticed
-                          ? "bg-green-100 text-green-600 border border-green-200"
-                          : "bg-gray-100 text-gray-400 hover:text-gray-600 border border-gray-200"
-                      }`}
-                    >
-                      <CheckCircle className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => copyQuestion(question.question)}
-                      className="p-3 bg-gray-100 text-gray-400 rounded-xl hover:text-gray-600 transition-all duration-300 border border-gray-200"
-                    >
-                      <Copy className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center space-x-3 mb-4">
-                  <button
-                    onClick={() => toggleAnswer(question.id)}
-                    className="flex items-center space-x-2 px-4 py-2.5 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-all duration-300 text-sm font-medium border border-blue-200"
-                  >
-                    {isExpanded ? (
-                      <>
-                        <EyeOff className="w-4 h-4" />
-                        <span>Hide Answer</span>
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="w-4 h-4" />
-                        <span>View Answer</span>
-                      </>
-                    )}
-                  </button>
-                  <button className="flex items-center space-x-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all duration-300 text-sm font-medium border border-gray-200">
-                    <Volume2 className="w-4 h-4" />
-                    <span>Practice Aloud</span>
-                  </button>
-                  <button className="flex items-center space-x-2 px-4 py-2.5 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-all duration-300 text-sm font-medium border border-purple-200">
-                    <Play className="w-4 h-4" />
-                    <span>Start Practice</span>
-                  </button>
-                </div>
-
-                {/* Expanded Content */}
-                {isExpanded && question.sampleAnswer && (
-                  <div className="mt-6 space-y-4">
-                    {/* Sample Answer */}
-                    <div className="p-5 bg-blue-50 rounded-xl border border-blue-200">
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                        <Lightbulb className="w-5 h-5 mr-2 text-blue-600" />
-                        Sample Answer
-                      </h4>
-                      <p className="text-gray-700 leading-relaxed">{question.sampleAnswer}</p>
-                    </div>
-
-                    {/* Tips */}
-                    {question.tips && (
-                      <div className="p-5 bg-yellow-50 rounded-xl border border-yellow-200">
-                        <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                          <Zap className="w-5 h-5 mr-2 text-yellow-600" />
-                          Tips for Answering
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {question.tips.map((tip, idx) => (
-                            <div key={idx} className="text-gray-700 flex items-start bg-white p-3 rounded-lg border border-yellow-100">
-                              <CheckCircle className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                              <span className="text-sm">{tip}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Follow-up Questions */}
-                    {question.followUps && (
-                      <div className="p-5 bg-purple-50 rounded-xl border border-purple-200">
-                        <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                          <TrendingUp className="w-5 h-5 mr-2 text-purple-600" />
-                          Potential Follow-ups
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {question.followUps.map((followUp, idx) => (
-                            <div key={idx} className="text-gray-700 bg-white p-3 rounded-lg border border-purple-100">
-                              <span className="text-sm">• {followUp}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Empty State */}
-      {filteredQuestions.length === 0 && (
+      {/* Loading State */}
+      {isLoading && (
         <div className="bg-white rounded-2xl p-12 text-center border border-gray-200 shadow-sm">
-          <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No questions found</h3>
-          <p className="text-gray-600 mb-4">
-            Try adjusting your filters or search terms to find more questions.
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            Loading Questions...
+          </h3>
+          <p className="text-gray-600">
+            Please wait while we load the interview question bank.
           </p>
-          <button
-            onClick={() => {
-              setSearchQuery("");
-              setSelectedCategory("all");
-              setSelectedDifficulty("all");
-              setSelectedType("all");
-            }}
-            className="px-6 py-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-colors border border-blue-200"
-          >
-            Clear Filters
-          </button>
         </div>
       )}
 
-      {/* Quick Stats */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <BarChart3 className="w-6 h-6 text-blue-600" />
-            <div>
-              <h3 className="font-semibold text-gray-900">Practice Progress</h3>
-              <p className="text-sm text-gray-600">Track your improvement over time</p>
+      {/* Questions Display */}
+      {!isLoading && (
+        <>
+          {/* Show filtered questions if any */}
+          {filteredQuestions.length > 0 && (
+            <div className="space-y-6">
+              {/* Filter Status */}
+              {selectedCategory !== "all" && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <span className="text-blue-800 font-medium">
+                        Showing {filteredQuestions.length} questions for{" "}
+                        {categories.find((cat) => cat.id === selectedCategory)
+                          ?.name || selectedCategory}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedCategory("all")}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      Show All Questions
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {filteredQuestions.map((question, index) => {
+                const isExpanded = showAnswers[question.id];
+                const isPracticed = practicedQuestions.includes(question.id);
+                const isFavorite = favoriteQuestions.includes(question.id);
+
+                return (
+                  <QuestionCard
+                    key={question.id}
+                    question={question}
+                    index={index}
+                    isExpanded={isExpanded}
+                    isPracticed={isPracticed}
+                    isFavorite={isFavorite}
+                    toggleAnswer={toggleAnswer}
+                    toggleFavorite={toggleFavorite}
+                    togglePracticed={togglePracticed}
+                    copyQuestion={copyQuestion}
+                    getDifficultyColor={getDifficultyColor}
+                    getTypeColor={getTypeColor}
+                    setSelectedQuestions={() => {}}
+                    setShowPracticeModal={() => {}}
+                  />
+                );
+              })}
             </div>
+          )}
+
+          {/* Fallback: Show some related questions when category is selected but filtering returns empty */}
+          {selectedCategory !== "all" &&
+            filteredQuestions.length === 0 &&
+            questions.length > 0 && (
+              <div className="space-y-6">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                      <span className="text-yellow-800 font-medium">
+                        Showing related questions (filtering returned empty)
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedCategory("all")}
+                      className="text-yellow-600 hover:text-yellow-800 text-sm font-medium"
+                    >
+                      Show All Questions
+                    </button>
+                  </div>
+                </div>
+
+                {/* Show first 5 questions as fallback */}
+                {questions.slice(0, 5).map((question, index) => {
+                  const isExpanded = showAnswers[question.id];
+                  const isPracticed = practicedQuestions.includes(question.id);
+                  const isFavorite = favoriteQuestions.includes(question.id);
+
+                  return (
+                    <QuestionCard
+                      key={question.id}
+                      question={question}
+                      index={index}
+                      isExpanded={isExpanded}
+                      isPracticed={isPracticed}
+                      isFavorite={isFavorite}
+                      toggleAnswer={toggleAnswer}
+                      toggleFavorite={toggleFavorite}
+                      togglePracticed={togglePracticed}
+                      copyQuestion={copyQuestion}
+                      getDifficultyColor={getDifficultyColor}
+                      getTypeColor={getTypeColor}
+                      setSelectedQuestions={() => {}}
+                      setShowPracticeModal={() => {}}
+                    />
+                  );
+                })}
+
+                <div className="text-center">
+                  <p className="text-sm text-yellow-700 mb-3">
+                    Showing {questions.length} total questions for this
+                    category. The filtering might be too strict.
+                  </p>
+                  <button
+                    onClick={() => setSelectedCategory("all")}
+                    className="px-6 py-2 bg-yellow-100 text-yellow-700 rounded-xl hover:bg-yellow-200 transition-colors border border-yellow-200"
+                  >
+                    View All Questions
+                  </button>
+                </div>
+
+                {/* Debug: Show all questions for this category */}
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">
+                    Debug: All Questions for{" "}
+                    {categories.find((cat) => cat.id === selectedCategory)
+                      ?.name || selectedCategory}
+                  </h4>
+                  <div className="space-y-3">
+                    {questions.map((question, index) => (
+                      <div
+                        key={question.id}
+                        className="bg-white p-3 rounded-lg border border-gray-200"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">
+                              {index + 1}. {question.question.substring(0, 100)}
+                              ...
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Tags: {question.tags?.join(", ") || "No tags"} |
+                              Category: {question.category || "No category"} |
+                              Type: {question.type || "No type"}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => toggleAnswer(question.id)}
+                            className="ml-3 px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200"
+                          >
+                            {showAnswers[question.id] ? "Hide" : "Show"} Answer
+                          </button>
+                        </div>
+                        {showAnswers[question.id] && question.sampleAnswer && (
+                          <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                            <p className="text-sm text-gray-700">
+                              {question.sampleAnswer.substring(0, 200)}...
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+        </>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && filteredQuestions.length === 0 && (
+        <div className="bg-white rounded-2xl p-12 text-center border border-gray-200 shadow-sm">
+          <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            {selectedCategory !== "all"
+              ? `No questions found for ${
+                  categories.find((cat) => cat.id === selectedCategory)?.name ||
+                  selectedCategory
+                }`
+              : "No questions found"}
+          </h3>
+          <p className="text-gray-600 mb-4">
+            {selectedCategory !== "all"
+              ? `The filtering might be too strict. Try viewing all questions or adjusting the filters.`
+              : "Try adjusting your filters or search terms to find more questions."}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedCategory("all");
+                setSelectedDifficulty("all");
+                setSelectedType("all");
+              }}
+              className="px-6 py-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-colors border border-blue-200"
+            >
+              Clear All Filters
+            </button>
+            {selectedCategory !== "all" && (
+              <>
+                <button
+                  onClick={() => setSelectedCategory("all")}
+                  className="px-6 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors border border-gray-200"
+                >
+                  Show All Categories
+                </button>
+                <button
+                  onClick={() => {
+                    // Show all questions for debugging
+                    console.log("Showing all questions for debugging");
+                    console.log("All questions:", allQuestions);
+                    console.log("Questions by subject:", questionsBySubject);
+                  }}
+                  className="px-6 py-2 bg-yellow-100 text-yellow-700 rounded-xl hover:bg-yellow-200 transition-colors border border-yellow-200"
+                >
+                  Debug Questions
+                </button>
+              </>
+            )}
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-gray-900">
-              {Math.round((practicedQuestions.length / questions.length) * 100)}%
-            </div>
-            <div className="text-sm text-gray-600">Completion Rate</div>
+
+          {/* Debug Info */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg text-left">
+            <p className="text-sm text-gray-600 mb-2">
+              <strong>Debug Info:</strong>
+            </p>
+            <p className="text-xs text-gray-500">
+              Total questions available: {questions.length}
+              <br />
+              Selected category: {selectedCategory}
+              <br />
+              Search query: "{searchQuery}"<br />
+              Difficulty filter: {selectedDifficulty}
+              <br />
+              Type filter: {selectedType}
+              <br />
+              Questions by subject keys:{" "}
+              {Object.keys(questionsBySubject).join(", ")}
+              <br />
+              Sample question tags:{" "}
+              {allQuestions[0]?.tags?.join(", ") || "No tags"}
+            </p>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   BookOpen,
   Loader,
@@ -28,7 +28,8 @@ import {
   TrendingUp,
   Calendar,
   Bookmark,
-  Share2
+  Share2,
+  X
 } from "lucide-react";
 import { unifiedAIService } from "../utils/aiConfig";
 import { driveStorageUtils } from "../utils/driveStorage";
@@ -46,18 +47,43 @@ type ParsedCard = {
   reviewCount?: number;
   masteryLevel?: number; // 0-100
   tags?: string[];
+  userTags?: string[]; // User-defined tags
+  systemTags?: string[]; // System-generated tags
   createdAt: Date;
+  // Spaced repetition fields
+  nextReviewDate?: Date;
+  interval?: number; // Days until next review
+  easeFactor?: number; // Multiplier for interval (starts at 2.5)
+  consecutiveCorrect?: number;
+  consecutiveIncorrect?: number;
+  totalStudyTime?: number; // Total time spent studying in seconds
+  averageResponseTime?: number; // Average time to answer in seconds
+  lastStudySession?: Date;
+  studyStreak?: number; // Consecutive days studied
 };
 
-type StudyMode = 'review' | 'quiz' | 'spaced' | 'mastery';
+// Spaced repetition algorithm constants
+const SPACED_REPETITION = {
+  INITIAL_EASE_FACTOR: 2.5,
+  MIN_EASE_FACTOR: 1.3,
+  EASE_FACTOR_DECREASE: 0.1,
+  EASE_FACTOR_INCREASE: 0.15,
+  INTERVALS: [1, 6, 15, 30, 90, 180, 365], // Days
+  MASTERY_THRESHOLD: 85, // Mastery level to consider card "learned"
+  REVIEW_THRESHOLD: 70, // Minimum mastery to avoid review
+};
+
+// Study session types
+type StudyMode = 'new' | 'review' | 'mastered' | 'difficult' | 'mixed';
 type StudySession = {
   id: string;
-  mode: StudyMode;
   startTime: Date;
   endTime?: Date;
-  cardsReviewed: number;
+  cardsStudied: string[];
   correctAnswers: number;
   incorrectAnswers: number;
+  totalTime: number;
+  mode: StudyMode;
 };
 
 export const FlashCards: React.FC = () => {
@@ -72,7 +98,7 @@ export const FlashCards: React.FC = () => {
   const [selectedDifficulty, setSelectedDifficulty] = React.useState("");
   const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
   const [currentView, setCurrentView] = React.useState<'create' | 'study' | 'manage' | 'stats'>('create');
-  const [studyMode, setStudyMode] = React.useState<StudyMode>('review');
+  const [studyMode, setStudyMode] = React.useState<StudyMode>('mixed');
   const [currentCardIndex, setCurrentCardIndex] = React.useState(0);
   const [showAnswer, setShowAnswer] = React.useState(false);
   const [studySession, setStudySession] = React.useState<StudySession | null>(null);
@@ -88,6 +114,20 @@ export const FlashCards: React.FC = () => {
   const [lastSaveStatus, setLastSaveStatus] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [showSessionExpiredModal, setShowSessionExpiredModal] = React.useState(false);
   const [sessionExpiredMessage, setSessionExpiredMessage] = React.useState('');
+  const [suggestedTags, setSuggestedTags] = React.useState<string[]>([]);
+  const [popularTags, setPopularTags] = React.useState<string[]>([]);
+  const [showTagSuggestions, setShowTagSuggestions] = React.useState(false);
+  const [currentStudyCard, setCurrentStudyCard] = React.useState<ParsedCard | null>(null);
+  const [showStudyModal, setShowStudyModal] = React.useState(false);
+  const [studyStats, setStudyStats] = React.useState({
+    totalCards: 0,
+    newCards: 0,
+    dueCards: 0,
+    masteredCards: 0,
+    studyStreak: 0,
+    totalStudyTime: 0,
+    averageAccuracy: 0,
+  });
 
   const user = realTimeAuth.getCurrentUser();
 
@@ -139,6 +179,27 @@ export const FlashCards: React.FC = () => {
     loadFlashcards();
   }, [user]);
 
+  // Load popular tags from existing cards
+  React.useEffect(() => {
+    if (cards.length > 0) {
+      const tagCounts: { [key: string]: number } = {};
+      cards.forEach(card => {
+        if (card.tags) {
+          card.tags.forEach(tag => {
+            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+          });
+        }
+      });
+      
+      const sortedTags = Object.entries(tagCounts)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 10)
+        .map(([tag]) => tag);
+      
+      setPopularTags(sortedTags);
+    }
+  }, [cards]);
+
   React.useEffect(() => {
     filterCards();
   }, [cards, searchTerm, selectedCategory, selectedDifficulty, selectedTags, cardOrder]);
@@ -159,12 +220,13 @@ export const FlashCards: React.FC = () => {
           setFilteredCards(cards);
         }
         const session: StudySession = {
-          id: generateId(),
-          mode: 'review',
+          id: Date.now().toString(),
           startTime: new Date(),
-          cardsReviewed: 0,
+          cardsStudied: [],
           correctAnswers: 0,
           incorrectAnswers: 0,
+          totalTime: 0,
+          mode: 'mixed',
         };
         setStudySession(session);
         setSessionStats({ correct: 0, incorrect: 0, total: 0 });
@@ -293,34 +355,90 @@ export const FlashCards: React.FC = () => {
     }
   };
 
-  const parseFlashcards = (raw: string, tags: string[] = []): ParsedCard[] => {
+  const parseFlashcards = (raw: string, userTags: string[] = []): ParsedCard[] => {
     const lines = raw
       .split("\n")
       .map((l) => l.trim())
       .filter((l) => l && l.includes("|"));
+    
     const parsed: ParsedCard[] = lines.map((line) => {
       const parts = line.split("|").map((p) => p.trim());
       const qPart = parts.find((p) => /^Q:/i.test(p)) || parts[0] || "";
       const aPart = parts.find((p) => /^A:/i.test(p)) || parts[1] || "";
       const rPart = parts.find((p) => /^R:/i.test(p)) || parts[2] || "";
       const clean = (s: string) => s.replace(/^[QAR]:\s*/i, "").trim();
+      
+      const question = clean(qPart);
+      const answer = clean(aPart);
+      const reasoning = clean(rPart) || undefined;
+      
+      // Generate system tags
+      const systemTags = generateSystemTags(question, answer, reasoning);
+      
+      // Combine user tags and system tags
+      const allTags = [...new Set([...userTags, ...systemTags])];
+      
       return {
         id: generateId(),
-        question: clean(qPart),
-        answer: clean(aPart),
-        reasoning: clean(rPart) || undefined,
+        question,
+        answer,
+        reasoning,
         category: "General",
         difficulty: "medium" as const,
         lastReviewed: new Date(),
         reviewCount: 0,
         masteryLevel: 0,
-        tags: tags,
+        tags: allTags,
+        userTags: userTags,
+        systemTags: systemTags,
         createdAt: new Date(),
       };
     });
     return parsed;
   };
 
+  // Generate system-suggested tags based on content
+  const generateSystemTags = (question: string, answer: string, reasoning?: string): string[] => {
+    const content = `${question} ${answer} ${reasoning || ''}`.toLowerCase();
+    const systemTags: string[] = [];
+
+    // Subject-based tags
+    if (content.includes('javascript') || content.includes('js')) systemTags.push('JavaScript');
+    if (content.includes('react') || content.includes('jsx')) systemTags.push('React');
+    if (content.includes('python')) systemTags.push('Python');
+    if (content.includes('java')) systemTags.push('Java');
+    if (content.includes('sql') || content.includes('database')) systemTags.push('Database');
+    if (content.includes('algorithm') || content.includes('data structure')) systemTags.push('Algorithms');
+    if (content.includes('html') || content.includes('css')) systemTags.push('Web Development');
+    if (content.includes('api') || content.includes('rest')) systemTags.push('API');
+    if (content.includes('git') || content.includes('version control')) systemTags.push('Version Control');
+    if (content.includes('testing') || content.includes('unit test')) systemTags.push('Testing');
+    if (content.includes('design pattern')) systemTags.push('Design Patterns');
+    if (content.includes('security') || content.includes('authentication')) systemTags.push('Security');
+    if (content.includes('performance') || content.includes('optimization')) systemTags.push('Performance');
+    if (content.includes('cloud') || content.includes('aws') || content.includes('azure')) systemTags.push('Cloud Computing');
+    if (content.includes('docker') || content.includes('kubernetes')) systemTags.push('DevOps');
+    if (content.includes('machine learning') || content.includes('ai')) systemTags.push('Machine Learning');
+    if (content.includes('frontend') || content.includes('ui')) systemTags.push('Frontend');
+    if (content.includes('backend') || content.includes('server')) systemTags.push('Backend');
+    if (content.includes('mobile') || content.includes('ios') || content.includes('android')) systemTags.push('Mobile Development');
+
+    // Difficulty-based tags
+    if (content.includes('basic') || content.includes('fundamental')) systemTags.push('Fundamentals');
+    if (content.includes('advanced') || content.includes('complex')) systemTags.push('Advanced');
+    if (content.includes('interview') || content.includes('question')) systemTags.push('Interview Prep');
+
+    // Topic-based tags
+    if (content.includes('array') || content.includes('list')) systemTags.push('Data Structures');
+    if (content.includes('function') || content.includes('method')) systemTags.push('Functions');
+    if (content.includes('class') || content.includes('object')) systemTags.push('OOP');
+    if (content.includes('async') || content.includes('promise')) systemTags.push('Asynchronous');
+    if (content.includes('error') || content.includes('exception')) systemTags.push('Error Handling');
+
+    return [...new Set(systemTags)]; // Remove duplicates
+  };
+
+  // Generate flashcards with enhanced tagging
   const generateFlashcards = async () => {
     if (isLoading) return;
     let content = inputText;
@@ -343,34 +461,32 @@ export const FlashCards: React.FC = () => {
     try {
       const result = await unifiedAIService.generateFlashcards(content);
       if (result.success && result.data) {
-        // Parse tags from input
-        const tags = inputTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-        const newCards = parseFlashcards(result.data, tags);
+        // Parse user tags from input
+        const userTags = inputTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+        const newCards = parseFlashcards(result.data, userTags);
         const updatedCards = [...cards, ...newCards];
         setCards(updatedCards);
         
-                 // Save to Drive/localStorage
-         if (user) {
-           try {
-             const savedToDrive = await driveStorageUtils.saveFlashcardsToDrive(updatedCards, user.id);
-             if (savedToDrive) {
-               console.log("✅ Flashcards saved to Google Drive");
-             } else {
-               console.log("📱 Flashcards saved to localStorage only");
-             }
-           } catch (error) {
-             console.error("Error saving flashcards:", error);
-             // Handle session expired errors
-             handleSessionExpired(error);
-           }
-         }
+        // Save to Drive/localStorage
+        if (user) {
+          try {
+            const savedToDrive = await driveStorageUtils.saveFlashcardsToDrive(updatedCards, user.id);
+            if (savedToDrive) {
+              console.log("✅ Flashcards saved to Google Drive");
+            } else {
+              console.log("📱 Flashcards saved to localStorage only");
+            }
+          } catch (error) {
+            console.error("Error saving flashcards:", error);
+            handleSessionExpired(error);
+          }
+        }
         
         setInputText("");
         setSelectedDocument("");
         setInputTags(""); // Clear tags input
-        // Switch to manage view to show the newly created cards
         setCurrentView('manage');
-        alert(`Successfully generated ${newCards.length} flashcards!`);
+        alert(`Successfully generated ${newCards.length} flashcards with enhanced tagging!`);
       } else {
         alert("AI processing failed: " + (result.error || "Unknown error"));
       }
@@ -381,66 +497,334 @@ export const FlashCards: React.FC = () => {
     }
   };
 
+  // Enhanced tag management functions
+  const addTagToCard = async (cardId: string, newTag: string) => {
+    const updatedCards = cards.map(card => {
+      if (card.id === cardId) {
+        const userTags = card.userTags || [];
+        const updatedUserTags = [...new Set([...userTags, newTag])];
+        const allTags = [...new Set([...updatedUserTags, ...(card.systemTags || [])])];
+        
+        return {
+          ...card,
+          tags: allTags,
+          userTags: updatedUserTags,
+        };
+      }
+      return card;
+    });
+    
+    setCards(updatedCards);
+    
+    // Save to Drive/localStorage
+    if (user) {
+      try {
+        await driveStorageUtils.saveFlashcardsToDrive(updatedCards, user.id);
+      } catch (error) {
+        console.error("Error saving tag changes:", error);
+      }
+    }
+  };
+
+  const removeTagFromCard = async (cardId: string, tagToRemove: string) => {
+    const updatedCards = cards.map(card => {
+      if (card.id === cardId) {
+        const userTags = card.userTags || [];
+        const systemTags = card.systemTags || [];
+        
+        // Only allow removal of user tags, not system tags
+        if (systemTags.includes(tagToRemove)) {
+          return card; // Don't modify system tags
+        }
+        
+        const updatedUserTags = userTags.filter(tag => tag !== tagToRemove);
+        const allTags = [...new Set([...updatedUserTags, ...systemTags])];
+        
+        return {
+          ...card,
+          tags: allTags,
+          userTags: updatedUserTags,
+        };
+      }
+      return card;
+    });
+    
+    setCards(updatedCards);
+    
+    // Save to Drive/localStorage
+    if (user) {
+      try {
+        await driveStorageUtils.saveFlashcardsToDrive(updatedCards, user.id);
+      } catch (error) {
+        console.error("Error saving tag changes:", error);
+      }
+    }
+  };
+
+  // Get all tags with counts and types
+  const getAllTagsWithInfo = () => {
+    const tagInfo: { [key: string]: { count: number; type: 'user' | 'system' | 'both' } } = {};
+    
+    cards.forEach(card => {
+      if (card.tags) {
+        card.tags.forEach(tag => {
+          if (!tagInfo[tag]) {
+            tagInfo[tag] = { count: 0, type: 'system' };
+          }
+          tagInfo[tag].count++;
+          
+          // Determine tag type
+          const isUserTag = card.userTags?.includes(tag);
+          const isSystemTag = card.systemTags?.includes(tag);
+          
+          if (isUserTag && isSystemTag) {
+            tagInfo[tag].type = 'both';
+          } else if (isUserTag) {
+            tagInfo[tag].type = 'user';
+          }
+        });
+      }
+    });
+    
+    return Object.entries(tagInfo)
+      .sort(([,a], [,b]) => b.count - a.count)
+      .map(([tag, info]) => ({ tag, ...info }));
+  };
+
+  // Spaced repetition algorithm
+  const calculateNextReview = (card: ParsedCard, quality: number): ParsedCard => {
+    const now = new Date();
+    let newCard = { ...card };
+    
+    // Quality: 0-5 (0=complete blackout, 5=perfect response)
+    if (quality < 3) {
+      // Incorrect or poor response
+      newCard.consecutiveIncorrect = (card.consecutiveIncorrect || 0) + 1;
+      newCard.consecutiveCorrect = 0;
+      newCard.interval = 1; // Review tomorrow
+      newCard.easeFactor = Math.max(
+        SPACED_REPETITION.MIN_EASE_FACTOR,
+        (card.easeFactor || SPACED_REPETITION.INITIAL_EASE_FACTOR) - SPACED_REPETITION.EASE_FACTOR_DECREASE
+      );
+    } else {
+      // Correct response
+      newCard.consecutiveCorrect = (card.consecutiveCorrect || 0) + 1;
+      newCard.consecutiveIncorrect = 0;
+      
+      if ((card.consecutiveCorrect || 0) === 0) {
+        // First correct response
+        newCard.interval = SPACED_REPETITION.INTERVALS[0];
+      } else if ((card.consecutiveCorrect || 0) < SPACED_REPETITION.INTERVALS.length) {
+        // Use predefined intervals
+        newCard.interval = SPACED_REPETITION.INTERVALS[(card.consecutiveCorrect || 0)];
+      } else {
+        // Use spaced repetition formula
+        newCard.interval = Math.round((card.interval || 1) * (card.easeFactor || SPACED_REPETITION.INITIAL_EASE_FACTOR));
+      }
+      
+      // Increase ease factor for good performance
+      if (quality >= 4) {
+        newCard.easeFactor = (card.easeFactor || SPACED_REPETITION.INITIAL_EASE_FACTOR) + SPACED_REPETITION.EASE_FACTOR_INCREASE;
+      }
+    }
+    
+    // Calculate next review date
+    const nextReview = new Date(now);
+    nextReview.setDate(nextReview.getDate() + (newCard.interval || 1));
+    newCard.nextReviewDate = nextReview;
+    
+    // Update mastery level
+    const masteryChange = quality >= 3 ? 15 : -10;
+    newCard.masteryLevel = Math.max(0, Math.min(100, (card.masteryLevel || 0) + masteryChange));
+    
+    // Update review count and last reviewed
+    newCard.reviewCount = (card.reviewCount || 0) + 1;
+    newCard.lastReviewed = now;
+    
+    return newCard;
+  };
+
+  // Get cards for study session
+  const getStudyCards = (mode: StudyMode): ParsedCard[] => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (mode) {
+      case 'new':
+        return cards.filter(card => !card.lastReviewed).slice(0, 20);
+      
+      case 'review':
+        return cards.filter(card => 
+          card.nextReviewDate && 
+          new Date(card.nextReviewDate) <= today &&
+          (card.masteryLevel || 0) < SPACED_REPETITION.MASTERY_THRESHOLD
+        ).slice(0, 30);
+      
+      case 'mastered':
+        return cards.filter(card => 
+          (card.masteryLevel || 0) >= SPACED_REPETITION.MASTERY_THRESHOLD
+        ).slice(0, 20);
+      
+      case 'difficult':
+        return cards.filter(card => 
+          (card.consecutiveIncorrect || 0) > 2 ||
+          (card.masteryLevel || 0) < 30
+        ).slice(0, 15);
+      
+      case 'mixed':
+      default:
+        const newCards = cards.filter(card => !card.lastReviewed).slice(0, 10);
+        const dueCards = cards.filter(card => 
+          card.nextReviewDate && 
+          new Date(card.nextReviewDate) <= today
+        ).slice(0, 20);
+        return [...newCards, ...dueCards];
+    }
+  };
+
+  // Start study session
   const startStudySession = (mode: StudyMode) => {
-    // Ensure we have cards to study
-    if (cards.length === 0) {
-      alert("No cards available for study. Please create some flashcards first.");
+    const studyCards = getStudyCards(mode);
+    if (studyCards.length === 0) {
+      alert('No cards available for study in this mode!');
       return;
     }
     
-    // Determine which cards to use for study
-    let cardsToStudy = filteredCards;
-    if (filteredCards.length === 0) {
-      cardsToStudy = cards;
-      setFilteredCards(cards);
-    }
-    
-    if (cardsToStudy.length === 0) {
-      alert("No cards available for study. Please create some flashcards first.");
-      return;
-    }
-
-    console.log('Starting study session:', { mode, filteredCardsLength: cardsToStudy.length, cardsToStudy });
-
     const session: StudySession = {
-      id: generateId(),
-      mode,
+      id: Date.now().toString(),
       startTime: new Date(),
-      cardsReviewed: 0,
+      cardsStudied: [],
       correctAnswers: 0,
       incorrectAnswers: 0,
+      totalTime: 0,
+      mode,
     };
-
-    // Set the study session first
+    
     setStudySession(session);
-    
-    // Ensure filteredCards is set before proceeding
-    if (filteredCards.length === 0) {
-      setFilteredCards(cards);
-    }
-    
-    setCurrentCardIndex(0);
-    setShowAnswer(false);
-    // Reset session stats
-    setSessionStats({ correct: 0, incorrect: 0, total: 0 });
-    setCurrentView('study');
-    
-    console.log('Study session started:', session);
+    setCurrentStudyCard(studyCards[0]);
+    setShowStudyModal(true);
   };
 
-  const endStudySession = () => {
-    if (studySession) {
-      const updatedSession = {
-        ...studySession,
-        endTime: new Date(),
-        cardsReviewed: sessionStats.total,
-        correctAnswers: sessionStats.correct,
-        incorrectAnswers: sessionStats.incorrect,
-      };
-      setStudySession(updatedSession);
+  // Handle card response
+  const handleCardResponse = (quality: number) => {
+    if (!currentStudyCard || !studySession) return;
+    
+    const startTime = Date.now();
+    const updatedCard = calculateNextReview(currentStudyCard, quality);
+    
+    // Update card in the array
+    setCards(prev => prev.map(card => 
+      card.id === updatedCard.id ? updatedCard : card
+    ));
+    
+    // Update study session
+    const sessionTime = (Date.now() - startTime) / 1000;
+    setStudySession(prev => prev ? {
+      ...prev,
+      cardsStudied: [...prev.cardsStudied, updatedCard.id],
+      correctAnswers: prev.correctAnswers + (quality >= 3 ? 1 : 0),
+      incorrectAnswers: prev.incorrectAnswers + (quality < 3 ? 1 : 0),
+      totalTime: prev.totalTime + sessionTime,
+    } : null);
+    
+    // Move to next card or end session
+    const studyCards = getStudyCards(studySession.mode);
+    const currentIndex = studyCards.findIndex(card => card.id === currentStudyCard.id);
+    const nextCard = studyCards[currentIndex + 1];
+    
+    if (nextCard) {
+      setCurrentStudyCard(nextCard);
+    } else {
+      endStudySession();
     }
-    setCurrentView('stats');
   };
+
+  // End study session
+  const endStudySession = () => {
+    if (!studySession) return;
+    
+    const endTime = new Date();
+    const finalSession = {
+      ...studySession,
+      endTime,
+    };
+    
+    // Save session to localStorage for analytics
+    const savedSessions = JSON.parse(localStorage.getItem('flashcardSessions') || '[]');
+    savedSessions.push(finalSession);
+    localStorage.setItem('flashcardSessions', JSON.stringify(savedSessions));
+    
+    // Update study stats
+    updateStudyStats();
+    
+    setStudySession(null);
+    setCurrentStudyCard(null);
+    setShowStudyModal(false);
+  };
+
+  // Update study statistics
+  const updateStudyStats = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const totalCards = cards.length;
+    const newCards = cards.filter(card => !card.lastReviewed).length;
+    const dueCards = cards.filter(card => 
+      card.nextReviewDate && 
+      new Date(card.nextReviewDate) <= today
+    ).length;
+    const masteredCards = cards.filter(card => 
+      (card.masteryLevel || 0) >= SPACED_REPETITION.MASTERY_THRESHOLD
+    ).length;
+    
+    // Calculate study streak
+    const savedSessions = JSON.parse(localStorage.getItem('flashcardSessions') || '[]');
+    let streak = 0;
+    let currentDate = new Date(today);
+    
+    for (let i = 0; i < 365; i++) {
+      const hasSession = savedSessions.some((session: StudySession) => {
+        const sessionDate = new Date(session.startTime);
+        return sessionDate.toDateString() === currentDate.toDateString();
+      });
+      
+      if (hasSession) {
+        streak++;
+        currentDate.setDate(currentDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+    
+    // Calculate average accuracy
+    const totalCorrect = savedSessions.reduce((sum: number, session: StudySession) => 
+      sum + session.correctAnswers, 0
+    );
+    const totalAnswered = savedSessions.reduce((sum: number, session: StudySession) => 
+      sum + session.correctAnswers + session.incorrectAnswers, 0
+    );
+    const averageAccuracy = totalAnswered > 0 ? (totalCorrect / totalAnswered) * 100 : 0;
+    
+    // Calculate total study time
+    const totalStudyTime = savedSessions.reduce((sum: number, session: StudySession) => 
+      sum + session.totalTime, 0
+    );
+    
+    setStudyStats({
+      totalCards,
+      newCards,
+      dueCards,
+      masteredCards,
+      studyStreak: streak,
+      totalStudyTime,
+      averageAccuracy,
+    });
+  };
+
+  // Load study stats on component mount
+  React.useEffect(() => {
+    updateStudyStats();
+  }, [cards]);
 
   const markCardAnswer = async (isCorrect: boolean) => {
     console.log('markCardAnswer called with:', { isCorrect, studySession, currentCardIndex, filteredCardsLength: filteredCards.length });
@@ -729,9 +1113,23 @@ export const FlashCards: React.FC = () => {
     return 'text-red-600';
   };
 
-    const Flashcard: React.FC<{ card: ParsedCard; idx: number }> = ({ card, idx }) => {
+  const Flashcard: React.FC<{ card: ParsedCard; idx: number }> = ({ card, idx }) => {
     const [flipped, setFlipped] = React.useState(false);
+    const [showTagInput, setShowTagInput] = React.useState(false);
+    const [newTagInput, setNewTagInput] = React.useState("");
     const toggle = () => setFlipped((f) => !f);
+
+    const handleAddTag = () => {
+      if (newTagInput.trim()) {
+        addTagToCard(card.id, newTagInput.trim());
+        setNewTagInput("");
+        setShowTagInput(false);
+      }
+    };
+
+    const handleRemoveTag = (tag: string) => {
+      removeTagFromCard(card.id, tag);
+    };
 
     return (
       <div className="relative group" style={{ perspective: 1200 }}>
@@ -790,14 +1188,41 @@ export const FlashCards: React.FC = () => {
               <div className="mb-3">
                 {card.tags && card.tags.length > 0 ? (
                   <div className="flex flex-wrap gap-2 justify-center">
-                    {card.tags.slice(0, 3).map((tag, tagIdx) => (
-                      <span key={tagIdx} className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs rounded-full font-medium shadow-sm hover:shadow-md transition-all duration-200">
-                        {tag}
-                      </span>
-                    ))}
-                    {card.tags.length > 3 && (
+                    {card.tags.slice(0, 5).map((tag, tagIdx) => {
+                      const isUserTag = card.userTags?.includes(tag);
+                      const isSystemTag = card.systemTags?.includes(tag);
+                      const tagType = isUserTag && isSystemTag ? 'both' : isUserTag ? 'user' : 'system';
+                      
+                      return (
+                        <div key={tagIdx} className="relative group/tag">
+                          <span className={`px-3 py-1.5 text-white text-xs rounded-full font-medium shadow-sm hover:shadow-md transition-all duration-200 flex items-center space-x-1 ${
+                            tagType === 'user' ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
+                            tagType === 'system' ? 'bg-gradient-to-r from-green-500 to-green-600' :
+                            'bg-gradient-to-r from-purple-500 to-purple-600'
+                          }`}>
+                            <span>{tag}</span>
+                            {tagType === 'user' && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleRemoveTag(tag); }}
+                                className="w-4 h-4 bg-white/20 rounded-full hover:bg-white/40 transition-colors flex items-center justify-center"
+                              >
+                                <span className="text-xs">×</span>
+                              </button>
+                            )}
+                          </span>
+                          
+                          {/* Tag type indicator */}
+                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover/tag:opacity-100 transition-opacity duration-200 pointer-events-none">
+                            <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                              {tagType === 'user' ? 'User Tag' : tagType === 'system' ? 'System Tag' : 'Both'}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {card.tags.length > 5 && (
                       <span className="px-3 py-1.5 bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs rounded-full font-medium shadow-sm">
-                        +{card.tags.length - 3}
+                        +{card.tags.length - 5}
                       </span>
                     )}
                   </div>
@@ -806,6 +1231,42 @@ export const FlashCards: React.FC = () => {
                     <span className="px-3 py-1.5 bg-gray-100 text-gray-500 text-xs rounded-full font-medium">
                       No tags
                     </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Add Tag Button */}
+              <div className="flex items-center justify-center">
+                {!showTagInput ? (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowTagInput(true); }}
+                    className="px-3 py-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-full transition-colors text-xs font-medium"
+                  >
+                    + Add Tag
+                  </button>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={newTagInput}
+                      onChange={(e) => setNewTagInput(e.target.value)}
+                      placeholder="Enter tag..."
+                      className="px-2 py-1 text-xs border border-gray-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleAddTag}
+                      className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                    >
+                      Add
+                    </button>
+                    <button
+                      onClick={() => { setShowTagInput(false); setNewTagInput(""); }}
+                      className="px-2 py-1 text-gray-500 text-xs rounded hover:bg-gray-100 transition-colors"
+                    >
+                      Cancel
+                    </button>
                   </div>
                 )}
               </div>
@@ -1085,14 +1546,82 @@ export const FlashCards: React.FC = () => {
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Tags (Optional)
         </label>
-        <input
-          type="text"
-          value={inputTags}
-          placeholder="Enter tags separated by commas (e.g., math, algebra, equations)"
-          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-          onChange={(e) => setInputTags(e.target.value)}
-        />
-        <p className="text-sm text-gray-500 mt-1">Tags help organize and search your flashcards</p>
+        <div className="space-y-3">
+          <input
+            type="text"
+            value={inputTags}
+            placeholder="Enter tags separated by commas (e.g., math, algebra, equations)"
+            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            onChange={(e) => setInputTags(e.target.value)}
+            onFocus={() => setShowTagSuggestions(true)}
+          />
+          
+          {/* Tag Suggestions */}
+          {showTagSuggestions && (popularTags.length > 0 || suggestedTags.length > 0) && (
+            <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-lg">
+              <div className="space-y-4">
+                {/* Popular Tags */}
+                {popularTags.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Popular Tags</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {popularTags.map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => {
+                            const currentTags = inputTags ? inputTags.split(',').map(t => t.trim()) : [];
+                            if (!currentTags.includes(tag)) {
+                              const newTags = [...currentTags, tag];
+                              setInputTags(newTags.join(', '));
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-blue-100 text-blue-700 text-sm rounded-full hover:bg-blue-200 transition-colors"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Suggested Tags */}
+                {suggestedTags.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Suggested Tags</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestedTags.map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => {
+                            const currentTags = inputTags ? inputTags.split(',').map(t => t.trim()) : [];
+                            if (!currentTags.includes(tag)) {
+                              const newTags = [...currentTags, tag];
+                              setInputTags(newTags.join(', '));
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-green-100 text-green-700 text-sm rounded-full hover:bg-green-200 transition-colors"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <button
+                onClick={() => setShowTagSuggestions(false)}
+                className="mt-3 text-sm text-gray-500 hover:text-gray-700"
+              >
+                Hide suggestions
+              </button>
+            </div>
+          )}
+          
+          <p className="text-sm text-gray-500">
+            Tags help organize and search your flashcards. Our system will also automatically add relevant tags based on content.
+          </p>
+        </div>
       </div>
 
       <button
@@ -1120,15 +1649,17 @@ export const FlashCards: React.FC = () => {
       <div className="text-center">
         <h3 className="text-2xl font-bold text-gray-900 mb-2">
           {studyMode === 'review' && 'Review Mode'}
-          {studyMode === 'quiz' && 'Quiz Mode'}
-          {studyMode === 'spaced' && 'Spaced Repetition'}
-          {studyMode === 'mastery' && 'Mastery Mode'}
+          {studyMode === 'new' && 'New Cards'}
+          {studyMode === 'mastered' && 'Mastered Cards'}
+          {studyMode === 'difficult' && 'Difficult Cards'}
+          {studyMode === 'mixed' && 'Mixed Study'}
         </h3>
         <p className="text-gray-600">
           {studyMode === 'review' && 'Review your flashcards at your own pace'}
-          {studyMode === 'quiz' && 'Test your knowledge with immediate feedback'}
-          {studyMode === 'spaced' && 'Review cards based on your performance'}
-          {studyMode === 'mastery' && 'Focus on cards you need to improve'}
+          {studyMode === 'new' && 'Learn new cards for the first time'}
+          {studyMode === 'mastered' && 'Review cards you have mastered'}
+          {studyMode === 'difficult' && 'Focus on cards you find challenging'}
+          {studyMode === 'mixed' && 'Mix of new and review cards'}
         </p>
       </div>
 
@@ -1147,148 +1678,231 @@ export const FlashCards: React.FC = () => {
     </div>
   );
 
-  const renderManageView = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search cards..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
+  const renderManageView = () => {
+    // Group cards by creation date
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    const recentCards = filteredCards.filter(card => 
+      new Date(card.createdAt) >= oneWeekAgo
+    );
+    const previousCards = filteredCards.filter(card => 
+      new Date(card.createdAt) < oneWeekAgo
+    );
 
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">All Categories</option>
-            {getCategories().map(category => (
-              <option key={category} value={category}>{category}</option>
-            ))}
-          </select>
+    const allTagsInfo = getAllTagsWithInfo();
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search cards..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
 
-          <select
-            value={selectedDifficulty}
-            onChange={(e) => setSelectedDifficulty(e.target.value)}
-            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">All Difficulties</option>
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
-          </select>
-
-          <select
-            value={cardOrder}
-            onChange={(e) => setCardOrder(e.target.value as 'sequential' | 'random')}
-            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="sequential">Newest First</option>
-            <option value="random">Random Order</option>
-          </select>
-
-          <div className="relative">
             <select
-              multiple
-              value={selectedTags}
-              onChange={(e) => {
-                const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-                setSelectedTags(selectedOptions);
-              }}
-              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[150px]"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">All Tags</option>
-              {getAllTags().map(tag => (
-                <option key={tag} value={tag}>{tag}</option>
+              <option value="">All Categories</option>
+              {getCategories().map(category => (
+                <option key={category} value={category}>{category}</option>
               ))}
             </select>
-            <div className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple tags</div>
+
+            <select
+              value={selectedDifficulty}
+              onChange={(e) => setSelectedDifficulty(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">All Difficulties</option>
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+
+            <select
+              value={cardOrder}
+              onChange={(e) => setCardOrder(e.target.value as 'sequential' | 'random')}
+              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="sequential">Newest First</option>
+              <option value="random">Random Order</option>
+            </select>
+
+            <div className="relative">
+              <select
+                multiple
+                value={selectedTags}
+                onChange={(e) => {
+                  const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+                  setSelectedTags(selectedOptions);
+                }}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[150px]"
+              >
+                <option value="">All Tags</option>
+                {getAllTags().map(tag => (
+                  <option key={tag} value={tag}>{tag}</option>
+                ))}
+              </select>
+              <div className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple tags</div>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedCategory("");
+                setSelectedDifficulty("");
+                setSelectedTags([]);
+                setCardOrder('sequential');
+              }}
+              className="px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
+              title="Reset all filters"
+            >
+              <RotateCcw className="w-4 h-4 mr-1 inline" />
+              Reset Filters
+            </button>
+            <button
+              onClick={shuffleCards}
+              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="Shuffle cards"
+            >
+              <Shuffle className="w-4 h-4" />
+            </button>
+            <button
+              onClick={exportCards}
+              className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+              title="Export cards"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+            <button
+              onClick={async () => {
+                if (user) {
+                  try {
+                    const loadedCards = await driveStorageUtils.loadFlashcardsFromDrive(user.id);
+                    if (loadedCards.length > 0) {
+                      setCards(loadedCards);
+                      alert(`Synced ${loadedCards.length} flashcards from Drive!`);
+                    } else {
+                      alert("No flashcards found in Drive.");
+                    }
+                  } catch (error) {
+                    alert("Error syncing from Drive: " + error);
+                  }
+                }
+              }}
+              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="Sync from Drive"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+            <label className="p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer">
+              <Upload className="w-4 h-4" />
+              <input
+                type="file"
+                accept=".json"
+                onChange={importCards}
+                className="hidden"
+              />
+            </label>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => {
-              setSearchTerm("");
-              setSelectedCategory("");
-              setSelectedDifficulty("");
-              setSelectedTags([]);
-              setCardOrder('sequential');
-            }}
-            className="px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
-            title="Reset all filters"
-          >
-            <RotateCcw className="w-4 h-4 mr-1 inline" />
-            Reset Filters
-          </button>
-          <button
-            onClick={shuffleCards}
-            className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            title="Shuffle cards"
-          >
-            <Shuffle className="w-4 h-4" />
-          </button>
-                     <button
-             onClick={exportCards}
-             className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-             title="Export cards"
-           >
-             <Download className="w-4 h-4" />
-           </button>
-           <button
-             onClick={async () => {
-               if (user) {
-                 try {
-                   const loadedCards = await driveStorageUtils.loadFlashcardsFromDrive(user.id);
-                   if (loadedCards.length > 0) {
-                     setCards(loadedCards);
-                     alert(`Synced ${loadedCards.length} flashcards from Drive!`);
-                   } else {
-                     alert("No flashcards found in Drive.");
-                   }
-                 } catch (error) {
-                   alert("Error syncing from Drive: " + error);
-                 }
-               }
-             }}
-             className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-             title="Sync from Drive"
-           >
-             <RotateCcw className="w-4 h-4" />
-           </button>
-          <label className="p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer">
-            <Upload className="w-4 h-4" />
-            <input
-              type="file"
-              accept=".json"
-              onChange={importCards}
-              className="hidden"
-            />
-          </label>
+        {/* Enhanced Tag Filter */}
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <h4 className="text-sm font-medium text-gray-700 mb-3">Filter by Tags</h4>
+          <div className="flex flex-wrap gap-2">
+            {allTagsInfo.slice(0, 20).map(({ tag, count, type }) => (
+              <button
+                key={tag}
+                onClick={() => {
+                  const isSelected = selectedTags.includes(tag);
+                  if (isSelected) {
+                    setSelectedTags(selectedTags.filter(t => t !== tag));
+                  } else {
+                    setSelectedTags([...selectedTags, tag]);
+                  }
+                }}
+                className={`px-3 py-1.5 text-xs rounded-full font-medium transition-all duration-200 ${
+                  selectedTags.includes(tag)
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : type === 'user' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' :
+                      type === 'system' ? 'bg-green-100 text-green-700 hover:bg-green-200' :
+                      'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                }`}
+              >
+                {tag} ({count})
+                <span className="ml-1 text-xs opacity-75">
+                  {type === 'user' ? '👤' : type === 'system' ? '🤖' : '🔗'}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {filteredCards.length === 0 ? (
-        <div className="text-center py-12">
-          <Brain className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No flashcards found</h3>
-          <p className="text-gray-600">Try adjusting your search or filters</p>
-        </div>
-      ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredCards.map((card, index) => (
-            <Flashcard key={card.id} card={card} idx={index} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
+        {filteredCards.length === 0 ? (
+          <div className="text-center py-12">
+            <Brain className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No flashcards found</h3>
+            <p className="text-gray-600">Try adjusting your search or filters</p>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {/* Recently Created Cards Section */}
+            {recentCards.length > 0 && (
+              <div>
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center">
+                    <Clock className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900">Recently Created</h3>
+                  <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
+                    {recentCards.length} cards
+                  </span>
+                </div>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {recentCards.map((card, index) => (
+                    <Flashcard key={card.id} card={card} idx={index} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Previous Cards Section */}
+            {previousCards.length > 0 && (
+              <div>
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="w-8 h-8 bg-gradient-to-r from-gray-500 to-gray-600 rounded-full flex items-center justify-center">
+                    <BookOpen className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900">Previous</h3>
+                  <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded-full">
+                    {previousCards.length} cards
+                  </span>
+                </div>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {previousCards.map((card, index) => (
+                    <Flashcard key={card.id} card={card} idx={index} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderStatsView = () => {
     const totalCards = cards.length;
@@ -1358,13 +1972,13 @@ export const FlashCards: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Cards Reviewed</p>
-                <p className="font-medium text-gray-900">{studySession.cardsReviewed}</p>
+                <p className="font-medium text-gray-900">{studySession.cardsStudied.length}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Accuracy</p>
                 <p className="font-medium text-gray-900">
-                  {studySession.cardsReviewed > 0
-                    ? Math.round((studySession.correctAnswers / studySession.cardsReviewed) * 100)
+                  {studySession.cardsStudied.length > 0
+                    ? Math.round((studySession.correctAnswers / studySession.cardsStudied.length) * 100)
                     : 0}%
                 </p>
               </div>
@@ -1396,15 +2010,15 @@ export const FlashCards: React.FC = () => {
                 if (filteredCards.length === 0) {
                   setFilteredCards(cards);
                 }
-                startStudySession('quiz');
+                startStudySession('new');
               }}
               className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
             >
               <div className="flex items-center mb-2">
                 <Target className="w-5 h-5 text-green-600 mr-2" />
-                <span className="font-medium text-gray-900">Quiz Mode</span>
+                <span className="font-medium text-gray-900">New Cards</span>
               </div>
-              <p className="text-sm text-gray-600">Test your knowledge</p>
+              <p className="text-sm text-gray-600">Learn new cards</p>
             </button>
 
             <button
@@ -1412,15 +2026,15 @@ export const FlashCards: React.FC = () => {
                 if (filteredCards.length === 0) {
                   setFilteredCards(cards);
                 }
-                startStudySession('spaced');
+                startStudySession('difficult');
               }}
               className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
             >
               <div className="flex items-center mb-2">
                 <Clock className="w-5 h-5 text-yellow-600 mr-2" />
-                <span className="font-medium text-gray-900">Spaced Repetition</span>
+                <span className="font-medium text-gray-900">Difficult Cards</span>
               </div>
-              <p className="text-sm text-gray-600">Review based on performance</p>
+              <p className="text-sm text-gray-600">Focus on challenging cards</p>
             </button>
 
             <button
@@ -1428,15 +2042,15 @@ export const FlashCards: React.FC = () => {
                 if (filteredCards.length === 0) {
                   setFilteredCards(cards);
                 }
-                startStudySession('mastery');
+                startStudySession('mastered');
               }}
               className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
             >
               <div className="flex items-center mb-2">
                 <TrendingUp className="w-5 h-5 text-purple-600 mr-2" />
-                <span className="font-medium text-gray-900">Mastery Mode</span>
+                <span className="font-medium text-gray-900">Mastered Cards</span>
               </div>
-              <p className="text-sm text-gray-600">Focus on weak areas</p>
+              <p className="text-sm text-gray-600">Review mastered content</p>
             </button>
           </div>
         </div>
@@ -1676,45 +2290,127 @@ export const FlashCards: React.FC = () => {
                 />
               </div>
 
-                             <div className="grid grid-cols-2 gap-4">
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                   <input
-                     type="text"
-                     value={editingCard.category || ''}
-                     onChange={(e) => setEditingCard({...editingCard, category: e.target.value})}
-                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                   />
-                 </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                  <input
+                    type="text"
+                    value={editingCard.category || ''}
+                    onChange={(e) => setEditingCard({...editingCard, category: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
 
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty</label>
-                   <select
-                     value={editingCard.difficulty || 'medium'}
-                     onChange={(e) => setEditingCard({...editingCard, difficulty: e.target.value as any})}
-                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                   >
-                     <option value="easy">Easy</option>
-                     <option value="medium">Medium</option>
-                     <option value="hard">Hard</option>
-                   </select>
-                 </div>
-               </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty</label>
+                  <select
+                    value={editingCard.difficulty || 'medium'}
+                    onChange={(e) => setEditingCard({...editingCard, difficulty: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </div>
+              </div>
 
-               <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
-                 <input
-                   type="text"
-                   value={editingCard.tags?.join(', ') || ''}
-                   onChange={(e) => {
-                     const tags = e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-                     setEditingCard({...editingCard, tags});
-                   }}
-                   placeholder="Enter tags separated by commas"
-                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                 />
-                 <p className="text-sm text-gray-500 mt-1">Separate multiple tags with commas</p>
-               </div>
+              {/* Enhanced Tag Management */}
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
+                
+                {/* Current Tags Display */}
+                {editingCard.tags && editingCard.tags.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-500">Current tags:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {editingCard.tags.map((tag, index) => {
+                        const isUserTag = editingCard.userTags?.includes(tag);
+                        const isSystemTag = editingCard.systemTags?.includes(tag);
+                        const tagType = isUserTag && isSystemTag ? 'both' : isUserTag ? 'user' : 'system';
+                        
+                        return (
+                          <div key={index} className="flex items-center space-x-1">
+                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                              tagType === 'user' ? 'bg-blue-100 text-blue-700' :
+                              tagType === 'system' ? 'bg-green-100 text-green-700' :
+                              'bg-purple-100 text-purple-700'
+                            }`}>
+                              {tag}
+                              <span className="ml-1 text-xs opacity-75">
+                                {tagType === 'user' ? '👤' : tagType === 'system' ? '🤖' : '🔗'}
+                              </span>
+                            </span>
+                            {isUserTag && (
+                              <button
+                                onClick={() => {
+                                  const updatedUserTags = (editingCard.userTags || []).filter(t => t !== tag);
+                                  const updatedTags = [...new Set([...updatedUserTags, ...(editingCard.systemTags || [])])];
+                                  setEditingCard({
+                                    ...editingCard,
+                                    tags: updatedTags,
+                                    userTags: updatedUserTags
+                                  });
+                                }}
+                                className="w-4 h-4 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors flex items-center justify-center"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Add New Tag */}
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    placeholder="Add new tag..."
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        const newTag = e.currentTarget.value.trim();
+                        if (newTag && !editingCard.tags?.includes(newTag)) {
+                          const updatedUserTags = [...(editingCard.userTags || []), newTag];
+                          const updatedTags = [...new Set([...updatedUserTags, ...(editingCard.systemTags || [])])];
+                          setEditingCard({
+                            ...editingCard,
+                            tags: updatedTags,
+                            userTags: updatedUserTags
+                          });
+                          e.currentTarget.value = '';
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={(e) => {
+                      const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                      const newTag = input.value.trim();
+                      if (newTag && !editingCard.tags?.includes(newTag)) {
+                        const updatedUserTags = [...(editingCard.userTags || []), newTag];
+                        const updatedTags = [...new Set([...updatedUserTags, ...(editingCard.systemTags || [])])];
+                        setEditingCard({
+                          ...editingCard,
+                          tags: updatedTags,
+                          userTags: updatedUserTags
+                        });
+                        input.value = '';
+                      }
+                    }}
+                    className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+                
+                <p className="text-xs text-gray-500">
+                  💡 System tags (🤖) are automatically generated and cannot be removed. User tags (👤) can be edited.
+                </p>
+              </div>
             </div>
 
             <div className="flex justify-end space-x-3 mt-6">
@@ -1730,6 +2426,89 @@ export const FlashCards: React.FC = () => {
               >
                 Save Changes
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Study Modal */}
+      {showStudyModal && studySession && currentStudyCard && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {studySession.mode === 'new' && 'New Card Study'}
+                {studySession.mode === 'review' && 'Review Session'}
+                {studySession.mode === 'mastered' && 'Mastered Cards Review'}
+                {studySession.mode === 'difficult' && 'Difficult Cards Practice'}
+                {studySession.mode === 'mixed' && 'Mixed Study Session'}
+              </h3>
+              <button
+                onClick={endStudySession}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="mb-4">
+              <div className="flex justify-between text-sm text-gray-600 mb-1">
+                <span>Progress: {studySession.cardsStudied.length} / {getStudyCards(studySession.mode).length}</span>
+                <span>Accuracy: {studySession.cardsStudied.length > 0 ? Math.round((studySession.correctAnswers / studySession.cardsStudied.length) * 100) : 0}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(studySession.cardsStudied.length / getStudyCards(studySession.mode).length) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Card Info */}
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>Mastery: {currentStudyCard.masteryLevel || 0}%</span>
+                <span>Reviews: {currentStudyCard.reviewCount || 0}</span>
+                {currentStudyCard.nextReviewDate && (
+                  <span>Next: {new Date(currentStudyCard.nextReviewDate).toLocaleDateString()}</span>
+                )}
+              </div>
+              
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-2">Question:</h4>
+                <p className="text-gray-700">{currentStudyCard.question}</p>
+              </div>
+              
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-2">Answer:</h4>
+                <p className="text-gray-700">{currentStudyCard.answer}</p>
+              </div>
+              
+              {/* Quality Rating */}
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-4">How well did you know this?</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {[
+                    { value: 1, label: 'Again', color: 'bg-red-100 text-red-700 hover:bg-red-200' },
+                    { value: 2, label: 'Hard', color: 'bg-orange-100 text-orange-700 hover:bg-orange-200' },
+                    { value: 3, label: 'Good', color: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' },
+                    { value: 4, label: 'Easy', color: 'bg-green-100 text-green-700 hover:bg-green-200' },
+                    { value: 5, label: 'Perfect', color: 'bg-blue-100 text-blue-700 hover:bg-blue-200' }
+                  ].map(({ value, label, color }) => (
+                    <button
+                      key={value}
+                      onClick={() => handleCardResponse(value)}
+                      className={`px-3 py-2 rounded-lg transition-colors font-medium ${color}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  1=Complete blackout, 5=Perfect response
+                </p>
+              </div>
             </div>
           </div>
         </div>

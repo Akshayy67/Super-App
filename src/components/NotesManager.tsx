@@ -7,9 +7,12 @@ import {
   Tag,
   FileText,
   Clock,
+  Cloud,
+  Download,
 } from "lucide-react";
 import { ShortNote } from "../types";
 import { storageUtils } from "../utils/storage";
+import { driveStorageUtils } from "../utils/driveStorage";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { format } from "date-fns";
 
@@ -32,8 +35,27 @@ export const NotesManager: React.FC = () => {
     }
   }, [user]);
 
-  const loadNotes = () => {
+  const loadNotes = async () => {
     if (!user) return;
+    
+    try {
+      // Try to load from Google Drive first
+      const driveNotes = await driveStorageUtils.loadShortNotesFromDrive(user.id);
+      if (driveNotes.length > 0) {
+        console.log("📱 Loaded notes from Google Drive:", driveNotes.length);
+        setNotes(
+          driveNotes.sort(
+            (a, b) =>
+              new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          )
+        );
+        return;
+      }
+    } catch (error) {
+      console.log("📱 Falling back to localStorage for notes");
+    }
+
+    // Fallback to localStorage
     const userNotes = storageUtils.getShortNotes(user.id);
     setNotes(
       userNotes.sort(
@@ -41,6 +63,21 @@ export const NotesManager: React.FC = () => {
           new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
       )
     );
+  };
+
+  const syncNotesToDrive = async () => {
+    if (!user) return;
+    
+    try {
+      const success = await driveStorageUtils.saveShortNotesToDrive(notes, user.id);
+      if (success) {
+        console.log("✅ Notes synced to Google Drive successfully");
+      } else {
+        console.log("📱 Notes saved to localStorage only");
+      }
+    } catch (error) {
+      console.error("Error syncing notes to Drive:", error);
+    }
   };
 
   const getFilteredNotes = () => {
@@ -63,11 +100,12 @@ export const NotesManager: React.FC = () => {
     });
   };
 
-  const handleSaveNote = () => {
+  const handleSaveNote = async () => {
     console.log("handleSaveNote called", { user, noteForm });
 
     if (!user) {
       console.error("No user found");
+      alert("Please sign in to save notes.");
       return;
     }
 
@@ -91,6 +129,15 @@ export const NotesManager: React.FC = () => {
           tags,
         };
         storageUtils.updateShortNote(editingNote.id, updates);
+        
+        // Update the notes state
+        setNotes(prevNotes =>
+          prevNotes.map(note =>
+            note.id === editingNote.id
+              ? { ...note, ...updates, updatedAt: new Date().toISOString() }
+              : note
+          )
+        );
       } else {
         console.log("Creating new note");
         const newNote: ShortNote = {
@@ -102,18 +149,21 @@ export const NotesManager: React.FC = () => {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
-        console.log("New note object:", newNote);
         storageUtils.storeShortNote(newNote);
-        console.log("Note stored successfully");
+        
+        // Add to notes state
+        setNotes(prevNotes => [newNote, ...prevNotes]);
       }
 
+      // Sync to Google Drive
+      await syncNotesToDrive();
+      
       resetForm();
       setShowEditor(false);
       setEditingNote(null);
-      loadNotes();
-      console.log("Note save completed");
     } catch (error) {
       console.error("Error saving note:", error);
+      alert("Failed to save note. Please try again.");
     }
   };
 
@@ -127,10 +177,17 @@ export const NotesManager: React.FC = () => {
     setShowEditor(true);
   };
 
-  const deleteShortNote = (noteId: string) => {
-    if (window.confirm("Are you sure you want to delete this short note?")) {
+  const deleteShortNote = async (noteId: string) => {
+    if (!user) return;
+    
+    if (confirm("Are you sure you want to delete this note?")) {
       storageUtils.deleteShortNote(noteId);
-      loadNotes();
+      
+      // Remove from notes state
+      setNotes(prevNotes => prevNotes.filter(note => note.id !== noteId));
+      
+      // Sync to Google Drive
+      await syncNotesToDrive();
     }
   };
 
@@ -145,13 +202,23 @@ export const NotesManager: React.FC = () => {
       <div className="border-b border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-gray-900">Short Notes</h2>
-          <button
-            onClick={() => setShowEditor(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Note
-          </button>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={syncNotesToDrive}
+              className="flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+              title="Sync notes to Google Drive"
+            >
+              <Cloud className="w-4 h-4 mr-2" />
+              Sync
+            </button>
+            <button
+              onClick={() => setShowEditor(true)}
+              className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Note
+            </button>
+          </div>
         </div>
 
         {/* Search */}

@@ -113,31 +113,302 @@ class GoogleDriveService {
       }
 
       const folder = await response.json();
-      this.appFolderId = folder.id;
-
+      console.log("✅ Created Super Study App folder:", folder.id);
       return { success: true, data: folder };
     } catch (error) {
       console.error("Error creating app folder:", error);
-
-      // Handle specific error cases
-      if (error instanceof Error) {
-        if (error.message.includes("expired")) {
-          return {
-            success: false,
-            error:
-              "Your Google Drive access has expired. Please sign out and sign in again to refresh your access.",
-          };
-        }
-        return {
-          success: false,
-          error: error.message,
-        };
-      }
-
       return {
         success: false,
-        error: "Unknown error occurred while accessing Google Drive",
+        error: error instanceof Error ? error.message : "Failed to create app folder",
       };
+    }
+  }
+
+  // Create ignore folder inside Super Study App folder
+  async createIgnoreFolder(): Promise<DriveApiResponse> {
+    try {
+      const accessToken = await this.getAccessToken();
+      if (!accessToken) {
+        return { success: false, error: "No access token available" };
+      }
+
+      const appFolderId = await this.getAppFolder();
+      if (!appFolderId) {
+        return { success: false, error: "Could not access app folder" };
+      }
+
+      // Check if ignore folder already exists
+      const searchResponse = await fetch(
+        `${this.DRIVE_API_BASE}/files?q=name='ignore' and mimeType='application/vnd.google-apps.folder' and '${appFolderId}' in parents and trashed=false`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const searchResult = await searchResponse.json();
+
+      if (searchResult.files && searchResult.files.length > 0) {
+        return { success: true, data: searchResult.files[0] };
+      }
+
+      // Create new ignore folder
+      const folderMetadata = {
+        name: "ignore",
+        mimeType: "application/vnd.google-apps.folder",
+        parents: [appFolderId],
+        description: "Special folders for app data - Flashcards and ShortNotes",
+      };
+
+      const response = await fetch(`${this.DRIVE_API_BASE}/files`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(folderMetadata),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const folder = await response.json();
+      console.log("✅ Created ignore folder:", folder.id);
+      return { success: true, data: folder };
+    } catch (error) {
+      console.error("Error creating ignore folder:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to create ignore folder",
+      };
+    }
+  }
+
+  // Get or create ignore folder
+  async getIgnoreFolder(): Promise<string | null> {
+    try {
+      const accessToken = await this.getAccessToken();
+      if (!accessToken) return null;
+
+      const appFolderId = await this.getAppFolder();
+      if (!appFolderId) return null;
+
+      // Search for existing ignore folder
+      const searchResponse = await fetch(
+        `${this.DRIVE_API_BASE}/files?q=name='ignore' and mimeType='application/vnd.google-apps.folder' and '${appFolderId}' in parents and trashed=false`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const searchResult = await searchResponse.json();
+
+      if (searchResult.files && searchResult.files.length > 0) {
+        return searchResult.files[0].id;
+      }
+
+      // Create new ignore folder if not found
+      const createResult = await this.createIgnoreFolder();
+      return createResult.success ? createResult.data.id : null;
+    } catch (error) {
+      console.error("Error getting ignore folder:", error);
+      return null;
+    }
+  }
+
+  // Create a specific folder for flashcards inside ignore folder
+  async createFlashcardsFolder(): Promise<DriveApiResponse> {
+    try {
+      const accessToken = await this.getAccessToken();
+      if (!accessToken) {
+        return { success: false, error: "No access token available" };
+      }
+
+      const ignoreFolderId = await this.getIgnoreFolder();
+      if (!ignoreFolderId) {
+        return { success: false, error: "Could not access ignore folder" };
+      }
+
+      // Check if flashcards folder already exists
+      const searchResponse = await fetch(
+        `${this.DRIVE_API_BASE}/files?q=name='FlashCards' and mimeType='application/vnd.google-apps.folder' and '${ignoreFolderId}' in parents and trashed=false`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const searchResult = await searchResponse.json();
+
+      if (searchResult.files && searchResult.files.length > 0) {
+        return { success: true, data: searchResult.files[0] };
+      }
+
+      // Create new flashcards folder
+      const folderMetadata = {
+        name: "FlashCards",
+        mimeType: "application/vnd.google-apps.folder",
+        parents: [ignoreFolderId],
+        description: "Flashcards created in Super Study App",
+      };
+
+      const response = await fetch(`${this.DRIVE_API_BASE}/files`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(folderMetadata),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const folder = await response.json();
+      console.log("✅ Created FlashCards folder:", folder.id);
+      return { success: true, data: folder };
+    } catch (error) {
+      console.error("Error creating flashcards folder:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to create flashcards folder",
+      };
+    }
+  }
+
+  // Create a specific folder for short notes inside ignore folder
+  async createShortNotesFolder(): Promise<DriveApiResponse> {
+    try {
+      const accessToken = await this.getAccessToken();
+      if (!accessToken) {
+        return { success: false, error: "No access token available" };
+      }
+
+      const ignoreFolderId = await this.getIgnoreFolder();
+      if (!ignoreFolderId) {
+        return { success: false, error: "Could not access ignore folder" };
+      }
+
+      // Check if short notes folder already exists
+      const searchResponse = await fetch(
+        `${this.DRIVE_API_BASE}/files?q=name='ShortNotes' and mimeType='application/vnd.google-apps.folder' and '${ignoreFolderId}' in parents and trashed=false`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const searchResult = await searchResponse.json();
+
+      if (searchResult.files && searchResult.files.length > 0) {
+        return { success: true, data: searchResult.files[0] };
+      }
+
+      // Create new short notes folder
+      const folderMetadata = {
+        name: "ShortNotes",
+        mimeType: "application/vnd.google-apps.folder",
+        parents: [ignoreFolderId],
+        description: "Short notes created in Super Study App",
+      };
+
+      const response = await fetch(`${this.DRIVE_API_BASE}/files`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(folderMetadata),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const folder = await response.json();
+      console.log("✅ Created ShortNotes folder:", folder.id);
+      return { success: true, data: folder };
+    } catch (error) {
+      console.error("Error creating short notes folder:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to create short notes folder",
+      };
+    }
+  }
+
+  // Get or create flashcards folder
+  async getFlashcardsFolder(): Promise<string | null> {
+    try {
+      const accessToken = await this.getAccessToken();
+      if (!accessToken) return null;
+
+      const ignoreFolderId = await this.getIgnoreFolder();
+      if (!ignoreFolderId) return null;
+
+      // Search for existing flashcards folder
+      const searchResponse = await fetch(
+        `${this.DRIVE_API_BASE}/files?q=name='FlashCards' and mimeType='application/vnd.google-apps.folder' and '${ignoreFolderId}' in parents and trashed=false`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const searchResult = await searchResponse.json();
+
+      if (searchResult.files && searchResult.files.length > 0) {
+        return searchResult.files[0].id;
+      }
+
+      // Create new flashcards folder if not found
+      const createResult = await this.createFlashcardsFolder();
+      return createResult.success ? createResult.data.id : null;
+    } catch (error) {
+      console.error("Error getting flashcards folder:", error);
+      return null;
+    }
+  }
+
+  // Get or create short notes folder
+  async getShortNotesFolder(): Promise<string | null> {
+    try {
+      const accessToken = await this.getAccessToken();
+      if (!accessToken) return null;
+
+      const ignoreFolderId = await this.getIgnoreFolder();
+      if (!ignoreFolderId) return null;
+
+      // Search for existing short notes folder
+      const searchResponse = await fetch(
+        `${this.DRIVE_API_BASE}/files?q=name='ShortNotes' and mimeType='application/vnd.google-apps.folder' and '${ignoreFolderId}' in parents and trashed=false`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const searchResult = await searchResponse.json();
+
+      if (searchResult.files && searchResult.files.length > 0) {
+        return searchResult.files[0].id;
+      }
+
+      // Create new short notes folder if not found
+      const createResult = await this.createShortNotesFolder();
+      return createResult.success ? createResult.data.id : null;
+    } catch (error) {
+      console.error("Error getting short notes folder:", error);
+      return null;
     }
   }
 
@@ -170,7 +441,11 @@ class GoogleDriveService {
 
       // Create new folder if not found
       const createResult = await this.createAppFolder();
-      return createResult.success ? createResult.data.id : null;
+      if (createResult.success && createResult.data) {
+        this.appFolderId = createResult.data.id;
+        return this.appFolderId;
+      }
+      return null;
     } catch (error) {
       console.error("Error getting app folder:", error);
       return null;
@@ -239,67 +514,6 @@ class GoogleDriveService {
     }
   }
 
-  // Create a specific folder for flashcards
-  async createFlashcardsFolder(): Promise<DriveApiResponse> {
-    try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) {
-        return { success: false, error: "No access token available" };
-      }
-
-      const appFolderId = await this.getAppFolder();
-      if (!appFolderId) {
-        return { success: false, error: "Could not access app folder" };
-      }
-
-      // Check if flashcards folder already exists
-      const searchResponse = await fetch(
-        `${this.DRIVE_API_BASE}/files?q=name='Flashcards' and mimeType='application/vnd.google-apps.folder' and '${appFolderId}' in parents and trashed=false`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      const searchResult = await searchResponse.json();
-
-      if (searchResult.files && searchResult.files.length > 0) {
-        return { success: true, data: searchResult.files[0] };
-      }
-
-      // Create new flashcards folder
-      const folderMetadata = {
-        name: "Flashcards",
-        mimeType: "application/vnd.google-apps.folder",
-        parents: [appFolderId],
-        description: "Flashcards created in Super Study App",
-      };
-
-      const response = await fetch(`${this.DRIVE_API_BASE}/files`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(folderMetadata),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const folder = await response.json();
-      return { success: true, data: folder };
-    } catch (error) {
-      console.error("Error creating flashcards folder:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to create flashcards folder",
-      };
-    }
-  }
-
   // Upload flashcards data as a JSON file
   async uploadFlashcards(
     flashcards: any[],
@@ -312,12 +526,11 @@ class GoogleDriveService {
       }
 
       // Get or create flashcards folder
-      const folderResult = await this.createFlashcardsFolder();
-      if (!folderResult.success || !folderResult.data) {
+      const folderId = await this.getFlashcardsFolder();
+      if (!folderId) {
         return { success: false, error: "Could not access flashcards folder" };
       }
 
-      const folderId = folderResult.data.id;
       const jsonContent = JSON.stringify(flashcards, null, 2);
       const blob = new Blob([jsonContent], { type: "application/json" });
 
@@ -371,12 +584,10 @@ class GoogleDriveService {
       }
 
       // Get flashcards folder
-      const folderResult = await this.createFlashcardsFolder();
-      if (!folderResult.success || !folderResult.data) {
+      const folderId = await this.getFlashcardsFolder();
+      if (!folderId) {
         return { success: false, error: "Could not access flashcards folder" };
       }
-
-      const folderId = folderResult.data.id;
 
       // Search for the flashcards file
       const searchResponse = await fetch(
@@ -463,16 +674,16 @@ class GoogleDriveService {
       const result = await response.json();
       let allFiles = result.files || [];
 
-      // Filter out special folders that should not be visible in File Manager
-      const specialFolders = ['Flashcards', 'ShortNotes', 'Flash Cards', 'Short Notes'];
+      // Filter out old special folder names but keep the new structure
+      const oldSpecialFolders = ['Flashcards', 'Flash Cards', 'Short Notes'];
       allFiles = allFiles.filter((file: any) => {
         if (file.mimeType === "application/vnd.google-apps.folder") {
-          return !specialFolders.includes(file.name);
+          return !oldSpecialFolders.includes(file.name);
         }
         return true;
       });
 
-      // Now get files from all subfolders recursively (excluding special folders)
+      // Now get files from all subfolders recursively (including the new special folders)
       const folders = allFiles.filter(
         (file: any) => file.mimeType === "application/vnd.google-apps.folder"
       );
@@ -485,7 +696,7 @@ class GoogleDriveService {
         allFiles = allFiles.concat(subfolderFiles);
       }
 
-      console.log("📁 Total files found (excluding special folders):", allFiles.length);
+      console.log("📁 Total files found (including new special folders):", allFiles.length);
       return { success: true, data: allFiles };
     } catch (error) {
       console.error("Error listing files:", error);
@@ -666,6 +877,182 @@ class GoogleDriveService {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Create folder failed",
+      };
+    }
+  }
+
+  // Upload short notes data as a JSON file
+  async uploadShortNotes(
+    shortNotes: any[],
+    filename: string = "shortnotes.json"
+  ): Promise<DriveApiResponse> {
+    try {
+      const accessToken = await this.getAccessToken();
+      if (!accessToken) {
+        return { success: false, error: "No access token available" };
+      }
+
+      // Get or create short notes folder
+      const folderId = await this.getShortNotesFolder();
+      if (!folderId) {
+        return { success: false, error: "Could not access short notes folder" };
+      }
+
+      const jsonContent = JSON.stringify(shortNotes, null, 2);
+      const blob = new Blob([jsonContent], { type: "application/json" });
+
+      // Create file metadata
+      const metadata = {
+        name: filename,
+        parents: [folderId],
+        mimeType: "application/json",
+      };
+
+      // Create the file using multipart upload
+      const form = new FormData();
+      form.append(
+        "metadata",
+        new Blob([JSON.stringify(metadata)], { type: "application/json" })
+      );
+      form.append("file", blob, filename);
+
+      const response = await fetch(
+        `${this.UPLOAD_API_BASE}/files?uploadType=multipart`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: form,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return { success: true, data: result };
+    } catch (error) {
+      console.error("Error uploading short notes:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to upload short notes",
+      };
+    }
+  }
+
+  // Download short notes from Google Drive
+  async downloadShortNotes(filename: string = "shortnotes.json"): Promise<DriveApiResponse> {
+    try {
+      const accessToken = await this.getAccessToken();
+      if (!accessToken) {
+        return { success: false, error: "No access token available" };
+      }
+
+      // Get short notes folder
+      const folderId = await this.getShortNotesFolder();
+      if (!folderId) {
+        return { success: false, error: "Could not access short notes folder" };
+      }
+
+      // Search for the short notes file
+      const searchResponse = await fetch(
+        `${this.DRIVE_API_BASE}/files?q=name='${filename}' and '${folderId}' in parents and trashed=false`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const searchResult = await searchResponse.json();
+
+      if (!searchResult.files || searchResult.files.length === 0) {
+        return { success: false, error: "Short notes file not found" };
+      }
+
+      const fileId = searchResult.files[0].id;
+
+      // Download the file content
+      const downloadResponse = await fetch(
+        `${this.DRIVE_API_BASE}/files/${fileId}?alt=media`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!downloadResponse.ok) {
+        throw new Error(`Download failed: ${downloadResponse.status}`);
+      }
+
+      const blob = await downloadResponse.blob();
+      const text = await blob.text();
+      const data = JSON.parse(text);
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error downloading short notes:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Download failed",
+      };
+    }
+  }
+
+  // Get folder structure for display in file manager
+  async getFolderStructure(): Promise<DriveApiResponse> {
+    try {
+      const accessToken = await this.getAccessToken();
+      if (!accessToken) {
+        return { success: false, error: "No access token available" };
+      }
+
+      const appFolderId = await this.getAppFolder();
+      if (!appFolderId) {
+        return { success: false, error: "Could not access app folder" };
+      }
+
+      // Get direct children of app folder
+      const query = `'${appFolderId}' in parents and trashed=false`;
+      const fields = "files(id,name,mimeType,size,createdTime,modifiedTime,parents,webViewLink,webContentLink)";
+
+      const response = await fetch(
+        `${this.DRIVE_API_BASE}/files?q=${encodeURIComponent(query)}&fields=${fields}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`List folders failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const folders = result.files || [];
+
+      // Get contents of special folders
+      const folderStructure = [];
+      
+      for (const folder of folders) {
+        if (folder.mimeType === "application/vnd.google-apps.folder") {
+          const folderContents = await this.getFilesFromFolder(folder.id, accessToken);
+          folderStructure.push({
+            ...folder,
+            contents: folderContents
+          });
+        }
+      }
+
+      return { success: true, data: folderStructure };
+    } catch (error) {
+      console.error("Error getting folder structure:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get folder structure",
       };
     }
   }
