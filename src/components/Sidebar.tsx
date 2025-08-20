@@ -9,6 +9,7 @@ import {
   LogOut,
   X,
   BookOpen,
+  Briefcase,
 } from "lucide-react";
 import { realTimeAuth } from "../utils/realTimeAuth";
 
@@ -32,10 +33,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const menuItems = [
     { id: "files", label: "File Manager", icon: FolderOpen },
     { id: "tasks", label: "To-Do List", icon: CheckSquare },
-            { id: "notes", label: "Short Notes", icon: StickyNote },
+    { id: "notes", label: "Short Notes", icon: StickyNote },
     { id: "chat", label: "AI Assistant", icon: MessageSquare },
     { id: "tools", label: "Study Tools", icon: Brain },
     { id: "flashcards", label: "Flash Cards", icon: BookOpen },
+    { id: "interview", label: "Interview Prep", icon: Briefcase },
   ];
 
   return (

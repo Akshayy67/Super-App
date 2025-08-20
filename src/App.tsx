@@ -8,6 +8,7 @@ import { NotesManager } from "./components/NotesManager";
 import { AIChat } from "./components/AIChat";
 import { StudyTools } from "./components/StudyTools";
 import { FlashCards } from "./components/FlashCards";
+import { InterviewPrep } from "./components/InterviewPrep/InterviewPrep";
 // Removed unused FilePreview import
 import ErrorBoundary from "./components/ErrorBoundary";
 import { realTimeAuth } from "./utils/realTimeAuth";
@@ -93,6 +94,8 @@ function App() {
         return <StudyTools />;
       case "flashcards":
         return <FlashCards />;
+      case "interview":
+        return <InterviewPrep />;
       default:
         return <Dashboard onViewChange={handleViewChange} />;
     }
