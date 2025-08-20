@@ -113,10 +113,11 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
       try {
         const textContent = atob(file.content.split(",")[1]);
         return (
-          <div className="h-full p-6 overflow-auto">
+          <div className="h-full p-6 overflow-auto" data-component="file-content">
             <pre
               className="whitespace-pre-wrap font-mono text-sm text-gray-800 leading-relaxed"
               style={{ fontSize: `${zoom}%` }}
+              data-content="file-text"
             >
               {textContent}
             </pre>

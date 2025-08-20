@@ -42,7 +42,7 @@ export interface Task {
   createdAt: string;
 }
 
-export interface Note {
+export interface ShortNote {
   id: string;
   title: string;
   content: string;

@@ -337,7 +337,7 @@ export const StudyTools: React.FC = () => {
   };
 
   return (
-    <div className="bg-white h-full flex flex-col">
+    <div className="bg-white h-full flex flex-col" data-component="study-tools">
       {/* Header */}
       <div className="border-b border-gray-200 p-6">
         <div className="flex items-center mb-4">

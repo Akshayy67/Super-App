@@ -1,7 +1,7 @@
 // Firebase configuration
-import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { initializeFirestore } from "firebase/firestore";
+import { initializeApp, FirebaseApp } from "firebase/app";
+import { getAuth, Auth, GoogleAuthProvider } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -30,32 +30,52 @@ console.log("Environment check:", {
   hasProjectId: !!firebaseConfig.projectId,
   mode: import.meta.env.MODE,
   usingFallbacks: !import.meta.env.VITE_FIREBASE_API_KEY,
+  envVars: {
+    VITE_FIREBASE_API_KEY: !!import.meta.env.VITE_FIREBASE_API_KEY,
+    VITE_FIREBASE_AUTH_DOMAIN: !!import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    VITE_FIREBASE_PROJECT_ID: !!import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  }
 });
 
 // Initialize Firebase
 console.log("Initializing Firebase...");
-const app = initializeApp(firebaseConfig);
-console.log("Firebase initialized successfully");
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
+let googleProvider: GoogleAuthProvider;
 
-// Initialize Firebase Authentication and get a reference to the service
-export const auth = getAuth(app);
+try {
+  app = initializeApp(firebaseConfig);
+  console.log("✅ Firebase initialized successfully");
+  
+  // Initialize Firebase Authentication and get a reference to the service
+  auth = getAuth(app);
+  console.log("✅ Firebase Auth initialized");
+  
+  // Initialize Cloud Firestore and get a reference to the service
+  // Use getFirestore instead of initializeFirestore to avoid conflicts
+  db = getFirestore(app);
+  console.log("✅ Firestore initialized");
+  
+  // Configure Google Auth Provider with necessary scopes
+  googleProvider = new GoogleAuthProvider();
+  googleProvider.addScope("https://www.googleapis.com/auth/userinfo.email");
+  googleProvider.addScope("https://www.googleapis.com/auth/userinfo.profile");
+  googleProvider.addScope("https://www.googleapis.com/auth/drive.file");
+  console.log("✅ Google Auth Provider configured");
+  
+  // Set custom parameters for Google OAuth
+  googleProvider.setCustomParameters({
+    prompt: "select_account",
+  });
+  
+} catch (error) {
+  console.error("❌ Firebase initialization failed:", error);
+  throw error;
+}
 
-// Initialize Cloud Firestore and get a reference to the service
-export const db = initializeFirestore(app, {
-  experimentalAutoDetectLongPolling: true,
-  useFetchStreams: false,
-});
-
-// Configure Google Auth Provider with necessary scopes
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.addScope("https://www.googleapis.com/auth/userinfo.email");
-googleProvider.addScope("https://www.googleapis.com/auth/userinfo.profile");
-googleProvider.addScope("https://www.googleapis.com/auth/drive.file");
-
-// Set custom parameters for Google OAuth
-googleProvider.setCustomParameters({
-  prompt: "select_account",
-});
+// Export the initialized services
+export { auth, db, googleProvider };
 
 // Set the client ID for Google OAuth (optional, Firebase handles this automatically)
 // but we can access it for debugging

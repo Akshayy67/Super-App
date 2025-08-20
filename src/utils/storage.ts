@@ -1,4 +1,4 @@
-import { FileItem, Task, Note, AIAnalysis } from "../types";
+import { FileItem, Task, ShortNote, AIAnalysis } from "../types";
 import { googleDriveService, DriveFile } from "./googleDriveService";
 import { realTimeAuth } from "./realTimeAuth";
 
@@ -68,22 +68,22 @@ export const storageUtils = {
     localStorage.setItem(TASKS_KEY, JSON.stringify(filtered));
   },
 
-  // Notes Management
-  getNotes(userId: string): Note[] {
+  // Short Notes Management
+  getShortNotes(userId: string): ShortNote[] {
     const notes = localStorage.getItem(NOTES_KEY);
-    const allNotes: Note[] = notes ? JSON.parse(notes) : [];
+    const allNotes: ShortNote[] = notes ? JSON.parse(notes) : [];
     return allNotes.filter((note) => note.userId === userId);
   },
 
-  storeNote(note: Note): void {
+  storeShortNote(note: ShortNote): void {
     const notes = JSON.parse(localStorage.getItem(NOTES_KEY) || "[]");
     notes.push(note);
     localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
   },
 
-  updateNote(noteId: string, updates: Partial<Note>): void {
+  updateShortNote(noteId: string, updates: Partial<ShortNote>): void {
     const notes = JSON.parse(localStorage.getItem(NOTES_KEY) || "[]");
-    const index = notes.findIndex((n: Note) => n.id === noteId);
+    const index = notes.findIndex((n: ShortNote) => n.id === noteId);
     if (index !== -1) {
       notes[index] = {
         ...notes[index],
@@ -94,10 +94,161 @@ export const storageUtils = {
     }
   },
 
-  deleteNote(noteId: string): void {
+  deleteShortNote(noteId: string): void {
     const notes = JSON.parse(localStorage.getItem(NOTES_KEY) || "[]");
-    const filtered = notes.filter((n: Note) => n.id !== noteId);
+    const filtered = notes.filter((n: ShortNote) => n.id !== noteId);
     localStorage.setItem(NOTES_KEY, JSON.stringify(filtered));
+  },
+
+  // Google Drive Integration for Short Notes
+  async storeShortNoteToDrive(note: ShortNote): Promise<boolean> {
+    try {
+      if (!realTimeAuth.hasGoogleDriveAccess()) {
+        console.log("📱 No Google Drive access, saving to localStorage only");
+        return false;
+      }
+
+      // Create or get the ShortNotes folder
+      const shortNotesFolderId = await this.getOrCreateShortNotesFolder();
+      if (!shortNotesFolderId) {
+        console.error("❌ Could not create or access ShortNotes folder");
+        return false;
+      }
+
+      // Create Google Doc from short note
+      const success = await this.createGoogleDocFromShortNote(note, shortNotesFolderId);
+      return success;
+    } catch (error) {
+      console.error("❌ Error storing short note to Google Drive:", error);
+      return false;
+    }
+  },
+
+  async getOrCreateShortNotesFolder(): Promise<string | null> {
+    try {
+      // First try to get the SuperApp folder
+      const superAppFolderId = await googleDriveService.getAppFolder();
+      if (!superAppFolderId) {
+        console.error("❌ Could not access SuperApp folder");
+        return null;
+      }
+
+      // Search for existing ShortNotes folder
+      const accessToken = realTimeAuth.getGoogleAccessToken();
+      if (!accessToken) return null;
+
+      const searchResponse = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=name='ShortNotes' and mimeType='application/vnd.google-apps.folder' and '${superAppFolderId}' in parents and trashed=false`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const searchResult = await searchResponse.json();
+
+      if (searchResult.files && searchResult.files.length > 0) {
+        return searchResult.files[0].id;
+      }
+
+      // Create new ShortNotes folder
+      const folderMetadata = {
+        name: "ShortNotes",
+        mimeType: "application/vnd.google-apps.folder",
+        parents: [superAppFolderId],
+        description: "Short notes created from copied text across the SuperApp",
+      };
+
+      const createResponse = await fetch("https://www.googleapis.com/drive/v3/files", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(folderMetadata),
+      });
+
+      if (!createResponse.ok) {
+        throw new Error(`HTTP error! status: ${createResponse.status}`);
+      }
+
+      const folder = await createResponse.json();
+      return folder.id;
+    } catch (error) {
+      console.error("❌ Error creating ShortNotes folder:", error);
+      return null;
+    }
+  },
+
+  async createGoogleDocFromShortNote(note: ShortNote, folderId: string): Promise<boolean> {
+    try {
+      const accessToken = realTimeAuth.getGoogleAccessToken();
+      if (!accessToken) return false;
+
+      // Create Google Doc metadata
+      const docMetadata = {
+        name: note.title || "Untitled Short Note",
+        mimeType: "application/vnd.google-apps.document",
+        parents: [folderId],
+        description: `Short note created on ${new Date(note.createdAt).toLocaleString()}`,
+      };
+
+      // Create the document
+      const createResponse = await fetch("https://www.googleapis.com/drive/v3/files", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(docMetadata),
+      });
+
+      if (!createResponse.ok) {
+        throw new Error(`HTTP error! status: ${createResponse.status}`);
+      }
+
+      const doc = await createResponse.json();
+      const docId = doc.id;
+
+      // Add content to the document
+      const content = `
+Title: ${note.title || "Untitled Short Note"}
+
+Content:
+${note.content}
+
+Tags: ${note.tags.join(", ")}
+
+Created: ${new Date(note.createdAt).toLocaleString()}
+Updated: ${new Date(note.updatedAt).toLocaleString()}
+
+Source: ${note.documentId ? `Document ID: ${note.documentId}` : "Copied from website"}
+      `.trim();
+
+      // Update document content
+      const updateResponse = await fetch(
+        `https://www.googleapis.com/upload/drive/v3/files/${docId}?uploadType=media`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "text/plain",
+          },
+          body: content,
+        }
+      );
+
+      if (!updateResponse.ok) {
+        throw new Error(`HTTP error! status: ${updateResponse.status}`);
+      }
+
+      console.log("✅ Short note successfully stored to Google Drive:", docId);
+      return true;
+    } catch (error) {
+      console.error("❌ Error creating Google Doc from short note:", error);
+      return false;
+    }
   },
 
   // AI Analysis

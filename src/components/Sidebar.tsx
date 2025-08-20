@@ -32,7 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const menuItems = [
     { id: "files", label: "File Manager", icon: FolderOpen },
     { id: "tasks", label: "To-Do List", icon: CheckSquare },
-    { id: "notes", label: "Notes", icon: StickyNote },
+            { id: "notes", label: "Short Notes", icon: StickyNote },
     { id: "chat", label: "AI Assistant", icon: MessageSquare },
     { id: "tools", label: "Study Tools", icon: Brain },
     { id: "flashcards", label: "Flash Cards", icon: BookOpen },

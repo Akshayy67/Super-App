@@ -7,6 +7,7 @@ import {
   Smartphone,
   ArrowLeftRight,
   X,
+  Search,
 } from "lucide-react";
 import { Task } from "../types";
 import { firestoreUserTasks } from "../utils/firestoreUserTasks";
@@ -28,20 +29,22 @@ export const TaskManager: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showAddTask, setShowAddTask] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [filter, setFilter] = useState<
-    | "all"
-    | "pending"
-    | "completed"
-    | "overdue"
-    | "today"
-    | "tomorrow"
-    | "high-priority"
-  >("all");
+  // Removed basic filter - only using advanced filters now
   const [sortBy, setSortBy] = useState<
     "smart" | "dueDate" | "priority" | "created" | "alphabetical"
   >("smart");
   const [showSortOptions, setShowSortOptions] = useState(false);
-  const [showFilterOptions, setShowFilterOptions] = useState(false);
+  // Removed showFilterOptions - not needed with advanced filters only
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchBar, setShowSearchBar] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<{
+    startDate: string;
+    endDate: string;
+  }>({ startDate: "", endDate: "" });
   const [celebrationTask, setCelebrationTask] = useState<Task | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [newAchievement, setNewAchievement] = useState<Achievement | null>(
@@ -83,7 +86,6 @@ export const TaskManager: React.FC = () => {
       const target = event.target as Element;
       if (!target.closest(".dropdown-container")) {
         setShowSortOptions(false);
-        setShowFilterOptions(false);
       }
     };
 
@@ -258,138 +260,258 @@ export const TaskManager: React.FC = () => {
   };
 
   const isOverdue = (task: Task) => {
-    if (task.status === "completed") return false;
-    return isAfter(startOfDay(new Date()), startOfDay(new Date(task.dueDate)));
+    try {
+      // Completed tasks are never overdue
+      if (task.status === "completed") return false;
+      
+      // Check if dueDate is valid
+      if (!task.dueDate || isNaN(new Date(task.dueDate).getTime())) {
+        return false;
+      }
+      
+      const taskDate = new Date(task.dueDate);
+      const today = new Date();
+      
+      // Compare dates at start of day for accurate comparison
+      const taskStartOfDay = startOfDay(taskDate);
+      const todayStartOfDay = startOfDay(today);
+      
+      // Task is overdue if today is after the due date
+      return isAfter(todayStartOfDay, taskStartOfDay);
+    } catch (error) {
+      console.error("Error checking if task is overdue:", error, task);
+      return false;
+    }
   };
 
   const sortTasks = (tasks: Task[]) => {
-    const sortedTasks = [...tasks];
+    try {
+      const sortedTasks = [...tasks];
 
-    switch (sortBy) {
-      case "smart":
-        return sortedTasks.sort((a, b) => {
-          const aDate = new Date(a.dueDate);
-          const bDate = new Date(b.dueDate);
+      switch (sortBy) {
+        case "smart":
+          return sortedTasks.sort((a, b) => {
+            try {
+              const aDate = new Date(a.dueDate);
+              const bDate = new Date(b.dueDate);
 
-          // 1. Pending before completed
-          if (a.status !== b.status) {
-            return a.status === "pending" ? -1 : 1;
-          }
+              // Check for invalid dates
+              if (isNaN(aDate.getTime()) || isNaN(bDate.getTime())) {
+                return 0; // Keep original order for invalid dates
+              }
 
-          // If both completed keep most recently created first (fallback behaviour)
-          if (a.status === "completed" && b.status === "completed") {
-            return (
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-            );
-          }
+              // 1. Pending before completed
+              if (a.status !== b.status) {
+                return a.status === "pending" ? -1 : 1;
+              }
 
-          // Both pending -> apply new smart grouping
-          const priorityOrder = { high: 3, medium: 2, low: 1 } as const;
-          const group = (t: Task) => {
-            const d = new Date(t.dueDate);
-            if (isOverdue(t)) return 0; // Overdue
-            if (isToday(d)) return 1; // Today
-            if (isTomorrow(d)) return 2; // Tomorrow
-            // Future (after tomorrow) grouped by priority sequence
-            if (t.priority === "high") return 3; // Future High
-            if (t.priority === "medium") return 4; // Future Medium
-            return 5; // Future Low (or any other)
-          };
+              // If both completed keep most recently created first (fallback behaviour)
+              if (a.status === "completed" && b.status === "completed") {
+                return (
+                  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                );
+              }
 
-          const aGroup = group(a);
-          const bGroup = group(b);
-          if (aGroup !== bGroup) return aGroup - bGroup;
+              // Both pending -> apply new smart grouping
+              const priorityOrder = { high: 3, medium: 2, low: 1 } as const;
+              const group = (t: Task) => {
+                try {
+                  const d = new Date(t.dueDate);
+                  if (isNaN(d.getTime())) return 6; // Invalid dates at the end
+                  if (isOverdue(t)) return 0; // Overdue
+                  if (isToday(d)) return 1; // Today
+                  if (isTomorrow(d)) return 2; // Tomorrow
+                  // Future (after tomorrow) grouped by priority sequence
+                  if (t.priority === "high") return 3; // Future High
+                  if (t.priority === "medium") return 4; // Future Medium
+                  return 5; // Future Low (or any other)
+                } catch (error) {
+                  console.error("Error grouping task:", error, t);
+                  return 6; // Error cases at the end
+                }
+              };
 
-          // Within same group rules
-          if (aGroup === 0) {
-            // Overdue
-            // Earlier due date first (older overdue first) then priority
-            const dateDiff = aDate.getTime() - bDate.getTime();
-            if (dateDiff !== 0) return dateDiff;
-            return priorityOrder[b.priority] - priorityOrder[a.priority];
-          }
+              const aGroup = group(a);
+              const bGroup = group(b);
+              if (aGroup !== bGroup) return aGroup - bGroup;
 
-          if (aGroup === 1 || aGroup === 2) {
-            // Today / Tomorrow
-            // Higher priority first then earlier time
-            const prDiff =
-              priorityOrder[b.priority] - priorityOrder[a.priority];
-            if (prDiff !== 0) return prDiff;
-            return aDate.getTime() - bDate.getTime();
-          }
+              // Within same group rules
+              if (aGroup === 0) {
+                // Overdue
+                // Earlier due date first (older overdue first) then priority
+                const dateDiff = aDate.getTime() - bDate.getTime();
+                if (dateDiff !== 0) return dateDiff;
+                return priorityOrder[b.priority] - priorityOrder[a.priority];
+              }
 
-          if (aGroup >= 3 && aGroup <= 5) {
-            // Future grouped by priority segments
-            // Already separated by priority: just earliest due date inside each segment
-            return aDate.getTime() - bDate.getTime();
-          }
+              if (aGroup === 1 || aGroup === 2) {
+                // Today / Tomorrow
+                // Higher priority first then earlier time
+                const prDiff =
+                  priorityOrder[b.priority] - priorityOrder[a.priority];
+                if (prDiff !== 0) return prDiff;
+                return aDate.getTime() - bDate.getTime();
+              }
 
-          return 0; // Fallback
-        });
+              if (aGroup >= 3 && aGroup <= 5) {
+                // Future grouped by priority segments
+                // Already separated by priority: just earliest due date inside each segment
+                return aDate.getTime() - bDate.getTime();
+              }
 
-      case "dueDate":
-        return sortedTasks.sort(
-          (a, b) =>
-            new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-        );
+              return 0; // Fallback
+            } catch (error) {
+              console.error("Error in smart sort comparison:", error, { a, b });
+              return 0; // Keep original order on error
+            }
+          });
 
-      case "priority":
-        const priorityOrder = { high: 3, medium: 2, low: 1 };
-        return sortedTasks.sort((a, b) => {
-          const priorityDiff =
-            priorityOrder[b.priority] - priorityOrder[a.priority];
-          if (priorityDiff !== 0) return priorityDiff;
-          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-        });
+        case "dueDate":
+          return sortedTasks.sort((a, b) => {
+            try {
+              const aDate = new Date(a.dueDate);
+              const bDate = new Date(b.dueDate);
+              
+              // Handle invalid dates
+              if (isNaN(aDate.getTime()) && isNaN(bDate.getTime())) return 0;
+              if (isNaN(aDate.getTime())) return 1; // Invalid dates at the end
+              if (isNaN(bDate.getTime())) return -1;
+              
+              return aDate.getTime() - bDate.getTime();
+            } catch (error) {
+              console.error("Error in dueDate sort:", error, { a, b });
+              return 0;
+            }
+          });
 
-      case "created":
-        return sortedTasks.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
+        case "priority":
+          const priorityOrder = { high: 3, medium: 2, low: 1 };
+          return sortedTasks.sort((a, b) => {
+            try {
+              const priorityDiff =
+                priorityOrder[b.priority] - priorityOrder[a.priority];
+              if (priorityDiff !== 0) return priorityDiff;
+              
+              // Secondary sort by due date
+              const aDate = new Date(a.dueDate);
+              const bDate = new Date(b.dueDate);
+              
+              if (isNaN(aDate.getTime()) && isNaN(bDate.getTime())) return 0;
+              if (isNaN(aDate.getTime())) return 1;
+              if (isNaN(bDate.getTime())) return -1;
+              
+              return aDate.getTime() - bDate.getTime();
+            } catch (error) {
+              console.error("Error in priority sort:", error, { a, b });
+              return 0;
+            }
+          });
 
-      case "alphabetical":
-        return sortedTasks.sort((a, b) => a.title.localeCompare(b.title));
+        case "created":
+          return sortedTasks.sort((a, b) => {
+            try {
+              const aDate = new Date(a.createdAt);
+              const bDate = new Date(b.createdAt);
+              
+              if (isNaN(aDate.getTime()) && isNaN(bDate.getTime())) return 0;
+              if (isNaN(aDate.getTime())) return 1;
+              if (isNaN(bDate.getTime())) return -1;
+              
+              return bDate.getTime() - aDate.getTime();
+            } catch (error) {
+              console.error("Error in created sort:", error, { a, b });
+              return 0;
+            }
+          });
 
-      default:
-        return sortedTasks;
+        case "alphabetical":
+          return sortedTasks.sort((a, b) => {
+            try {
+              return a.title.localeCompare(b.title);
+            } catch (error) {
+              console.error("Error in alphabetical sort:", error, { a, b });
+              return 0;
+            }
+          });
+
+        default:
+          return sortedTasks;
+      }
+    } catch (error) {
+      console.error("Error in sortTasks:", error);
+      return tasks; // Return original order on error
     }
   };
 
   const getFilteredTasks = () => {
-    let filteredTasks: Task[];
+    try {
+      // Start with all tasks
+      let filteredTasks: Task[] = [...tasks];
 
-    switch (filter) {
-      case "pending":
-        filteredTasks = tasks.filter((task) => task.status === "pending");
-        break;
-      case "completed":
-        filteredTasks = tasks.filter((task) => task.status === "completed");
-        break;
-      case "overdue":
-        filteredTasks = tasks.filter((task) => isOverdue(task));
-        break;
-      case "today":
-        filteredTasks = tasks.filter(
-          (task) => task.status === "pending" && isToday(new Date(task.dueDate))
+      // Apply advanced filters
+      
+      // Subject filter (multiple selection)
+      if (selectedSubjects.length > 0) {
+        filteredTasks = filteredTasks.filter((task) => 
+          task.subject && selectedSubjects.includes(task.subject.trim())
         );
-        break;
-      case "tomorrow":
-        filteredTasks = tasks.filter(
-          (task) =>
-            task.status === "pending" && isTomorrow(new Date(task.dueDate))
+      }
+
+      // Priority filter (multiple selection)
+      if (selectedPriorities.length > 0) {
+        filteredTasks = filteredTasks.filter((task) => 
+          selectedPriorities.includes(task.priority)
         );
-        break;
-      case "high-priority":
-        filteredTasks = tasks.filter(
-          (task) => task.status === "pending" && task.priority === "high"
+      }
+
+      // Status filter (multiple selection)
+      if (selectedStatuses.length > 0) {
+        filteredTasks = filteredTasks.filter((task) => 
+          selectedStatuses.includes(task.status)
         );
-        break;
-      default:
-        filteredTasks = tasks;
+      }
+
+      // Date range filter
+      if (dateRange.startDate || dateRange.endDate) {
+        filteredTasks = filteredTasks.filter((task) => {
+          const taskDate = new Date(task.dueDate);
+          if (isNaN(taskDate.getTime())) return false;
+          
+          const startDate = dateRange.startDate ? new Date(dateRange.startDate) : null;
+          const endDate = dateRange.endDate ? new Date(dateRange.endDate) : null;
+          
+          if (startDate && endDate) {
+            return taskDate >= startDate && taskDate <= endDate;
+          } else if (startDate) {
+            return taskDate >= startDate;
+          } else if (endDate) {
+            return taskDate <= endDate;
+          }
+          
+          return true;
+        });
+      }
+
+      // Then apply search filter if there's a search query
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        filteredTasks = filteredTasks.filter((task) => {
+          const titleMatch = task.title.toLowerCase().includes(query);
+          const descriptionMatch = task.description.toLowerCase().includes(query);
+          const subjectMatch = task.subject.toLowerCase().includes(query);
+          const priorityMatch = task.priority.toLowerCase().includes(query);
+          const statusMatch = task.status.toLowerCase().includes(query);
+          
+          return titleMatch || descriptionMatch || subjectMatch || priorityMatch || statusMatch;
+        });
+      }
+
+      return sortTasks(filteredTasks);
+    } catch (error) {
+      console.error("Error filtering tasks:", error);
+      // Return all tasks if filtering fails
+      return sortTasks(tasks);
     }
-
-    return sortTasks(filteredTasks);
   };
 
   const getPriorityColor = (priority: string) => {
@@ -405,25 +527,7 @@ export const TaskManager: React.FC = () => {
     }
   };
 
-  const getStatusCounts = () => {
-    return {
-      all: tasks.length,
-      pending: tasks.filter((t) => t.status === "pending").length,
-      completed: tasks.filter((t) => t.status === "completed").length,
-      overdue: tasks.filter((t) => isOverdue(t)).length,
-      today: tasks.filter(
-        (t) => t.status === "pending" && isToday(new Date(t.dueDate))
-      ).length,
-      tomorrow: tasks.filter(
-        (t) => t.status === "pending" && isTomorrow(new Date(t.dueDate))
-      ).length,
-      "high-priority": tasks.filter(
-        (t) => t.status === "pending" && t.priority === "high"
-      ).length,
-    };
-  };
-
-  const counts = getStatusCounts();
+  // Removed getStatusCounts - no longer needed with advanced filters only
   const [showSwipeTip, setShowSwipeTip] = useState<boolean>(() => {
     try {
       return !localStorage.getItem("hideSwipeTip");
@@ -439,8 +543,90 @@ export const TaskManager: React.FC = () => {
     } catch {}
   };
 
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setSortBy("smart");
+    clearAdvancedFilters();
+  };
+
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (searchQuery.trim()) count++;
+    if (sortBy !== "smart") count++;
+    if (selectedSubjects.length > 0) count++;
+    if (selectedPriorities.length > 0) count++;
+    if (selectedStatuses.length > 0) count++;
+    if (dateRange.startDate || dateRange.endDate) count++;
+    return count;
+  };
+
+  // Dynamic filter options
+  const getAvailableSubjects = () => {
+    const subjects = new Set<string>();
+    tasks.forEach(task => {
+      if (task.subject && task.subject.trim()) {
+        subjects.add(task.subject.trim());
+      }
+    });
+    return Array.from(subjects).sort();
+  };
+
+  const getAvailablePriorities = () => {
+    const priorities = new Set<string>();
+    tasks.forEach(task => {
+      if (task.priority) {
+        priorities.add(task.priority);
+      }
+    });
+    return Array.from(priorities).sort((a, b) => {
+      const priorityOrder = { high: 3, medium: 2, low: 1 };
+      return priorityOrder[b as keyof typeof priorityOrder] - priorityOrder[a as keyof typeof priorityOrder];
+    });
+  };
+
+  const getAvailableStatuses = () => {
+    const statuses = new Set<string>();
+    tasks.forEach(task => {
+      if (task.status) {
+        statuses.add(task.status);
+      }
+    });
+    return Array.from(statuses).sort();
+  };
+
+  const toggleSubjectFilter = (subject: string) => {
+    setSelectedSubjects(prev => 
+      prev.includes(subject) 
+        ? prev.filter(s => s !== subject)
+        : [...prev, subject]
+    );
+  };
+
+  const togglePriorityFilter = (priority: string) => {
+    setSelectedPriorities(prev => 
+      prev.includes(priority) 
+        ? prev.filter(p => p !== priority)
+        : [...prev, priority]
+    );
+  };
+
+  const toggleStatusFilter = (status: string) => {
+    setSelectedStatuses(prev => 
+      prev.includes(status) 
+        ? prev.filter(s => s !== status)
+        : [...prev, status]
+    );
+  };
+
+  const clearAdvancedFilters = () => {
+    setSelectedSubjects([]);
+    setSelectedPriorities([]);
+    setSelectedStatuses([]);
+    setDateRange({ startDate: "", endDate: "" });
+  };
+
   return (
-    <div className="bg-white h-full flex flex-col">
+    <div className="bg-white h-full flex flex-col" data-component="tasks">
       {/* Header */}
       <div className="border-b border-gray-200 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 space-y-4 sm:space-y-0">
@@ -492,76 +678,24 @@ export const TaskManager: React.FC = () => {
               )}
             </div>
 
-            {/* Filter Dropdown */}
-            <div className="relative dropdown-container">
+            {/* Advanced Filters Toggle */}
+            <div className="relative">
               <button
-                onClick={() => setShowFilterOptions(!showFilterOptions)}
-                className="flex items-center px-2 sm:px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors text-sm"
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className={`flex items-center px-2 sm:px-3 py-2 border rounded-lg transition-colors text-sm ${
+                  showAdvancedFilters
+                    ? "bg-purple-50 text-purple-600 border-purple-200"
+                    : "text-gray-600 hover:text-gray-900 border-gray-200"
+                }`}
               >
                 <Filter className="w-4 h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Filter</span>
+                <span className="hidden sm:inline">Advanced Filters</span>
+                {getActiveFiltersCount() > 0 && (
+                  <span className="ml-2 px-1.5 py-0.5 text-xs bg-purple-600 text-white rounded-full">
+                    {getActiveFiltersCount()}
+                  </span>
+                )}
               </button>
-              {showFilterOptions && (
-                <div className="absolute right-0 mt-2 w-44 sm:w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                  <div className="py-1">
-                    {[
-                      { key: "all", label: "All Tasks", count: counts.all },
-                      { key: "today", label: "Due Today", count: counts.today },
-                      {
-                        key: "tomorrow",
-                        label: "Due Tomorrow",
-                        count: counts.tomorrow,
-                      },
-                      {
-                        key: "high-priority",
-                        label: "High Priority",
-                        count: counts["high-priority"],
-                      },
-                      {
-                        key: "pending",
-                        label: "Pending",
-                        count: counts.pending,
-                      },
-                      {
-                        key: "completed",
-                        label: "Completed",
-                        count: counts.completed,
-                      },
-                      {
-                        key: "overdue",
-                        label: "Overdue",
-                        count: counts.overdue,
-                      },
-                    ].map((option) => (
-                      <button
-                        key={option.key}
-                        onClick={() => {
-                          setFilter(option.key as any);
-                          setShowFilterOptions(false);
-                        }}
-                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center justify-between ${
-                          filter === option.key
-                            ? "bg-blue-50 text-blue-600"
-                            : "text-gray-700"
-                        }`}
-                      >
-                        <span>{option.label}</span>
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${
-                            option.key === "overdue" && option.count > 0
-                              ? "bg-red-100 text-red-600"
-                              : option.key === "today" && option.count > 0
-                              ? "bg-orange-100 text-orange-600"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {option.count}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Vibration Settings Button (Mobile Only) */}
@@ -586,50 +720,247 @@ export const TaskManager: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Filter Tabs */}
-        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg overflow-x-auto scrollbar-hide">
-          {[
-            { key: "all", label: "All", count: counts.all },
-            { key: "today", label: "Today", count: counts.today },
-            { key: "tomorrow", label: "Tomorrow", count: counts.tomorrow },
-            {
-              key: "high-priority",
-              label: "High Priority",
-              count: counts["high-priority"],
-            },
-            { key: "pending", label: "Pending", count: counts.pending },
-            { key: "overdue", label: "Overdue", count: counts.overdue },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setFilter(tab.key as any)}
-              className={`flex-shrink-0 flex items-center justify-center px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-                filter === tab.key
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              {tab.label}
-              <span
-                className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-                  tab.key === "overdue" && tab.count > 0
-                    ? "bg-red-100 text-red-600"
-                    : tab.key === "today" && tab.count > 0
-                    ? "bg-orange-100 text-orange-600"
-                    : tab.key === "high-priority" && tab.count > 0
-                    ? "bg-purple-100 text-purple-600"
-                    : "bg-gray-200 text-gray-600"
-                }`}
+        {/* Search Bar */}
+        <div className="flex items-center space-x-2 mb-4">
+          <div className="relative flex-1 max-w-md">
+            <input
+              type="text"
+              placeholder="Search tasks by title, description, subject, priority, or status..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-sm"
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
               >
-                {tab.count}
-              </span>
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <button
+            onClick={() => setShowSearchBar(!showSearchBar)}
+            className={`px-3 py-2 text-sm border rounded-lg transition-colors ${
+              showSearchBar
+                ? "bg-blue-50 text-blue-600 border-blue-200"
+                : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            {showSearchBar ? "Hide" : "Search"}
+          </button>
+          <button
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className={`px-3 py-2 text-sm border rounded-lg transition-colors ${
+              showAdvancedFilters
+                ? "bg-purple-50 text-purple-600 border-purple-200"
+                : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+            }`}
+          >
+            Advanced Filters
+          </button>
+          {getActiveFiltersCount() > 0 && (
+            <button
+              onClick={clearAllFilters}
+              className="px-3 py-2 text-sm border border-red-200 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center space-x-1"
+              title={`Clear ${getActiveFiltersCount()} active filter${getActiveFiltersCount() > 1 ? 's' : ''}`}
+            >
+              <X className="w-4 h-4" />
+              <span>Clear All</span>
             </button>
-          ))}
+          )}
+        </div>
+
+        {/* Advanced Filters Panel */}
+        {showAdvancedFilters && (
+          <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Subject Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Subjects ({selectedSubjects.length} selected)
+                </label>
+                <div className="max-h-32 overflow-y-auto space-y-1">
+                  {getAvailableSubjects().map((subject) => (
+                    <label key={subject} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedSubjects.includes(subject)}
+                        onChange={() => toggleSubjectFilter(subject)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">{subject}</span>
+                    </label>
+                  ))}
+                  {getAvailableSubjects().length === 0 && (
+                    <span className="text-sm text-gray-500">No subjects available</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Priority Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Priorities ({selectedPriorities.length} selected)
+                </label>
+                <div className="space-y-1">
+                  {getAvailablePriorities().map((priority) => (
+                    <label key={priority} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedPriorities.includes(priority)}
+                        onChange={() => togglePriorityFilter(priority)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className={`text-sm capitalize ${getPriorityColor(priority)}`}>
+                        {priority}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Status Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status ({selectedStatuses.length} selected)
+                </label>
+                <div className="space-y-1">
+                  {getAvailableStatuses().map((status) => (
+                    <label key={status} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedStatuses.includes(status)}
+                        onChange={() => toggleStatusFilter(status)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className={`text-sm capitalize ${
+                        status === 'completed' ? 'text-green-600' : 'text-orange-600'
+                      }`}>
+                        {status}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Date Range Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date Range
+                </label>
+                <div className="space-y-2">
+                  <input
+                    type="date"
+                    value={dateRange.startDate}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="w-full px-2 py-1 text-sm border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Start Date"
+                  />
+                  <input
+                    type="date"
+                    value={dateRange.endDate}
+                    onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="w-full px-2 py-1 text-sm border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="End Date"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* Advanced Filters Actions */}
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+              <div className="text-sm text-gray-600">
+                {getActiveFiltersCount() > 0 && (
+                  <span>
+                    {getActiveFiltersCount()} active filter{getActiveFiltersCount() > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={clearAdvancedFilters}
+                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                >
+                  Clear Advanced
+                </button>
+                <button
+                  onClick={() => setShowAdvancedFilters(false)}
+                  className="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Quick Stats */}
+        <div className="flex space-x-1 bg-gray-100 p-3 rounded-lg">
+          <div className="flex items-center space-x-4 text-sm text-gray-600">
+            <span>Total: <strong className="text-gray-900">{tasks.length}</strong></span>
+            <span>Pending: <strong className="text-orange-600">{tasks.filter(t => t.status === 'pending').length}</strong></span>
+            <span>Completed: <strong className="text-green-600">{tasks.filter(t => t.status === 'completed').length}</strong></span>
+            <span>Overdue: <strong className="text-red-600">{tasks.filter(t => isOverdue(t)).length}</strong></span>
+          </div>
         </div>
       </div>
 
       {/* Task List */}
       <div className="flex-1 overflow-auto p-4 sm:p-6">
+        {/* Search Results Indicator */}
+        {(searchQuery.trim() || getActiveFiltersCount() > 0) && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <Search className="w-4 h-4 text-blue-600" />
+                <span className="text-sm text-blue-800 font-medium">
+                  Active Filters & Search
+                </span>
+              </div>
+              <div className="text-sm text-blue-600">
+                {getFilteredTasks().length} of {tasks.length} tasks
+              </div>
+            </div>
+            
+            {/* Active Filters Display */}
+            <div className="flex flex-wrap gap-2 mb-2">
+              {searchQuery.trim() && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                  🔍 "{searchQuery}"
+                </span>
+              )}
+              {selectedSubjects.map(subject => (
+                <span key={subject} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                  📚 {subject}
+                </span>
+              ))}
+              {selectedPriorities.map(priority => (
+                <span key={priority} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
+                  ⚡ {priority}
+                </span>
+              ))}
+              {selectedStatuses.map(status => (
+                <span key={status} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+                  📋 {status}
+                </span>
+              ))}
+              {(dateRange.startDate || dateRange.endDate) && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                  📅 {dateRange.startDate || 'Any'} - {dateRange.endDate || 'Any'}
+                </span>
+              )}
+            </div>
+            
+            {getFilteredTasks().length === 0 && (
+              <p className="text-xs text-blue-600">
+                Try adjusting your search terms or filters
+              </p>
+            )}
+          </div>
+        )}
+
         {showSwipeTip && (
           <div className="mb-4 sm:mb-5 animate-fadeSlideIn relative">
             <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-dashed border-gray-300 text-[11px] sm:text-xs text-gray-600 italic">
@@ -662,32 +993,16 @@ export const TaskManager: React.FC = () => {
           <div className="text-center py-8 sm:py-12 px-4">
             <CheckCircle2 className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
             <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
-              {filter === "all"
-                ? "No tasks yet"
-                : filter === "today"
-                ? "No tasks due today"
-                : filter === "tomorrow"
-                ? "No tasks due tomorrow"
-                : filter === "high-priority"
-                ? "No high priority tasks"
-                : `No ${filter} tasks`}
+              {tasks.length === 0 
+                ? "No tasks yet" 
+                : "No tasks match your current filters"}
             </h3>
             <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 max-w-sm mx-auto">
-              {filter === "all"
+              {tasks.length === 0
                 ? "Create your first task to get started with organized studying"
-                : filter === "today"
-                ? "Great! You have no tasks due today. Enjoy your free time!"
-                : filter === "tomorrow"
-                ? "No tasks scheduled for tomorrow yet."
-                : filter === "high-priority"
-                ? "No high priority tasks at the moment."
-                : filter === "completed"
-                ? "No completed tasks yet. Start working on your pending tasks!"
-                : filter === "overdue"
-                ? "Great! No overdue tasks. Keep up the good work!"
-                : `You don't have any ${filter} tasks at the moment`}
+                : "Try adjusting your search terms or clearing some filters to see more tasks"}
             </p>
-            {filter === "all" && (
+            {tasks.length === 0 && (
               <button
                 onClick={() => setShowAddTask(true)}
                 className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm sm:text-base"

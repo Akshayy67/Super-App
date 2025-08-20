@@ -34,14 +34,20 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
     setToast(null);
 
     try {
+      console.log("🔄 Starting Google sign-in process...");
       const result = await realTimeAuth.signInWithGoogle();
+      console.log("📋 Sign-in result:", result);
+      
       if (result.success) {
+        console.log("✅ Sign-in successful, calling onAuthSuccess");
         setToast({ message: "Welcome! Sign-in successful.", type: "success" });
         onAuthSuccess();
       } else {
+        console.error("❌ Sign-in failed:", result.message);
         setToast({ message: result.message, type: "error" });
       }
     } catch (err) {
+      console.error("💥 Sign-in error:", err);
       setToast({ message: "Sign-in failed. Please try again.", type: "error" });
     } finally {
       setLoading(false);

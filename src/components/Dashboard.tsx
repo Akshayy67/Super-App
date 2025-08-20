@@ -10,7 +10,7 @@ import {
   Clock,
   AlertTriangle,
 } from "lucide-react";
-import { storageUtils } from "../utils/storage"; // still used for notes
+import { storageUtils } from "../utils/storage"; // still used for short notes
 import { driveStorageUtils } from "../utils/driveStorage"; // for accurate file count (Drive or local fallback)
 import { firestoreUserTasks } from "../utils/firestoreUserTasks";
 import { realTimeAuth } from "../utils/realTimeAuth";
@@ -30,7 +30,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
     todayTasks: 0,
     tomorrowTasks: 0,
     highPriorityTasks: 0,
-    totalNotes: 0,
+    totalShortNotes: 0,
   });
   const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([]);
 
@@ -49,7 +49,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
       // Use driveStorageUtils (async, Drive-aware with fallback) for file list
       const files = await driveStorageUtils.getFiles(user.id);
       const tasks = await firestoreUserTasks.getTasks(user.id);
-      const notes = storageUtils.getNotes(user.id);
+      const notes = storageUtils.getShortNotes(user.id);
 
       const pendingTasks = tasks.filter((task) => task.status === "pending");
 
@@ -89,7 +89,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
         todayTasks: todayTasks.length,
         tomorrowTasks: tomorrowTasks.length,
         highPriorityTasks: highPriorityTasks.length,
-        totalNotes: notes.length,
+        totalShortNotes: notes.length,
       });
 
       setUpcomingTasks(upcoming);
@@ -147,7 +147,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
   };
 
   return (
-    <div className="bg-gray-50 h-full overflow-auto">
+    <div className="bg-gray-50 h-full overflow-auto" data-component="dashboard">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 p-4 sm:p-6">
         <div className="max-w-7xl mx-auto">
@@ -396,8 +396,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
               <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Brain className="w-8 h-8 text-purple-600" />
               </div>
-              <h3 className="font-medium text-gray-900">{stats.totalNotes}</h3>
-              <p className="text-sm text-gray-600">Notes Created</p>
+                      <h3 className="font-medium text-gray-900">{stats.totalShortNotes}</h3>
+        <p className="text-sm text-gray-600">Short Notes Created</p>
             </div>
           </div>
         </div>

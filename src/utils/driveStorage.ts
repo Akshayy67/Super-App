@@ -1,4 +1,4 @@
-import { FileItem, Task, Note, AIAnalysis } from "../types";
+import { FileItem, Task, ShortNote, AIAnalysis } from "../types";
 import { googleDriveService, DriveFile } from "./googleDriveService";
 import { realTimeAuth } from "./realTimeAuth";
 
@@ -90,6 +90,67 @@ export const driveStorageUtils = {
     });
 
     return fileItem;
+  },
+
+  // Flashcards management methods
+  async saveFlashcardsToDrive(flashcards: any[], userId: string): Promise<boolean> {
+    try {
+      if (!realTimeAuth.hasGoogleDriveAccess()) {
+        console.log("📱 No Google Drive access, saving to localStorage only");
+        // Save to localStorage as fallback
+        localStorage.setItem("super_study_flashcards", JSON.stringify(flashcards));
+        return false;
+      }
+
+      console.log("☁️ Saving flashcards to Google Drive...");
+      const result = await googleDriveService.uploadFlashcards(flashcards);
+      
+      if (result.success) {
+        console.log("✅ Flashcards saved to Google Drive successfully");
+        // Also save to localStorage as backup
+        localStorage.setItem("super_study_flashcards", JSON.stringify(flashcards));
+        return true;
+      } else {
+        console.error("❌ Failed to save flashcards to Drive:", result.error);
+        // Fallback to localStorage
+        localStorage.setItem("super_study_flashcards", JSON.stringify(flashcards));
+        return false;
+      }
+    } catch (error) {
+      console.error("Error saving flashcards to Drive:", error);
+      // Fallback to localStorage
+      localStorage.setItem("super_study_flashcards", JSON.stringify(flashcards));
+      return false;
+    }
+  },
+
+  async loadFlashcardsFromDrive(userId: string): Promise<any[]> {
+    try {
+      if (!realTimeAuth.hasGoogleDriveAccess()) {
+        console.log("📱 No Google Drive access, loading from localStorage");
+        const stored = localStorage.getItem("super_study_flashcards");
+        return stored ? JSON.parse(stored) : [];
+      }
+
+      console.log("☁️ Loading flashcards from Google Drive...");
+      const result = await googleDriveService.downloadFlashcards();
+      
+      if (result.success && result.data) {
+        console.log("✅ Flashcards loaded from Google Drive successfully");
+        // Update localStorage with Drive data
+        localStorage.setItem("super_study_flashcards", JSON.stringify(result.data));
+        return result.data;
+      } else {
+        console.log("📱 Falling back to localStorage for flashcards");
+        const stored = localStorage.getItem("super_study_flashcards");
+        return stored ? JSON.parse(stored) : [];
+      }
+    } catch (error) {
+      console.error("Error loading flashcards from Drive:", error);
+      // Fallback to localStorage
+      const stored = localStorage.getItem("super_study_flashcards");
+      return stored ? JSON.parse(stored) : [];
+    }
   },
 
   // File Management with Google Drive
@@ -334,31 +395,31 @@ export const driveStorageUtils = {
     localStorage.setItem(TASKS_KEY, JSON.stringify(filteredTasks));
   },
 
-  // Notes Management (keeping localStorage for now)
-  getNotes(userId: string): Note[] {
+  // Short Notes Management (keeping localStorage for now)
+  getShortNotes(userId: string): ShortNote[] {
     const notes = localStorage.getItem(NOTES_KEY);
-    const allNotes: Note[] = notes ? JSON.parse(notes) : [];
+    const allNotes: ShortNote[] = notes ? JSON.parse(notes) : [];
     return allNotes.filter((note) => note.userId === userId);
   },
 
-  storeNote(note: Note): void {
+  storeShortNote(note: ShortNote): void {
     const notes = JSON.parse(localStorage.getItem(NOTES_KEY) || "[]");
     notes.push(note);
     localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
   },
 
-  updateNote(noteId: string, updates: Partial<Note>): void {
+  updateShortNote(noteId: string, updates: Partial<ShortNote>): void {
     const notes = JSON.parse(localStorage.getItem(NOTES_KEY) || "[]");
-    const index = notes.findIndex((n: Note) => n.id === noteId);
+    const index = notes.findIndex((n: ShortNote) => n.id === noteId);
     if (index !== -1) {
       notes[index] = { ...notes[index], ...updates };
       localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
     }
   },
 
-  deleteNote(noteId: string): void {
+  deleteShortNote(noteId: string): void {
     const notes = JSON.parse(localStorage.getItem(NOTES_KEY) || "[]");
-    const filteredNotes = notes.filter((n: Note) => n.id !== noteId);
+    const filteredNotes = notes.filter((n: ShortNote) => n.id !== noteId);
     localStorage.setItem(NOTES_KEY, JSON.stringify(filteredNotes));
   },
 

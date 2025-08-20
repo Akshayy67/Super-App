@@ -13,6 +13,8 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { realTimeAuth } from "./utils/realTimeAuth";
 // Removed unused FileItem and User imports
 import { Menu, X } from "lucide-react";
+import { GlobalNoteCreator } from "./components/GlobalNoteCreator";
+import { useGlobalCopyListener } from "./hooks/useGlobalCopyListener";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -20,10 +22,15 @@ function App() {
   const [activeView, setActiveView] = useState("dashboard");
   // Removed unused previewFile state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Global copy listener for note creation
+  const { copyEvent, isModalVisible, closeModal } = useGlobalCopyListener();
 
   useEffect(() => {
     // Set up real-time auth state listener
+    console.log("🔐 Setting up auth state listener...");
     const unsubscribe = realTimeAuth.onAuthStateChange((user) => {
+      console.log("👤 Auth state changed:", { user: !!user, userId: user?.id });
       setIsAuthenticated(!!user);
       // Removed unused setCurrentUser
     });
@@ -33,12 +40,30 @@ function App() {
   }, []);
 
   const handleAuthSuccess = () => {
+    console.log("🎉 Auth success handler called, setting view to dashboard");
     setActiveView("dashboard");
   };
 
   const handleLogout = async () => {
-    await realTimeAuth.logout();
-    // setActiveView("dashboard");
+    try {
+      console.log("🔄 Starting logout process...");
+      await realTimeAuth.logout();
+      console.log("✅ Logout successful");
+      
+      // Force update authentication state
+      setIsAuthenticated(false);
+      
+      // Reset view to dashboard for next login
+      setActiveView("dashboard");
+      
+      // Close mobile menu if open
+      setIsMobileMenuOpen(false);
+      
+    } catch (error) {
+      console.error("❌ Logout failed:", error);
+      // Even if logout fails, we should still redirect to auth
+      setIsAuthenticated(false);
+    }
   };
 
   const handleViewChange = (view: string) => {
@@ -83,6 +108,16 @@ function App() {
 
   return (
     <ErrorBoundary>
+      {/* Global Note Creator Modal */}
+      {isModalVisible && copyEvent && (
+        <GlobalNoteCreator
+          isVisible={isModalVisible}
+          onClose={closeModal}
+          copiedText={copyEvent.text}
+          sourceContext={copyEvent.sourceContext}
+        />
+      )}
+      
       <div className="h-screen bg-gray-50 flex flex-col lg:flex-row">
         {/* Mobile Header */}
         <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 p-3 sm:p-4 flex items-center justify-between">

@@ -179,11 +179,49 @@ class RealTimeAuthService {
     };
   }
 
+  // Manually clear authentication state (useful for logout)
+  clearAuthState(): void {
+    console.log("🔄 Manually clearing authentication state...");
+    this.currentUser = null;
+    this.googleAccessToken = null;
+    localStorage.removeItem("google_access_token");
+    localStorage.removeItem("user_session");
+    
+    // Notify all listeners about auth state change
+    this.authStateListeners.forEach((listener) => listener(null));
+    console.log("✅ Authentication state cleared");
+  }
+
   async logout(): Promise<void> {
     try {
+      console.log("🔄 Starting logout process...");
+      
+      // Clear Google access token
+      this.googleAccessToken = null;
+      localStorage.removeItem("google_access_token");
+      console.log("✅ Google access token cleared");
+      
+      // Clear current user data
+      this.currentUser = null;
+      console.log("✅ Current user data cleared");
+      
+      // Sign out from Firebase
       await signOut(auth);
+      console.log("✅ Firebase sign out successful");
+      
+      // Clear any other stored data
+      localStorage.removeItem("user_session");
+      
+      console.log("✅ Logout completed successfully");
+      
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error("❌ Logout error:", error);
+      // Even if Firebase logout fails, clear local data
+      this.googleAccessToken = null;
+      this.currentUser = null;
+      localStorage.removeItem("google_access_token");
+      localStorage.removeItem("user_session");
+      throw error;
     }
   }
 

@@ -239,6 +239,190 @@ class GoogleDriveService {
     }
   }
 
+  // Create a specific folder for flashcards
+  async createFlashcardsFolder(): Promise<DriveApiResponse> {
+    try {
+      const accessToken = await this.getAccessToken();
+      if (!accessToken) {
+        return { success: false, error: "No access token available" };
+      }
+
+      const appFolderId = await this.getAppFolder();
+      if (!appFolderId) {
+        return { success: false, error: "Could not access app folder" };
+      }
+
+      // Check if flashcards folder already exists
+      const searchResponse = await fetch(
+        `${this.DRIVE_API_BASE}/files?q=name='Flashcards' and mimeType='application/vnd.google-apps.folder' and '${appFolderId}' in parents and trashed=false`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const searchResult = await searchResponse.json();
+
+      if (searchResult.files && searchResult.files.length > 0) {
+        return { success: true, data: searchResult.files[0] };
+      }
+
+      // Create new flashcards folder
+      const folderMetadata = {
+        name: "Flashcards",
+        mimeType: "application/vnd.google-apps.folder",
+        parents: [appFolderId],
+        description: "Flashcards created in Super Study App",
+      };
+
+      const response = await fetch(`${this.DRIVE_API_BASE}/files`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(folderMetadata),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const folder = await response.json();
+      return { success: true, data: folder };
+    } catch (error) {
+      console.error("Error creating flashcards folder:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to create flashcards folder",
+      };
+    }
+  }
+
+  // Upload flashcards data as a JSON file
+  async uploadFlashcards(
+    flashcards: any[],
+    filename: string = "flashcards.json"
+  ): Promise<DriveApiResponse> {
+    try {
+      const accessToken = await this.getAccessToken();
+      if (!accessToken) {
+        return { success: false, error: "No access token available" };
+      }
+
+      // Get or create flashcards folder
+      const folderResult = await this.createFlashcardsFolder();
+      if (!folderResult.success || !folderResult.data) {
+        return { success: false, error: "Could not access flashcards folder" };
+      }
+
+      const folderId = folderResult.data.id;
+      const jsonContent = JSON.stringify(flashcards, null, 2);
+      const blob = new Blob([jsonContent], { type: "application/json" });
+
+      // Create file metadata
+      const metadata = {
+        name: filename,
+        parents: [folderId],
+        mimeType: "application/json",
+      };
+
+      // Create the file using multipart upload
+      const form = new FormData();
+      form.append(
+        "metadata",
+        new Blob([JSON.stringify(metadata)], { type: "application/json" })
+      );
+      form.append("file", blob, filename);
+
+      const response = await fetch(
+        `${this.UPLOAD_API_BASE}/files?uploadType=multipart`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: form,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return { success: true, data: result };
+    } catch (error) {
+      console.error("Error uploading flashcards:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to upload flashcards",
+      };
+    }
+  }
+
+  // Download flashcards from Google Drive
+  async downloadFlashcards(filename: string = "flashcards.json"): Promise<DriveApiResponse> {
+    try {
+      const accessToken = await this.getAccessToken();
+      if (!accessToken) {
+        return { success: false, error: "No access token available" };
+      }
+
+      // Get flashcards folder
+      const folderResult = await this.createFlashcardsFolder();
+      if (!folderResult.success || !folderResult.data) {
+        return { success: false, error: "Could not access flashcards folder" };
+      }
+
+      const folderId = folderResult.data.id;
+
+      // Search for the flashcards file
+      const searchResponse = await fetch(
+        `${this.DRIVE_API_BASE}/files?q=name='${filename}' and '${folderId}' in parents and trashed=false`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const searchResult = await searchResponse.json();
+
+      if (!searchResult.files || searchResult.files.length === 0) {
+        return { success: false, error: "Flashcards file not found" };
+      }
+
+      const fileId = searchResult.files[0].id;
+
+      // Download the file content
+      const downloadResponse = await fetch(
+        `${this.DRIVE_API_BASE}/files/${fileId}?alt=media`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!downloadResponse.ok) {
+        throw new Error(`Download failed: ${downloadResponse.status}`);
+      }
+
+      const content = await downloadResponse.text();
+      const flashcards = JSON.parse(content);
+
+      return { success: true, data: flashcards };
+    } catch (error) {
+      console.error("Error downloading flashcards:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to download flashcards",
+      };
+    }
+  }
+
   // List all files recursively from the app folder and its subfolders
   async listFiles(_folderId?: string): Promise<DriveApiResponse> {
     try {
@@ -279,7 +463,16 @@ class GoogleDriveService {
       const result = await response.json();
       let allFiles = result.files || [];
 
-      // Now get files from all subfolders recursively
+      // Filter out special folders that should not be visible in File Manager
+      const specialFolders = ['Flashcards', 'ShortNotes', 'Flash Cards', 'Short Notes'];
+      allFiles = allFiles.filter((file: any) => {
+        if (file.mimeType === "application/vnd.google-apps.folder") {
+          return !specialFolders.includes(file.name);
+        }
+        return true;
+      });
+
+      // Now get files from all subfolders recursively (excluding special folders)
       const folders = allFiles.filter(
         (file: any) => file.mimeType === "application/vnd.google-apps.folder"
       );
@@ -292,7 +485,7 @@ class GoogleDriveService {
         allFiles = allFiles.concat(subfolderFiles);
       }
 
-      console.log("📁 Total files found:", allFiles.length);
+      console.log("📁 Total files found (excluding special folders):", allFiles.length);
       return { success: true, data: allFiles };
     } catch (error) {
       console.error("Error listing files:", error);

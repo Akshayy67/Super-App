@@ -445,7 +445,7 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
     : [
         "Summarize my uploaded documents",
         "What are the key concepts in my study materials?",
-        "Generate flashcards from my notes",
+        "Generate flashcards from my short notes",
         "Explain a complex topic I'm studying",
       ];
 
@@ -460,7 +460,7 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
   ) : null;
 
   return (
-    <div className="bg-white h-full flex flex-col">
+    <div className="bg-white h-full flex flex-col" data-component="ai-chat">
       {/* Header */}
       <div className="border-b border-gray-200 p-6">
         <div className="flex items-center justify-between">
@@ -521,6 +521,7 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
                     ? "bg-blue-600 text-white"
                     : "bg-gray-100 text-gray-900"
                 }`}
+                data-message-type={message.type}
               >
                 {message.context && (
                   <div className="text-xs opacity-75 mb-2 flex items-center">
@@ -528,7 +529,7 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
                     {message.context}
                   </div>
                 )}
-                <p className="whitespace-pre-wrap">{message.content}</p>
+                <p className="whitespace-pre-wrap" data-content="ai-message">{message.content}</p>
                 <div
                   className={`text-xs mt-2 opacity-75 ${
                     message.type === "user" ? "text-blue-100" : "text-gray-500"

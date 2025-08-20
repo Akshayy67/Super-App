@@ -50,8 +50,47 @@ export const FileManager: React.FC<FileManagerProps> = () => {
     needsReauth?: boolean;
     error?: string;
   }>({ type: "localStorage", hasAccess: false });
+  const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState('');
 
   const user = realTimeAuth.getCurrentUser();
+
+  // Handle session expired errors
+  const handleSessionExpired = (error: any) => {
+    if (error.message && error.message.includes('Google Drive access expired')) {
+      setSessionExpiredMessage('Your Google Drive session has expired. You can continue using files with local storage, or sign in again to sync with Google Drive.');
+      setShowSessionExpiredModal(true);
+      return true; // Indicates session expired was handled
+    }
+    return false; // Not a session expired error
+  };
+
+  // Handle relogin
+  const handleRelogin = async () => {
+    try {
+      setShowSessionExpiredModal(false);
+      setSessionExpiredMessage('');
+      
+      // Sign out first
+      await realTimeAuth.logout();
+      
+      // Show a message that user should sign in again
+      alert('Please sign in again to refresh your Google Drive access. You will be redirected to the sign-in page.');
+      
+      // Redirect to sign-in (this will be handled by the auth system)
+      // The user will need to manually navigate to sign-in or refresh the page
+    } catch (error) {
+      console.error('Error during relogin:', error);
+      alert('Error during relogin. Please try signing out and signing in again manually.');
+    }
+  };
+
+  // Continue with local storage only
+  const continueWithLocalStorage = () => {
+    setShowSessionExpiredModal(false);
+    setSessionExpiredMessage('');
+    alert('You can continue using files with local storage. Your data will be saved locally and can be synced to Google Drive later when you sign in again.');
+  };
 
   useEffect(() => {
     if (user) {
@@ -85,12 +124,16 @@ export const FileManager: React.FC<FileManagerProps> = () => {
 
       // Check if it's a Google Drive authentication error
       if (error instanceof Error && error.message.includes("expired")) {
-        setStorageStatus((prev) => ({
-          ...prev,
-          needsReauth: true,
-          error:
-            "Google Drive access expired. Please sign out and sign in again.",
-        }));
+        // Handle session expired errors
+        if (!handleSessionExpired(error)) {
+          // If not a session expired error, show generic error
+          setStorageStatus((prev) => ({
+            ...prev,
+            needsReauth: true,
+            error:
+              "Google Drive access expired. Please sign out and sign in again.",
+          }));
+        }
       } else {
         setStorageStatus((prev) => ({
           ...prev,
@@ -228,6 +271,11 @@ export const FileManager: React.FC<FileManagerProps> = () => {
         });
       } catch (error) {
         console.error("Error uploading file:", error);
+        // Handle session expired errors
+        if (!handleSessionExpired(error)) {
+          // If not a session expired error, show generic error
+          console.error("Generic error uploading file:", error);
+        }
         setUploadProgress((prev) => {
           const newProgress = { ...prev };
           delete newProgress[fileId];
@@ -257,6 +305,11 @@ export const FileManager: React.FC<FileManagerProps> = () => {
       }
     } catch (error) {
       console.error("Error creating folder:", error);
+      // Handle session expired errors
+      if (!handleSessionExpired(error)) {
+        // If not a session expired error, show generic error
+        console.error("Generic error creating folder:", error);
+      }
     }
   };
 
@@ -269,6 +322,11 @@ export const FileManager: React.FC<FileManagerProps> = () => {
         }
       } catch (error) {
         console.error("Error deleting file:", error);
+        // Handle session expired errors
+        if (!handleSessionExpired(error)) {
+          // If not a session expired error, show generic error
+          console.error("Generic error deleting file:", error);
+        }
       }
     }
   };
@@ -351,6 +409,11 @@ export const FileManager: React.FC<FileManagerProps> = () => {
           }
         } catch (error) {
           console.error("❌ Error fetching from Google Drive:", error);
+          // Handle session expired errors
+          if (!handleSessionExpired(error)) {
+            // If not a session expired error, show generic error
+            console.error("Generic error fetching from Google Drive:", error);
+          }
         }
       }
 
@@ -551,7 +614,7 @@ export const FileManager: React.FC<FileManagerProps> = () => {
   };
 
   return (
-    <div className="bg-white h-full flex flex-col">
+    <div className="bg-white h-full flex flex-col" data-component="file-manager">
       {/* Header */}
       <div className="border-b border-gray-200 p-6">
         {/* Error Banner */}
@@ -601,6 +664,29 @@ export const FileManager: React.FC<FileManagerProps> = () => {
                   Sign Out & Re-authenticate
                 </button>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Google Drive Access Warning */}
+        {user && !realTimeAuth.hasGoogleDriveAccess() && realTimeAuth.shouldHaveGoogleDriveAccess() && (
+          <div className="bg-orange-50 border-l-4 border-orange-400 p-4 mx-6 mt-4 rounded-r-lg">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-5 h-5 bg-orange-400 rounded-full"></div>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-orange-800">
+                  <strong>Google Drive Access Expired:</strong> Your session has expired. 
+                  <button
+                    onClick={handleRelogin}
+                    className="ml-2 underline hover:no-underline font-medium"
+                  >
+                    Sign in again
+                  </button>
+                  to sync your files with Google Drive, or continue using local storage.
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -941,6 +1027,38 @@ export const FileManager: React.FC<FileManagerProps> = () => {
           </div>
         )}
       </div>
+
+      {/* Session Expired Modal */}
+      {showSessionExpiredModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-8 h-8 bg-red-500 rounded-full"></div>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Session Expired</h3>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                {sessionExpiredMessage}
+              </p>
+            </div>
+            
+            <div className="space-y-3">
+              <button
+                onClick={handleRelogin}
+                className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                Sign In Again
+              </button>
+              <button
+                onClick={continueWithLocalStorage}
+                className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200 font-medium"
+              >
+                Continue with Local Storage
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Preview Modal - now using FilePreviewModal */}
       {previewFile && (
