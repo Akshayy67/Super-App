@@ -1,0 +1,431 @@
+import { Question } from "../../InterviewSubjects";
+
+// Enhanced Stack and Queue DSA Questions with comprehensive implementations
+export const enhancedStackQueueQuestions: Question[] = [
+  {
+    id: "enhanced-stack-1",
+    question: "Valid Parentheses - Given a string s containing just parentheses characters, determine if the input string is valid.",
+    category: "technical",
+    difficulty: "easy",
+    type: "technical",
+    approach: "Multiple approaches available: 1) Stack-based Solution (O(n) time, O(n) space): Use stack to match opening and closing brackets. 2) Optimized with Early Termination (O(n) time, O(n) space): Check odd length early and use optimized bracket matching. 3) Counter-based Approach: Use counters for each bracket type (less flexible but simpler). Stack approach is most intuitive and handles all bracket types, while early termination provides performance optimization for invalid cases.",
+    codeImplementation: [
+      {
+        language: "TypeScript",
+        code: `// Approach 1: Stack-based Solution (Optimal)
+// Time: O(n), Space: O(n)
+function isValid(s: string): boolean {
+    const stack: string[] = [];
+    const pairs = new Map([
+        [')', '('],
+        ['}', '{'],
+        [']', '[']
+    ]);
+    
+    for (const char of s) {
+        if (pairs.has(char)) {
+            // Closing bracket
+            if (stack.length === 0 || stack.pop() !== pairs.get(char)) {
+                return false;
+            }
+        } else {
+            // Opening bracket
+            stack.push(char);
+        }
+    }
+    
+    return stack.length === 0;
+}`,
+        explanation: "Classic stack-based solution using map for bracket pairs. Most intuitive and handles all bracket types."
+      },
+      {
+        language: "TypeScript",
+        code: `// Approach 2: Optimized with Early Termination
+// Time: O(n), Space: O(n)
+function isValidOptimized(s: string): boolean {
+    if (s.length % 2 !== 0) return false;
+    
+    const stack: string[] = [];
+    const openBrackets = new Set(['(', '{', '[']);
+    const bracketPairs = { ')': '(', '}': '{', ']': '[' };
+    
+    for (const char of s) {
+        if (openBrackets.has(char)) {
+            stack.push(char);
+        } else {
+            if (stack.length === 0 || stack.pop() !== bracketPairs[char as keyof typeof bracketPairs]) {
+                return false;
+            }
+        }
+    }
+    
+    return stack.length === 0;
+}`,
+        explanation: "Optimized version with early odd-length check and set for open brackets. Better performance for invalid cases."
+      },
+      {
+        language: "TypeScript",
+        code: `// Approach 3: Counter-based Approach (Simpler but Less Flexible)
+// Time: O(n), Space: O(1)
+function isValidCounters(s: string): boolean {
+    let round = 0, curly = 0, square = 0;
+    
+    for (const char of s) {
+        switch (char) {
+            case '(': round++; break;
+            case ')': round--; break;
+            case '{': curly++; break;
+            case '}': curly--; break;
+            case '[': square++; break;
+            case ']': square--; break;
+        }
+        
+        if (round < 0 || curly < 0 || square < 0) return false;
+    }
+    
+    return round === 0 && curly === 0 && square === 0;
+}`,
+        explanation: "Counter-based approach using separate counters for each bracket type. Simpler but doesn't handle mixed bracket sequences correctly."
+      }
+    ],
+    tips: [
+      "Stack is perfect for matching pairs",
+      "Map closing brackets to their opening counterparts",
+      "Check odd length early for quick rejection",
+      "Empty stack at end confirms all brackets matched"
+    ],
+    tags: ["string", "stack"],
+    estimatedTime: 15,
+    industry: ["tech"],
+    practiceCount: 0,
+    successRate: 0,
+  },
+  {
+    id: "enhanced-stack-2",
+    question: "Min Stack - Design a stack that supports push, pop, top, and retrieving the minimum element in constant time.",
+    category: "technical",
+    difficulty: "medium",
+    type: "technical",
+    approach: "Multiple approaches available: 1) Two Stacks (O(1) time for all operations, O(n) space): Use main stack and separate min stack to track minimum values. 2) Single Stack with Pairs (O(1) time for all operations, O(n) space): Store each element with current minimum in single stack. 3) Difference Encoding (O(1) time for all operations, O(n) space): Use difference encoding to save space but with more complex implementation. Two stacks approach is most intuitive, while difference encoding provides space optimization for large datasets.",
+    codeImplementation: [
+      {
+        language: "TypeScript",
+        code: `// Approach 1: Two Stacks (Optimal)
+// All operations: O(1), Space: O(n)
+class MinStack {
+    private stack: number[] = [];
+    private minStack: number[] = [];
+    
+    push(val: number): void {
+        this.stack.push(val);
+        
+        if (this.minStack.length === 0 || val <= this.minStack[this.minStack.length - 1]) {
+            this.minStack.push(val);
+        }
+    }
+    
+    pop(): void {
+        const popped = this.stack.pop();
+        
+        if (popped === this.minStack[this.minStack.length - 1]) {
+            this.minStack.pop();
+        }
+    }
+    
+    top(): number {
+        return this.stack[this.stack.length - 1];
+    }
+    
+    getMin(): number {
+        return this.minStack[this.minStack.length - 1];
+    }
+}`,
+        explanation: "Two stacks approach: main stack for values, min stack for minimum tracking. Most intuitive and efficient."
+      },
+      {
+        language: "TypeScript",
+        code: `// Approach 2: Single Stack with Pairs
+// All operations: O(1), Space: O(n)
+class MinStackPairs {
+    private stack: [number, number][] = []; // [value, currentMin]
+    
+    push(val: number): void {
+        const currentMin = this.stack.length === 0 ? val : 
+                          Math.min(val, this.stack[this.stack.length - 1][1]);
+        this.stack.push([val, currentMin]);
+    }
+    
+    pop(): void {
+        this.stack.pop();
+    }
+    
+    top(): number {
+        return this.stack[this.stack.length - 1][0];
+    }
+    
+    getMin(): number {
+        return this.stack[this.stack.length - 1][1];
+    }
+}`,
+        explanation: "Single stack stores each element with its current minimum. Simpler structure but uses more space per element."
+      },
+      {
+        language: "TypeScript",
+        code: `// Approach 3: Difference Encoding (Space Optimized)
+// All operations: O(1), Space: O(n)
+class MinStackDiff {
+    private stack: number[] = [];
+    private min: number = 0;
+    
+    push(val: number): void {
+        if (this.stack.length === 0) {
+            this.stack.push(0);
+            this.min = val;
+        } else {
+            this.stack.push(val - this.min);
+            if (val < this.min) {
+                this.min = val;
+            }
+        }
+    }
+    
+    pop(): void {
+        if (this.stack.length === 0) return;
+        
+        const diff = this.stack.pop()!;
+        
+        if (diff < 0) {
+            this.min = this.min - diff;
+        }
+    }
+    
+    top(): number {
+        const diff = this.stack[this.stack.length - 1];
+        return diff < 0 ? this.min : this.min + diff;
+    }
+    
+    getMin(): number {
+        return this.min;
+    }
+}`,
+        explanation: "Difference encoding stores differences from current minimum. Most space-efficient but more complex implementation."
+      }
+    ],
+    tips: [
+      "Two stacks approach: main stack + min stack",
+      "Only push to min stack when new minimum found",
+      "Pair approach stores current minimum with each element",
+      "Difference encoding saves space but more complex"
+    ],
+    tags: ["stack", "design"],
+    estimatedTime: 25,
+    industry: ["tech"],
+    practiceCount: 0,
+    successRate: 0,
+  },
+  {
+    id: "enhanced-stack-3",
+    question: "Evaluate Reverse Polish Notation - Evaluate the value of an arithmetic expression in Reverse Polish Notation.",
+    category: "technical",
+    difficulty: "medium",
+    type: "technical",
+    approach: "Multiple approaches available: 1) Stack-based Solution (O(n) time, O(n) space): Classic stack approach using switch statements for operators. 2) Function Map Approach (O(n) time, O(n) space): Use map to store operator functions for cleaner code. 3) Recursive Approach (O(n) time, O(n) space): Recursive evaluation from right to left. Stack-based approach is most intuitive and efficient, while function map provides cleaner, more maintainable code.",
+    codeImplementation: [
+      {
+        language: "TypeScript",
+        code: `// Approach 1: Stack-based Solution (Optimal)
+// Time: O(n), Space: O(n)
+function evalRPN(tokens: string[]): number {
+    const stack: number[] = [];
+    const operators = new Set(['+', '-', '*', '/']);
+    
+    for (const token of tokens) {
+        if (operators.has(token)) {
+            const b = stack.pop()!;
+            const a = stack.pop()!;
+            
+            switch (token) {
+                case '+':
+                    stack.push(a + b);
+                    break;
+                case '-':
+                    stack.push(a - b);
+                    break;
+                case '*':
+                    stack.push(a * b);
+                    break;
+                case '/':
+                    stack.push(Math.trunc(a / b)); // Truncate towards zero
+                    break;
+            }
+        } else {
+            stack.push(parseInt(token));
+        }
+    }
+    
+    return stack[0];
+}`,
+        explanation: "Classic stack-based solution using switch statements. Most intuitive and handles all operators efficiently."
+      },
+      {
+        language: "TypeScript",
+        code: `// Approach 2: Using Function Map for Operations
+// Time: O(n), Space: O(n)
+function evalRPNMap(tokens: string[]): number {
+    const stack: number[] = [];
+    
+    const operations = new Map<string, (a: number, b: number) => number>([
+        ['+', (a, b) => a + b],
+        ['-', (a, b) => a - b],
+        ['*', (a, b) => a * b],
+        ['/', (a, b) => Math.trunc(a / b)]
+    ]);
+    
+    for (const token of tokens) {
+        if (operations.has(token)) {
+            const b = stack.pop()!;
+            const a = stack.pop()!;
+            stack.push(operations.get(token)!(a, b));
+        } else {
+            stack.push(parseInt(token));
+        }
+    }
+    
+    return stack[0];
+}`,
+        explanation: "Function map approach provides cleaner, more maintainable code. Easy to extend with new operators."
+      },
+      {
+        language: "TypeScript",
+        code: `// Approach 3: Recursive Approach (Less Practical)
+// Time: O(n), Space: O(n)
+function evalRPNRecursive(tokens: string[]): number {
+    let index = tokens.length - 1;
+    
+    function evaluate(): number {
+        const token = tokens[index--];
+        
+        if (token === '+') {
+            return evaluate() + evaluate();
+        } else if (token === '-') {
+            const b = evaluate();
+            const a = evaluate();
+            return a - b;
+        } else if (token === '*') {
+            return evaluate() * evaluate();
+        } else if (token === '/') {
+            const b = evaluate();
+            const a = evaluate();
+            return Math.trunc(a / b);
+        } else {
+            return parseInt(token);
+        }
+    }
+    
+    return evaluate();
+}`,
+        explanation: "Recursive approach evaluates from right to left. Less practical due to call stack overhead but demonstrates alternative thinking."
+      }
+    ],
+    tips: [
+      "Stack naturally handles postfix notation evaluation",
+      "Pop two operands for binary operations (order matters for - and /)",
+      "Handle division truncation towards zero correctly",
+      "RPN eliminates need for parentheses and operator precedence"
+    ],
+    tags: ["stack", "math", "array"],
+    estimatedTime: 20,
+    industry: ["tech"],
+    practiceCount: 0,
+    successRate: 0,
+  },
+  {
+    id: "enhanced-stack-4",
+    question: "Daily Temperatures - Given an array of integers temperatures, return an array answer such that answer[i] is the number of days you have to wait for a warmer temperature.",
+    category: "technical",
+    difficulty: "medium",
+    type: "technical",
+    approach: "Multiple approaches available: 1) Monotonic Stack (O(n) time, O(n) space): Use monotonic decreasing stack to track temperature indices. 2) Brute Force (O(n²) time, O(1) space): Simple nested loops for comparison. 3) Optimized with Right-to-Left Processing: Process array from right to left for different stack logic. Monotonic stack is optimal, while brute force provides better understanding of the problem. Right-to-left approach offers alternative perspective on the same algorithm.",
+    codeImplementation: [
+      {
+        language: "TypeScript",
+        code: `// Approach 1: Monotonic Stack (Optimal)
+// Time: O(n), Space: O(n)
+function dailyTemperatures(temperatures: number[]): number[] {
+    const result = new Array(temperatures.length).fill(0);
+    const stack: number[] = []; // Store indices
+    
+    for (let i = 0; i < temperatures.length; i++) {
+        // While current temperature is warmer than stack top
+        while (stack.length > 0 && temperatures[i] > temperatures[stack[stack.length - 1]]) {
+            const prevIndex = stack.pop()!;
+            result[prevIndex] = i - prevIndex;
+        }
+        
+        stack.push(i);
+    }
+    
+    return result;
+}`,
+        explanation: "Monotonic decreasing stack maintains indices of decreasing temperatures. Most efficient approach with O(n) time complexity."
+      },
+      {
+        language: "TypeScript",
+        code: `// Approach 2: Brute Force (for comparison)
+// Time: O(n²), Space: O(1)
+function dailyTemperaturesBrute(temperatures: number[]): number[] {
+    const result = new Array(temperatures.length).fill(0);
+    
+    for (let i = 0; i < temperatures.length; i++) {
+        for (let j = i + 1; j < temperatures.length; j++) {
+            if (temperatures[j] > temperatures[i]) {
+                result[i] = j - i;
+                break;
+            }
+        }
+    }
+    
+    return result;
+}`,
+        explanation: "Brute force approach with nested loops. Simple to understand but inefficient for large arrays."
+      },
+      {
+        language: "TypeScript",
+        code: `// Approach 3: Optimized with Right-to-Left Processing
+// Time: O(n), Space: O(n)
+function dailyTemperaturesOptimized(temperatures: number[]): number[] {
+    const result = new Array(temperatures.length).fill(0);
+    const stack: number[] = [];
+    
+    for (let i = temperatures.length - 1; i >= 0; i--) {
+        // Remove cooler temperatures from stack
+        while (stack.length > 0 && temperatures[stack[stack.length - 1]] <= temperatures[i]) {
+            stack.pop();
+        }
+        
+        // If stack not empty, top element is next warmer day
+        if (stack.length > 0) {
+            result[i] = stack[stack.length - 1] - i;
+        }
+        
+        stack.push(i);
+    }
+    
+    return result;
+}`,
+        explanation: "Right-to-left processing with different stack logic. Alternative perspective on the same monotonic stack algorithm."
+      }
+    ],
+    tips: [
+      "Monotonic stack maintains decreasing temperature indices",
+      "When warmer temperature found, resolve all cooler days in stack",
+      "Stack stores indices, not temperatures, to calculate distances",
+      "Process left to right or right to left with different stack logic"
+    ],
+    tags: ["array", "stack", "monotonic-stack"],
+    estimatedTime: 25,
+    industry: ["tech"],
+    practiceCount: 0,
+    successRate: 0,
+  }
+];

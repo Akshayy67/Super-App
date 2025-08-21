@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { BookOpen, Search, Filter, Play, Settings } from "lucide-react";
-import { Question } from "./InterviewSubjects";
+import { BookOpen, Search } from "lucide-react";
 import { QuestionCard } from "./QuestionCard";
+import { Question } from "./InterviewSubjects";
 import {
   allQuestions,
   questionsBySubject,
   getQuestionsBySubject,
-  getQuestionsByTags,
 } from "./bank";
 
 interface QuestionCategory {
@@ -24,6 +23,11 @@ export const QuestionBank: React.FC = () => {
   console.log("allQuestions imported:", allQuestions.length);
   console.log("questionsBySubject imported:", Object.keys(questionsBySubject));
   console.log("Sample questions:", allQuestions.slice(0, 2));
+  
+  // Log individual question counts by subject
+  Object.entries(questionsBySubject).forEach(([subject, questions]) => {
+    console.log(`${subject}: ${questions.length} questions`);
+  });
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -52,14 +56,18 @@ export const QuestionBank: React.FC = () => {
       const subjectMap: Record<string, string> = {
         webdev: "Frontend Development",
         database: "Databases",
-        algorithm: "Algorithms & Data Structures",
-        system: "System Design",
+        algorithms: "Algorithms & Data Structures",
+        systemdesign: "System Design",
         cloud: "Cloud & DevOps",
         react: "React",
         frontend: "Frontend Development",
         javascript: "JavaScript",
         behavioral: "Behavioral",
         os: "Operating Systems",
+        puzzles: "Puzzles",
+        aptitude: "Aptitude & Reasoning",
+        enhanceddsa: "Enhanced DSA (Top 75)",
+        networks: "Computer Networks",
       };
 
       const subject = subjectMap[selectedCategory];
@@ -72,6 +80,11 @@ export const QuestionBank: React.FC = () => {
       console.log(`Subject: ${subject}`);
       console.log(`Questions found: ${subjectQuestions.length}`);
       console.log("Sample questions:", subjectQuestions.slice(0, 2));
+      
+      if (subjectQuestions.length === 0) {
+        console.warn(`No questions found for subject: ${subject}`);
+        console.log("Available subjects:", Object.keys(questionsBySubject));
+      }
 
       return subjectQuestions;
     }
@@ -85,6 +98,15 @@ export const QuestionBank: React.FC = () => {
 
   // Categories
   const categories: QuestionCategory[] = [
+    {
+      id: "enhanceddsa",
+      name: "Most Important DSA",
+      icon: BookOpen,
+      color: "green",
+      description:
+        "DSA problems with multiple coding approaches and implementations",
+      questionCount: questionsBySubject["Enhanced DSA (Top 75)"]?.length || 0,
+    },
     {
       id: "behavioral",
       name: "Behavioral Questions",
@@ -169,6 +191,33 @@ export const QuestionBank: React.FC = () => {
         "Operating system concepts, memory management, and processes",
       questionCount: questionsBySubject["Operating Systems"]?.length || 0,
     },
+    {
+      id: "puzzles",
+      name: "Puzzles",
+      icon: BookOpen,
+      color: "pink",
+      description:
+        "Logical puzzles and brain teasers from GeeksforGeeks",
+      questionCount: questionsBySubject["Puzzles"]?.length || 0,
+    },
+    {
+      id: "aptitude",
+      name: "Aptitude & Reasoning",
+      icon: BookOpen,
+      color: "rose",
+      description:
+        "Quantitative aptitude and logical reasoning questions",
+      questionCount: questionsBySubject["Aptitude & Reasoning"]?.length || 0,
+    },
+    {
+      id: "networks",
+      name: "Computer Networks",
+      icon: BookOpen,
+      color: "indigo",
+      description:
+        "Computer networking concepts, protocols, and architecture",
+      questionCount: questionsBySubject["Computer Networks"]?.length || 0,
+    },
   ];
 
   const toggleAnswer = (questionId: string) => {
@@ -249,7 +298,7 @@ export const QuestionBank: React.FC = () => {
           "postgresql",
           "mongodb",
         ],
-        algorithm: [
+        algorithms: [
           "algorithms",
           "data structures",
           "algorithm",
@@ -262,7 +311,7 @@ export const QuestionBank: React.FC = () => {
           "complexity",
           "big o",
         ],
-        system: [
+        systemdesign: [
           "system design",
           "architecture",
           "scalability",
@@ -324,6 +373,61 @@ export const QuestionBank: React.FC = () => {
           "paging",
           "segmentation",
           "file system",
+        ],
+        puzzles: [
+          "puzzle",
+          "brain teaser",
+          "logic",
+          "riddle",
+          "problem solving",
+        ],
+        aptitude: [
+          "aptitude",
+          "reasoning",
+          "quantitative",
+          "logical",
+          "numerical",
+          "verbal",
+        ],
+        networks: [
+          "networking",
+          "protocols",
+          "architecture",
+          "tcp/ip",
+          "dns",
+          "http",
+          "https",
+          "ssh",
+          "firewall",
+          "load balancer",
+        ],
+        enhanceddsa: [
+          "array",
+          "string",
+          "linked list",
+          "tree",
+          "graph",
+          "dynamic programming",
+          "stack",
+          "queue",
+          "heap",
+          "backtracking",
+          "bit manipulation",
+          "matrix",
+          "search",
+          "sort",
+          "algorithms",
+          "data structures",
+          "complexity",
+          "big o",
+          "two-pointers",
+          "sliding window",
+          "binary search",
+          "hash table",
+          "dfs",
+          "bfs",
+          "divide and conquer",
+          "greedy",
         ],
       };
 
@@ -394,6 +498,7 @@ export const QuestionBank: React.FC = () => {
           Master your interview skills with our comprehensive collection of
           questions
         </p>
+
       </div>
 
       {/* Search and Filters */}
@@ -496,29 +601,63 @@ export const QuestionBank: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {categories.map((category) => {
             const Icon = category.icon;
+            const isMostImportantDSA = category.id === "enhanceddsa";
+            
             return (
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-all duration-300 text-left group hover:border-blue-200"
+                className={`rounded-2xl p-6 border transition-all duration-300 text-left group hover:shadow-lg ${
+                  isMostImportantDSA
+                    ? "bg-gradient-to-r from-slate-900 to-slate-800 text-white border-slate-700 hover:shadow-xl hover:scale-[1.02] transform hover:border-slate-600"
+                    : "bg-white border-gray-200 hover:shadow-lg text-left group hover:border-blue-200"
+                }`}
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 rounded-xl border bg-blue-100 text-blue-600 border-blue-200">
+                  <div className={`p-3 rounded-xl border ${
+                    isMostImportantDSA
+                      ? "bg-white/10 text-white border-white/20"
+                      : "bg-blue-100 text-blue-600 border-blue-200"
+                  }`}>
                     <Icon className="w-6 h-6" />
                   </div>
+                  {isMostImportantDSA && (
+                    <div className="flex items-center space-x-1">
+                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></div>
+                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" style={{ animationDelay: '0.4s' }}></div>
+                    </div>
+                  )}
                 </div>
 
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <h3 className={`text-xl font-semibold mb-2 ${
+                  isMostImportantDSA ? "text-white" : "text-gray-900"
+                }`}>
                   {category.name}
+                  {isMostImportantDSA && (
+                    <span className="ml-2 text-xs bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-full border border-emerald-500/30">
+                      PREMIUM
+                    </span>
+                  )}
                 </h3>
-                <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                <p className={`text-sm mb-4 leading-relaxed ${
+                  isMostImportantDSA ? "text-slate-300" : "text-gray-600"
+                }`}>
                   {category.description}
                 </p>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500 font-medium">
+                  <span className={`text-sm font-medium ${
+                    isMostImportantDSA ? "text-slate-300" : "text-gray-500"
+                  }`}>
                     {category.questionCount} questions
                   </span>
+                  {isMostImportantDSA && (
+                    <div className="flex items-center space-x-1">
+                      <div className="w-1 h-1 bg-emerald-400 rounded-full"></div>
+                      <span className="text-xs text-emerald-300 font-medium">Essential</span>
+                    </div>
+                  )}
                 </div>
               </button>
             );
@@ -539,246 +678,75 @@ export const QuestionBank: React.FC = () => {
         </div>
       )}
 
-      {/* Questions Display */}
-      {!isLoading && (
-        <>
-          {/* Show filtered questions if any */}
-          {filteredQuestions.length > 0 && (
-            <div className="space-y-6">
-              {/* Filter Status */}
-              {selectedCategory !== "all" && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <span className="text-blue-800 font-medium">
-                        Showing {filteredQuestions.length} questions for{" "}
-                        {categories.find((cat) => cat.id === selectedCategory)
-                          ?.name || selectedCategory}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setSelectedCategory("all")}
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                    >
-                      Show All Questions
-                    </button>
-                  </div>
-                </div>
-              )}
+      {/* Questions Display - Only when a category is selected */}
+      {!isLoading && selectedCategory !== "all" && (
+        <div className="space-y-6">
+          {/* Filter Status */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span className="text-blue-800 font-medium">
+                  Showing {filteredQuestions.length} questions for{" "}
+                  {categories.find((cat) => cat.id === selectedCategory)
+                    ?.name || selectedCategory}
+                </span>
+              </div>
+              <button
+                onClick={() => setSelectedCategory("all")}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              >
+                Back to Categories
+              </button>
+            </div>
+          </div>
 
-              {filteredQuestions.map((question, index) => {
-                const isExpanded = showAnswers[question.id];
-                const isPracticed = practicedQuestions.includes(question.id);
-                const isFavorite = favoriteQuestions.includes(question.id);
+          {/* Questions List */}
+          {filteredQuestions.length > 0 ? (
+            filteredQuestions.map((question, index) => {
+              const isExpanded = showAnswers[question.id];
+              const isPracticed = practicedQuestions.includes(question.id);
+              const isFavorite = favoriteQuestions.includes(question.id);
 
-                return (
-                  <QuestionCard
-                    key={question.id}
-                    question={question}
-                    index={index}
-                    isExpanded={isExpanded}
-                    isPracticed={isPracticed}
-                    isFavorite={isFavorite}
-                    toggleAnswer={toggleAnswer}
-                    toggleFavorite={toggleFavorite}
-                    togglePracticed={togglePracticed}
-                    copyQuestion={copyQuestion}
-                    getDifficultyColor={getDifficultyColor}
-                    getTypeColor={getTypeColor}
-                    setSelectedQuestions={() => {}}
-                    setShowPracticeModal={() => {}}
-                  />
-                );
-              })}
+              return (
+                <QuestionCard
+                  key={question.id}
+                  question={question}
+                  index={index}
+                  isExpanded={isExpanded}
+                  isPracticed={isPracticed}
+                  isFavorite={isFavorite}
+                  toggleAnswer={toggleAnswer}
+                  toggleFavorite={toggleFavorite}
+                  togglePracticed={togglePracticed}
+                  copyQuestion={copyQuestion}
+                  getDifficultyColor={getDifficultyColor}
+                  getTypeColor={getTypeColor}
+                  setSelectedQuestions={() => {}}
+                  setShowPracticeModal={() => {}}
+                />
+              );
+            })
+          ) : (
+            <div className="bg-white rounded-2xl p-12 text-center border border-gray-200 shadow-sm">
+              <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                No questions found for this category
+              </h3>
+              <p className="text-gray-600 mb-4">
+                This category might not have questions yet, or they might not be loaded properly.
+              </p>
+              <button
+                onClick={() => setSelectedCategory("all")}
+                className="px-6 py-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-colors border border-blue-200"
+              >
+                Back to Categories
+              </button>
             </div>
           )}
-
-          {/* Fallback: Show some related questions when category is selected but filtering returns empty */}
-          {selectedCategory !== "all" &&
-            filteredQuestions.length === 0 &&
-            questions.length > 0 && (
-              <div className="space-y-6">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                      <span className="text-yellow-800 font-medium">
-                        Showing related questions (filtering returned empty)
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setSelectedCategory("all")}
-                      className="text-yellow-600 hover:text-yellow-800 text-sm font-medium"
-                    >
-                      Show All Questions
-                    </button>
-                  </div>
-                </div>
-
-                {/* Show first 5 questions as fallback */}
-                {questions.slice(0, 5).map((question, index) => {
-                  const isExpanded = showAnswers[question.id];
-                  const isPracticed = practicedQuestions.includes(question.id);
-                  const isFavorite = favoriteQuestions.includes(question.id);
-
-                  return (
-                    <QuestionCard
-                      key={question.id}
-                      question={question}
-                      index={index}
-                      isExpanded={isExpanded}
-                      isPracticed={isPracticed}
-                      isFavorite={isFavorite}
-                      toggleAnswer={toggleAnswer}
-                      toggleFavorite={toggleFavorite}
-                      togglePracticed={togglePracticed}
-                      copyQuestion={copyQuestion}
-                      getDifficultyColor={getDifficultyColor}
-                      getTypeColor={getTypeColor}
-                      setSelectedQuestions={() => {}}
-                      setShowPracticeModal={() => {}}
-                    />
-                  );
-                })}
-
-                <div className="text-center">
-                  <p className="text-sm text-yellow-700 mb-3">
-                    Showing {questions.length} total questions for this
-                    category. The filtering might be too strict.
-                  </p>
-                  <button
-                    onClick={() => setSelectedCategory("all")}
-                    className="px-6 py-2 bg-yellow-100 text-yellow-700 rounded-xl hover:bg-yellow-200 transition-colors border border-yellow-200"
-                  >
-                    View All Questions
-                  </button>
-                </div>
-
-                {/* Debug: Show all questions for this category */}
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">
-                    Debug: All Questions for{" "}
-                    {categories.find((cat) => cat.id === selectedCategory)
-                      ?.name || selectedCategory}
-                  </h4>
-                  <div className="space-y-3">
-                    {questions.map((question, index) => (
-                      <div
-                        key={question.id}
-                        className="bg-white p-3 rounded-lg border border-gray-200"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900">
-                              {index + 1}. {question.question.substring(0, 100)}
-                              ...
-                            </p>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Tags: {question.tags?.join(", ") || "No tags"} |
-                              Category: {question.category || "No category"} |
-                              Type: {question.type || "No type"}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => toggleAnswer(question.id)}
-                            className="ml-3 px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200"
-                          >
-                            {showAnswers[question.id] ? "Hide" : "Show"} Answer
-                          </button>
-                        </div>
-                        {showAnswers[question.id] && question.sampleAnswer && (
-                          <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                            <p className="text-sm text-gray-700">
-                              {question.sampleAnswer.substring(0, 200)}...
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-        </>
-      )}
-
-      {/* Empty State */}
-      {!isLoading && filteredQuestions.length === 0 && (
-        <div className="bg-white rounded-2xl p-12 text-center border border-gray-200 shadow-sm">
-          <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            {selectedCategory !== "all"
-              ? `No questions found for ${
-                  categories.find((cat) => cat.id === selectedCategory)?.name ||
-                  selectedCategory
-                }`
-              : "No questions found"}
-          </h3>
-          <p className="text-gray-600 mb-4">
-            {selectedCategory !== "all"
-              ? `The filtering might be too strict. Try viewing all questions or adjusting the filters.`
-              : "Try adjusting your filters or search terms to find more questions."}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={() => {
-                setSearchQuery("");
-                setSelectedCategory("all");
-                setSelectedDifficulty("all");
-                setSelectedType("all");
-              }}
-              className="px-6 py-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-colors border border-blue-200"
-            >
-              Clear All Filters
-            </button>
-            {selectedCategory !== "all" && (
-              <>
-                <button
-                  onClick={() => setSelectedCategory("all")}
-                  className="px-6 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors border border-gray-200"
-                >
-                  Show All Categories
-                </button>
-                <button
-                  onClick={() => {
-                    // Show all questions for debugging
-                    console.log("Showing all questions for debugging");
-                    console.log("All questions:", allQuestions);
-                    console.log("Questions by subject:", questionsBySubject);
-                  }}
-                  className="px-6 py-2 bg-yellow-100 text-yellow-700 rounded-xl hover:bg-yellow-200 transition-colors border border-yellow-200"
-                >
-                  Debug Questions
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* Debug Info */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg text-left">
-            <p className="text-sm text-gray-600 mb-2">
-              <strong>Debug Info:</strong>
-            </p>
-            <p className="text-xs text-gray-500">
-              Total questions available: {questions.length}
-              <br />
-              Selected category: {selectedCategory}
-              <br />
-              Search query: "{searchQuery}"<br />
-              Difficulty filter: {selectedDifficulty}
-              <br />
-              Type filter: {selectedType}
-              <br />
-              Questions by subject keys:{" "}
-              {Object.keys(questionsBySubject).join(", ")}
-              <br />
-              Sample question tags:{" "}
-              {allQuestions[0]?.tags?.join(", ") || "No tags"}
-            </p>
-          </div>
         </div>
       )}
+
     </div>
   );
 };
