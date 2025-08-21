@@ -39,6 +39,51 @@ function isValid(s: string): boolean {
         explanation: "Classic stack-based solution using map for bracket pairs. Most intuitive and handles all bracket types."
       },
       {
+        language: "Python",
+        code: `# Approach 1: Stack-based Solution (Optimal)
+# Time: O(n), Space: O(n)
+def is_valid(s):
+    stack = []
+    pairs = {
+        ')': '(',
+        '}': '{',
+        ']': '['
+    }
+    
+    for char in s:
+        if char in pairs:
+            # Closing bracket
+            if not stack or stack.pop() != pairs[char]:
+                return False
+        else:
+            # Opening bracket
+            stack.append(char)
+    
+    return len(stack) == 0
+
+# Class-based solution
+class Solution:
+    def isValid(self, s):
+        stack = []
+        pairs = {
+            ')': '(',
+            '}': '{',
+            ']': '['
+        }
+        
+        for char in s:
+            if char in pairs:
+                # Closing bracket
+                if not stack or stack.pop() != pairs[char]:
+                    return False
+            else:
+                # Opening bracket
+                stack.append(char)
+        
+        return len(stack) == 0`,
+        explanation: "Classic stack-based solution using map for bracket pairs. Most intuitive and handles all bracket types."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Optimized with Early Termination
 // Time: O(n), Space: O(n)
@@ -64,6 +109,47 @@ function isValidOptimized(s: string): boolean {
         explanation: "Optimized version with early odd-length check and set for open brackets. Better performance for invalid cases."
       },
       {
+        language: "Python",
+        code: `# Approach 2: Optimized with Early Termination
+# Time: O(n), Space: O(n)
+def is_valid_optimized(s):
+    if len(s) % 2 != 0:
+        return False
+    
+    stack = []
+    open_brackets = {'(', '{', '['}
+    bracket_pairs = {')': '(', '}': '{', ']': '['}
+    
+    for char in s:
+        if char in open_brackets:
+            stack.append(char)
+        else:
+            if not stack or stack.pop() != bracket_pairs[char]:
+                return False
+    
+    return len(stack) == 0
+
+# Class-based solution
+class Solution:
+    def isValidOptimized(self, s):
+        if len(s) % 2 != 0:
+            return False
+        
+        stack = []
+        open_brackets = {'(', '{', '['}
+        bracket_pairs = {')': '(', '}': '{', ']': '['}
+        
+        for char in s:
+            if char in open_brackets:
+                stack.append(char)
+            else:
+                if not stack or stack.pop() != bracket_pairs[char]:
+                    return False
+        
+        return len(stack) == 0`,
+        explanation: "Optimized version with early odd-length check and set for open brackets. Better performance for invalid cases."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: Counter-based Approach (Simpler but Less Flexible)
 // Time: O(n), Space: O(1)
@@ -85,6 +171,57 @@ function isValidCounters(s: string): boolean {
     
     return round === 0 && curly === 0 && square === 0;
 }`,
+        explanation: "Counter-based approach using separate counters for each bracket type. Simpler but doesn't handle mixed bracket sequences correctly."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Counter-based Approach (Simpler but Less Flexible)
+# Time: O(n), Space: O(1)
+def is_valid_counters(s):
+    round_count = curly_count = square_count = 0
+    
+    for char in s:
+        if char == '(':
+            round_count += 1
+        elif char == ')':
+            round_count -= 1
+        elif char == '{':
+            curly_count += 1
+        elif char == '}':
+            curly_count -= 1
+        elif char == '[':
+            square_count += 1
+        elif char == ']':
+            square_count -= 1
+        
+        if round_count < 0 or curly_count < 0 or square_count < 0:
+            return False
+    
+    return round_count == 0 and curly_count == 0 and square_count == 0
+
+# Class-based solution
+class Solution:
+    def isValidCounters(self, s):
+        round_count = curly_count = square_count = 0
+        
+        for char in s:
+            if char == '(':
+                round_count += 1
+            elif char == ')':
+                round_count -= 1
+            elif char == '{':
+                curly_count += 1
+            elif char == '}':
+                curly_count -= 1
+            elif char == '[':
+                square_count += 1
+            elif char == ']':
+                square_count -= 1
+            
+            if round_count < 0 or curly_count < 0 or square_count < 0:
+                return False
+        
+        return round_count == 0 and curly_count == 0 and square_count == 0`,
         explanation: "Counter-based approach using separate counters for each bracket type. Simpler but doesn't handle mixed bracket sequences correctly."
       }
     ],
@@ -140,6 +277,34 @@ class MinStack {
         return this.minStack[this.minStack.length - 1];
     }
 }`,
+        explanation: "Two stacks approach: main stack for values, min stack for minimum tracking. Most intuitive and efficient."
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Two Stacks (Optimal)
+# All operations: O(1), Space: O(n)
+class MinStack:
+    def __init__(self):
+        self.stack = []
+        self.min_stack = []
+    
+    def push(self, val):
+        self.stack.append(val)
+        
+        if not self.min_stack or val <= self.min_stack[-1]:
+            self.min_stack.append(val)
+    
+    def pop(self):
+        popped = self.stack.pop()
+        
+        if popped == self.min_stack[-1]:
+            self.min_stack.pop()
+    
+    def top(self):
+        return self.stack[-1]
+    
+    def getMin(self):
+        return self.min_stack[-1]`,
         explanation: "Two stacks approach: main stack for values, min stack for minimum tracking. Most intuitive and efficient."
       },
       {
