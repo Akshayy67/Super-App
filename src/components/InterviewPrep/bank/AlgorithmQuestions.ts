@@ -111,8 +111,81 @@ export const algorithmQuestions: Question[] = [
     category: "technical",
     difficulty: "easy",
     type: "technical",
-    sampleAnswer:
-      "The Two Sum problem asks us to find two numbers in an array that add up to a target value. The most efficient approach uses a hash map to achieve O(n) time complexity. We iterate through the array once, and for each element, we check if the complement (target - current element) exists in our hash map. If it does, we've found our pair; if not, we add the current element to the hash map and continue. This beats the naive O(n²) approach of checking every pair. For example, with array [2, 7, 11, 15] and target 9, we first check if (9-2)=7 exists in our map (it doesn't), so we add 2 to the map. Then we check if (9-7)=2 exists (it does), so we return the indices of 2 and 7. This approach works regardless of array order and handles duplicates correctly if they're valid parts of the solution. Edge cases to consider include empty arrays, no valid solution, or multiple valid solutions (usually we return the first one found). Space complexity is O(n) in the worst case where we store almost all elements in our hash map.",
+    approach:
+      "The Two Sum problem asks us to find two numbers in an array that add up to a target value. There are two main approaches: 1) Brute Force (O(n²)): Check every pair of numbers - simple but inefficient for large arrays. 2) Hash Map (O(n)): Use a hash map to store complements. For each element, check if its complement (target - current) exists in the map. If yes, return the indices; if no, add the current element to the map. This single-pass approach is optimal for time complexity.",
+    codeImplementation: [
+      {
+        language: "JavaScript",
+        code: `function twoSum(nums, target) {
+    const numMap = new Map();
+    
+    for (let i = 0; i < nums.length; i++) {
+        const complement = target - nums[i];
+        
+        if (numMap.has(complement)) {
+            return [numMap.get(complement), i];
+        }
+        
+        numMap.set(nums[i], i);
+    }
+    
+    return []; // No solution found
+}
+
+// Example usage:
+console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
+console.log(twoSum([3, 2, 4], 6));      // Output: [1, 2]`,
+        explanation: "We use a Map to store each number and its index. For each element, we calculate its complement and check if it exists in our map. If found, we return both indices. Time: O(n), Space: O(n)."
+      },
+      {
+        language: "Python",
+        code: `def two_sum(nums, target):
+    num_map = {}
+    
+    for i, num in enumerate(nums):
+        complement = target - num
+        
+        if complement in num_map:
+            return [num_map[complement], i]
+        
+        num_map[num] = i
+    
+    return []  # No solution found
+
+# Example usage:
+print(two_sum([2, 7, 11, 15], 9))  # Output: [0, 1]
+print(two_sum([3, 2, 4], 6))       # Output: [1, 2]`,
+        explanation: "Python dictionary provides O(1) average lookup time. We iterate once through the array, checking if each number's complement exists in our dictionary."
+      },
+      {
+        language: "Java",
+        code: `import java.util.HashMap;
+import java.util.Map;
+
+public class Solution {
+    public int[] twoSum(int[] nums, int target) {
+        Map<Integer, Integer> numMap = new HashMap<>();
+        
+        for (int i = 0; i < nums.length; i++) {
+            int complement = target - nums[i];
+            
+            if (numMap.containsKey(complement)) {
+                return new int[]{numMap.get(complement), i};
+            }
+            
+            numMap.put(nums[i], i);
+        }
+        
+        return new int[]{}; // No solution found
+    }
+}
+
+// Example usage:
+// Solution sol = new Solution();
+// int[] result = sol.twoSum(new int[]{2, 7, 11, 15}, 9); // [0, 1]`,
+        explanation: "HashMap in Java provides efficient key-value storage. We check for complement existence before adding current element to avoid using the same element twice."
+      }
+    ],
     tips: [
       "Discuss both brute force and optimized hash map approaches",
       "Explain how the hash map solution achieves O(n) time complexity",
@@ -151,8 +224,101 @@ export const algorithmQuestions: Question[] = [
     category: "technical",
     difficulty: "easy",
     type: "technical",
-    sampleAnswer:
-      "The Valid Parentheses problem asks us to determine if a string containing only parentheses characters ('{', '}', '[', ']', '(', ')') has all opening brackets matched with their corresponding closing brackets in the correct order. This is efficiently solved using a stack data structure. We iterate through the string character by character. When we encounter an opening bracket ('(', '{', or '['), we push it onto the stack. When we encounter a closing bracket (')', '}', or ']'), we check if the stack is empty (indicating an unmatched closing bracket) or if the top of the stack doesn't match the current closing bracket's corresponding opening bracket. If either condition is true, the string is invalid. Otherwise, we pop the matching opening bracket from the stack and continue. After processing all characters, the stack should be empty for a valid string; any remaining brackets in the stack indicate unmatched opening brackets. This solution has O(n) time complexity, where n is the string length, and O(n) space complexity in the worst case. Common edge cases include empty strings (typically considered valid), strings with an odd number of characters (always invalid), and strings containing only opening or only closing brackets.",
+    approach:
+      "The Valid Parentheses problem requires checking if brackets are properly matched and nested. The key insight is to use a stack data structure. Strategy: 1) For opening brackets ('(', '{', '['), push them onto the stack. 2) For closing brackets (')', '}', ']'), check if stack is empty or if the top doesn't match - if so, return false. Otherwise, pop the matching opening bracket. 3) After processing all characters, the stack should be empty for a valid string. This works because stacks follow LIFO (Last In, First Out), perfectly matching the nesting nature of valid parentheses.",
+    codeImplementation: [
+      {
+        language: "JavaScript",
+        code: `function isValid(s) {
+    const stack = [];
+    const pairs = {
+        ')': '(',
+        '}': '{',
+        ']': '['
+    };
+    
+    for (let char of s) {
+        if (char === '(' || char === '{' || char === '[') {
+            // Opening bracket: push to stack
+            stack.push(char);
+        } else if (char === ')' || char === '}' || char === ']') {
+            // Closing bracket: check match
+            if (stack.length === 0 || stack.pop() !== pairs[char]) {
+                return false;
+            }
+        }
+    }
+    
+    return stack.length === 0;
+}
+
+// Example usage:
+console.log(isValid("()"));       // true
+console.log(isValid("()[]{}"));   // true
+console.log(isValid("(]"));       // false
+console.log(isValid("([)]"));     // false`,
+        explanation: "We use an array as a stack and a map to store bracket pairs. For each character, we either push opening brackets or check closing brackets against the stack top."
+      },
+      {
+        language: "Python",
+        code: `def is_valid(s):
+    stack = []
+    pairs = {')': '(', '}': '{', ']': '['}
+    
+    for char in s:
+        if char in '({[':
+            # Opening bracket: push to stack
+            stack.append(char)
+        elif char in ')}]':
+            # Closing bracket: check match
+            if not stack or stack.pop() != pairs[char]:
+                return False
+    
+    return len(stack) == 0
+
+# Example usage:
+print(is_valid("()"))       # True
+print(is_valid("()[]{}"))   # True
+print(is_valid("(]"))       # False
+print(is_valid("([)]"))     # False`,
+        explanation: "Python's list works as a stack with append() and pop(). We check membership in strings for efficient bracket type detection."
+      },
+      {
+        language: "Java",
+        code: `import java.util.Stack;
+import java.util.HashMap;
+import java.util.Map;
+
+public class Solution {
+    public boolean isValid(String s) {
+        Stack<Character> stack = new Stack<>();
+        Map<Character, Character> pairs = new HashMap<>();
+        pairs.put(')', '(');
+        pairs.put('}', '{');
+        pairs.put(']', '[');
+        
+        for (char c : s.toCharArray()) {
+            if (c == '(' || c == '{' || c == '[') {
+                // Opening bracket: push to stack
+                stack.push(c);
+            } else if (c == ')' || c == '}' || c == ']') {
+                // Closing bracket: check match
+                if (stack.isEmpty() || stack.pop() != pairs.get(c)) {
+                    return false;
+                }
+            }
+        }
+        
+        return stack.isEmpty();
+    }
+}
+
+// Example usage:
+// Solution sol = new Solution();
+// boolean result = sol.isValid("()[]{}"); // true`,
+        explanation: "Java's Stack class provides push() and pop() methods. HashMap stores the bracket pairs for quick lookup during validation."
+      }
+    ],
     tips: [
       "Explain how the stack data structure is perfect for this problem",
       "Discuss how to efficiently check for bracket matches",
@@ -172,8 +338,105 @@ export const algorithmQuestions: Question[] = [
     category: "technical",
     difficulty: "medium",
     type: "technical",
-    sampleAnswer:
-      "To find the longest substring without repeating characters, we can use a sliding window approach with a hash map or set for optimal O(n) time complexity. We maintain a window using two pointers: left and right. As we iterate through the string with the right pointer, we track characters and their positions in a hash map. When we encounter a repeated character, we update our left pointer to the position after the first occurrence of the repeated character (or keep it if the duplicate is outside our current window). Throughout this process, we keep track of the maximum window length seen so far. For example, with the string 'abcabcbb', we start with an empty window. Adding 'a', 'b', and 'c' expands our window to 'abc'. When we encounter the second 'a', we shrink our window by moving the left pointer past the first 'a', resulting in 'bca'. We continue this process, eventually finding that the longest substring is 'abc' with length 3. This approach efficiently handles edge cases like empty strings or strings with all unique characters. Alternative approaches include using a fixed-size array instead of a hash map for character sets with known bounds (like ASCII), which can improve constant-factor performance. For very large strings, we can optimize space usage by storing only indices rather than character values.",
+    approach:
+      "This problem uses the sliding window technique with a hash map. Maintain two pointers (left and right) to form a window. Strategy: 1) Expand the right pointer and add characters to a hash map with their indices. 2) When a duplicate character is found, move the left pointer to skip past the first occurrence of that character. 3) Track the maximum window size throughout the process. The key insight is that we only need to track the most recent position of each character, allowing us to efficiently skip over duplicates in O(1) time.",
+    codeImplementation: [
+      {
+        language: "JavaScript",
+        code: `function lengthOfLongestSubstring(s) {
+    const charMap = new Map();
+    let left = 0;
+    let maxLength = 0;
+    
+    for (let right = 0; right < s.length; right++) {
+        const char = s[right];
+        
+        // If character is already in current window
+        if (charMap.has(char) && charMap.get(char) >= left) {
+            // Move left pointer past the duplicate
+            left = charMap.get(char) + 1;
+        }
+        
+        // Update character position
+        charMap.set(char, right);
+        
+        // Update max length
+        maxLength = Math.max(maxLength, right - left + 1);
+    }
+    
+    return maxLength;
+}
+
+// Example usage:
+console.log(lengthOfLongestSubstring("abcabcbb")); // 3 ("abc")
+console.log(lengthOfLongestSubstring("bbbbb"));    // 1 ("b")
+console.log(lengthOfLongestSubstring("pwwkew"));   // 3 ("wke")`,
+        explanation: "We use a Map to track character positions and two pointers for the sliding window. When we find a duplicate, we jump the left pointer to skip past the previous occurrence."
+      },
+      {
+        language: "Python",
+        code: `def length_of_longest_substring(s):
+    char_map = {}
+    left = 0
+    max_length = 0
+    
+    for right, char in enumerate(s):
+        # If character is already in current window
+        if char in char_map and char_map[char] >= left:
+            # Move left pointer past the duplicate
+            left = char_map[char] + 1
+        
+        # Update character position
+        char_map[char] = right
+        
+        # Update max length
+        max_length = max(max_length, right - left + 1)
+    
+    return max_length
+
+# Example usage:
+print(length_of_longest_substring("abcabcbb"))  # 3
+print(length_of_longest_substring("bbbbb"))     # 1
+print(length_of_longest_substring("pwwkew"))    # 3`,
+        explanation: "Python's dictionary provides O(1) lookup. We use enumerate() to get both index and character, making the code more Pythonic."
+      },
+      {
+        language: "Java",
+        code: `import java.util.HashMap;
+import java.util.Map;
+
+public class Solution {
+    public int lengthOfLongestSubstring(String s) {
+        Map<Character, Integer> charMap = new HashMap<>();
+        int left = 0;
+        int maxLength = 0;
+        
+        for (int right = 0; right < s.length(); right++) {
+            char c = s.charAt(right);
+            
+            // If character is already in current window
+            if (charMap.containsKey(c) && charMap.get(c) >= left) {
+                // Move left pointer past the duplicate
+                left = charMap.get(c) + 1;
+            }
+            
+            // Update character position
+            charMap.put(c, right);
+            
+            // Update max length
+            maxLength = Math.max(maxLength, right - left + 1);
+        }
+        
+        return maxLength;
+    }
+}
+
+// Example usage:
+// Solution sol = new Solution();
+// int result = sol.lengthOfLongestSubstring("abcabcbb"); // 3`,
+        explanation: "HashMap provides efficient character-to-index mapping. We check both containsKey() and position to ensure the duplicate is within our current window."
+      }
+    ],
     tips: [
       "Explain the sliding window technique in detail",
       "Discuss optimizations for different character set constraints",
