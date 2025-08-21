@@ -31,6 +31,28 @@ function climbStairs(n: number): number {
         explanation: "Space-optimized iterative approach. Recognizes Fibonacci pattern and only stores last two values."
       },
       {
+        language: "Java",
+        code: `// Approach 1: Bottom-up DP (Optimal)
+// Time: O(n), Space: O(1)
+public class Solution {
+    public int climbStairs(int n) {
+        if (n <= 2) return n;
+        
+        int prev2 = 1; // f(1)
+        int prev1 = 2; // f(2)
+        
+        for (int i = 3; i <= n; i++) {
+            int current = prev1 + prev2;
+            prev2 = prev1;
+            prev1 = current;
+        }
+        
+        return prev1;
+    }
+}`,
+        explanation: "Java implementation using space-optimized iterative approach. Recognizes Fibonacci pattern and only stores last two values."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Top-down DP with Memoization
 // Time: O(n), Space: O(n)
@@ -49,6 +71,30 @@ function climbStairsMemo(n: number): number {
     return dp(n);
 }`,
         explanation: "Recursive approach with memoization. More intuitive but uses extra space for the call stack and memo."
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Top-down DP with Memoization
+// Time: O(n), Space: O(n)
+import java.util.*;
+
+public class Solution {
+    private Map<Integer, Integer> memo = new HashMap<>();
+    
+    public int climbStairs(int n) {
+        return dp(n);
+    }
+    
+    private int dp(int i) {
+        if (i <= 2) return i;
+        if (memo.containsKey(i)) return memo.get(i);
+        
+        int result = dp(i - 1) + dp(i - 2);
+        memo.put(i, result);
+        return result;
+    }
+}`,
+        explanation: "Java implementation using recursive approach with memoization. More intuitive but uses extra space for the call stack and memo."
       },
       {
         language: "TypeScript",
@@ -85,6 +131,44 @@ function climbStairsMatrix(n: number): number {
     return result[0][0];
 }`,
         explanation: "Advanced mathematical approach using matrix exponentiation. Achieves O(log n) time for very large n."
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Matrix Exponentiation (Advanced)
+// Time: O(log n), Space: O(1)
+public class Solution {
+    public int climbStairs(int n) {
+        if (n <= 2) return n;
+        
+        int[][] transformMatrix = {{1, 1}, {1, 0}};
+        int[][] result = matrixPower(transformMatrix, n);
+        
+        return result[0][0];
+    }
+    
+    private int[][] multiply(int[][] a, int[][] b) {
+        return new int[][]{
+            {a[0][0] * b[0][0] + a[0][1] * b[1][0], a[0][0] * b[0][1] + a[0][1] * b[1][1]},
+            {a[1][0] * b[0][0] + a[1][1] * b[1][0], a[1][0] * b[0][1] + a[1][1] * b[1][1]}
+        };
+    }
+    
+    private int[][] matrixPower(int[][] matrix, int power) {
+        int[][] result = {{1, 0}, {0, 1}}; // Identity matrix
+        int[][] base = matrix;
+        
+        while (power > 0) {
+            if (power % 2 == 1) {
+                result = multiply(result, base);
+            }
+            base = multiply(base, base);
+            power /= 2;
+        }
+        
+        return result;
+    }
+}`,
+        explanation: "Java implementation using advanced mathematical approach with matrix exponentiation. Achieves O(log n) time for very large n."
       }
     ],
     tips: [
@@ -129,6 +213,29 @@ function rob(nums: number[]): number {
         explanation: "Space-optimized approach tracking only the maximum money from the last two positions. Most efficient solution."
       },
       {
+        language: "java",
+        code: `// Approach 1: Space-optimized DP (Optimal)
+// Time: O(n), Space: O(1)
+public class Solution {
+    public int rob(int[] nums) {
+        if (nums.length == 0) return 0;
+        if (nums.length == 1) return nums[0];
+        
+        int prev2 = 0;      // Max money up to i-2
+        int prev1 = nums[0]; // Max money up to i-1
+        
+        for (int i = 1; i < nums.length; i++) {
+            int current = Math.max(prev1, prev2 + nums[i]);
+            prev2 = prev1;
+            prev1 = current;
+        }
+        
+        return prev1;
+    }
+}`,
+        explanation: "Java implementation using space-optimized approach tracking only the maximum money from the last two positions. Most efficient solution."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Standard DP Array
 // Time: O(n), Space: O(n)
@@ -147,6 +254,28 @@ function robDP(nums: number[]): number {
     return dp[nums.length - 1];
 }`,
         explanation: "Standard DP approach with array to store maximum money at each position. Easier to understand and debug."
+      },
+      {
+        language: "java",
+        code: `// Approach 2: Standard DP Array
+// Time: O(n), Space: O(n)
+public class Solution {
+    public int rob(int[] nums) {
+        if (nums.length == 0) return 0;
+        if (nums.length == 1) return nums[0];
+        
+        int[] dp = new int[nums.length];
+        dp[0] = nums[0];
+        dp[1] = Math.max(nums[0], nums[1]);
+        
+        for (int i = 2; i < nums.length; i++) {
+            dp[i] = Math.max(dp[i - 1], dp[i - 2] + nums[i]);
+        }
+        
+        return dp[nums.length - 1];
+    }
+}`,
+        explanation: "Java implementation using standard DP approach with array to store maximum money at each position. Easier to understand and debug."
       },
       {
         language: "TypeScript",
@@ -171,6 +300,36 @@ function robMemo(nums: number[]): number {
     return robFrom(0);
 }`,
         explanation: "Top-down recursive approach with memoization. More intuitive for some but uses call stack space."
+      },
+      {
+        language: "java",
+        code: `// Approach 3: Recursive with Memoization
+// Time: O(n), Space: O(n)
+import java.util.*;
+
+public class Solution {
+    private Map<Integer, Integer> memo = new HashMap<>();
+    private int[] nums;
+    
+    public int rob(int[] nums) {
+        this.nums = nums;
+        return robFrom(0);
+    }
+    
+    private int robFrom(int i) {
+        if (i >= nums.length) return 0;
+        if (memo.containsKey(i)) return memo.get(i);
+        
+        int result = Math.max(
+            robFrom(i + 1),           // Skip current house
+            nums[i] + robFrom(i + 2)  // Rob current house
+        );
+        
+        memo.put(i, result);
+        return result;
+    }
+}`,
+        explanation: "Java implementation using top-down recursive approach with memoization. More intuitive for some but uses call stack space."
       }
     ],
     tips: [
@@ -213,6 +372,29 @@ function uniquePaths(m: number, n: number): number {
         explanation: "Space-optimized approach using 1D array. Optimizes for the smaller dimension to minimize space usage."
       },
       {
+        language: "java",
+        code: `// Approach 1: Space-optimized DP (Optimal)
+// Time: O(m * n), Space: O(min(m, n))
+public class Solution {
+    public int uniquePaths(int m, int n) {
+        // Use smaller dimension for space optimization
+        int rows = Math.min(m, n);
+        int cols = Math.max(m, n);
+        int[] dp = new int[rows];
+        Arrays.fill(dp, 1);
+        
+        for (int col = 1; col < cols; col++) {
+            for (int row = 1; row < rows; row++) {
+                dp[row] += dp[row - 1];
+            }
+        }
+        
+        return dp[rows - 1];
+    }
+}`,
+        explanation: "Java implementation using space-optimized approach with 1D array. Optimizes for the smaller dimension to minimize space usage."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: 2D DP Array
 // Time: O(m * n), Space: O(m * n)
@@ -230,12 +412,42 @@ function uniquePaths2D(m: number, n: number): number {
         explanation: "Classic 2D DP approach. Easier to understand and visualize. Each cell stores paths to reach that position."
       },
       {
+        language: "java",
+        code: `// Approach 2: 2D DP Array
+// Time: O(m * n), Space: O(m * n)
+import java.util.Arrays;
+
+public class Solution {
+    public int uniquePaths(int m, int n) {
+        int[][] dp = new int[m][n];
+        
+        // Fill first row and column with 1s
+        Arrays.fill(dp[0], 1);
+        for (int i = 0; i < m; i++) {
+            dp[i][0] = 1;
+        }
+        
+        for (int i = 1; i < m; i++) {
+            for (int j = 1; j < n; j++) {
+                dp[i][j] = dp[i - 1][j] + dp[i][j - 1];
+            }
+        }
+        
+        return dp[m - 1][n - 1];
+    }
+}`,
+        explanation: "Java implementation using classic 2D DP approach. Easier to understand and visualize. Each cell stores paths to reach that position."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: Mathematical (Combinatorics)
 // Time: O(min(m, n)), Space: O(1)
 function uniquePathsMath(m: number, n: number): number {
     // Total moves: (m-1) down + (n-1) right = m+n-2
     // Choose (m-1) positions for down moves: C(m+n-2, m-1)
+    
+    const totalMoves = m + n - 2;
+    const downMoves = m - 1;
     
     const totalMoves = m + n - 2;
     const downMoves = m - 1;
@@ -250,6 +462,30 @@ function uniquePathsMath(m: number, n: number): number {
     return Math.round(result);
 }`,
         explanation: "Mathematical approach using combinations. Most efficient but requires understanding of combinatorics."
+      },
+      {
+        language: "java",
+        code: `// Approach 3: Mathematical (Combinatorics)
+// Time: O(min(m, n)), Space: O(1)
+public class Solution {
+    public int uniquePaths(int m, int n) {
+        // Total moves: (m-1) down + (n-1) right = m+n-2
+        // Choose (m-1) positions for down moves: C(m+n-2, m-1)
+        
+        long totalMoves = m + n - 2;
+        long downMoves = m - 1;
+        
+        long result = 1;
+        
+        // Calculate C(totalMoves, downMoves) efficiently
+        for (int i = 0; i < downMoves; i++) {
+            result = result * (totalMoves - i) / (i + 1);
+        }
+        
+        return (int) result;
+    }
+}`,
+        explanation: "Java implementation using mathematical approach with combinations. Most efficient but requires understanding of combinatorics. Uses long to avoid overflow."
       },
       {
         language: "TypeScript",
@@ -273,6 +509,36 @@ function uniquePathsRecursive(m: number, n: number): number {
     return dp(0, 0);
 }`,
         explanation: "Top-down recursive approach with memoization. Good for understanding the problem structure."
+      },
+      {
+        language: "java",
+        code: `// Approach 4: Recursive with Memoization
+// Time: O(m * n), Space: O(m * n)
+import java.util.*;
+
+public class Solution {
+    private Map<String, Integer> memo = new HashMap<>();
+    private int m, n;
+    
+    public int uniquePaths(int m, int n) {
+        this.m = m;
+        this.n = n;
+        return dp(0, 0);
+    }
+    
+    private int dp(int row, int col) {
+        if (row == m - 1 && col == n - 1) return 1;
+        if (row >= m || col >= n) return 0;
+        
+        String key = row + "," + col;
+        if (memo.containsKey(key)) return memo.get(key);
+        
+        int result = dp(row + 1, col) + dp(row, col + 1);
+        memo.put(key, result);
+        return result;
+    }
+}`,
+        explanation: "Java implementation using top-down recursive approach with memoization. Good for understanding the problem structure."
       }
     ],
     tips: [
@@ -315,6 +581,27 @@ function canJump(nums: number[]): boolean {
         explanation: "Greedy approach tracking maximum reachable position. Most efficient solution with early termination."
       },
       {
+        language: "java",
+        code: `// Approach 1: Greedy (Optimal)
+// Time: O(n), Space: O(1)
+public class Solution {
+    public boolean canJump(int[] nums) {
+        int maxReach = 0;
+        
+        for (int i = 0; i < nums.length; i++) {
+            if (i > maxReach) return false;
+            maxReach = Math.max(maxReach, i + nums[i]);
+            
+            // Early termination if we can reach the end
+            if (maxReach >= nums.length - 1) return true;
+        }
+        
+        return true;
+    }
+}`,
+        explanation: "Java implementation using greedy approach tracking maximum reachable position. Most efficient solution with early termination."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Dynamic Programming
 // Time: O(n²), Space: O(n)
@@ -336,6 +623,31 @@ function canJumpDP(nums: number[]): boolean {
         explanation: "DP approach marking all reachable positions. Less efficient but more explicit about reachability."
       },
       {
+        language: "java",
+        code: `// Approach 2: Dynamic Programming
+// Time: O(n²), Space: O(n)
+import java.util.Arrays;
+
+public class Solution {
+    public boolean canJump(int[] nums) {
+        int n = nums.length;
+        boolean[] dp = new boolean[n];
+        dp[0] = true;
+        
+        for (int i = 0; i < n; i++) {
+            if (!dp[i]) continue;
+            
+            for (int j = 1; j <= nums[i] && i + j < n; j++) {
+                dp[i + j] = true;
+            }
+        }
+        
+        return dp[n - 1];
+    }
+}`,
+        explanation: "Java implementation using DP approach marking all reachable positions. Less efficient but more explicit about reachability."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: Backtracking from End
 // Time: O(n), Space: O(1)
@@ -353,6 +665,25 @@ function canJumpBacktrack(nums: number[]): boolean {
         explanation: "Works backwards from the end to check if each position can reach a 'good' position."
       },
       {
+        language: "java",
+        code: `// Approach 3: Backtracking from End
+// Time: O(n), Space: O(1)
+public class Solution {
+    public boolean canJump(int[] nums) {
+        int lastGoodIndex = nums.length - 1;
+        
+        for (int i = nums.length - 2; i >= 0; i--) {
+            if (i + nums[i] >= lastGoodIndex) {
+                lastGoodIndex = i;
+            }
+        }
+        
+        return lastGoodIndex == 0;
+    }
+}`,
+        explanation: "Java implementation working backwards from the end to check if each position can reach a 'good' position."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 4: Jump Game II - Minimum Jumps
 // Time: O(n), Space: O(1)
@@ -363,7 +694,6 @@ function jump(nums: number[]): number {
     
     for (let i = 0; i < nums.length - 1; i++) {
         farthest = Math.max(farthest, i + nums[i]);
-        
         if (i === currentEnd) {
             jumps++;
             currentEnd = farthest;
@@ -373,6 +703,30 @@ function jump(nums: number[]): number {
     return jumps;
 }`,
         explanation: "Extension that finds minimum number of jumps needed to reach the end. Uses greedy BFS approach."
+      },
+      {
+        language: "java",
+        code: `// Approach 4: Jump Game II - Minimum Jumps
+// Time: O(n), Space: O(1)
+public class Solution {
+    public int jump(int[] nums) {
+        int jumps = 0;
+        int currentEnd = 0;
+        int farthest = 0;
+        
+        for (int i = 0; i < nums.length - 1; i++) {
+            farthest = Math.max(farthest, i + nums[i]);
+            
+            if (i == currentEnd) {
+                jumps++;
+                currentEnd = farthest;
+            }
+        }
+        
+        return jumps;
+    }
+}`,
+        explanation: "Java implementation finding minimum number of jumps needed to reach the end. Uses greedy BFS approach."
       }
     ],
     tips: [
@@ -429,6 +783,40 @@ function minDistance(word1: string, word2: string): number {
         explanation: "Classic 2D DP approach building complete table. Most intuitive and allows reconstruction of operations sequence."
       },
       {
+        language: "java",
+        code: `// Approach 1: 2D DP (Standard)
+// Time: O(m * n), Space: O(m * n)
+public class Solution {
+    public int minDistance(String word1, String word2) {
+        int m = word1.length();
+        int n = word2.length();
+        
+        // dp[i][j] = min operations to convert word1[0...i-1] to word2[0...j-1]
+        int[][] dp = new int[m + 1][n + 1];
+        
+        // Initialize base cases
+        for (int i = 0; i <= m; i++) dp[i][0] = i; // Delete all characters
+        for (int j = 0; j <= n; j++) dp[0][j] = j; // Insert all characters
+        
+        for (int i = 1; i <= m; i++) {
+            for (int j = 1; j <= n; j++) {
+                if (word1.charAt(i - 1) == word2.charAt(j - 1)) {
+                    dp[i][j] = dp[i - 1][j - 1]; // No operation needed
+                } else {
+                    dp[i][j] = 1 + Math.min(
+                        Math.min(dp[i - 1][j], dp[i][j - 1]), // Delete, Insert
+                        dp[i - 1][j - 1]  // Replace
+                    );
+                }
+            }
+        }
+        
+        return dp[m][n];
+    }
+}`,
+        explanation: "Java implementation using classic 2D DP approach building complete table. Most intuitive and allows reconstruction of operations sequence."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Space-optimized DP
 // Time: O(m * n), Space: O(min(m, n))
@@ -457,6 +845,40 @@ function minDistanceOptimized(word1: string, word2: string): number {
         explanation: "Space-optimized version using only current and previous rows. Memory efficient for very long strings."
       },
       {
+        language: "java",
+        code: `// Approach 2: Space-optimized DP
+// Time: O(m * n), Space: O(min(m, n))
+public class Solution {
+    public int minDistance(String word1, String word2) {
+        String shorter = word1.length() <= word2.length() ? word1 : word2;
+        String longer = word1.length() <= word2.length() ? word2 : word1;
+        
+        int[] prev = new int[shorter.length() + 1];
+        for (int i = 0; i <= shorter.length(); i++) {
+            prev[i] = i;
+        }
+        
+        for (int i = 1; i <= longer.length(); i++) {
+            int[] curr = new int[shorter.length() + 1];
+            curr[0] = i;
+            
+            for (int j = 1; j <= shorter.length(); j++) {
+                if (longer.charAt(i - 1) == shorter.charAt(j - 1)) {
+                    curr[j] = prev[j - 1];
+                } else {
+                    curr[j] = 1 + Math.min(Math.min(prev[j], curr[j - 1]), prev[j - 1]);
+                }
+            }
+            
+            prev = curr;
+        }
+        
+        return prev[shorter.length()];
+    }
+}`,
+        explanation: "Java implementation using space-optimized version with only current and previous rows. Memory efficient for very long strings."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: Recursive with Memoization
 // Time: O(m * n), Space: O(m * n)
@@ -465,7 +887,7 @@ function minDistanceRecursive(word1: string, word2: string): number {
     
     function dp(i: number, j: number): number {
         if (i === 0) return j; // Insert all remaining characters of word2
-        if (j === 0) return i; // Delete all remaining characters of word1
+        if (2 === 0) return i; // Delete all remaining characters of word1
         
         const key = \`\${i},\${j}\`;
         if (memo.has(key)) return memo.get(key)!;
@@ -489,6 +911,46 @@ function minDistanceRecursive(word1: string, word2: string): number {
     return dp(word1.length, word2.length);
 }`,
         explanation: "Top-down recursive approach with memoization. Good for understanding the problem structure and recurrence."
+      },
+      {
+        language: "java",
+        code: `// Approach 3: Recursive with Memoization
+// Time: O(m * n), Space: O(m * n)
+import java.util.*;
+
+public class Solution {
+    private Map<String, Integer> memo = new HashMap<>();
+    private String word1, word2;
+    
+    public int minDistance(String word1, String word2) {
+        this.word1 = word1;
+        this.word2 = word2;
+        return dp(word1.length(), word2.length());
+    }
+    
+    private int dp(int i, int j) {
+        if (i == 0) return j; // Insert all remaining characters of word2
+        if (j == 0) return i; // Delete all remaining characters of word1
+        
+        String key = i + "," + j;
+        if (memo.containsKey(key)) return memo.get(key);
+        
+        int result;
+        
+        if (word1.charAt(i - 1) == word2.charAt(j - 1)) {
+            result = dp(i - 1, j - 1);
+        } else {
+            result = 1 + Math.min(
+                Math.min(dp(i - 1, j), dp(i, j - 1)), // Delete, Insert
+                dp(i - 1, j - 1)  // Replace
+            );
+        }
+        
+        memo.put(key, result);
+        return result;
+    }
+}`,
+        explanation: "Java implementation using top-down recursive approach with memoization. Good for understanding the problem structure and recurrence."
       }
     ],
     tips: [
@@ -532,6 +994,31 @@ function coinChange(coins: number[], amount: number): number {
         explanation: "Bottom-up DP builds solution iteratively. Most space-efficient approach that fills DP table systematically."
       },
       {
+        language: "java",
+        code: `// Approach 1: Bottom-up DP (Optimal)
+// Time: O(amount * coins.length), Space: O(amount)
+import java.util.Arrays;
+
+public class Solution {
+    public int coinChange(int[] coins, int amount) {
+        int[] dp = new int[amount + 1];
+        Arrays.fill(dp, Integer.MAX_VALUE);
+        dp[0] = 0;
+        
+        for (int i = 1; i <= amount; i++) {
+            for (int coin : coins) {
+                if (coin <= i && dp[i - coin] != Integer.MAX_VALUE) {
+                    dp[i] = Math.min(dp[i], dp[i - coin] + 1);
+                }
+            }
+        }
+        
+        return dp[amount] == Integer.MAX_VALUE ? -1 : dp[amount];
+    }
+}`,
+        explanation: "Java implementation using bottom-up DP building solution iteratively. Most space-efficient approach that fills DP table systematically."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Top-down DP with Memoization
 // Time: O(amount * coins.length), Space: O(amount)
@@ -560,6 +1047,42 @@ function coinChangeMemo(coins: number[], amount: number): number {
     return result === Infinity ? -1 : result;
 }`,
         explanation: "Top-down approach with memoization avoids redundant calculations. More intuitive recursive structure."
+      },
+      {
+        language: "java",
+        code: `// Approach 2: Top-down DP with Memoization
+// Time: O(amount * coins.length), Space: O(amount)
+import java.util.*;
+
+public class Solution {
+    private Map<Integer, Integer> memo = new HashMap<>();
+    private int[] coins;
+    
+    public int coinChange(int[] coins, int amount) {
+        this.coins = coins;
+        int result = dp(amount);
+        return result == Integer.MAX_VALUE ? -1 : result;
+    }
+    
+    private int dp(int remaining) {
+        if (remaining == 0) return 0;
+        if (remaining < 0) return Integer.MAX_VALUE;
+        if (memo.containsKey(remaining)) return memo.get(remaining);
+        
+        int minCoins = Integer.MAX_VALUE;
+        
+        for (int coin : coins) {
+            int result = dp(remaining - coin);
+            if (result != Integer.MAX_VALUE) {
+                minCoins = Math.min(minCoins, result + 1);
+            }
+        }
+        
+        memo.put(remaining, minCoins);
+        return minCoins;
+    }
+}`,
+        explanation: "Java implementation using top-down approach with memoization avoids redundant calculations. More intuitive recursive structure."
       },
       {
         language: "TypeScript",
@@ -594,6 +1117,46 @@ function coinChangeBFS(coins: number[], amount: number): number {
     return -1;
 }`,
         explanation: "BFS naturally finds minimum steps by exploring levels. Intuitive approach that shows the process step by step."
+      },
+      {
+        language: "java",
+        code: `// Approach 3: BFS Approach
+// Time: O(amount * coins.length), Space: O(amount)
+import java.util.*;
+
+public class Solution {
+    public int coinChange(int[] coins, int amount) {
+        if (amount == 0) return 0;
+        
+        Queue<Integer> queue = new LinkedList<>();
+        Set<Integer> visited = new HashSet<>();
+        queue.offer(0);
+        visited.add(0);
+        int level = 0;
+        
+        while (!queue.isEmpty()) {
+            int size = queue.size();
+            level++;
+            
+            for (int i = 0; i < size; i++) {
+                int current = queue.poll();
+                
+                for (int coin : coins) {
+                    int next = current + coin;
+                    
+                    if (next == amount) return level;
+                    if (next < amount && !visited.contains(next)) {
+                        visited.add(next);
+                        queue.offer(next);
+                    }
+                }
+            }
+        }
+        
+        return -1;
+    }
+}`,
+        explanation: "Java implementation using BFS naturally finds minimum steps by exploring levels. Intuitive approach that shows the process step by step."
       }
     ],
     tips: [
@@ -651,6 +1214,44 @@ function lengthOfLIS(nums: number[]): number {
         explanation: "Binary search approach maintains array of smallest tail elements. Most efficient with O(n log n) time complexity."
       },
       {
+        language: "java",
+        code: `// Approach 1: Binary Search with Patience Sorting (Optimal)
+// Time: O(n log n), Space: O(n)
+import java.util.*;
+
+public class Solution {
+    public int lengthOfLIS(int[] nums) {
+        List<Integer> tails = new ArrayList<>();
+        
+        for (int num : nums) {
+            int left = 0;
+            int right = tails.size();
+            
+            // Binary search for insertion position
+            while (left < right) {
+                int mid = left + (right - left) / 2;
+                if (tails.get(mid) < num) {
+                    left = mid + 1;
+                } else {
+                    right = mid;
+                }
+            }
+            
+            // If num is larger than all elements, append
+            if (left == tails.size()) {
+                tails.add(num);
+            } else {
+                // Replace the first element >= num
+                tails.set(left, num);
+            }
+        }
+        
+        return tails.size();
+    }
+}`,
+        explanation: "Java implementation using binary search approach maintaining array of smallest tail elements. Most efficient with O(n log n) time complexity."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Dynamic Programming
 // Time: O(n²), Space: O(n)
@@ -672,6 +1273,34 @@ function lengthOfLISDP(nums: number[]): number {
     return maxLength;
 }`,
         explanation: "Classic DP approach builds LIS ending at each position. More intuitive but less efficient than binary search."
+      },
+      {
+        language: "java",
+        code: `// Approach 2: Dynamic Programming
+// Time: O(n²), Space: O(n)
+import java.util.Arrays;
+
+public class Solution {
+    public int lengthOfLIS(int[] nums) {
+        if (nums.length == 0) return 0;
+        
+        int[] dp = new int[nums.length];
+        Arrays.fill(dp, 1);
+        int maxLength = 1;
+        
+        for (int i = 1; i < nums.length; i++) {
+            for (int j = 0; j < i; j++) {
+                if (nums[j] < nums[i]) {
+                    dp[i] = Math.max(dp[i], dp[j] + 1);
+                }
+            }
+            maxLength = Math.max(maxLength, dp[i]);
+        }
+        
+        return maxLength;
+    }
+}`,
+        explanation: "Java implementation using classic DP approach building LIS ending at each position. More intuitive but less efficient than binary search."
       },
       {
         language: "TypeScript",
@@ -759,6 +1388,33 @@ function knapsack(weights: number[], values: number[], capacity: number): number
         explanation: "Standard 2D DP approach builds complete table. Most intuitive but uses more memory."
       },
       {
+        language: "java",
+        code: `// Approach 1: 2D DP Approach (Standard)
+// Time: O(n * W), Space: O(n * W)
+public class Solution {
+    public int knapsack(int[] weights, int[] values, int capacity) {
+        int n = weights.length;
+        int[][] dp = new int[n + 1][capacity + 1];
+        
+        for (int i = 1; i <= n; i++) {
+            for (int w = 1; w <= capacity; w++) {
+                if (weights[i - 1] <= w) {
+                    dp[i][w] = Math.max(
+                        dp[i - 1][w], // Don't take item
+                        dp[i - 1][w - weights[i - 1]] + values[i - 1] // Take item
+                    );
+                } else {
+                    dp[i][w] = dp[i - 1][w];
+                }
+            }
+        }
+        
+        return dp[n][capacity];
+    }
+}`,
+        explanation: "Java implementation using standard 2D DP approach builds complete table. Most intuitive but uses more memory."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Space-optimized DP
 // Time: O(n * W), Space: O(W)
@@ -774,6 +1430,25 @@ function knapsackOptimized(weights: number[], values: number[], capacity: number
     return dp[capacity];
 }`,
         explanation: "Space-optimized approach uses only one row. Process weights in reverse order to avoid overwriting."
+      },
+      {
+        language: "java",
+        code: `// Approach 2: Space-optimized DP
+// Time: O(n * W), Space: O(W)
+public class Solution {
+    public int knapsack(int[] weights, int[] values, int capacity) {
+        int[] dp = new int[capacity + 1];
+        
+        for (int i = 0; i < weights.length; i++) {
+            for (int w = capacity; w >= weights[i]; w--) {
+                dp[w] = Math.max(dp[w], dp[w - weights[i]] + values[i]);
+            }
+        }
+        
+        return dp[capacity];
+    }
+}`,
+        explanation: "Java implementation using space-optimized approach with only one row. Process weights in reverse order to avoid overwriting."
       },
       {
         language: "TypeScript",
@@ -986,6 +1661,32 @@ function wordBreak(s: string, wordDict: string[]): boolean {
         explanation: "Standard DP approach builds solution iteratively. Most intuitive with clear state definition."
       },
       {
+        language: "java",
+        code: `// Approach 1: Dynamic Programming (Optimal)
+// Time: O(n² * m), Space: O(n) where m = avg word length
+import java.util.*;
+
+public class Solution {
+    public boolean wordBreak(String s, List<String> wordDict) {
+        Set<String> wordSet = new HashSet<>(wordDict);
+        boolean[] dp = new boolean[s.length() + 1];
+        dp[0] = true; // Empty string can always be segmented
+        
+        for (int i = 1; i <= s.length(); i++) {
+            for (int j = 0; j < i; j++) {
+                if (dp[j] && wordSet.contains(s.substring(j, i))) {
+                    dp[i] = true;
+                    break;
+                }
+            }
+        }
+        
+        return dp[s.length()];
+    }
+}`,
+        explanation: "Java implementation using standard DP approach building solution iteratively. Most intuitive with clear state definition."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: BFS Approach
 // Time: O(n² * m), Space: O(n)
@@ -1003,15 +1704,48 @@ function wordBreakBFS(s: string, wordDict: string[]): boolean {
         visited.add(start);
         
         for (let end = start + 1; end <= s.length; end++) {
-            if (wordSet.has(s.substring(start, end))) {
-                queue.push(end);
-            }
+        if (wordSet.has(s.substring(start, end))) {
+            queue.push(end);
         }
     }
     
     return false;
 }`,
         explanation: "BFS explores positions level by level. Natural approach that shows the process step by step."
+      },
+      {
+        language: "java",
+        code: `// Approach 2: BFS Approach
+// Time: O(n² * m), Space: O(n)
+import java.util.*;
+
+public class Solution {
+    public boolean wordBreak(String s, List<String> wordDict) {
+        Set<String> wordSet = new HashSet<>(wordDict);
+        Set<Integer> visited = new HashSet<>();
+        Queue<Integer> queue = new LinkedList<>();
+        
+        queue.offer(0);
+        
+        while (!queue.isEmpty()) {
+            int start = queue.poll();
+            
+            if (start == s.length()) return true;
+            if (visited.contains(start)) continue;
+            
+            visited.add(start);
+            
+            for (int end = start + 1; end <= s.length(); end++) {
+                if (wordSet.contains(s.substring(start, end))) {
+                    queue.offer(end);
+                }
+            }
+        }
+        
+        return false;
+    }
+}`,
+        explanation: "Java implementation using BFS explores positions level by level. Natural approach that shows the process step by step."
       },
       {
         language: "TypeScript",
@@ -1032,7 +1766,7 @@ function wordBreakII(s: string, wordDict: string[]): string[] {
             
             if (wordSet.has(word)) {
                 const suffixes = dp(end);
-                for (const suffix of suffixes) {
+                for (const suffix of suffixes) high) {
                     result.push(word + (suffix ? ' ' + suffix : ''));
                 }
             }
@@ -1045,6 +1779,53 @@ function wordBreakII(s: string, wordDict: string[]): string[] {
     return dp(0);
 }`,
         explanation: "Extension that returns all possible sentences using memoization to avoid recomputation."
+      },
+      {
+        language: "java",
+        code: `// Approach 3: Word Break II - All Possible Sentences
+// Time: O(n² * m), Space: O(n)
+import java.util.*;
+
+public class Solution {
+    private Map<Integer, List<String>> memo = new HashMap<>();
+    private Set<String> wordSet;
+    private String s;
+    
+    public List<String> wordBreak(String s, List<String> wordDict) {
+        this.wordSet = new HashSet<>(wordDict);
+        this.s = s;
+        return dp(0);
+    }
+    
+    private List<String> dp(int start) {
+        if (start == s.length()) {
+            List<String> result = new ArrayList<>();
+            result.add("");
+            return result;
+        }
+        
+        if (memo.containsKey(start)) {
+            return memo.get(start);
+        }
+        
+        List<String> result = new ArrayList<>();
+        
+        for (int end = start + 1; end <= s.length(); end++) {
+            String word = s.substring(start, end);
+            
+            if (wordSet.contains(word)) {
+                List<String> suffixes = dp(end);
+                for (String suffix : suffixes) {
+                    result.add(word + (suffix.isEmpty() ? "" : " " + suffix));
+                }
+            }
+        }
+        
+        memo.put(start, result);
+        return result;
+    }
+}`,
+        explanation: "Java implementation of extension that returns all possible sentences using memoization to avoid recomputation."
       }
     ],
     tips: [

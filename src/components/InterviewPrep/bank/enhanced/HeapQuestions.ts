@@ -4,11 +4,13 @@ import { Question } from "../../InterviewSubjects";
 export const enhancedHeapQuestions: Question[] = [
   {
     id: "enhanced-heap-1",
-    question: "Kth Largest Element in Array - Find the kth largest element in an unsorted array.",
+    question:
+      "Kth Largest Element in Array - Find the kth largest element in an unsorted array.",
     category: "technical",
     difficulty: "medium",
     type: "technical",
-    approach: "Multiple approaches available: 1) Quick Select (O(n) average, O(n²) worst case, O(1) space): Partition-based algorithm similar to quicksort. 2) Min Heap (O(n log k) time, O(k) space): Maintain heap of size k with largest elements. 3) Sorting (O(n log n) time, O(1) space): Simple but less efficient approach. Quick Select is optimal for average case, while Min Heap is better for worst-case guarantees.",
+    approach:
+      "Multiple approaches available: 1) Quick Select (O(n) average, O(n²) worst case, O(1) space): Partition-based algorithm similar to quicksort. 2) Min Heap (O(n log k) time, O(k) space): Maintain heap of size k with largest elements. 3) Sorting (O(n log n) time, O(1) space): Simple but less efficient approach. Quick Select is optimal for average case, while Min Heap is better for worst-case guarantees.",
     codeImplementation: [
       {
         language: "TypeScript",
@@ -46,7 +48,56 @@ function findKthLargest(nums: number[], k: number): number {
     
     return quickSelect(0, nums.length - 1);
 }`,
-        explanation: "Quick Select uses partitioning to find the kth element. Most efficient average case but can degrade to O(n²) in worst case."
+        explanation:
+          "Quick Select uses partitioning to find the kth element. Most efficient average case but can degrade to O(n²) in worst case.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Quick Select (Optimal average case)
+// Time: O(n) average, O(n²) worst, Space: O(1)
+public int findKthLargest(int[] nums, int k) {
+    k = nums.length - k; // Convert to kth smallest (0-indexed)
+    return quickSelect(nums, 0, nums.length - 1, k);
+}
+
+private int quickSelect(int[] nums, int left, int right, int k) {
+    if (left == right) {
+        return nums[left];
+    }
+    
+    int pivot = partition(nums, left, right);
+    
+    if (pivot == k) {
+        return nums[pivot];
+    } else if (pivot < k) {
+        return quickSelect(nums, pivot + 1, right, k);
+    } else {
+        return quickSelect(nums, left, pivot - 1, k);
+    }
+}
+
+private int partition(int[] nums, int left, int right) {
+    int pivotValue = nums[right];
+    int i = left;
+    
+    for (int j = left; j < right; j++) {
+        if (nums[j] <= pivotValue) {
+            swap(nums, i, j);
+            i++;
+        }
+    }
+    
+    swap(nums, i, right);
+    return i;
+}
+
+private void swap(int[] nums, int i, int j) {
+    int temp = nums[i];
+    nums[i] = nums[j];
+    nums[j] = temp;
+}`,
+        explanation:
+          "Java implementation of Quick Select. Recursively partitions the array to find the kth largest element.",
       },
       {
         language: "TypeScript",
@@ -121,7 +172,31 @@ function findKthLargestHeap(nums: number[], k: number): number {
     
     return minHeap.peek();
 }`,
-        explanation: "Min Heap maintains k largest elements. Guaranteed O(n log k) time complexity but uses extra space."
+        explanation:
+          "Min Heap maintains k largest elements. Guaranteed O(n log k) time complexity but uses extra space.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Min Heap
+// Time: O(n log k), Space: O(k)
+public int findKthLargestHeap(int[] nums, int k) {
+    // Use PriorityQueue as min heap
+    PriorityQueue<Integer> minHeap = new PriorityQueue<>();
+    
+    for (int num : nums) {
+        minHeap.offer(num);
+        
+        // Keep heap size at k
+        if (minHeap.size() > k) {
+            minHeap.poll();
+        }
+    }
+    
+    // Top of min heap is kth largest
+    return minHeap.peek();
+}`,
+        explanation:
+          "Java implementation using PriorityQueue as min heap. Maintains k largest elements efficiently.",
       },
       {
         language: "TypeScript",
@@ -131,14 +206,41 @@ function findKthLargestSort(nums: number[], k: number): number {
     nums.sort((a, b) => b - a);
     return nums[k - 1];
 }`,
-        explanation: "Simple sorting approach. Less efficient but easiest to implement and understand."
-      }
+        explanation:
+          "Simple sorting approach. Less efficient but easiest to implement and understand.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Sorting
+// Time: O(n log n), Space: O(1)
+public int findKthLargestSort(int[] nums, int k) {
+    // Sort in descending order
+    Arrays.sort(nums);
+    reverse(nums);
+    
+    // Return the kth element
+    return nums[k - 1];
+}
+
+private void reverse(int[] nums) {
+    int left = 0, right = nums.length - 1;
+    while (left < right) {
+        int temp = nums[left];
+        nums[left] = nums[right];
+        nums[right] = temp;
+        left++;
+        right--;
+    }
+}`,
+        explanation:
+          "Java implementation using sorting. Simple approach using built-in Arrays.sort and manual reversal.",
+      },
     ],
     tips: [
       "Quick select is optimal average case with O(n) time",
       "Min heap of size k maintains k largest elements",
       "Quick select modifies array, heap approach doesn't",
-      "Consider randomized pivot for better average performance"
+      "Consider randomized pivot for better average performance",
     ],
     tags: ["array", "heap", "quickselect", "sorting"],
     estimatedTime: 25,
@@ -148,11 +250,13 @@ function findKthLargestSort(nums: number[], k: number): number {
   },
   {
     id: "enhanced-heap-2",
-    question: "Top K Frequent Elements - Given integer array and integer k, return k most frequent elements.",
+    question:
+      "Top K Frequent Elements - Given integer array and integer k, return k most frequent elements.",
     category: "technical",
     difficulty: "medium",
     type: "technical",
-    approach: "Multiple approaches available: 1) Bucket Sort (O(n) time, O(n) space): Most efficient approach using frequency buckets. 2) Min Heap (O(n log k) time, O(n + k) space): Maintain heap of size k with most frequent elements. 3) Quick Select (O(n) average time, O(n) space): Partition-based approach for finding kth most frequent. Bucket sort is optimal for time complexity, while heap approach provides better space efficiency for large k.",
+    approach:
+      "Multiple approaches available: 1) Bucket Sort (O(n) time, O(n) space): Most efficient approach using frequency buckets. 2) Min Heap (O(n log k) time, O(n + k) space): Maintain heap of size k with most frequent elements. 3) Quick Select (O(n) average time, O(n) space): Partition-based approach for finding kth most frequent. Bucket sort is optimal for time complexity, while heap approach provides better space efficiency for large k.",
     codeImplementation: [
       {
         language: "TypeScript",
@@ -180,7 +284,49 @@ function topKFrequent(nums: number[], k: number): number[] {
     
     return result.slice(0, k);
 }`,
-        explanation: "Bucket sort approach groups elements by frequency. Most efficient with O(n) time complexity."
+        explanation:
+          "Bucket sort approach groups elements by frequency. Most efficient with O(n) time complexity.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Bucket Sort (Optimal)
+// Time: O(n), Space: O(n)
+public int[] topKFrequent(int[] nums, int k) {
+    // Count frequencies
+    Map<Integer, Integer> frequencyMap = new HashMap<>();
+    for (int num : nums) {
+        frequencyMap.put(num, frequencyMap.getOrDefault(num, 0) + 1);
+    }
+    
+    // Create buckets for each frequency
+    List<Integer>[] buckets = new ArrayList[nums.length + 1];
+    for (int i = 0; i < buckets.length; i++) {
+        buckets[i] = new ArrayList<>();
+    }
+    
+    // Add numbers to frequency buckets
+    for (Map.Entry<Integer, Integer> entry : frequencyMap.entrySet()) {
+        int num = entry.getKey();
+        int freq = entry.getValue();
+        buckets[freq].add(num);
+    }
+    
+    // Collect top k elements
+    List<Integer> result = new ArrayList<>();
+    for (int i = buckets.length - 1; i >= 0 && result.size() < k; i--) {
+        result.addAll(buckets[i]);
+    }
+    
+    // Convert list to array
+    int[] topK = new int[k];
+    for (int i = 0; i < k; i++) {
+        topK[i] = result.get(i);
+    }
+    
+    return topK;
+}`,
+        explanation:
+          "Java implementation using bucket sort. Groups elements by frequency for O(n) time complexity.",
       },
       {
         language: "TypeScript",
@@ -206,7 +352,45 @@ function topKFrequentHeap(nums: number[], k: number): number[] {
     
     return minHeap.map(([freq, num]) => num);
 }`,
-        explanation: "Min heap maintains k most frequent elements. Good for when k is much smaller than n."
+        explanation:
+          "Min heap maintains k most frequent elements. Good for when k is much smaller than n.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Min Heap
+// Time: O(n log k), Space: O(n + k)
+public int[] topKFrequentHeap(int[] nums, int k) {
+    // Count frequencies
+    Map<Integer, Integer> frequencyMap = new HashMap<>();
+    for (int num : nums) {
+        frequencyMap.put(num, frequencyMap.getOrDefault(num, 0) + 1);
+    }
+    
+    // Min heap to keep k most frequent elements
+    PriorityQueue<int[]> minHeap = new PriorityQueue<>((a, b) -> a[0] - b[0]);
+    
+    // Add elements to heap
+    for (Map.Entry<Integer, Integer> entry : frequencyMap.entrySet()) {
+        int num = entry.getKey();
+        int freq = entry.getValue();
+        
+        minHeap.offer(new int[]{freq, num});
+        
+        if (minHeap.size() > k) {
+            minHeap.poll();
+        }
+    }
+    
+    // Extract results from heap
+    int[] result = new int[k];
+    for (int i = k - 1; i >= 0; i--) {
+        result[i] = minHeap.poll()[1];
+    }
+    
+    return result;
+}`,
+        explanation:
+          "Java implementation using PriorityQueue (min heap). Efficiently maintains the k most frequent elements.",
       },
       {
         language: "TypeScript",
@@ -252,14 +436,79 @@ function topKFrequentQuickSelect(nums: number[], k: number): number[] {
     quickSelect(0, uniqueNums.length - 1, uniqueNums.length - k);
     return uniqueNums.slice(uniqueNums.length - k);
 }`,
-        explanation: "Quick select approach finds kth most frequent element. Good average case performance."
-      }
+        explanation:
+          "Quick select approach finds kth most frequent element. Good average case performance.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Quick Select
+// Time: O(n) average, Space: O(n)
+public int[] topKFrequentQuickSelect(int[] nums, int k) {
+    // Count frequencies
+    Map<Integer, Integer> frequencyMap = new HashMap<>();
+    for (int num : nums) {
+        frequencyMap.put(num, frequencyMap.getOrDefault(num, 0) + 1);
+    }
+    
+    // Extract unique numbers
+    int[] uniqueNums = new int[frequencyMap.size()];
+    int i = 0;
+    for (int num : frequencyMap.keySet()) {
+        uniqueNums[i++] = num;
+    }
+    
+    // Find k most frequent using quick select
+    quickSelect(uniqueNums, 0, uniqueNums.length - 1, uniqueNums.length - k, frequencyMap);
+    
+    // Extract top k elements
+    int[] result = new int[k];
+    System.arraycopy(uniqueNums, uniqueNums.length - k, result, 0, k);
+    return result;
+}
+
+private void quickSelect(int[] nums, int left, int right, int kSmallest, Map<Integer, Integer> freqMap) {
+    if (left == right) return;
+    
+    int pivotIndex = partition(nums, left, right, freqMap);
+    
+    if (kSmallest == pivotIndex) {
+        return;
+    } else if (kSmallest < pivotIndex) {
+        quickSelect(nums, left, pivotIndex - 1, kSmallest, freqMap);
+    } else {
+        quickSelect(nums, pivotIndex + 1, right, kSmallest, freqMap);
+    }
+}
+
+private int partition(int[] nums, int left, int right, Map<Integer, Integer> freqMap) {
+    int pivotFreq = freqMap.get(nums[right]);
+    int i = left;
+    
+    for (int j = left; j < right; j++) {
+        if (freqMap.get(nums[j]) < pivotFreq) {
+            swap(nums, i, j);
+            i++;
+        }
+    }
+    
+    swap(nums, i, right);
+    return i;
+}
+
+private void swap(int[] nums, int i, int j) {
+    int temp = nums[i];
+    nums[i] = nums[j];
+    nums[j] = temp;
+}`,
+        explanation:
+          "Java implementation of quick select approach. Partitions based on frequencies to find k most frequent elements.",
+      },
     ],
     tips: [
       "Bucket sort achieves O(n) by using frequency as index",
       "Min heap of size k keeps track of top k elements",
       "Quick select finds kth element without full sorting",
-      "Count frequencies first, then find top k by frequency"
+      "Count frequencies first, then find top k by frequency",
     ],
     tags: ["array", "heap", "bucket-sort", "quickselect", "hash-table"],
     estimatedTime: 25,
@@ -269,11 +518,13 @@ function topKFrequentQuickSelect(nums: number[], k: number): number[] {
   },
   {
     id: "enhanced-heap-3",
-    question: "Merge k Sorted Arrays - Given k sorted arrays, merge them into one sorted array.",
+    question:
+      "Merge k Sorted Arrays - Given k sorted arrays, merge them into one sorted array.",
     category: "technical",
     difficulty: "hard",
     type: "technical",
-    approach: "Multiple approaches available: 1) Min Heap (O(n log k) time, O(k) space): Most efficient approach using priority queue to track smallest element from each array. 2) Divide and Conquer (O(n log k) time, O(log k) space): Merge arrays pairwise until one remains. 3) Simple Merge (O(nk) time, O(n) space): Merge arrays one by one sequentially. Min heap approach is optimal for time complexity and provides the best practical performance.",
+    approach:
+      "Multiple approaches available: 1) Min Heap (O(n log k) time, O(k) space): Most efficient approach using priority queue to track smallest element from each array. 2) Divide and Conquer (O(n log k) time, O(log k) space): Merge arrays pairwise until one remains. 3) Simple Merge (O(nk) time, O(n) space): Merge arrays one by one sequentially. Min heap approach is optimal for time complexity and provides the best practical performance.",
     codeImplementation: [
       {
         language: "TypeScript",
@@ -360,7 +611,49 @@ function mergeKSortedArrays(arrays: number[][]): number[] {
     
     return result;
 }`,
-        explanation: "Min heap approach tracks smallest unprocessed element from each array. Most efficient with O(n log k) time complexity."
+        explanation:
+          "Min heap approach tracks smallest unprocessed element from each array. Most efficient with O(n log k) time complexity.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Min Heap (Optimal)
+// Time: O(n log k), Space: O(k) where n = total elements
+public List<Integer> mergeKSortedArrays(int[][] arrays) {
+    List<Integer> result = new ArrayList<>();
+    
+    // Min heap to track smallest element from each array
+    PriorityQueue<int[]> minHeap = new PriorityQueue<>((a, b) -> a[0] - b[0]);
+    
+    // Initialize heap with first element from each array
+    for (int i = 0; i < arrays.length; i++) {
+        if (arrays[i].length > 0) {
+            // Structure: [value, arrayIndex, elementIndex]
+            minHeap.offer(new int[]{arrays[i][0], i, 0});
+        }
+    }
+    
+    while (!minHeap.isEmpty()) {
+        int[] current = minHeap.poll();
+        int value = current[0];
+        int arrayIndex = current[1];
+        int elementIndex = current[2];
+        
+        result.add(value);
+        
+        // Add next element from same array
+        if (elementIndex + 1 < arrays[arrayIndex].length) {
+            minHeap.offer(new int[]{
+                arrays[arrayIndex][elementIndex + 1],
+                arrayIndex,
+                elementIndex + 1
+            });
+        }
+    }
+    
+    return result;
+}`,
+        explanation:
+          "Java implementation using PriorityQueue. Tracks smallest element from each array efficiently.",
       },
       {
         language: "TypeScript",
@@ -402,7 +695,64 @@ function mergeKSortedArraysDC(arrays: number[][]): number[] {
     
     return arrays[0];
 }`,
-        explanation: "Divide and conquer approach merges arrays pairwise until one remains. Good space efficiency but more complex."
+        explanation:
+          "Divide and conquer approach merges arrays pairwise until one remains. Good space efficiency but more complex.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Divide and Conquer
+// Time: O(n log k), Space: O(log k)
+public List<Integer> mergeKSortedArraysDC(int[][] arrays) {
+    if (arrays.length == 0) return new ArrayList<>();
+    if (arrays.length == 1) return arrayToList(arrays[0]);
+    
+    List<List<Integer>> lists = new ArrayList<>();
+    for (int[] arr : arrays) {
+        lists.add(arrayToList(arr));
+    }
+    
+    while (lists.size() > 1) {
+        List<List<Integer>> mergedLists = new ArrayList<>();
+        
+        for (int i = 0; i < lists.size(); i += 2) {
+            List<Integer> list1 = lists.get(i);
+            List<Integer> list2 = (i + 1 < lists.size()) ? lists.get(i + 1) : new ArrayList<>();
+            mergedLists.add(mergeTwoLists(list1, list2));
+        }
+        
+        lists = mergedLists;
+    }
+    
+    return lists.get(0);
+}
+
+private List<Integer> mergeTwoLists(List<Integer> list1, List<Integer> list2) {
+    List<Integer> result = new ArrayList<>();
+    int i = 0, j = 0;
+    
+    while (i < list1.size() && j < list2.size()) {
+        if (list1.get(i) <= list2.get(j)) {
+            result.add(list1.get(i++));
+        } else {
+            result.add(list2.get(j++));
+        }
+    }
+    
+    while (i < list1.size()) result.add(list1.get(i++));
+    while (j < list2.size()) result.add(list2.get(j++));
+    
+    return result;
+}
+
+private List<Integer> arrayToList(int[] arr) {
+    List<Integer> list = new ArrayList<>();
+    for (int num : arr) {
+        list.add(num);
+    }
+    return list;
+}`,
+        explanation:
+          "Java implementation of divide and conquer approach. Recursively merges arrays in pairs.",
       },
       {
         language: "TypeScript",
@@ -437,14 +787,59 @@ function mergeKSortedArraysSimple(arrays: number[][]): number[] {
     
     return result;
 }`,
-        explanation: "Simple approach merges arrays sequentially. Less efficient but easier to implement and understand."
-      }
+        explanation:
+          "Simple approach merges arrays sequentially. Less efficient but easier to implement and understand.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Simple Merge
+// Time: O(nk), Space: O(n)
+public List<Integer> mergeKSortedArraysSimple(int[][] arrays) {
+    if (arrays.length == 0) return new ArrayList<>();
+    
+    List<Integer> result = arrayToList(arrays[0]);
+    
+    for (int i = 1; i < arrays.length; i++) {
+        result = mergeTwoArrays(result, arrays[i]);
+    }
+    
+    return result;
+}
+
+private List<Integer> mergeTwoArrays(List<Integer> list, int[] arr) {
+    List<Integer> result = new ArrayList<>();
+    int i = 0, j = 0;
+    
+    while (i < list.size() && j < arr.length) {
+        if (list.get(i) <= arr[j]) {
+            result.add(list.get(i++));
+        } else {
+            result.add(arr[j++]);
+        }
+    }
+    
+    while (i < list.size()) result.add(list.get(i++));
+    while (j < arr.length) result.add(arr[j++]);
+    
+    return result;
+}
+
+private List<Integer> arrayToList(int[] arr) {
+    List<Integer> list = new ArrayList<>();
+    for (int num : arr) {
+        list.add(num);
+    }
+    return list;
+}`,
+        explanation:
+          "Java implementation of the simple merge approach. Merges arrays sequentially one by one.",
+      },
     ],
     tips: [
       "Min heap tracks smallest unprocessed element from each array",
       "Always extract minimum and add next element from same array",
       "Divide and conquer merges arrays pairwise",
-      "Heap approach processes elements in sorted order"
+      "Heap approach processes elements in sorted order",
     ],
     tags: ["heap", "divide-and-conquer", "merge-sort", "array"],
     estimatedTime: 30,
@@ -454,11 +849,13 @@ function mergeKSortedArraysSimple(arrays: number[][]): number[] {
   },
   {
     id: "enhanced-heap-4",
-    question: "Find Median from Data Stream - Design data structure that supports adding integers and finding median.",
+    question:
+      "Find Median from Data Stream - Design data structure that supports adding integers and finding median.",
     category: "technical",
     difficulty: "hard",
     type: "technical",
-    approach: "Multiple approaches available: 1) Two Heaps (O(log n) add, O(1) median, O(n) space): Use max heap for left half and min heap for right half. 2) Optimized Heap Implementation: Same logic but with proper heap data structures instead of arrays. 3) Balanced Tree Approach: Use ordered data structure to maintain sorted order. Two heaps approach is optimal for this problem, providing efficient insertion and constant-time median retrieval.",
+    approach:
+      "Multiple approaches available: 1) Two Heaps (O(log n) add, O(1) median, O(n) space): Use max heap for left half and min heap for right half. 2) Optimized Heap Implementation: Same logic but with proper heap data structures instead of arrays. 3) Balanced Tree Approach: Use ordered data structure to maintain sorted order. Two heaps approach is optimal for this problem, providing efficient insertion and constant-time median retrieval.",
     codeImplementation: [
       {
         language: "TypeScript",
@@ -512,7 +909,52 @@ class MedianFinder {
         return this.minHeap.shift()!;
     }
 }`,
-        explanation: "Two heaps approach maintains balanced left and right halves. Max heap stores smaller elements, min heap stores larger ones."
+        explanation:
+          "Two heaps approach maintains balanced left and right halves. Max heap stores smaller elements, min heap stores larger ones.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Two Heaps (Optimal)
+// addNum: O(log n), findMedian: O(1), Space: O(n)
+class MedianFinder {
+    // Max heap for the lower half (smaller elements)
+    private PriorityQueue<Integer> maxHeap;
+    // Min heap for the upper half (larger elements)
+    private PriorityQueue<Integer> minHeap;
+    
+    public MedianFinder() {
+        maxHeap = new PriorityQueue<>((a, b) -> b - a); // Max heap
+        minHeap = new PriorityQueue<>(); // Min heap (default)
+    }
+    
+    public void addNum(int num) {
+        // Add to appropriate heap
+        if (maxHeap.isEmpty() || num <= maxHeap.peek()) {
+            maxHeap.offer(num);
+        } else {
+            minHeap.offer(num);
+        }
+        
+        // Balance heaps
+        if (maxHeap.size() > minHeap.size() + 1) {
+            minHeap.offer(maxHeap.poll());
+        } else if (minHeap.size() > maxHeap.size() + 1) {
+            maxHeap.offer(minHeap.poll());
+        }
+    }
+    
+    public double findMedian() {
+        if (maxHeap.size() == minHeap.size()) {
+            return (maxHeap.peek() + minHeap.peek()) / 2.0;
+        } else if (maxHeap.size() > minHeap.size()) {
+            return maxHeap.peek();
+        } else {
+            return minHeap.peek();
+        }
+    }
+}`,
+        explanation:
+          "Java implementation using two PriorityQueues. Efficiently maintains balanced heaps for O(log n) insertion and O(1) median retrieval.",
       },
       {
         language: "TypeScript",
@@ -547,7 +989,51 @@ class OptimizedMedianFinder {
         }
     }
 }`,
-        explanation: "Same logic as approach 1 but uses proper heap data structures for better performance and cleaner code."
+        explanation:
+          "Same logic as approach 1 but uses proper heap data structures for better performance and cleaner code.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Optimized Heap Implementation
+// addNum: O(log n), findMedian: O(1), Space: O(n)
+class OptimizedMedianFinder {
+    // Using Java's built-in PriorityQueue which is already optimized
+    private PriorityQueue<Integer> maxHeap;
+    private PriorityQueue<Integer> minHeap;
+    
+    public OptimizedMedianFinder() {
+        maxHeap = new PriorityQueue<>((a, b) -> b - a); // Max heap
+        minHeap = new PriorityQueue<>(); // Min heap
+    }
+    
+    public void addNum(int num) {
+        // Add to appropriate heap
+        if (maxHeap.isEmpty() || num <= maxHeap.peek()) {
+            maxHeap.offer(num);
+        } else {
+            minHeap.offer(num);
+        }
+        
+        // Balance heaps
+        if (maxHeap.size() > minHeap.size() + 1) {
+            minHeap.offer(maxHeap.poll());
+        } else if (minHeap.size() > maxHeap.size() + 1) {
+            maxHeap.offer(minHeap.poll());
+        }
+    }
+    
+    public double findMedian() {
+        if (maxHeap.size() == minHeap.size()) {
+            return (maxHeap.peek() + minHeap.peek()) / 2.0;
+        } else if (maxHeap.size() > minHeap.size()) {
+            return maxHeap.peek();
+        } else {
+            return minHeap.peek();
+        }
+    }
+}`,
+        explanation:
+          "Java implementation with optimized heap structures. Uses Java's built-in PriorityQueue implementation.",
       },
       {
         language: "TypeScript",
@@ -587,14 +1073,60 @@ class BalancedTreeMedianFinder {
         return left;
     }
 }`,
-        explanation: "Maintains sorted array using binary search insertion. Simpler to understand but less efficient than heap approach."
-      }
+        explanation:
+          "Maintains sorted array using binary search insertion. Simpler to understand but less efficient than heap approach.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Balanced Tree Approach
+// addNum: O(log n), findMedian: O(1), Space: O(n)
+class BalancedTreeMedianFinder {
+    private List<Integer> sortedList;
+    
+    public BalancedTreeMedianFinder() {
+        sortedList = new ArrayList<>();
+    }
+    
+    public void addNum(int num) {
+        // Insert in sorted order using binary search
+        int insertIndex = binarySearch(num);
+        sortedList.add(insertIndex, num);
+    }
+    
+    public double findMedian() {
+        int n = sortedList.size();
+        if (n % 2 == 0) {
+            return (sortedList.get(n/2 - 1) + sortedList.get(n/2)) / 2.0;
+        } else {
+            return sortedList.get(n/2);
+        }
+    }
+    
+    private int binarySearch(int target) {
+        int left = 0;
+        int right = sortedList.size();
+        
+        while (left < right) {
+            int mid = left + (right - left) / 2;
+            if (sortedList.get(mid) < target) {
+                left = mid + 1;
+            } else {
+                right = mid;
+            }
+        }
+        
+        return left;
+    }
+}`,
+        explanation:
+          "Java implementation using ArrayList with binary search insertion. Maintains sorted order for O(log n) insertion and O(1) median retrieval.",
+      },
     ],
     tips: [
       "Use two heaps: max heap for left half, min heap for right half",
       "Keep heaps balanced: size difference ≤ 1",
       "Median is top of larger heap or average of both tops",
-      "Add to appropriate heap based on comparison with current median"
+      "Add to appropriate heap based on comparison with current median",
     ],
     tags: ["heap", "design", "data-stream"],
     estimatedTime: 30,
@@ -604,11 +1136,13 @@ class BalancedTreeMedianFinder {
   },
   {
     id: "enhanced-heap-5",
-    question: "Task Scheduler - Given array of tasks and cooldown time n, return minimum time to complete all tasks.",
+    question:
+      "Task Scheduler - Given array of tasks and cooldown time n, return minimum time to complete all tasks.",
     category: "technical",
     difficulty: "medium",
     type: "technical",
-    approach: "Multiple approaches available: 1) Max Heap with Cooldown Queue (O(n) time, O(1) space): Simulate task execution using priority queue and cooldown tracking. 2) Mathematical Approach (O(n) time, O(1) space): Calculate minimum time using frequency analysis and idle slot calculation. 3) Greedy Simulation: Track task execution order and cooldown periods. Mathematical approach is most efficient, while heap approach provides better understanding of the process.",
+    approach:
+      "Multiple approaches available: 1) Max Heap with Cooldown Queue (O(n) time, O(1) space): Simulate task execution using priority queue and cooldown tracking. 2) Mathematical Approach (O(n) time, O(1) space): Calculate minimum time using frequency analysis and idle slot calculation. 3) Greedy Simulation: Track task execution order and cooldown periods. Mathematical approach is most efficient, while heap approach provides better understanding of the process.",
     codeImplementation: [
       {
         language: "TypeScript",
@@ -648,7 +1182,49 @@ function leastInterval(tasks: string[], n: number): number {
     
     return time;
 }`,
-        explanation: "Simulates actual task execution using max heap and cooldown queue. Most intuitive approach that shows the process step by step."
+        explanation:
+          "Simulates actual task execution using max heap and cooldown queue. Most intuitive approach that shows the process step by step.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Max Heap with Cooldown Queue
+// Time: O(n), Space: O(1) - limited by 26 task types
+public int leastInterval(char[] tasks, int n) {
+    // Count task frequencies
+    Map<Character, Integer> taskCount = new HashMap<>();
+    for (char task : tasks) {
+        taskCount.put(task, taskCount.getOrDefault(task, 0) + 1);
+    }
+    
+    // Max heap of frequencies
+    PriorityQueue<Integer> maxHeap = new PriorityQueue<>((a, b) -> b - a);
+    maxHeap.addAll(taskCount.values());
+    
+    Queue<int[]> cooldownQueue = new LinkedList<>(); // [count, availableTime]
+    
+    int time = 0;
+    
+    while (!maxHeap.isEmpty() || !cooldownQueue.isEmpty()) {
+        time++;
+        
+        // Add tasks back from cooldown
+        if (!cooldownQueue.isEmpty() && cooldownQueue.peek()[1] == time) {
+            maxHeap.offer(cooldownQueue.poll()[0]);
+        }
+        
+        // Execute most frequent available task
+        if (!maxHeap.isEmpty()) {
+            int count = maxHeap.poll();
+            if (count > 1) {
+                cooldownQueue.offer(new int[]{count - 1, time + n + 1});
+            }
+        }
+    }
+    
+    return time;
+}`,
+        explanation:
+          "Java implementation using PriorityQueue for max heap and Queue for cooldown tracking. Simulates task execution step by step.",
       },
       {
         language: "TypeScript",
@@ -672,7 +1248,41 @@ function leastIntervalMath(tasks: string[], n: number): number {
     
     return tasks.length + Math.max(0, idleSlots);
 }`,
-        explanation: "Mathematical approach calculates minimum time needed by analyzing task frequencies and required idle slots. Most efficient solution."
+        explanation:
+          "Mathematical approach calculates minimum time needed by analyzing task frequencies and required idle slots. Most efficient solution.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Mathematical Approach (Most Efficient)
+// Time: O(n), Space: O(1)
+public int leastIntervalMath(char[] tasks, int n) {
+    int[] taskCount = new int[26];
+    
+    // Count frequency of each task
+    for (char task : tasks) {
+        taskCount[task - 'A']++;
+    }
+    
+    // Sort in descending order (using built-in sort)
+    Arrays.sort(taskCount);
+    
+    // Get maximum frequency
+    int maxCount = taskCount[25];
+    
+    // Calculate idle slots needed between tasks of max frequency
+    int idleSlots = (maxCount - 1) * n;
+    
+    // Fill idle slots with other tasks
+    for (int i = 24; i >= 0 && taskCount[i] > 0; i--) {
+        idleSlots -= Math.min(taskCount[i], maxCount - 1);
+    }
+    
+    // If we have enough tasks to fill all idle slots, time = tasks.length
+    // Otherwise, we need additional idle time
+    return tasks.length + Math.max(0, idleSlots);
+}`,
+        explanation:
+          "Java implementation of the mathematical approach. Analyzes task frequencies to calculate minimum required time.",
       },
       {
         language: "TypeScript",
@@ -698,19 +1308,50 @@ function leastIntervalGreedy(tasks: string[], n: number): number {
     
     return Math.max(minTime, tasks.length);
 }`,
-        explanation: "Greedy approach considers tasks with maximum frequency and calculates minimum time based on cooldown requirements."
-      }
+        explanation:
+          "Greedy approach that calculates minimum time by analyzing task frequencies and finding tasks with maximum frequency.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Greedy with Frequency Tracking
+// Time: O(n), Space: O(1)
+public int leastIntervalGreedy(char[] tasks, int n) {
+    int[] taskCount = new int[26];
+    
+    // Count frequency of each task
+    for (char task : tasks) {
+        taskCount[task - 'A']++;
+    }
+    
+    Arrays.sort(taskCount);
+    
+    // Find how many tasks have maximum frequency
+    int maxFreq = taskCount[25];
+    int maxFreqCount = 0;
+    for (int i = 25; i >= 0 && taskCount[i] == maxFreq; i--) {
+        maxFreqCount++;
+    }
+    
+    // Calculate minimum time needed
+    // (maxFreq-1) complete cycles of (n+1) slots + maxFreqCount slots for the final tasks
+    int minTime = (maxFreq - 1) * (n + 1) + maxFreqCount;
+    
+    return Math.max(minTime, tasks.length);
+}`,
+        explanation:
+          "Java implementation of greedy approach. Calculates optimal schedule based on task frequencies and cooldown requirements.",
+      },
     ],
     tips: [
       "Schedule most frequent task first to minimize idle time",
       "Use cooldown queue to track when tasks become available",
       "Mathematical approach: calculate idle slots needed",
-      "Answer is max(tasks.length, calculated_time_with_idles)"
+      "Answer is max(tasks.length, calculated_time_with_idles)",
     ],
     tags: ["heap", "greedy", "queue", "simulation"],
     estimatedTime: 30,
     industry: ["tech"],
     practiceCount: 0,
     successRate: 0,
-  }
+  },
 ];

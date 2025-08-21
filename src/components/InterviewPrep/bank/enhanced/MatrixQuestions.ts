@@ -58,6 +58,56 @@ function spiralOrder(matrix: number[][]): number[] {
         explanation: "Layer by Layer approach processes matrix from outside to inside. Most space-efficient with clear boundary management."
       },
       {
+        language: "Java",
+        code: `// Approach 1: Layer by Layer (Optimal)
+// Time: O(m * n), Space: O(1) excluding output
+import java.util.*;
+class Solution {
+    public List<Integer> spiralOrder(int[][] matrix) {
+        if (matrix == null || matrix.length == 0) return new ArrayList<>();
+        
+        List<Integer> result = new ArrayList<>();
+        int top = 0;
+        int bottom = matrix.length - 1;
+        int left = 0;
+        int right = matrix[0].length - 1;
+        
+        while (top <= bottom && left <= right) {
+            // Traverse right
+            for (int col = left; col <= right; col++) {
+                result.add(matrix[top][col]);
+            }
+            top++;
+            
+            // Traverse down
+            for (int row = top; row <= bottom; row++) {
+                result.add(matrix[row][right]);
+            }
+            right--;
+            
+            // Traverse left (if still valid row)
+            if (top <= bottom) {
+                for (int col = right; col >= left; col--) {
+                    result.add(matrix[bottom][col]);
+                }
+                bottom--;
+            }
+            
+            // Traverse up (if still valid column)
+            if (left <= right) {
+                for (int row = bottom; row >= top; row--) {
+                    result.add(matrix[row][left]);
+                }
+                left++;
+            }
+        }
+        
+        return result;
+    }
+}`,
+        explanation: "Layer by Layer approach processes matrix from outside to inside. Most space-efficient with clear boundary management."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Direction-based Approach
 // Time: O(m * n), Space: O(m * n)
@@ -93,6 +143,50 @@ function spiralOrderDirection(matrix: number[][]): number[] {
     }
     
     return result;
+}`,
+        explanation: "Direction-based approach uses direction array and visited matrix. More flexible but uses extra space."
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Direction-based Approach
+// Time: O(m * n), Space: O(m * n)
+import java.util.*;
+class Solution {
+    public List<Integer> spiralOrderDirection(int[][] matrix) {
+        if (matrix == null || matrix.length == 0) return new ArrayList<>();
+        
+        List<Integer> result = new ArrayList<>();
+        int rows = matrix.length;
+        int cols = matrix[0].length;
+        boolean[][] visited = new boolean[rows][cols];
+        
+        int[][] directions = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}}; // right, down, left, up
+        int dirIndex = 0;
+        int row = 0, col = 0;
+        
+        for (int i = 0; i < rows * cols; i++) {
+            result.add(matrix[row][col]);
+            visited[row][col] = true;
+            
+            int dr = directions[dirIndex][0];
+            int dc = directions[dirIndex][1];
+            int newRow = row + dr;
+            int newCol = col + dc;
+            
+            if (newRow < 0 || newRow >= rows || newCol < 0 || newCol >= cols || visited[newRow][newCol]) {
+                dirIndex = (dirIndex + 1) % 4;
+                int newDr = directions[dirIndex][0];
+                int newDc = directions[dirIndex][1];
+                row += newDr;
+                col += newDc;
+            } else {
+                row = newRow;
+                col = newCol;
+            }
+        }
+        
+        return result;
+    }
 }`,
         explanation: "Direction-based approach uses direction array and visited matrix. More flexible but uses extra space."
       },
@@ -136,6 +230,52 @@ function spiralOrderRecursive(matrix: number[][]): number[] {
     
     spiralLayer(0, matrix.length - 1, 0, matrix[0].length - 1);
     return result;
+}`,
+        explanation: "Recursive approach processes outer layer and recursively handles inner submatrix. Elegant but uses call stack space."
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Recursive Approach
+// Time: O(m * n), Space: O(m * n) for call stack
+import java.util.*;
+class Solution {
+    public List<Integer> spiralOrderRecursive(int[][] matrix) {
+        if (matrix == null || matrix.length == 0) return new ArrayList<>();
+        
+        List<Integer> result = new ArrayList<>();
+        
+        void spiralLayer(int top, int bottom, int left, int right) {
+            if (top > bottom || left > right) return;
+            
+            // Single row
+            if (top == bottom) {
+                for (int col = left; col <= right; col++) {
+                    result.add(matrix[top][col]);
+                }
+                return;
+            }
+            
+            // Single column
+            if (left == right) {
+                for (int row = top; row <= bottom; row++) {
+                    result.add(matrix[row][left]);
+                }
+                return;
+            }
+            
+            // Traverse outer layer
+            for (int col = left; col <= right; col++) result.add(matrix[top][col]);
+            for (int row = top + 1; row <= bottom; row++) result.add(matrix[row][right]);
+            for (int col = right - 1; col >= left; col--) result.add(matrix[bottom][col]);
+            for (int row = bottom - 1; row > top; row--) result.add(matrix[row][left]);
+            
+            // Recursively process inner submatrix
+            spiralLayer(top + 1, bottom - 1, left + 1, right - 1);
+        }
+        
+        spiralLayer(0, matrix.length - 1, 0, matrix[0].length - 1);
+        return result;
+    }
 }`,
         explanation: "Recursive approach processes outer layer and recursively handles inner submatrix. Elegant but uses call stack space."
       }
@@ -182,6 +322,40 @@ function rotate(matrix: number[][]): void {
         explanation: "Transpose + Reverse approach is most intuitive. 90° clockwise rotation = transpose + reverse rows."
       },
       {
+        language: "Java",
+        code: `// Approach 1: Transpose + Reverse (Optimal)
+// Time: O(n²), Space: O(1)
+import java.util.*;
+class Solution {
+    public void rotate(int[][] matrix) {
+        int n = matrix.length;
+        
+        // Step 1: Transpose matrix (swap matrix[i][j] with matrix[j][i])
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                int temp = matrix[i][j];
+                matrix[i][j] = matrix[j][i];
+                matrix[j][i] = temp;
+            }
+        }
+        
+        // Step 2: Reverse each row
+        for (int i = 0; i < n; i++) {
+            int left = 0;
+            int right = n - 1;
+            while (left < right) {
+                int temp = matrix[i][left];
+                matrix[i][left] = matrix[i][right];
+                matrix[i][right] = temp;
+                left++;
+                right--;
+            }
+        }
+    }
+}`,
+        explanation: "Transpose + Reverse approach is most intuitive. 90° clockwise rotation = transpose + reverse rows."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Layer by Layer Rotation
 // Time: O(n²), Space: O(1)
@@ -215,6 +389,42 @@ function rotateLayered(matrix: number[][]): void {
         explanation: "Layer approach rotates matrix from outer to inner layers. More complex but shows the rotation process clearly."
       },
       {
+        language: "Java",
+        code: `// Approach 2: Layer by Layer Rotation
+// Time: O(n²), Space: O(1)
+import java.util.*;
+class Solution {
+    public void rotateLayered(int[][] matrix) {
+        int n = matrix.length;
+        
+        for (int layer = 0; layer < Math.floor(n / 2); layer++) {
+            int first = layer;
+            int last = n - 1 - layer;
+            
+            for (int i = first; i < last; i++) {
+                int offset = i - first;
+                
+                // Save top element
+                int top = matrix[first][i];
+                
+                // top = left
+                matrix[first][i] = matrix[last - offset][first];
+                
+                // left = bottom
+                matrix[last - offset][first] = matrix[last][last - offset];
+                
+                // bottom = right
+                matrix[last][last - offset] = matrix[i][last];
+                
+                // right = top
+                matrix[i][last] = top;
+            }
+        }
+    }
+}`,
+        explanation: "Layer approach rotates matrix from outer to inner layers. More complex but shows the rotation process clearly."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: Four-way Swap in One Pass
 // Time: O(n²), Space: O(1)
@@ -229,6 +439,29 @@ function rotateFourWay(matrix: number[][]): void {
             matrix[n - 1 - j][i] = matrix[n - 1 - i][n - 1 - j];
             matrix[n - 1 - i][n - 1 - j] = matrix[j][n - 1 - i];
             matrix[j][n - 1 - i] = temp;
+        }
+    }
+}`,
+        explanation: "Four-way swap moves elements to final positions directly in one pass. Most efficient but harder to understand."
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Four-way Swap in One Pass
+// Time: O(n²), Space: O(1)
+import java.util.*;
+class Solution {
+    public void rotateFourWay(int[][] matrix) {
+        int n = matrix.length;
+        
+        for (int i = 0; i < Math.floor(n / 2); i++) {
+            for (int j = i; j < n - 1 - i; j++) {
+                // Four-way rotation
+                int temp = matrix[i][j];
+                matrix[i][j] = matrix[n - 1 - j][i];
+                matrix[n - 1 - j][i] = matrix[n - 1 - i][n - 1 - j];
+                matrix[n - 1 - i][n - 1 - j] = matrix[j][n - 1 - i];
+                matrix[j][n - 1 - i] = temp;
+            }
         }
     }
 }`,
@@ -317,6 +550,70 @@ function setZeroes(matrix: number[][]): void {
         explanation: "Uses first row and column as markers to avoid extra space. Most space-efficient approach."
       },
       {
+        language: "Java",
+        code: `// Approach 1: First Row/Column as Markers (Optimal)
+// Time: O(m * n), Space: O(1)
+import java.util.*;
+class Solution {
+    public void setZeroes(int[][] matrix) {
+        int rows = matrix.length;
+        int cols = matrix[0].length;
+        boolean firstRowZero = false;
+        boolean firstColZero = false;
+        
+        // Check if first row should be zero
+        for (int j = 0; j < cols; j++) {
+            if (matrix[0][j] == 0) {
+                firstRowZero = true;
+                break;
+            }
+        }
+        
+        // Check if first column should be zero
+        for (int i = 0; i < rows; i++) {
+            if (matrix[i][0] == 0) {
+                firstColZero = true;
+                break;
+            }
+        }
+        
+        // Use first row and column as markers
+        for (int i = 1; i < rows; i++) {
+            for (int j = 1; j < cols; j++) {
+                if (matrix[i][j] == 0) {
+                    matrix[i][0] = 0; // Mark row
+                    matrix[0][j] = 0; // Mark column
+                }
+            }
+        }
+        
+        // Set zeros based on markers
+        for (int i = 1; i < rows; i++) {
+            for (int j = 1; j < cols; j++) {
+                if (matrix[i][0] == 0 || matrix[0][j] == 0) {
+                    matrix[i][j] = 0;
+                }
+            }
+        }
+        
+        // Handle first row
+        if (firstRowZero) {
+            for (int j = 0; j < cols; j++) {
+                matrix[0][j] = 0;
+            }
+        }
+        
+        // Handle first column
+        if (firstColZero) {
+            for (int i = 0; i < rows; i++) {
+                matrix[i][0] = 0;
+            }
+        }
+    }
+}`,
+        explanation: "Uses first row and column as markers to avoid extra space. Most space-efficient approach."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Extra Space Approach (Clearer)
 // Time: O(m * n), Space: O(m + n)
@@ -353,6 +650,45 @@ function setZeroesExtraSpace(matrix: number[][]): void {
         explanation: "Uses separate arrays to track zero rows and columns. Clearer and easier to understand."
       },
       {
+        language: "Java",
+        code: `// Approach 2: Extra Space Approach (Clearer)
+// Time: O(m * n), Space: O(m + n)
+import java.util.*;
+class Solution {
+    public void setZeroesExtraSpace(int[][] matrix) {
+        int rows = matrix.length;
+        int cols = matrix[0].length;
+        Set<Integer> zeroRows = new HashSet<>();
+        Set<Integer> zeroCols = new HashSet<>();
+        
+        // Find all zero positions
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (matrix[i][j] == 0) {
+                    zeroRows.add(i);
+                    zeroCols.add(j);
+                }
+            }
+        }
+        
+        // Set rows to zero
+        for (Integer row : zeroRows) {
+            for (int j = 0; j < cols; j++) {
+                matrix[row][j] = 0;
+            }
+        }
+        
+        // Set columns to zero
+        for (Integer col : zeroCols) {
+            for (int i = 0; i < rows; i++) {
+                matrix[i][col] = 0;
+            }
+        }
+    }
+}`,
+        explanation: "Uses separate arrays to track zero rows and columns. Clearer and easier to understand."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: Brute Force with Markers
 // Time: O(m * n), Space: O(1)
@@ -382,6 +718,45 @@ function setZeroesBruteForce(matrix: number[][]): void {
         for (let j = 0; j < cols; j++) {
             if (matrix[i][j] === MARKER) {
                 matrix[i][j] = 0;
+            }
+        }
+    }
+}`,
+        explanation: "Brute force approach marks zeros with special value then converts back. Simple but less efficient."
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Brute Force with Markers
+// Time: O(m * n), Space: O(1)
+import java.util.*;
+class Solution {
+    public void setZeroesBruteForce(int[][] matrix) {
+        int rows = matrix.length;
+        int cols = matrix[0].length;
+        int MARKER = -1000000; // Special value to mark zeros
+        
+        // Mark zeros with special value
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (matrix[i][j] == 0) {
+                    // Mark entire row
+                    for (int k = 0; k < cols; k++) {
+                        if (matrix[i][k] != 0) matrix[i][k] = MARKER;
+                    }
+                    // Mark entire column
+                    for (int k = 0; k < rows; k++) {
+                        if (matrix[k][j] != 0) matrix[k][j] = MARKER;
+                    }
+                }
+            }
+        }
+        
+        // Convert markers back to zeros
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (matrix[i][j] == MARKER) {
+                    matrix[i][j] = 0;
+                }
             }
         }
     }
@@ -439,6 +814,38 @@ function searchMatrix(matrix: number[][], target: number): boolean {
         explanation: "Binary search treats matrix as 1D array with coordinate conversion. Optimal for fully sorted matrices."
       },
       {
+        language: "Java",
+        code: `// Approach 1: Binary Search (Matrix I - fully sorted)
+// Time: O(log(m * n)), Space: O(1)
+import java.util.*;
+class Solution {
+    public boolean searchMatrix(int[][] matrix, int target) {
+        if (matrix == null || matrix.length == 0) return false;
+        
+        int rows = matrix.length;
+        int cols = matrix[0].length;
+        int left = 0;
+        int right = rows * cols - 1;
+        
+        while (left <= right) {
+            int mid = (left + right) / 2;
+            int midValue = matrix[mid / cols][mid % cols];
+            
+            if (midValue == target) {
+                return true;
+            } else if (midValue < target) {
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
+        }
+        
+        return false;
+    }
+}`,
+        explanation: "Binary search treats matrix as 1D array with coordinate conversion. Optimal for fully sorted matrices."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Search from Top-Right (Matrix II - row and column sorted)
 // Time: O(m + n), Space: O(1)
@@ -463,6 +870,33 @@ function searchMatrixII(matrix: number[][], target: number): boolean {
         explanation: "Top-right approach eliminates row or column at each step. Works for row and column sorted matrices."
       },
       {
+        language: "Java",
+        code: `// Approach 2: Search from Top-Right (Matrix II - row and column sorted)
+// Time: O(m + n), Space: O(1)
+import java.util.*;
+class Solution {
+    public boolean searchMatrixII(int[][] matrix, int target) {
+        if (matrix == null || matrix.length == 0) return false;
+        
+        int row = 0;
+        int col = matrix[0].length - 1;
+        
+        while (row < matrix.length && col >= 0) {
+            if (matrix[row][col] == target) {
+                return true;
+            } else if (matrix[row][col] > target) {
+                col--; // Move left
+            } else {
+                row++; // Move down
+            }
+        }
+        
+        return false;
+    }
+}`,
+        explanation: "Top-right approach eliminates row or column at each step. Works for row and column sorted matrices."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: Count Occurrences in Sorted Matrix
 // Time: O(m + n), Space: O(1)
@@ -483,6 +917,33 @@ function countInMatrix(matrix: number[][], target: number): number {
     }
     
     return count;
+}`,
+        explanation: "Extension that counts occurrences of target value in sorted matrix using top-right approach."
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Count Occurrences in Sorted Matrix
+// Time: O(m + n), Space: O(1)
+import java.util.*;
+class Solution {
+    public int countInMatrix(int[][] matrix, int target) {
+        int count = 0;
+        int row = 0;
+        int col = matrix[0].length - 1;
+        
+        while (row < matrix.length && col >= 0) {
+            if (matrix[row][col] == target) {
+                count++;
+                col--; // Continue searching left
+            } else if (matrix[row][col] > target) {
+                col--;
+            } else {
+                row++;
+            }
+        }
+        
+        return count;
+    }
 }`,
         explanation: "Extension that counts occurrences of target value in sorted matrix using top-right approach."
       }
@@ -539,6 +1000,44 @@ function isValidSudoku(board: string[][]): boolean {
         explanation: "Uses sets to track seen numbers in rows, columns, and 3×3 boxes. Most intuitive and clear approach."
       },
       {
+        language: "Java",
+        code: `// Approach 1: Hash Set Validation (Optimal)
+// Time: O(1) - fixed 9×9 size, Space: O(1)
+import java.util.*;
+class Solution {
+    public boolean isValidSudoku(char[][] board) {
+        Set<String> seenRows = new HashSet<>();
+        Set<String> seenCols = new HashSet<>();
+        Set<String> seenBoxes = new HashSet<>();
+        
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                char cell = board[i][j];
+                
+                if (cell == '.') continue;
+                
+                int boxIndex = (i / 3) * 3 + (j / 3);
+                
+                String rowKey = "row" + i + "-" + cell;
+                String colKey = "col" + j + "-" + cell;
+                String boxKey = "box" + boxIndex + "-" + cell;
+                
+                if (seenRows.contains(rowKey) || seenCols.contains(colKey) || seenBoxes.contains(boxKey)) {
+                    return false;
+                }
+                
+                seenRows.add(rowKey);
+                seenCols.add(colKey);
+                seenBoxes.add(boxKey);
+            }
+        }
+        
+        return true;
+    }
+}`,
+        explanation: "Uses sets to track seen numbers in rows, columns, and 3×3 boxes. Most intuitive and clear approach."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Bit Manipulation Approach
 // Time: O(1), Space: O(1)
@@ -570,6 +1069,40 @@ function isValidSudokuBit(board: string[][]): boolean {
         explanation: "Uses bit masks to track seen numbers. Most space-efficient approach for this problem."
       },
       {
+        language: "Java",
+        code: `// Approach 2: Bit Manipulation Approach
+// Time: O(1), Space: O(1)
+import java.util.*;
+class Solution {
+    public boolean isValidSudokuBit(char[][] board) {
+        int[] rows = new int[9];
+        int[] cols = new int[9];
+        int[] boxes = new int[9];
+        
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                if (board[i][j] == '.') continue;
+                
+                int num = board[i][j] - '0';
+                int bit = 1 << (num - 1);
+                int boxIndex = (i / 3) * 3 + (j / 3);
+                
+                if ((rows[i] & bit) != 0 || (cols[j] & bit) != 0 || (boxes[boxIndex] & bit) != 0) {
+                    return false;
+                }
+                
+                rows[i] |= bit;
+                cols[j] |= bit;
+                boxes[boxIndex] |= bit;
+            }
+        }
+        
+        return true;
+    }
+}`,
+        explanation: "Uses bit masks to track seen numbers. Most space-efficient approach for this problem."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: Single Pass with String Encoding
 // Time: O(1), Space: O(1)
@@ -597,6 +1130,40 @@ function isValidSudokuEncoded(board: string[][]): boolean {
     }
     
     return true;
+}`,
+        explanation: "Single pass approach encodes constraints as strings. Elegant solution using one set for all constraints."
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Single Pass with String Encoding
+// Time: O(1), Space: O(1)
+import java.util.*;
+class Solution {
+    public boolean isValidSudokuEncoded(char[][] board) {
+        Set<String> seen = new HashSet<>();
+        
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                char cell = board[i][j];
+                
+                if (cell == '.') continue;
+                
+                String rowKey = "row" + i + "-" + cell;
+                String colKey = "col" + j + "-" + cell;
+                String boxKey = "box" + (i / 3) + (j / 3) + "-" + cell;
+                
+                if (seen.contains(rowKey) || seen.contains(colKey) || seen.contains(boxKey)) {
+                    return false;
+                }
+                
+                seen.add(rowKey);
+                seen.add(colKey);
+                seen.add(boxKey);
+            }
+        }
+        
+        return true;
+    }
 }`,
         explanation: "Single pass approach encodes constraints as strings. Elegant solution using one set for all constraints."
       }
@@ -682,6 +1249,69 @@ function findWordsInBoard(board: string[][], words: string[]): string[] {
         explanation: "Trie + DFS approach enables efficient multi-word search. Builds trie from words and explores board using DFS."
       },
       {
+        language: "Java",
+        code: `// Approach 1: Trie + DFS Backtracking (Optimal)
+// Time: O(m * n * 4^L), Space: O(TRIE_SIZE)
+import java.util.*;
+class Solution {
+    public List<String> findWords(char[][] board, String[] words) {
+        class TrieNode {
+            Map<Character, TrieNode> children = new HashMap<>();
+            String word = null;
+        }
+        
+        // Build trie
+        TrieNode root = new TrieNode();
+        for (String word : words) {
+            TrieNode node = root;
+            for (char c : word.toCharArray()) {
+                node.children.putIfAbsent(c, new TrieNode());
+                node = node.children.get(c);
+            }
+            node.word = word;
+        }
+        
+        List<String> result = new ArrayList<>();
+        int rows = board.length;
+        int cols = board[0].length;
+        int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        
+        void dfs(int row, int col, TrieNode node) {
+            if (row < 0 || row >= rows || col < 0 || col >= cols) return;
+            
+            char c = board[row][col];
+            if (c == '#' || !node.children.containsKey(c)) return;
+            
+            node = node.children.get(c);
+            
+            if (node.word != null) {
+                result.add(node.word);
+                node.word = null; // Avoid duplicates
+            }
+            
+            board[row][col] = '#'; // Mark visited
+            
+            for (int[] dir : directions) {
+                dfs(row + dir[0], col + dir[1], node);
+            }
+            
+            board[row][col] = c; // Backtrack
+        }
+        
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (root.children.containsKey(board[i][j])) {
+                    dfs(i, j, root);
+                }
+            }
+        }
+        
+        return result;
+    }
+}`,
+        explanation: "Trie + DFS approach enables efficient multi-word search. Builds trie from words and explores board using DFS."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Optimized with Trie Pruning
 // Time: O(m * n * 4^L), Space: O(TRIE_SIZE)
@@ -755,6 +1385,80 @@ function findWordsOptimized(board: string[][], words: string[]): string[] {
         explanation: "Optimized version with trie pruning. Removes found words and prunes empty nodes for better performance."
       },
       {
+        language: "Java",
+        code: `// Approach 2: Optimized with Trie Pruning
+// Time: O(m * n * 4^L), Space: O(TRIE_SIZE)
+import java.util.*;
+class Solution {
+    public List<String> findWordsOptimized(char[][] board, String[] words) {
+        class TrieNode {
+            Map<Character, TrieNode> children = new HashMap<>();
+            String word = null;
+            
+            void removeWord() {
+                this.word = null;
+            }
+            
+            boolean isEmpty() {
+                return this.children.size() == 0 && this.word == null;
+            }
+        }
+        
+        TrieNode root = new TrieNode();
+        
+        // Build trie
+        for (String word : words) {
+            TrieNode node = root;
+            for (char c : word.toCharArray()) {
+                node.children.putIfAbsent(c, new TrieNode());
+                node = node.children.get(c);
+            }
+            node.word = word;
+        }
+        
+        List<String> result = new ArrayList<>();
+        
+        void dfs(int row, int col, TrieNode parent, TrieNode node) {
+            if (node.word != null) {
+                result.add(node.word);
+                node.removeWord();
+            }
+            
+            if (row < 0 || row >= board.length || col < 0 || col >= board[0].length) return;
+            
+            char c = board[row][col];
+            if (c == '#' || !node.children.containsKey(c)) return;
+            
+            TrieNode nextNode = node.children.get(c);
+            board[row][col] = '#';
+            
+            int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+            for (int[] dir : directions) {
+                dfs(row + dir[0], col + dir[1], node, nextNode);
+            }
+            
+            board[row][col] = c;
+            
+            // Prune empty nodes
+            if (nextNode.isEmpty()) {
+                parent.children.remove(c);
+            }
+        }
+        
+        for (int i = 0; i < board.length; i++) {
+            for (int j = 0; j < board[0].length; j++) {
+                if (root.children.containsKey(board[i][j])) {
+                    dfs(i, j, null, root);
+                }
+            }
+        }
+        
+        return result;
+    }
+}`,
+        explanation: "Optimized version with trie pruning. Removes found words and prunes empty nodes for better performance."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: Brute Force DFS (Less Efficient)
 // Time: O(m * n * 4^L * W), Space: O(L) where W = number of words
@@ -796,6 +1500,54 @@ function findWordsBruteForce(board: string[][], words: string[]): string[] {
     }
     
     return result;
+}`,
+        explanation: "Brute force approach checks each word individually using DFS. Less efficient for multiple words but simpler to implement."
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Brute Force DFS (Less Efficient)
+// Time: O(m * n * 4^L * W), Space: O(L) where W = number of words
+import java.util.*;
+class Solution {
+    public List<String> findWordsBruteForce(char[][] board, String[] words) {
+        List<String> result = new ArrayList<>();
+        int rows = board.length;
+        int cols = board[0].length;
+        int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        
+        boolean dfs(int row, int col, String word, int index) {
+            if (index == word.length()) return true;
+            if (row < 0 || row >= rows || col < 0 || col >= cols) return false;
+            if (board[row][col] != word.charAt(index)) return false;
+            
+            char temp = board[row][col];
+            board[row][col] = '#';
+            
+            for (int[] dir : directions) {
+                if (dfs(row + dir[0], col + dir[1], word, index + 1)) {
+                    board[row][col] = temp;
+                    return true;
+                }
+            }
+            
+            board[row][col] = temp;
+            return false;
+        }
+        
+        for (String word : words) {
+            for (int i = 0; i < rows; i++) {
+                for (int j = 0; j < cols; j++) {
+                    if (dfs(i, j, word, 0)) {
+                        result.add(word);
+                        break;
+                    }
+                }
+                if (result.contains(word)) break;
+            }
+        }
+        
+        return result;
+    }
 }`,
         explanation: "Brute force approach checks each word individually using DFS. Less efficient for multiple words but simpler to implement."
       }

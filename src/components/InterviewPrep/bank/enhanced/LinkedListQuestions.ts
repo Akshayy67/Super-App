@@ -22,7 +22,7 @@ class ListNode {
     next: ListNode | null;
     constructor(val?: number, next?: ListNode | null) {
         this.val = val === undefined ? 0 : val;
-        this.next = next === undefined ? null : next;
+        this.next = next === undefined ? null : null;
     }
 }
 
@@ -41,6 +41,35 @@ function reverseList(head: ListNode | null): ListNode | null {
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Iterative Approach: We maintain three pointers - prev, current, and next. For each node, we save the next node, reverse the current node's pointer, update prev and current. Time complexity is O(n) for traversing the list once. Space complexity is O(1) as we use only a constant amount of extra space.",
+        code: `// ListNode Definition
+class ListNode {
+    int val;
+    ListNode next;
+    ListNode() {}
+    ListNode(int val) { this.val = val; }
+    ListNode(int val, ListNode next) { this.val = val; this.next = next; }
+}
+
+class Solution {
+    public ListNode reverseList(ListNode head) {
+        ListNode prev = null;
+        ListNode current = head;
+        
+        while (current != null) {
+            ListNode next = current.next;
+            current.next = prev;
+            prev = current;
+            current = next;
+        }
+        
+        return prev;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Recursive Approach: We recursively traverse to the end of the list, then fix the pointers while unwinding the recursion stack. For each node, we set its next node's next pointer to point to itself and its next pointer to null. Time complexity is O(n), but space complexity is O(n) due to the recursion stack.",
@@ -52,6 +81,22 @@ function reverseList(head: ListNode | null): ListNode | null {
     head.next = null;
     
     return newHead;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Recursive Approach: We recursively traverse to the end of the list, then fix the pointers while unwinding the recursion stack. For each node, we set its next node's next pointer to point to itself and its next pointer to null. Time complexity is O(n), but space complexity is O(n) due to the recursion stack.",
+        code: `class Solution {
+    public ListNode reverseListRecursive(ListNode head) {
+        if (head == null || head.next == null) return head;
+        
+        ListNode newHead = reverseListRecursive(head.next);
+        head.next.next = head;
+        head.next = null;
+        
+        return newHead;
+    }
 }`,
       },
       {
@@ -81,6 +126,38 @@ function reverseList(head: ListNode | null): ListNode | null {
     
     current.next = null;
     return newHead;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Stack-Based Approach: We first push all nodes onto a stack, then pop them off in reverse order to rebuild the list. This approach makes the reversal process more explicit. Time complexity is O(n) and space complexity is also O(n) for the stack.",
+        code: `import java.util.*;
+class Solution {
+    public ListNode reverseListStack(ListNode head) {
+        if (head == null) return null;
+        
+        Stack<ListNode> stack = new Stack<>();
+        ListNode current = head;
+        
+        // Push all nodes to stack
+        while (current != null) {
+            stack.push(current);
+            current = current.next;
+        }
+        
+        // Pop and rebuild connections
+        ListNode newHead = stack.pop();
+        current = newHead;
+        
+        while (!stack.isEmpty()) {
+            current.next = stack.pop();
+            current = current.next;
+        }
+        
+        current.next = null;
+        return newHead;
+    }
 }`,
       },
     ],
@@ -129,6 +206,28 @@ function reverseList(head: ListNode | null): ListNode | null {
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Floyd's Cycle Detection Algorithm: We use two pointers - a slow pointer that moves one step at a time and a fast pointer that moves two steps. If there's a cycle, the fast pointer will eventually meet the slow pointer. This approach uses O(1) space and O(n) time complexity.",
+        code: `class Solution {
+    public boolean hasCycle(ListNode head) {
+        if (head == null || head.next == null) return false;
+        
+        ListNode slow = head;
+        ListNode fast = head;
+        
+        while (fast != null && fast.next != null) {
+            slow = slow.next;
+            fast = fast.next.next;
+            
+            if (slow == fast) return true;
+        }
+        
+        return false;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Hash Set Approach: We track all visited nodes in a Set. If we encounter a node that's already in the set, we've found a cycle. This approach is more intuitive but uses O(n) extra space with O(n) time complexity.",
@@ -143,6 +242,26 @@ function reverseList(head: ListNode | null): ListNode | null {
     }
     
     return false;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Hash Set Approach: We track all visited nodes in a Set. If we encounter a node that's already in the set, we've found a cycle. This approach is more intuitive but uses O(n) extra space with O(n) time complexity.",
+        code: `import java.util.*;
+class Solution {
+    public boolean hasCycleHashSet(ListNode head) {
+        Set<ListNode> visited = new HashSet<>();
+        ListNode current = head;
+        
+        while (current != null) {
+            if (visited.contains(current)) return true;
+            visited.add(current);
+            current = current.next;
+        }
+        
+        return false;
+    }
 }`,
       },
       {
@@ -173,6 +292,38 @@ function reverseList(head: ListNode | null): ListNode | null {
     }
     
     return slow;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Finding Cycle Start Position: This is a follow-up that extends Floyd's algorithm. After detecting a cycle, we reset the slow pointer to the head and move both pointers at the same speed. The point where they meet is the start of the cycle. The mathematical proof relies on the properties of modular arithmetic. Time complexity remains O(n) and space O(1).",
+        code: `class Solution {
+    public ListNode detectCycle(ListNode head) {
+        if (head == null || head.next == null) return null;
+        
+        ListNode slow = head;
+        ListNode fast = head;
+        
+        // Phase 1: Detect if cycle exists
+        while (fast != null && fast.next != null) {
+            slow = slow.next;
+            fast = fast.next.next;
+            
+            if (slow == fast) break;
+        }
+        
+        if (fast == null || fast.next == null) return null; // No cycle
+        
+        // Phase 2: Find cycle start
+        slow = head;
+        while (slow != fast) {
+            slow = slow.next;
+            fast = fast.next;
+        }
+        
+        return slow;
+    }
 }`,
       },
     ],
@@ -226,6 +377,33 @@ function reverseList(head: ListNode | null): ListNode | null {
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Iterative Approach with Dummy Node: We use a dummy node to avoid edge cases for handling the head. We compare values from both lists and connect the smaller node to our result. Time complexity is O(m+n) where m and n are the lengths of the lists. Space complexity is O(1) as we only rearrange pointers without using extra space proportional to input size.",
+        code: `class Solution {
+    public ListNode mergeTwoLists(ListNode list1, ListNode list2) {
+        ListNode dummy = new ListNode(0);
+        ListNode current = dummy;
+        
+        while (list1 != null && list2 != null) {
+            if (list1.val <= list2.val) {
+                current.next = list1;
+                list1 = list1.next;
+            } else {
+                current.next = list2;
+                list2 = list2.next;
+            }
+            current = current.next;
+        }
+        
+        // Attach remaining nodes
+        current.next = list1 != null ? list1 : list2;
+        
+        return dummy.next;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Recursive Approach: This elegant solution recursively merges the lists by choosing the smaller head node, then recursively attaching the result of merging the remaining lists. Time complexity is O(m+n), but space complexity is O(m+n) due to the recursion stack.",
@@ -239,6 +417,25 @@ function reverseList(head: ListNode | null): ListNode | null {
     } else {
         list2.next = mergeTwoListsRecursive(list1, list2.next);
         return list2;
+    }
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Recursive Approach: This elegant solution recursively merges the lists by choosing the smaller head node, then recursively attaching the result of merging the remaining lists. Time complexity is O(m+n), but space complexity is O(m+n) due to the recursion stack.",
+        code: `class Solution {
+    public ListNode mergeTwoListsRecursive(ListNode list1, ListNode list2) {
+        if (list1 == null) return list2;
+        if (list2 == null) return list1;
+        
+        if (list1.val <= list2.val) {
+            list1.next = mergeTwoListsRecursive(list1.next, list2);
+            return list1;
+        } else {
+            list2.next = mergeTwoListsRecursive(list1, list2.next);
+            return list2;
+        }
     }
 }`,
       },
@@ -275,6 +472,43 @@ function reverseList(head: ListNode | null): ListNode | null {
     
     current.next = list1 || list2;
     return head;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "In-place Merge Approach: This approach avoids using a dummy node by directly handling the head edge case. It has the same time and space complexity as the iterative approach with dummy node (O(m+n) time, O(1) space) but might be slightly more complex to understand.",
+        code: `class Solution {
+    public ListNode mergeTwoListsInPlace(ListNode list1, ListNode list2) {
+        if (list1 == null) return list2;
+        if (list2 == null) return list1;
+        
+        ListNode head;
+        
+        if (list1.val <= list2.val) {
+            head = list1;
+            list1 = list1.next;
+        } else {
+            head = list2;
+            list2 = list2.next;
+        }
+        
+        ListNode current = head;
+        
+        while (list1 != null && list2 != null) {
+            if (list1.val <= list2.val) {
+                current.next = list1;
+                list1 = list1.next;
+            } else {
+                current.next = list2;
+                list2 = list2.next;
+            }
+            current = current.next;
+        }
+        
+        current.next = list1 != null ? list1 : list2;
+        return head;
+    }
 }`,
       },
     ],
@@ -331,6 +565,36 @@ function reverseList(head: ListNode | null): ListNode | null {
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Two Pointers (One Pass) Approach: We use two pointers with a gap of n+1 between them. When the first pointer reaches the end, the second pointer will be at the node just before the one to be deleted. This allows us to remove the target node in a single pass. Time complexity is O(n) and space complexity is O(1).",
+        code: `class Solution {
+    public ListNode removeNthFromEnd(ListNode head, int n) {
+        ListNode dummy = new ListNode(0);
+        dummy.next = head;
+        
+        ListNode first = dummy;
+        ListNode second = dummy;
+        
+        // Move first pointer n+1 steps ahead
+        for (int i = 0; i <= n; i++) {
+            first = first.next;
+        }
+        
+        // Move both pointers until first reaches end
+        while (first != null) {
+            first = first.next;
+            second = second.next;
+        }
+        
+        // Remove the nth node from end
+        second.next = second.next.next;
+        
+        return dummy.next;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Two Pass Approach: We first count the total number of nodes in the list, then calculate the position of the node to remove from the beginning. While less efficient than the one-pass solution, this approach might be more intuitive. Time complexity is O(n) with two passes, and space complexity is O(1).",
@@ -359,6 +623,36 @@ function reverseList(head: ListNode | null): ListNode | null {
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Two Pass Approach: We first count the total number of nodes in the list, then calculate the position of the node to remove from the beginning. While less efficient than the one-pass solution, this approach might be more intuitive. Time complexity is O(n) with two passes, and space complexity is O(1).",
+        code: `class Solution {
+    public ListNode removeNthFromEndTwoPass(ListNode head, int n) {
+        // First pass: count total nodes
+        int length = 0;
+        ListNode current = head;
+        while (current != null) {
+            length++;
+            current = current.next;
+        }
+        
+        // Handle edge case: remove head
+        if (n == length) {
+            return head != null ? head.next : null;
+        }
+        
+        // Second pass: find node before target
+        current = head;
+        for (int i = 0; i < length - n - 1; i++) {
+            current = current.next;
+        }
+        
+        current.next = current.next.next;
+        return head;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Recursive Approach: We use recursion to implicitly count from the end of the list. As we unwind the recursion stack, we track the position from the end and remove the target node when identified. Time complexity is O(n) and space complexity is O(n) due to the recursion stack.",
@@ -380,6 +674,34 @@ function reverseList(head: ListNode | null): ListNode | null {
     helper(dummy);
     
     return dummy.next;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Recursive Approach: We use recursion to implicitly count from the end of the list. As we unwind the recursion stack, we track the position from the end and remove the target node when identified. Time complexity is O(n) and space complexity is O(n) due to the recursion stack.",
+        code: `class Solution {
+    public ListNode removeNthFromEndRecursive(ListNode head, int n) {
+        class Helper {
+            public int helper(ListNode node) {
+                if (node == null) return 0;
+                
+                int index = helper(node.next) + 1;
+                
+                if (index == n + 1) {
+                    node.next = node.next.next;
+                }
+                
+                return index;
+            }
+        }
+        
+        ListNode dummy = new ListNode(0);
+        dummy.next = head;
+        new Helper().helper(dummy);
+        
+        return dummy.next;
+    }
 }`,
       },
     ],
@@ -460,6 +782,56 @@ function reverseList(head: ListNode | null): ListNode | null {
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Three-Step Approach: This optimal solution first finds the middle using the slow/fast pointer technique, then reverses the second half of the list, and finally merges the two halves alternately. Time complexity is O(n) with only one pass through each step, and space complexity is O(1) as we only rearrange pointers without using extra data structures.",
+        code: `class Solution {
+    public void reorderList(ListNode head) {
+        if (head == null || head.next == null) return;
+        
+        // Step 1: Find middle of the list
+        ListNode slow = head;
+        ListNode fast = head;
+        
+        while (fast.next != null && fast.next.next != null) {
+            slow = slow.next;
+            fast = fast.next.next;
+        }
+        
+        // Step 2: Reverse second half
+        ListNode secondHalf = slow.next;
+        slow.next = null; // Split the list
+        
+        ListNode prev = null;
+        ListNode current = secondHalf;
+        
+        while (current != null) {
+            ListNode next = current.next;
+            current.next = prev;
+            prev = current;
+            current = next;
+        }
+        
+        secondHalf = prev;
+        
+        // Step 3: Merge two halves alternately
+        ListNode first = head;
+        ListNode second = secondHalf;
+        
+        while (second != null) {
+            ListNode firstNext = first.next;
+            ListNode secondNext = second.next;
+            
+            first.next = second;
+            second.next = firstNext;
+            
+            first = firstNext;
+            second = secondNext;
+        }
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Array-Based Approach: This solution stores all nodes in an array first, then uses two pointers from both ends to reorder the list. While more intuitive, it uses O(n) extra space. Time complexity remains O(n).",
@@ -493,6 +865,42 @@ function reverseList(head: ListNode | null): ListNode | null {
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Array-Based Approach: This solution stores all nodes in an array first, then uses two pointers from both ends to reorder the list. While more intuitive, it uses O(n) extra space. Time complexity remains O(n).",
+        code: `class Solution {
+    public void reorderListArray(ListNode head) {
+        if (head == null) return;
+        
+        // Convert to array
+        ListNode[] nodes = new ListNode[10000]; // Assuming max 10000 nodes
+        int index = 0;
+        ListNode current = head;
+        
+        while (current != null) {
+            nodes[index++] = current;
+            current = current.next;
+        }
+        
+        // Reorder using two pointers
+        int left = 0;
+        int right = index - 1;
+        
+        while (left < right) {
+            nodes[left].next = nodes[right];
+            left++;
+            
+            if (left == right) break;
+            
+            nodes[right].next = nodes[left];
+            right--;
+        }
+        
+        nodes[left].next = null;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Recursive Approach: This solution recursively finds the tail of the list, disconnects it, inserts it after the head, and repeats on the remaining list. While elegant in concept, it has poor performance with O(n²) time complexity since finding the tail is repeated for each recursion level.",
@@ -517,6 +925,35 @@ function reverseList(head: ListNode | null): ListNode | null {
     
     // Recursively reorder remaining list
     reorderListRecursive(tail.next);
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Recursive Approach: This solution recursively finds the tail of the list, disconnects it, inserts it after the head, and repeats on the remaining list. While elegant in concept, it has poor performance with O(n²) time complexity since finding the tail is repeated for each recursion level.",
+        code: `class Solution {
+    public void reorderListRecursive(ListNode head) {
+        if (head == null || head.next == null) return;
+        
+        // Find tail and second-to-last
+        ListNode prev = null;
+        ListNode tail = head;
+        
+        while (tail.next != null) {
+            prev = tail;
+            tail = tail.next;
+        }
+        
+        // Disconnect tail
+        prev.next = null;
+        
+        // Insert tail after head
+        tail.next = head.next;
+        head.next = tail;
+        
+        // Recursively reorder remaining list
+        reorderListRecursive(tail.next);
+    }
 }`,
       },
     ],
@@ -583,6 +1020,49 @@ function reverseList(head: ListNode | null): ListNode | null {
     }
     
     return lists[0];
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Divide and Conquer Approach: We recursively merge pairs of lists, reducing the total number of lists by half in each iteration until only one list remains. This approach has O(n log k) time complexity where n is the total number of nodes and k is the number of lists. The space complexity is O(log k) for the recursive call stack.",
+        code: `class Solution {
+    public ListNode mergeKLists(ListNode[] lists) {
+        if (lists == null || lists.length == 0) return null;
+        
+        while (lists.length > 1) {
+            ListNode[] mergedLists = new ListNode[lists.length / 2 + lists.length % 2];
+            
+            for (int i = 0; i < lists.length; i += 2) {
+                ListNode l1 = lists[i];
+                ListNode l2 = i + 1 < lists.length ? lists[i + 1] : null;
+                mergedLists[i / 2] = mergeTwoLists(l1, l2);
+            }
+            
+            lists = mergedLists;
+        }
+        
+        return lists[0];
+    }
+    
+    private ListNode mergeTwoLists(ListNode l1, ListNode l2) {
+        ListNode dummy = new ListNode(0);
+        ListNode current = dummy;
+        
+        while (l1 != null && l2 != null) {
+            if (l1.val <= l2.val) {
+                current.next = l1;
+                l1 = l1.next;
+            } else {
+                current.next = l2;
+                l2 = l2.next;
+            }
+            current = current.next;
+        }
+        
+        current.next = l1 != null ? l1 : l2;
+        return dummy.next;
+    }
 }`,
       },
       {
@@ -669,6 +1149,97 @@ function reverseList(head: ListNode | null): ListNode | null {
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Priority Queue Approach: We maintain a min heap of nodes from all lists, always extracting the minimum node and adding its next node to the heap. This approach also has O(n log k) time complexity, with O(k) space complexity for the heap. This implementation includes a simple min-heap implementation for clarity.",
+        code: `import java.util.*;
+class Solution {
+    public ListNode mergeKListsHeap(ListNode[] lists) {
+        // Simple priority queue implementation
+        class MinHeap {
+            ListNode[] heap = new ListNode[1000]; // Assuming max 1000 nodes
+            int size = 0;
+            
+            public void push(ListNode node) {
+                heap[size++] = node;
+                bubbleUp(size - 1);
+            }
+            
+            public ListNode pop() {
+                if (size == 0) return null;
+                if (size == 1) return heap[--size];
+                
+                ListNode min = heap[0];
+                heap[0] = heap[--size];
+                bubbleDown(0);
+                return min;
+            }
+            
+            private void bubbleUp(int index) {
+                while (index > 0) {
+                    int parentIndex = (index - 1) / 2;
+                    if (heap[parentIndex].val <= heap[index].val) break;
+                    
+                    ListNode temp = heap[parentIndex];
+                    heap[parentIndex] = heap[index];
+                    heap[index] = temp;
+                    index = parentIndex;
+                }
+            }
+            
+            private void bubbleDown(int index) {
+                while (true) {
+                    int minIndex = index;
+                    int leftChild = 2 * index + 1;
+                    int rightChild = 2 * index + 2;
+                    
+                    if (leftChild < size && heap[leftChild].val < heap[minIndex].val) {
+                        minIndex = leftChild;
+                    }
+                    
+                    if (rightChild < size && heap[rightChild].val < heap[minIndex].val) {
+                        minIndex = rightChild;
+                    }
+                    
+                    if (minIndex == index) break;
+                    
+                    ListNode temp = heap[index];
+                    heap[index] = heap[minIndex];
+                    heap[minIndex] = temp;
+                    index = minIndex;
+                }
+            }
+            
+            public boolean isEmpty() {
+                return size == 0;
+            }
+        }
+        
+        MinHeap heap = new MinHeap();
+        
+        // Add first node from each list
+        for (ListNode list : lists) {
+            if (list != null) heap.push(list);
+        }
+        
+        ListNode dummy = new ListNode(0);
+        ListNode current = dummy;
+        
+        while (!heap.isEmpty()) {
+            ListNode node = heap.pop();
+            current.next = node;
+            current = current.next;
+            
+            if (node.next != null) {
+                heap.push(node.next);
+            }
+        }
+        
+        return dummy.next;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Sequential Merging Approach: This is the most straightforward approach where we merge lists one by one. For each iteration, we merge the result so far with the next list. Time complexity is O(kn) which is less efficient than the other approaches, but the implementation is simpler and uses only O(1) extra space.",
@@ -701,6 +1272,43 @@ function reverseList(head: ListNode | null): ListNode | null {
     }
     
     return result;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Sequential Merging Approach: This is the most straightforward approach where we merge lists one by one. For each iteration, we merge the result so far with the next list. Time complexity is O(kn) which is less efficient than the other approaches, but the implementation is simpler and uses only O(1) extra space.",
+        code: `class Solution {
+    public ListNode mergeKListsSequential(ListNode[] lists) {
+        if (lists == null || lists.length == 0) return null;
+        
+        ListNode result = lists[0];
+        
+        for (int i = 1; i < lists.length; i++) {
+            result = mergeTwoLists(result, lists[i]);
+        }
+        
+        return result;
+    }
+    
+    private ListNode mergeTwoLists(ListNode l1, ListNode l2) {
+        ListNode dummy = new ListNode(0);
+        ListNode current = dummy;
+        
+        while (l1 != null && l2 != null) {
+            if (l1.val <= l2.val) {
+                current.next = l1;
+                l1 = l1.next;
+            } else {
+                current.next = l2;
+                l2 = l2.next;
+            }
+            current = current.next;
+        }
+        
+        current.next = l1 != null ? l1 : l2;
+        return dummy.next;
+    }
 }`,
       },
     ],
@@ -751,6 +1359,33 @@ function reverseList(head: ListNode | null): ListNode | null {
     }
     
     return dummy.next;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Single Pass with Carry: For the standard problem where digits are stored in reverse order, we can process both lists in a single pass. We add corresponding digits plus any carry from the previous addition, then create a new node with the result modulo 10 and carry the remainder to the next addition. Time complexity is O(max(m,n)) and space complexity is O(max(m,n)) for the result list.",
+        code: `class Solution {
+    public ListNode addTwoNumbers(ListNode l1, ListNode l2) {
+        ListNode dummy = new ListNode(0);
+        ListNode current = dummy;
+        int carry = 0;
+        
+        while (l1 != null || l2 != null || carry > 0) {
+            int val1 = l1 != null ? l1.val : 0;
+            int val2 = l2 != null ? l2.val : 0;
+            int sum = val1 + val2 + carry;
+            
+            carry = sum / 10;
+            current.next = new ListNode(sum % 10);
+            current = current.next;
+            
+            l1 = l1 != null ? l1.next : null;
+            l2 = l2 != null ? l2.next : null;
+        }
+        
+        return dummy.next;
+    }
 }`,
       },
       {
@@ -811,6 +1446,77 @@ function reverseList(head: ListNode | null): ListNode | null {
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Forward Order Addition (Add Two Numbers II): When digits are stored in forward order (most significant digit first), we need to align the digits properly. One approach is to get the lengths of both lists, pad the shorter one with leading zeros, then use recursion to add from right to left. Time complexity remains O(max(m,n)) but with additional steps for length calculation and padding.",
+        code: `class Solution {
+    public ListNode addTwoNumbersII(ListNode l1, ListNode l2) {
+        // Get lengths
+        int len1 = getLength(l1);
+        int len2 = getLength(l2);
+        
+        // Pad shorter list with zeros
+        if (len1 < len2) {
+            for (int i = 0; i < len2 - len1; i++) {
+                ListNode newNode = new ListNode(0);
+                newNode.next = l1;
+                l1 = newNode;
+            }
+        } else if (len2 < len1) {
+            for (int i = 0; i < len1 - len2; i++) {
+                ListNode newNode = new ListNode(0);
+                newNode.next = l2;
+                l2 = newNode;
+            }
+        }
+        
+        // Recursive addition
+        Result result = addHelper(l1, l2);
+        
+        if (result.carry > 0) {
+            ListNode carryNode = new ListNode(result.carry);
+            carryNode.next = result.node;
+            return carryNode;
+        }
+        
+        return result.node;
+    }
+    
+    private int getLength(ListNode head) {
+        int length = 0;
+        while (head != null) {
+            length++;
+            head = head.next;
+        }
+        return length;
+    }
+    
+    private Result addHelper(ListNode n1, ListNode n2) {
+        if (n1 == null && n2 == null) {
+            return new Result(null, 0);
+        }
+        
+        Result nextResult = addHelper(n1.next, n2.next);
+        int sum = n1.val + n2.val + nextResult.carry;
+        
+        ListNode newNode = new ListNode(sum % 10);
+        newNode.next = nextResult.node;
+        
+        return new Result(newNode, sum / 10);
+    }
+    
+    private static class Result {
+        ListNode node;
+        int carry;
+        
+        Result(ListNode node, int carry) {
+            this.node = node;
+            this.carry = carry;
+        }
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Alternative Approach (Using Stack): Another approach for forward-order addition is to convert both lists to stacks, which naturally processes elements in reverse order. Then pop from both stacks and add as in the standard problem. This avoids recursion but uses additional space for the stacks.",
@@ -847,6 +1553,48 @@ function reverseList(head: ListNode | null): ListNode | null {
     }
     
     return result;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Alternative Approach (Using Stack): Another approach for forward-order addition is to convert both lists to stacks, which naturally processes elements in reverse order. Then pop from both stacks and add as in the standard problem. This avoids recursion but uses additional space for the stacks.",
+        code: `import java.util.*;
+class Solution {
+    public ListNode addTwoNumbersIIWithStack(ListNode l1, ListNode l2) {
+        // Convert lists to stacks
+        Stack<Integer> stack1 = new Stack<>();
+        Stack<Integer> stack2 = new Stack<>();
+        
+        while (l1 != null) {
+            stack1.push(l1.val);
+            l1 = l1.next;
+        }
+        
+        while (l2 != null) {
+            stack2.push(l2.val);
+            l2 = l2.next;
+        }
+        
+        int carry = 0;
+        ListNode result = null;
+        
+        // Process stacks from the end (least significant digit first)
+        while (!stack1.isEmpty() || !stack2.isEmpty() || carry > 0) {
+            int val1 = stack1.isEmpty() ? 0 : stack1.pop();
+            int val2 = stack2.isEmpty() ? 0 : stack2.pop();
+            int sum = val1 + val2 + carry;
+            
+            // Create new node and insert at beginning of result list
+            ListNode newNode = new ListNode(sum % 10);
+            newNode.next = result;
+            result = newNode;
+            
+            carry = sum / 10;
+        }
+        
+        return result;
+    }
 }`,
       },
     ],
@@ -915,6 +1663,36 @@ function copyRandomList(head: RandomListNode | null): RandomListNode | null {
           "This hash map implementation stores the mapping between original nodes and their copies. In the first pass, we create all new nodes and store them in the map. In the second pass, we set both next and random pointers using the mappings from the map. This approach uses O(n) extra space for the hash map.",
       },
       {
+        language: "Java",
+        code: `class Solution {
+    public RandomListNode copyRandomList(RandomListNode head) {
+        if (head == null) return null;
+        
+        Map<RandomListNode, RandomListNode> nodeMap = new HashMap<>();
+        
+        // First pass: create all nodes
+        RandomListNode current = head;
+        while (current != null) {
+            nodeMap.put(current, new RandomListNode(current.val));
+            current = current.next;
+        }
+        
+        // Second pass: set next and random pointers
+        current = head;
+        while (current != null) {
+            RandomListNode newNode = nodeMap.get(current);
+            newNode.next = current.next != null ? nodeMap.get(current.next) : null;
+            newNode.random = current.random != null ? nodeMap.get(current.random) : null;
+            current = current.next;
+        }
+        
+        return nodeMap.get(head);
+    }
+}`,
+        explanation:
+          "This hash map implementation stores the mapping between original nodes and their copies. In the first pass, we create all new nodes and store them in the map. In the second pass, we set both next and random pointers using the mappings from the map. This approach uses O(n) extra space for the hash map.",
+      },
+      {
         language: "typescript",
         code: `function copyRandomListOptimized(head: RandomListNode | null): RandomListNode | null {
     if (!head) return null;
@@ -952,8 +1730,47 @@ function copyRandomList(head: RandomListNode | null): RandomListNode | null {
     
     return dummy.next;
 }`,
-        explanation:
-          "This optimized approach uses O(1) space by interweaving new nodes with the original list. It has three steps: 1) Create new nodes and place each one after its corresponding original node. 2) Set random pointers for new nodes using the interweaved structure. 3) Separate the original and copied lists. This avoids using extra space at the cost of more complex pointer manipulation.",
+      },
+      {
+        language: "Java",
+        code: `class Solution {
+    public RandomListNode copyRandomListOptimized(RandomListNode head) {
+        if (head == null) return null;
+        
+        // Step 1: Create interweaved list A->A'->B->B'->C->C'
+        RandomListNode current = head;
+        while (current != null) {
+            RandomListNode newNode = new RandomListNode(current.val);
+            newNode.next = current.next;
+            current.next = newNode;
+            current = newNode.next;
+        }
+        
+        // Step 2: Set random pointers for new nodes
+        current = head;
+        while (current != null) {
+            if (current.random != null) {
+                current.next.random = current.random.next;
+            }
+            current = current.next.next;
+        }
+        
+        // Step 3: Separate the lists
+        RandomListNode dummy = new RandomListNode(0);
+        RandomListNode newCurrent = dummy;
+        current = head;
+        
+        while (current != null) {
+            RandomListNode newNode = current.next;
+            current.next = newNode.next;
+            newCurrent.next = newNode;
+            newCurrent = newNode;
+            current = current.next;
+        }
+        
+        return dummy.next;
+    }
+}`,
       },
     ],
     sampleAnswer:

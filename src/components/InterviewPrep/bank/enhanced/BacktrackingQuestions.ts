@@ -39,6 +39,39 @@ export const enhancedBacktrackingQuestions: Question[] = [
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Backtracking (Recursive): Java implementation using the same backtracking approach. We use ArrayList to store results and StringBuilder for efficient string building. Time: O(4^n / √n), Space: O(4^n / √n)",
+        code: `import java.util.*;
+
+public class Solution {
+    public List<String> generateParenthesis(int n) {
+        List<String> result = new ArrayList<>();
+        backtrack(result, new StringBuilder(), 0, 0, n);
+        return result;
+    }
+    
+    private void backtrack(List<String> result, StringBuilder current, int open, int close, int n) {
+        if (current.length() == 2 * n) {
+            result.add(current.toString());
+            return;
+        }
+        
+        if (open < n) {
+            current.append('(');
+            backtrack(result, current, open + 1, close, n);
+            current.deleteCharAt(current.length() - 1);
+        }
+        
+        if (close < open) {
+            current.append(')');
+            backtrack(result, current, open, close + 1, n);
+            current.deleteCharAt(current.length() - 1);
+        }
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Iterative with Queue: This approach uses a queue to simulate the recursive calls, tracking the same state information (current string, open count, close count). Time: O(4^n / √n), Space: O(4^n / √n)",
@@ -67,6 +100,50 @@ export const enhancedBacktrackingQuestions: Question[] = [
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Iterative with Queue: Java implementation using a queue to simulate recursive calls. We use a custom State class to track the current string and counts. Time: O(4^n / √n), Space: O(4^n / √n)",
+        code: `import java.util.*;
+
+public class Solution {
+    class State {
+        String current;
+        int open, close;
+        
+        State(String current, int open, int close) {
+            this.current = current;
+            this.open = open;
+            this.close = close;
+        }
+    }
+    
+    public List<String> generateParenthesis(int n) {
+        List<String> result = new ArrayList<>();
+        Queue<State> queue = new LinkedList<>();
+        queue.offer(new State("", 0, 0));
+        
+        while (!queue.isEmpty()) {
+            State state = queue.poll();
+            
+            if (state.current.length() == 2 * n) {
+                result.add(state.current);
+                continue;
+            }
+            
+            if (state.open < n) {
+                queue.offer(new State(state.current + "(", state.open + 1, state.close));
+            }
+            
+            if (state.close < state.open) {
+                queue.offer(new State(state.current + ")", state.open, state.close + 1));
+            }
+        }
+        
+        return result;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Dynamic Programming: This approach uses DP to build solutions using the Catalan number recurrence relation. For each position, we consider all possible combinations of valid substrings. Time: O(4^n / √n), Space: O(4^n / √n)",
@@ -85,6 +162,33 @@ export const enhancedBacktrackingQuestions: Question[] = [
     }
     
     return dp[n];
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Dynamic Programming: Java implementation using DP with Catalan number recurrence. We use ArrayList arrays to store solutions for each position. Time: O(4^n / √n), Space: O(4^n / √n)",
+        code: `import java.util.*;
+
+public class Solution {
+    public List<String> generateParenthesis(int n) {
+        List<List<String>> dp = new ArrayList<>();
+        dp.add(Arrays.asList(""));
+        
+        for (int i = 1; i <= n; i++) {
+            List<String> current = new ArrayList<>();
+            for (int j = 0; j < i; j++) {
+                for (String left : dp.get(j)) {
+                    for (String right : dp.get(i - 1 - j)) {
+                        current.add("(" + left + ")" + right);
+                    }
+                }
+            }
+            dp.add(current);
+        }
+        
+        return dp.get(n);
+    }
 }`,
       },
     ],
@@ -143,6 +247,40 @@ export const enhancedBacktrackingQuestions: Question[] = [
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Backtracking with Used Array: Java implementation using boolean array to track used elements. We use ArrayList for dynamic result collection and backtracking. Time: O(n! * n), Space: O(n)",
+        code: `import java.util.*;
+
+public class Solution {
+    public List<List<Integer>> permute(int[] nums) {
+        List<List<Integer>> result = new ArrayList<>();
+        boolean[] used = new boolean[nums.length];
+        backtrack(result, new ArrayList<>(), nums, used);
+        return result;
+    }
+    
+    private void backtrack(List<List<Integer>> result, List<Integer> current, int[] nums, boolean[] used) {
+        if (current.size() == nums.length) {
+            result.add(new ArrayList<>(current));
+            return;
+        }
+        
+        for (int i = 0; i < nums.length; i++) {
+            if (!used[i]) {
+                used[i] = true;
+                current.add(nums[i]);
+                
+                backtrack(result, current, nums, used);
+                
+                current.remove(current.size() - 1);
+                used[i] = false;
+            }
+        }
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Swap-based Backtracking (In-place): This approach performs swaps to generate permutations, avoiding the need for a used array by working directly on the input array. Time: O(n! * n), Space: O(n) recursion stack",
@@ -167,6 +305,43 @@ export const enhancedBacktrackingQuestions: Question[] = [
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Swap-based Backtracking (In-place): Java implementation using in-place swaps to generate permutations. This avoids extra space for tracking used elements. Time: O(n! * n), Space: O(n) recursion stack",
+        code: `import java.util.*;
+
+public class Solution {
+    public List<List<Integer>> permute(int[] nums) {
+        List<List<Integer>> result = new ArrayList<>();
+        backtrack(result, nums, 0);
+        return result;
+    }
+    
+    private void backtrack(List<List<Integer>> result, int[] nums, int start) {
+        if (start == nums.length) {
+            List<Integer> permutation = new ArrayList<>();
+            for (int num : nums) {
+                permutation.add(num);
+            }
+            result.add(permutation);
+            return;
+        }
+        
+        for (int i = start; i < nums.length; i++) {
+            swap(nums, start, i);
+            backtrack(result, nums, start + 1);
+            swap(nums, start, i); // Backtrack
+        }
+    }
+    
+    private void swap(int[] nums, int i, int j) {
+        int temp = nums[i];
+        nums[i] = nums[j];
+        nums[j] = temp;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Iterative Approach: This approach builds permutations by inserting each new number at every possible position in existing permutations. Time: O(n! * n), Space: O(n!)",
@@ -187,6 +362,35 @@ export const enhancedBacktrackingQuestions: Question[] = [
     }
     
     return result;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Iterative Approach: Java implementation that builds permutations by inserting each new number at every possible position. We use ArrayList operations for insertion. Time: O(n! * n), Space: O(n!)",
+        code: `import java.util.*;
+
+public class Solution {
+    public List<List<Integer>> permute(int[] nums) {
+        List<List<Integer>> result = new ArrayList<>();
+        result.add(new ArrayList<>());
+        
+        for (int num : nums) {
+            List<List<Integer>> newResult = new ArrayList<>();
+            
+            for (List<Integer> perm : result) {
+                for (int i = 0; i <= perm.size(); i++) {
+                    List<Integer> newPerm = new ArrayList<>(perm);
+                    newPerm.add(i, num);
+                    newResult.add(newPerm);
+                }
+            }
+            
+            result = newResult;
+        }
+        
+        return result;
+    }
 }`,
       },
       {
@@ -221,6 +425,43 @@ export const enhancedBacktrackingQuestions: Question[] = [
     
     backtrack([]);
     return result;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Handling Duplicates (Permutations II): Java implementation that handles duplicate values by sorting first and skipping duplicate branches. The key is to avoid using duplicate elements at the same recursion level. Time: O(n! * n), Space: O(n)",
+        code: `import java.util.*;
+
+public class Solution {
+    public List<List<Integer>> permuteUnique(int[] nums) {
+        List<List<Integer>> result = new ArrayList<>();
+        Arrays.sort(nums);
+        boolean[] used = new boolean[nums.length];
+        backtrack(result, new ArrayList<>(), nums, used);
+        return result;
+    }
+    
+    private void backtrack(List<List<Integer>> result, List<Integer> current, int[] nums, boolean[] used) {
+        if (current.size() == nums.length) {
+            result.add(new ArrayList<>(current));
+            return;
+        }
+        
+        for (int i = 0; i < nums.length; i++) {
+            if (used[i] || (i > 0 && nums[i] == nums[i - 1] && !used[i - 1])) {
+                continue;
+            }
+            
+            used[i] = true;
+            current.add(nums[i]);
+            
+            backtrack(result, current, nums, used);
+            
+            current.remove(current.size() - 1);
+            used[i] = false;
+        }
+    }
 }`,
       },
     ],
@@ -272,6 +513,33 @@ export const enhancedBacktrackingQuestions: Question[] = [
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Backtracking Approach: Java implementation using standard backtracking with start index to avoid duplicates. We use ArrayList for dynamic collection management. Time: O(C(n,k) * k), Space: O(C(n,k) * k)",
+        code: `import java.util.*;
+
+public class Solution {
+    public List<List<Integer>> combine(int n, int k) {
+        List<List<Integer>> result = new ArrayList<>();
+        backtrack(result, new ArrayList<>(), 1, n, k);
+        return result;
+    }
+    
+    private void backtrack(List<List<Integer>> result, List<Integer> current, int start, int n, int k) {
+        if (current.size() == k) {
+            result.add(new ArrayList<>(current));
+            return;
+        }
+        
+        for (int i = start; i <= n; i++) {
+            current.add(i);
+            backtrack(result, current, i + 1, n, k);
+            current.remove(current.size() - 1);
+        }
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Optimized with Early Pruning: This approach adds pruning checks to avoid exploring branches that can't lead to valid combinations, reducing computation time. Time: O(C(n,k) * k), Space: O(C(n,k) * k)",
@@ -301,6 +569,38 @@ export const enhancedBacktrackingQuestions: Question[] = [
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Optimized with Early Pruning: Java implementation with pruning optimization to skip branches that cannot lead to valid combinations. This reduces unnecessary computation. Time: O(C(n,k) * k), Space: O(C(n,k) * k)",
+        code: `import java.util.*;
+
+public class Solution {
+    public List<List<Integer>> combine(int n, int k) {
+        List<List<Integer>> result = new ArrayList<>();
+        backtrack(result, new ArrayList<>(), 1, n, k);
+        return result;
+    }
+    
+    private void backtrack(List<List<Integer>> result, List<Integer> current, int start, int n, int k) {
+        if (current.size() == k) {
+            result.add(new ArrayList<>(current));
+            return;
+        }
+        
+        int needed = k - current.size();
+        int available = n - start + 1;
+        
+        if (available < needed) return; // Pruning
+        
+        for (int i = start; i <= n - needed + 1; i++) {
+            current.add(i);
+            backtrack(result, current, i + 1, n, k);
+            current.remove(current.size() - 1);
+        }
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Iterative Approach: This approach uses an explicit stack to simulate the recursive calls, which can be more efficient in languages where recursion is expensive. Time: O(C(n,k) * k), Space: O(C(n,k) * k)",
@@ -322,6 +622,47 @@ export const enhancedBacktrackingQuestions: Question[] = [
     }
     
     return result;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Iterative Approach: Java implementation using explicit stack to simulate recursive calls. We use a custom State class to track the start position and current combination. Time: O(C(n,k) * k), Space: O(C(n,k) * k)",
+        code: `import java.util.*;
+
+public class Solution {
+    class State {
+        int start;
+        List<Integer> current;
+        
+        State(int start, List<Integer> current) {
+            this.start = start;
+            this.current = new ArrayList<>(current);
+        }
+    }
+    
+    public List<List<Integer>> combine(int n, int k) {
+        List<List<Integer>> result = new ArrayList<>();
+        Stack<State> stack = new Stack<>();
+        stack.push(new State(1, new ArrayList<>()));
+        
+        while (!stack.isEmpty()) {
+            State state = stack.pop();
+            
+            if (state.current.size() == k) {
+                result.add(new ArrayList<>(state.current));
+                continue;
+            }
+            
+            for (int i = state.start; i <= n; i++) {
+                List<Integer> newCurrent = new ArrayList<>(state.current);
+                newCurrent.add(i);
+                stack.push(new State(i + 1, newCurrent));
+            }
+        }
+        
+        return result;
+    }
 }`,
       },
     ],
@@ -391,6 +732,63 @@ export const enhancedBacktrackingQuestions: Question[] = [
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Backtracking with Conflict Detection: Java implementation using HashSet to track conflicts. We use char arrays for the board and convert to strings for the result. Time: O(n!), Space: O(n)",
+        code: `import java.util.*;
+
+public class Solution {
+    public List<List<String>> solveNQueens(int n) {
+        List<List<String>> result = new ArrayList<>();
+        char[][] board = new char[n][n];
+        
+        // Initialize board
+        for (int i = 0; i < n; i++) {
+            Arrays.fill(board[i], '.');
+        }
+        
+        Set<Integer> cols = new HashSet<>();
+        Set<Integer> diag1 = new HashSet<>(); // row - col
+        Set<Integer> diag2 = new HashSet<>(); // row + col
+        
+        backtrack(result, board, 0, cols, diag1, diag2, n);
+        return result;
+    }
+    
+    private void backtrack(List<List<String>> result, char[][] board, int row, 
+                          Set<Integer> cols, Set<Integer> diag1, Set<Integer> diag2, int n) {
+        if (row == n) {
+            List<String> solution = new ArrayList<>();
+            for (char[] r : board) {
+                solution.add(new String(r));
+            }
+            result.add(solution);
+            return;
+        }
+        
+        for (int col = 0; col < n; col++) {
+            if (cols.contains(col) || diag1.contains(row - col) || diag2.contains(row + col)) {
+                continue;
+            }
+            
+            // Place queen
+            board[row][col] = 'Q';
+            cols.add(col);
+            diag1.add(row - col);
+            diag2.add(row + col);
+            
+            backtrack(result, board, row + 1, cols, diag1, diag2, n);
+            
+            // Remove queen (backtrack)
+            board[row][col] = '.';
+            cols.remove(col);
+            diag1.remove(row - col);
+            diag2.remove(row + col);
+        }
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Count Solutions Only (N-Queens II): This variation focuses only on counting valid solutions rather than constructing the boards, which can be more efficient when only the count is needed. Time: O(n!), Space: O(n)",
@@ -425,6 +823,48 @@ export const enhancedBacktrackingQuestions: Question[] = [
     
     backtrack(0);
     return count;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Count Solutions Only (N-Queens II): Java implementation that only counts solutions without constructing the boards. This is more memory efficient when only the count is needed. Time: O(n!), Space: O(n)",
+        code: `import java.util.*;
+
+public class Solution {
+    private int count = 0;
+    
+    public int totalNQueens(int n) {
+        Set<Integer> cols = new HashSet<>();
+        Set<Integer> diag1 = new HashSet<>();
+        Set<Integer> diag2 = new HashSet<>();
+        
+        backtrack(0, cols, diag1, diag2, n);
+        return count;
+    }
+    
+    private void backtrack(int row, Set<Integer> cols, Set<Integer> diag1, Set<Integer> diag2, int n) {
+        if (row == n) {
+            count++;
+            return;
+        }
+        
+        for (int col = 0; col < n; col++) {
+            if (cols.contains(col) || diag1.contains(row - col) || diag2.contains(row + col)) {
+                continue;
+            }
+            
+            cols.add(col);
+            diag1.add(row - col);
+            diag2.add(row + col);
+            
+            backtrack(row + 1, cols, diag1, diag2, n);
+            
+            cols.remove(col);
+            diag1.remove(row - col);
+            diag2.remove(row + col);
+        }
+    }
 }`,
       },
       {
@@ -473,6 +913,57 @@ function constructBoard(solutions: number[], n: number): string[] {
     }
     
     return board;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Bit Manipulation Optimization: Java implementation using bitwise operations for ultra-fast conflict checking. We use bit manipulation to track columns and diagonals efficiently. Time: O(n!), Space: O(n)",
+        code: `import java.util.*;
+
+public class Solution {
+    public List<List<String>> solveNQueens(int n) {
+        List<List<String>> result = new ArrayList<>();
+        int[] solutions = new int[n];
+        backtrack(result, solutions, 0, 0, 0, 0, n);
+        return result;
+    }
+    
+    private void backtrack(List<List<String>> result, int[] solutions, int row, 
+                          int cols, int diag1, int diag2, int n) {
+        if (row == n) {
+            result.add(constructBoard(solutions, n));
+            return;
+        }
+        
+        int availablePositions = ((1 << n) - 1) & (~(cols | diag1 | diag2));
+        
+        while (availablePositions != 0) {
+            int position = availablePositions & (-availablePositions);
+            availablePositions &= (availablePositions - 1);
+            
+            int col = Integer.numberOfTrailingZeros(position);
+            solutions[row] = col;
+            
+            backtrack(result, solutions, row + 1, 
+                     cols | position, 
+                     (diag1 | position) << 1, 
+                     (diag2 | position) >> 1, n);
+        }
+    }
+    
+    private List<String> constructBoard(int[] solutions, int n) {
+        List<String> board = new ArrayList<>();
+        
+        for (int i = 0; i < n; i++) {
+            char[] row = new char[n];
+            Arrays.fill(row, '.');
+            row[solutions[i]] = 'Q';
+            board.add(new String(row));
+        }
+        
+        return board;
+    }
 }`,
       },
     ],
@@ -556,6 +1047,62 @@ function constructBoard(solutions: number[], n: number): string[] {
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "Backtracking with Constraint Propagation: Java implementation using char arrays for the board. We check row, column, and 3x3 box constraints before placing each number. Time: O(9^(n*n)), Space: O(n*n)",
+        code: `public class Solution {
+    public void solveSudoku(char[][] board) {
+        solve(board);
+    }
+    
+    private boolean solve(char[][] board) {
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                if (board[i][j] == '.') {
+                    for (char num = '1'; num <= '9'; num++) {
+                        if (isValid(board, i, j, num)) {
+                            board[i][j] = num;
+                            
+                            if (solve(board)) return true;
+                            
+                            board[i][j] = '.'; // Backtrack
+                        }
+                    }
+                    
+                    return false; // No valid number found
+                }
+            }
+        }
+        
+        return true; // All cells filled
+    }
+    
+    private boolean isValid(char[][] board, int row, int col, char num) {
+        // Check row
+        for (int j = 0; j < 9; j++) {
+            if (board[row][j] == num) return false;
+        }
+        
+        // Check column
+        for (int i = 0; i < 9; i++) {
+            if (board[i][col] == num) return false;
+        }
+        
+        // Check 3x3 box
+        int boxRow = (row / 3) * 3;
+        int boxCol = (col / 3) * 3;
+        
+        for (int i = boxRow; i < boxRow + 3; i++) {
+            for (int j = boxCol; j < boxCol + 3; j++) {
+                if (board[i][j] == num) return false;
+            }
+        }
+        
+        return true;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Optimized with Bit Sets: This approach uses bit manipulation to efficiently track used digits in each row, column, and box, greatly reducing the time needed to check constraints. Time: O(9^(n*n)), Space: O(n)",
@@ -613,6 +1160,68 @@ function constructBoard(solutions: number[], n: number): string[] {
     }
     
     solve();
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Optimized with Bit Sets: Java implementation using bit manipulation for ultra-fast constraint checking. We use bitmasks to track used digits in each row, column, and box. Time: O(9^(n*n)), Space: O(n)",
+        code: `public class Solution {
+    public void solveSudoku(char[][] board) {
+        int[] rows = new int[9];
+        int[] cols = new int[9];
+        int[] boxes = new int[9];
+        
+        // Initialize constraints
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                if (board[i][j] != '.') {
+                    int num = board[i][j] - '0';
+                    int bit = 1 << (num - 1);
+                    int boxIndex = (i / 3) * 3 + j / 3;
+                    
+                    rows[i] |= bit;
+                    cols[j] |= bit;
+                    boxes[boxIndex] |= bit;
+                }
+            }
+        }
+        
+        solve(board, rows, cols, boxes);
+    }
+    
+    private boolean solve(char[][] board, int[] rows, int[] cols, int[] boxes) {
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                if (board[i][j] == '.') {
+                    int boxIndex = (i / 3) * 3 + j / 3;
+                    int mask = rows[i] | cols[j] | boxes[boxIndex];
+                    
+                    for (int num = 1; num <= 9; num++) {
+                        int bit = 1 << (num - 1);
+                        
+                        if ((mask & bit) == 0) {
+                            board[i][j] = (char)(num + '0');
+                            rows[i] |= bit;
+                            cols[j] |= bit;
+                            boxes[boxIndex] |= bit;
+                            
+                            if (solve(board, rows, cols, boxes)) return true;
+                            
+                            board[i][j] = '.';
+                            rows[i] &= ~bit;
+                            cols[j] &= ~bit;
+                            boxes[boxIndex] &= ~bit;
+                        }
+                    }
+                    
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
 }`,
       },
     ],
@@ -685,6 +1294,54 @@ function constructBoard(solutions: number[], n: number): string[] {
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "DFS Backtracking: Java implementation using DFS to explore all paths from each starting cell. We modify the board in-place to mark visited cells and restore them during backtracking. Time: O(m * n * 4^L), Space: O(L) where L is word length",
+        code: `public class Solution {
+    private int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    
+    public boolean exist(char[][] board, String word) {
+        int rows = board.length;
+        int cols = board[0].length;
+        
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (dfs(board, word, i, j, 0)) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    private boolean dfs(char[][] board, String word, int row, int col, int index) {
+        if (index == word.length()) return true;
+        
+        if (row < 0 || row >= board.length || col < 0 || col >= board[0].length ||
+            board[row][col] != word.charAt(index)) {
+            return false;
+        }
+        
+        // Mark cell as visited
+        char temp = board[row][col];
+        board[row][col] = '#';
+        
+        // Explore all 4 directions
+        for (int[] dir : directions) {
+            if (dfs(board, word, row + dir[0], col + dir[1], index + 1)) {
+                board[row][col] = temp; // Restore
+                return true;
+            }
+        }
+        
+        // Backtrack
+        board[row][col] = temp;
+        return false;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Word Search II (Multiple Words): This enhanced version uses a Trie data structure to efficiently search for multiple words simultaneously. As we explore the board, we track our position in the Trie to quickly identify if we're on a path to any valid word. Time: O(m*n*4^L), Space: O(k) where k is total length of all words",
@@ -741,6 +1398,68 @@ function constructBoard(solutions: number[], n: number): string[] {
     }
     
     return result;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "Word Search II (Multiple Words): Java implementation using Trie for efficient multiple word search. We build a Trie from all words and traverse it while exploring the board, finding all words in a single pass. Time: O(m*n*4^L), Space: O(k) where k is total length of all words",
+        code: `import java.util.*;
+
+public class Solution {
+    class TrieNode {
+        Map<Character, TrieNode> children = new HashMap<>();
+        String word = null;
+    }
+    
+    private int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    
+    public List<String> findWords(char[][] board, String[] words) {
+        // Build trie
+        TrieNode root = new TrieNode();
+        for (String word : words) {
+            TrieNode node = root;
+            for (char c : word.toCharArray()) {
+                node.children.putIfAbsent(c, new TrieNode());
+                node = node.children.get(c);
+            }
+            node.word = word;
+        }
+        
+        List<String> result = new ArrayList<>();
+        int rows = board.length;
+        int cols = board[0].length;
+        
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                dfs(board, i, j, root, result);
+            }
+        }
+        
+        return result;
+    }
+    
+    private void dfs(char[][] board, int row, int col, TrieNode node, List<String> result) {
+        if (row < 0 || row >= board.length || col < 0 || col >= board[0].length) return;
+        
+        char c = board[row][col];
+        if (c == '#' || !node.children.containsKey(c)) return;
+        
+        node = node.children.get(c);
+        
+        if (node.word != null) {
+            result.add(node.word);
+            node.word = null; // Avoid duplicates
+        }
+        
+        board[row][col] = '#'; // Mark visited
+        
+        for (int[] dir : directions) {
+            dfs(board, row + dir[0], col + dir[1], node, result);
+        }
+        
+        board[row][col] = c; // Backtrack
+    }
 }`,
       },
     ],

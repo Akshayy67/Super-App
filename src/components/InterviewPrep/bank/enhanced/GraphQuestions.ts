@@ -50,6 +50,46 @@ export const enhancedGraphQuestions: Question[] = [
 }`,
       },
       {
+        language: "Java",
+        explanation:
+          "DFS Approach: Java implementation using Depth-First Search to explore the grid. We mark visited cells by changing their value and restore them during backtracking. Time: O(m*n), Space: O(m*n)",
+        code: `public class Solution {
+    public int numIslands(char[][] grid) {
+        if (grid == null || grid.length == 0) return 0;
+        
+        int rows = grid.length;
+        int cols = grid[0].length;
+        int islands = 0;
+        
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                if (grid[row][col] == '1') {
+                    islands++;
+                    dfs(grid, row, col);
+                }
+            }
+        }
+        
+        return islands;
+    }
+    
+    private void dfs(char[][] grid, int row, int col) {
+        if (row < 0 || row >= grid.length || col < 0 || col >= grid[0].length || 
+            grid[row][col] == '0') {
+            return;
+        }
+        
+        grid[row][col] = '0'; // Mark as visited
+        
+        // Explore all 4 directions
+        dfs(grid, row + 1, col);
+        dfs(grid, row - 1, col);
+        dfs(grid, row, col + 1);
+        dfs(grid, row, col - 1);
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "BFS Approach: This solution uses breadth-first search to explore islands level by level. Instead of using recursion, we use a queue to keep track of cells to explore. Time: O(m * n), Space: O(min(m, n)) for the queue in worst case",
@@ -90,6 +130,55 @@ export const enhancedGraphQuestions: Question[] = [
     }
     
     return islands;
+}`,
+      },
+      {
+        language: "Java",
+        explanation:
+          "BFS Approach: Java implementation using breadth-first search to explore islands level by level. We use a queue to keep track of cells to explore instead of recursion. Time: O(m * n), Space: O(min(m, n)) for the queue in worst case",
+        code: `import java.util.*;
+
+public class Solution {
+    public int numIslands(char[][] grid) {
+        if (grid == null || grid.length == 0) return 0;
+        
+        int rows = grid.length;
+        int cols = grid[0].length;
+        int islands = 0;
+        
+        int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                if (grid[row][col] == '1') {
+                    islands++;
+                    
+                    Queue<int[]> queue = new LinkedList<>();
+                    queue.offer(new int[]{row, col});
+                    grid[row][col] = '0';
+                    
+                    while (!queue.isEmpty()) {
+                        int[] cell = queue.poll();
+                        int r = cell[0], c = cell[1];
+                        
+                        for (int[] dir : directions) {
+                            int newRow = r + dir[0];
+                            int newCol = c + dir[1];
+                            
+                            if (newRow >= 0 && newRow < rows && 
+                                newCol >= 0 && newCol < cols && 
+                                grid[newRow][newCol] == '1') {
+                                grid[newRow][newCol] = '0';
+                                queue.offer(new int[]{newRow, newCol});
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return islands;
+    }
 }`,
       },
       {
@@ -168,6 +257,97 @@ function numIslandsUnionFind(grid: string[][]): number {
     return uf.count;
 }`,
       },
+      {
+        language: "java",
+        explanation:
+          "Union-Find Approach: Java implementation using disjoint set data structure to track connected components. We initialize each land cell as its own set and merge adjacent land cells. Time: O(m * n), Space: O(m * n)",
+        code: `class UnionFind {
+    private int[] parent;
+    private int[] rank;
+    private int count;
+    
+    public UnionFind(int n) {
+        parent = new int[n];
+        rank = new int[n];
+        count = 0;
+        
+        for (int i = 0; i < n; i++) {
+            parent[i] = i;
+            rank[i] = 1;
+        }
+    }
+    
+    public int find(int x) {
+        if (parent[x] != x) {
+            parent[x] = find(parent[x]); // Path compression
+        }
+        return parent[x];
+    }
+    
+    public void union(int x, int y) {
+        int rootX = find(x);
+        int rootY = find(y);
+        
+        if (rootX != rootY) {
+            if (rank[rootX] < rank[rootY]) {
+                parent[rootX] = rootY;
+            } else if (rank[rootX] > rank[rootY]) {
+                parent[rootY] = rootX;
+            } else {
+                parent[rootY] = rootX;
+                rank[rootX]++;
+            }
+            count--;
+        }
+    }
+    
+    public void incrementCount() {
+        count++;
+    }
+    
+    public int getCount() {
+        return count;
+    }
+}
+
+public class Solution {
+    public int numIslands(char[][] grid) {
+        if (grid == null || grid.length == 0) return 0;
+        
+        int rows = grid.length;
+        int cols = grid[0].length;
+        UnionFind uf = new UnionFind(rows * cols);
+        
+        // Count initial islands
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (grid[i][j] == '1') {
+                    uf.incrementCount();
+                }
+            }
+        }
+        
+        int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (grid[i][j] == '1') {
+                    for (int[] dir : directions) {
+                        int ni = i + dir[0];
+                        int nj = j + dir[1];
+                        
+                        if (ni >= 0 && ni < rows && nj >= 0 && nj < cols && grid[ni][nj] == '1') {
+                            uf.union(i * cols + j, ni * cols + nj);
+                        }
+                    }
+                }
+            }
+        }
+        
+        return uf.getCount();
+    }
+}`,
+      },
     ],
     sampleAnswer: `See the code implementations tab for different approaches to solve this problem.`,
     tips: [
@@ -231,6 +411,51 @@ function numIslandsUnionFind(grid: string[][]): number {
 }`,
       },
       {
+        language: "java",
+        explanation:
+          "DFS Cycle Detection: Java implementation using depth-first search with three states to detect cycles in the directed graph. If we encounter a node in 'visiting' state, we've found a cycle. Time: O(V + E), Space: O(V + E)",
+        code: `import java.util.*;
+
+public class Solution {
+    public boolean canFinish(int numCourses, int[][] prerequisites) {
+        // Build adjacency list
+        List<List<Integer>> graph = new ArrayList<>();
+        for (int i = 0; i < numCourses; i++) {
+            graph.add(new ArrayList<>());
+        }
+        
+        for (int[] prereq : prerequisites) {
+            graph.get(prereq[1]).add(prereq[0]);
+        }
+        
+        // 0: unvisited, 1: visiting, 2: visited
+        int[] state = new int[numCourses];
+        
+        for (int i = 0; i < numCourses; i++) {
+            if (state[i] == 0 && hasCycle(graph, state, i)) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    private boolean hasCycle(List<List<Integer>> graph, int[] state, int course) {
+        if (state[course] == 1) return true;  // Back edge found, cycle detected
+        if (state[course] == 2) return false; // Already processed
+        
+        state[course] = 1; // Mark as visiting
+        
+        for (int nextCourse : graph.get(course)) {
+            if (hasCycle(graph, state, nextCourse)) return true;
+        }
+        
+        state[course] = 2; // Mark as visited
+        return false;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Kahn's Algorithm (Topological Sort): This approach uses breadth-first search to perform a topological sort of the graph. We start with nodes that have no dependencies, and progressively remove them from the graph. If there's a cycle, we won't be able to process all courses. Time: O(V + E), Space: O(V + E)",
@@ -267,6 +492,54 @@ function numIslandsUnionFind(grid: string[][]): number {
     }
     
     return processedCourses === numCourses;
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Kahn's Algorithm (Topological Sort): Java implementation using breadth-first search to perform topological sort. We start with nodes having no dependencies and progressively remove them. Time: O(V + E), Space: O(V + E)",
+        code: `import java.util.*;
+
+public class Solution {
+    public boolean canFinish(int numCourses, int[][] prerequisites) {
+        List<List<Integer>> graph = new ArrayList<>();
+        int[] indegree = new int[numCourses];
+        
+        // Initialize graph
+        for (int i = 0; i < numCourses; i++) {
+            graph.add(new ArrayList<>());
+        }
+        
+        // Build graph and calculate indegrees
+        for (int[] prereq : prerequisites) {
+            graph.get(prereq[1]).add(prereq[0]);
+            indegree[prereq[0]]++;
+        }
+        
+        // Find courses with no prerequisites
+        Queue<Integer> queue = new LinkedList<>();
+        for (int i = 0; i < numCourses; i++) {
+            if (indegree[i] == 0) {
+                queue.offer(i);
+            }
+        }
+        
+        int processedCourses = 0;
+        
+        while (!queue.isEmpty()) {
+            int course = queue.poll();
+            processedCourses++;
+            
+            for (int nextCourse : graph.get(course)) {
+                indegree[nextCourse]--;
+                if (indegree[nextCourse] == 0) {
+                    queue.offer(nextCourse);
+                }
+            }
+        }
+        
+        return processedCourses == numCourses;
+    }
 }`,
       },
     ],
@@ -434,6 +707,54 @@ function cloneGraph(node: GraphNode | null): GraphNode | null {
 }`,
       },
       {
+        language: "java",
+        explanation:
+          "DFS with HashMap Approach: Java implementation using depth-first search to traverse the original graph. We check if we've already cloned each node using a HashMap to avoid infinite recursion. Time complexity is O(V+E) where V is the number of vertices and E is the number of edges. Space complexity is O(V) for the HashMap and recursion stack.",
+        code: `// Graph Node Definition
+class Node {
+    public int val;
+    public List<Node> neighbors;
+    
+    public Node() {
+        val = 0;
+        neighbors = new ArrayList<Node>();
+    }
+    
+    public Node(int _val) {
+        val = _val;
+        neighbors = new ArrayList<Node>();
+    }
+    
+    public Node(int _val, ArrayList<Node> _neighbors) {
+        val = _val;
+        neighbors = _neighbors;
+    }
+}
+
+import java.util.*;
+
+public class Solution {
+    private Map<Node, Node> cloned = new HashMap<>();
+    
+    public Node cloneGraph(Node node) {
+        if (node == null) return null;
+        
+        if (cloned.containsKey(node)) {
+            return cloned.get(node);
+        }
+        
+        Node clone = new Node(node.val);
+        cloned.put(node, clone);
+        
+        for (Node neighbor : node.neighbors) {
+            clone.neighbors.add(cloneGraph(neighbor));
+        }
+        
+        return clone;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "BFS with HashMap Approach: We use breadth-first search with a queue to iterate through the nodes. We create the clones first, then process the neighbors in a level-by-level fashion. This is more iterative and uses less stack space than the DFS solution. Time complexity remains O(V+E) and space complexity is O(V).",
@@ -460,6 +781,40 @@ function cloneGraph(node: GraphNode | null): GraphNode | null {
     }
     
     return cloned.get(node)!;
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "BFS with HashMap Approach: Java implementation using breadth-first search with a queue to iterate through nodes. We create clones first, then process neighbors level-by-level. More iterative and uses less stack space than DFS. Time complexity remains O(V+E) and space complexity is O(V).",
+        code: `import java.util.*;
+
+public class Solution {
+    public Node cloneGraph(Node node) {
+        if (node == null) return null;
+        
+        Map<Node, Node> cloned = new HashMap<>();
+        Queue<Node> queue = new LinkedList<>();
+        
+        // Clone the starting node
+        cloned.put(node, new Node(node.val));
+        queue.offer(node);
+        
+        while (!queue.isEmpty()) {
+            Node current = queue.poll();
+            
+            for (Node neighbor : current.neighbors) {
+                if (!cloned.containsKey(neighbor)) {
+                    cloned.put(neighbor, new Node(neighbor.val));
+                    queue.offer(neighbor);
+                }
+                
+                cloned.get(current).neighbors.add(cloned.get(neighbor));
+            }
+        }
+        
+        return cloned.get(node);
+    }
 }`,
       },
       {
@@ -564,6 +919,65 @@ function cloneGraph(node: GraphNode | null): GraphNode | null {
     }
     
     return result;
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "DFS from Ocean Borders Approach: Java implementation performing two separate DFS starting from Pacific and Atlantic border cells. We flow up to cells with height >= current. Any cell reachable from both oceans is part of our answer. Time complexity is O(m*n) where m and n are the dimensions of the matrix. Space complexity is O(m*n) for the visited arrays.",
+        code: `import java.util.*;
+
+public class Solution {
+    private int[][] heights;
+    private int rows, cols;
+    private int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    
+    public List<List<Integer>> pacificAtlantic(int[][] heights) {
+        if (heights == null || heights.length == 0) return new ArrayList<>();
+        
+        this.heights = heights;
+        this.rows = heights.length;
+        this.cols = heights[0].length;
+        
+        boolean[][] pacificReachable = new boolean[rows][cols];
+        boolean[][] atlanticReachable = new boolean[rows][cols];
+        
+        // Start DFS from Pacific borders (top and left)
+        for (int i = 0; i < rows; i++) {
+            dfs(i, 0, pacificReachable, heights[i][0]);
+            dfs(i, cols - 1, atlanticReachable, heights[i][cols - 1]);
+        }
+        
+        for (int j = 0; j < cols; j++) {
+            dfs(0, j, pacificReachable, heights[0][j]);
+            dfs(rows - 1, j, atlanticReachable, heights[rows - 1][j]);
+        }
+        
+        // Find cells reachable by both oceans
+        List<List<Integer>> result = new ArrayList<>();
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (pacificReachable[i][j] && atlanticReachable[i][j]) {
+                    result.add(Arrays.asList(i, j));
+                }
+            }
+        }
+        
+        return result;
+    }
+    
+    private void dfs(int row, int col, boolean[][] reachable, int prevHeight) {
+        if (row < 0 || row >= rows || col < 0 || col >= cols || 
+            reachable[row][col] || heights[row][col] < prevHeight) {
+            return;
+        }
+        
+        reachable[row][col] = true;
+        
+        for (int[] dir : directions) {
+            dfs(row + dir[0], col + dir[1], reachable, heights[row][col]);
+        }
+    }
 }`,
       },
       {

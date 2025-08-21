@@ -35,6 +35,32 @@ function search(nums: number[], target: number): number {
         explanation: "Standard iterative binary search. Most space-efficient with O(1) space complexity."
       },
       {
+        language: "Java",
+        code: `// Approach 1: Standard Binary Search (Optimal)
+// Time: O(log n), Space: O(1)
+class Solution {
+    public int search(int[] nums, int target) {
+        int left = 0;
+        int right = nums.length - 1;
+        
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            
+            if (nums[mid] == target) {
+                return mid;
+            } else if (nums[mid] < target) {
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
+        }
+        
+        return -1;
+    }
+}`,
+        explanation: "Standard iterative binary search. Most space-efficient with O(1) space complexity."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Recursive Binary Search
 // Time: O(log n), Space: O(log n)
@@ -58,6 +84,31 @@ function searchRecursive(nums: number[], target: number): number {
         explanation: "Recursive binary search implementation. More intuitive but uses call stack space."
       },
       {
+        language: "Java",
+        code: `// Approach 2: Recursive Binary Search
+// Time: O(log n), Space: O(log n)
+class Solution {
+    public int searchRecursive(int[] nums, int target) {
+        return binarySearch(nums, target, 0, nums.length - 1);
+    }
+    
+    private int binarySearch(int[] nums, int target, int left, int right) {
+        if (left > right) return -1;
+        
+        int mid = left + (right - left) / 2;
+        
+        if (nums[mid] == target) {
+            return mid;
+        } else if (nums[mid] < target) {
+            return binarySearch(nums, target, mid + 1, right);
+        } else {
+            return binarySearch(nums, target, left, mid - 1);
+        }
+    }
+}`,
+        explanation: "Recursive binary search implementation. More intuitive but uses call stack space."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: Find Insertion Position (Lower Bound)
 // Time: O(log n), Space: O(1)
@@ -76,6 +127,30 @@ function searchInsert(nums: number[], target: number): number {
     }
     
     return left;
+}`,
+        explanation: "Extension that finds insertion position for target. Uses left < right condition for bounds."
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Find Insertion Position (Lower Bound)
+// Time: O(log n), Space: O(1)
+class Solution {
+    public int searchInsert(int[] nums, int target) {
+        int left = 0;
+        int right = nums.length;
+        
+        while (left < right) {
+            int mid = left + (right - left) / 2;
+            
+            if (nums[mid] < target) {
+                left = mid + 1;
+            } else {
+                right = mid;
+            }
+        }
+        
+        return left;
+    }
 }`,
         explanation: "Extension that finds insertion position for target. Uses left < right condition for bounds."
       }
@@ -136,6 +211,43 @@ function searchRotated(nums: number[], target: number): number {
         explanation: "Modified binary search handles rotated sorted arrays by determining which half is sorted."
       },
       {
+        language: "Java",
+        code: `// Approach 1: Modified Binary Search (Optimal)
+// Time: O(log n), Space: O(1)
+class Solution {
+    public int search(int[] nums, int target) {
+        int left = 0;
+        int right = nums.length - 1;
+        
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            
+            if (nums[mid] == target) return mid;
+            
+            // Determine which half is sorted
+            if (nums[left] <= nums[mid]) {
+                // Left half is sorted
+                if (nums[left] <= target && target < nums[mid]) {
+                    right = mid - 1;
+                } else {
+                    left = mid + 1;
+                }
+            } else {
+                // Right half is sorted
+                if (nums[mid] < target && target <= nums[right]) {
+                    left = mid + 1;
+                } else {
+                    right = mid - 1;
+                }
+            }
+        }
+        
+        return -1;
+    }
+}`,
+        explanation: "Modified binary search handles rotated sorted arrays by determining which half is sorted."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Handle Duplicates Version
 // Time: O(log n), Space: O(1)
@@ -174,6 +286,46 @@ function searchRotatedWithDuplicates(nums: number[], target: number): boolean {
         explanation: "Extension that handles duplicate elements by incrementing/decrementing pointers when endpoints are equal."
       },
       {
+        language: "Java",
+        code: `// Approach 2: Handle Duplicates Version
+// Time: O(log n), Space: O(1)
+class Solution {
+    public boolean search(int[] nums, int target) {
+        int left = 0;
+        int right = nums.length - 1;
+        
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            
+            if (nums[mid] == target) return true;
+            
+            // Handle duplicates
+            if (nums[left] == nums[mid] && nums[mid] == nums[right]) {
+                left++;
+                right--;
+            } else if (nums[left] <= nums[mid]) {
+                // Left half is sorted
+                if (nums[left] <= target && target < nums[mid]) {
+                    right = mid - 1;
+                } else {
+                    left = mid + 1;
+                }
+            } else {
+                // Right half is sorted
+                if (nums[mid] < target && target <= nums[right]) {
+                    left = mid + 1;
+                } else {
+                    right = mid - 1;
+                }
+            }
+        }
+        
+        return false;
+    }
+}`,
+        explanation: "Extension that handles duplicate elements by incrementing/decrementing pointers when endpoints are equal."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: Find Minimum in Rotated Array
 // Time: O(log n), Space: O(1)
@@ -192,6 +344,30 @@ function findMin(nums: number[]): number {
     }
     
     return nums[left];
+}`,
+        explanation: "Binary search to find minimum element in rotated sorted array. Uses left < right condition."
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Find Minimum in Rotated Array
+// Time: O(log n), Space: O(1)
+class Solution {
+    public int findMin(int[] nums) {
+        int left = 0;
+        int right = nums.length - 1;
+        
+        while (left < right) {
+            int mid = left + (right - left) / 2;
+            
+            if (nums[mid] > nums[right]) {
+                left = mid + 1;
+            } else {
+                right = mid;
+            }
+        }
+        
+        return nums[left];
+    }
 }`,
         explanation: "Binary search to find minimum element in rotated sorted array. Uses left < right condition."
       }
@@ -251,6 +427,46 @@ function merge(left: number[], right: number[]): number[] {
         explanation: "Classic divide-and-conquer recursive implementation. Most intuitive and easy to understand."
       },
       {
+        language: "Java",
+        code: `// Approach 1: Standard Merge Sort (Classic)
+// Time: O(n log n), Space: O(n)
+import java.util.*;
+class Solution {
+    public int[] mergeSort(int[] nums) {
+        if (nums.length <= 1) return nums;
+        
+        int mid = nums.length / 2;
+        int[] left = Arrays.copyOfRange(nums, 0, mid);
+        int[] right = Arrays.copyOfRange(nums, mid, nums.length);
+        
+        left = mergeSort(left);
+        right = mergeSort(right);
+        
+        return merge(left, right);
+    }
+    
+    private int[] merge(int[] left, int[] right) {
+        int[] result = new int[left.length + right.length];
+        int i = 0, j = 0, k = 0;
+        
+        while (i < left.length && j < right.length) {
+            if (left[i] <= right[j]) {
+                result[k++] = left[i++];
+            } else {
+                result[k++] = right[j++];
+            }
+        }
+        
+        // Add remaining elements
+        while (i < left.length) result[k++] = left[i++];
+        while (j < right.length) result[k++] = right[j++];
+        
+        return result;
+    }
+}`,
+        explanation: "Classic divide-and-conquer recursive implementation. Most intuitive and easy to understand."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: In-place Merge Sort (Space Efficient)
 // Time: O(n log n), Space: O(n)
@@ -286,6 +502,48 @@ function mergeSortInPlace(nums: number[]): void {
     
     const temp = new Array(nums.length);
     mergeSortHelper(nums, temp, 0, nums.length - 1);
+}`,
+        explanation: "In-place version using temporary array. More space-efficient than creating new arrays."
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: In-place Merge Sort (Space Efficient)
+// Time: O(n log n), Space: O(n)
+import java.util.*;
+class Solution {
+    public void mergeSortInPlace(int[] nums) {
+        int[] temp = new int[nums.length];
+        mergeSortHelper(nums, temp, 0, nums.length - 1);
+    }
+    
+    private void mergeSortHelper(int[] arr, int[] temp, int left, int right) {
+        if (left >= right) return;
+        
+        int mid = (left + right) / 2;
+        mergeSortHelper(arr, temp, left, mid);
+        mergeSortHelper(arr, temp, mid + 1, right);
+        mergeInPlace(arr, temp, left, mid, right);
+    }
+    
+    private void mergeInPlace(int[] arr, int[] temp, int left, int mid, int right) {
+        // Copy to temp array
+        for (int i = left; i <= right; i++) {
+            temp[i] = arr[i];
+        }
+        
+        int i = left, j = mid + 1, k = left;
+        
+        while (i <= mid && j <= right) {
+            if (temp[i] <= temp[j]) {
+                arr[k++] = temp[i++];
+            } else {
+                arr[k++] = temp[j++];
+            }
+        }
+        
+        while (i <= mid) arr[k++] = temp[i++];
+        while (j <= right) arr[k++] = temp[j++];
+    }
 }`,
         explanation: "In-place version using temporary array. More space-efficient than creating new arrays."
       },
@@ -327,6 +585,50 @@ function mergeBottomUp(arr: number[], temp: number[], left: number, mid: number,
     
     while (i <= mid) arr[k++] = temp[i++];
     while (j <= right) arr[k++] = temp[j++];
+}`,
+        explanation: "Iterative bottom-up approach avoids recursion overhead. Better performance for large arrays."
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Bottom-up Merge Sort (Iterative)
+// Time: O(n log n), Space: O(n)
+import java.util.*;
+class Solution {
+    public int[] mergeSortBottomUp(int[] nums) {
+        int n = nums.length;
+        int[] result = Arrays.copyOf(nums, n);
+        int[] temp = new int[n];
+        
+        for (int size = 1; size < n; size *= 2) {
+            for (int left = 0; left < n - size; left += 2 * size) {
+                int mid = left + size - 1;
+                int right = Math.min(left + 2 * size - 1, n - 1);
+                
+                mergeBottomUp(result, temp, left, mid, right);
+            }
+        }
+        
+        return result;
+    }
+    
+    private void mergeBottomUp(int[] arr, int[] temp, int left, int mid, int right) {
+        for (int i = left; i <= right; i++) {
+            temp[i] = arr[i];
+        }
+        
+        int i = left, j = mid + 1, k = left;
+        
+        while (i <= mid && j <= right) {
+            if (temp[i] <= temp[j]) {
+                arr[k++] = temp[i++];
+            } else {
+                arr[k++] = temp[j++];
+            }
+        }
+        
+        while (i <= mid) arr[k++] = temp[i++];
+        while (j <= right) arr[k++] = temp[j++];
+    }
 }`,
         explanation: "Iterative bottom-up approach avoids recursion overhead. Better performance for large arrays."
       }
@@ -387,6 +689,47 @@ function quickSort(nums: number[]): number[] {
         explanation: "Classic Lomuto partitioning scheme using last element as pivot. Simple to implement and understand."
       },
       {
+        language: "Java",
+        code: `// Approach 1: Quick Sort with Lomuto Partition
+// Time: O(n log n) average, O(n²) worst, Space: O(log n) average
+import java.util.*;
+class Solution {
+    public int[] quickSort(int[] nums) {
+        int[] arr = Arrays.copyOf(nums, nums.length);
+        quickSortHelper(arr, 0, arr.length - 1);
+        return arr;
+    }
+    
+    private void quickSortHelper(int[] arr, int low, int high) {
+        if (low < high) {
+            int pivotIndex = partition(arr, low, high);
+            quickSortHelper(arr, low, pivotIndex - 1);
+            quickSortHelper(arr, pivotIndex + 1, high);
+        }
+    }
+    
+    private int partition(int[] arr, int low, int high) {
+        int pivot = arr[high];
+        int i = low - 1;
+        
+        for (int j = low; j < high; j++) {
+            if (arr[j] <= pivot) {
+                i++;
+                int temp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = temp;
+            }
+        }
+        
+        int temp = arr[i + 1];
+        arr[i + 1] = arr[high];
+        arr[high] = temp;
+        return i + 1;
+    }
+}`,
+        explanation: "Classic Lomuto partitioning scheme using last element as pivot. Simple to implement and understand."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Hoare Partition Scheme (More Efficient)
 // Time: O(n log n) average, O(n²) worst, Space: O(log n) average
@@ -418,6 +761,45 @@ function quickSortHoare(nums: number[]): number[] {
     
     quickSortHelper(0, arr.length - 1);
     return arr;
+}`,
+        explanation: "Hoare partitioning scheme is more efficient with better cache performance and fewer swaps."
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Hoare Partition Scheme (More Efficient)
+// Time: O(n log n) average, O(n²) worst, Space: O(log n) average
+import java.util.*;
+class Solution {
+    public int[] quickSortHoare(int[] nums) {
+        int[] arr = Arrays.copyOf(nums, nums.length);
+        quickSortHelper(arr, 0, arr.length - 1);
+        return arr;
+    }
+    
+    private void quickSortHelper(int[] arr, int low, int high) {
+        if (low < high) {
+            int pivotIndex = partitionHoare(arr, low, high);
+            quickSortHelper(arr, low, pivotIndex);
+            quickSortHelper(arr, pivotIndex + 1, high);
+        }
+    }
+    
+    private int partitionHoare(int[] arr, int low, int high) {
+        int pivot = arr[low];
+        int i = low - 1;
+        int j = high + 1;
+        
+        while (true) {
+            do { i++; } while (arr[i] < pivot);
+            do { j--; } while (arr[j] > pivot);
+            
+            if (i >= j) return j;
+            
+            int temp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = temp;
+        }
+    }
 }`,
         explanation: "Hoare partitioning scheme is more efficient with better cache performance and fewer swaps."
       },
@@ -461,6 +843,53 @@ function quickSortRandomized(nums: number[]): number[] {
         explanation: "Randomized pivot selection prevents worst-case O(n²) performance on sorted arrays."
       },
       {
+        language: "Java",
+        code: `// Approach 3: Randomized Quick Sort (Better Average Case)
+// Time: O(n log n) average, O(n²) worst, Space: O(log n) average
+import java.util.*;
+class Solution {
+    public int[] quickSortRandomized(int[] nums) {
+        int[] arr = Arrays.copyOf(nums, nums.length);
+        quickSortHelper(arr, 0, arr.length - 1);
+        return arr;
+    }
+    
+    private void quickSortHelper(int[] arr, int low, int high) {
+        if (low < high) {
+            // Randomize pivot selection
+            int randomIndex = low + (int)(Math.random() * (high - low + 1));
+            int temp = arr[randomIndex];
+            arr[randomIndex] = arr[high];
+            arr[high] = temp;
+            
+            int pivotIndex = partition(arr, low, high);
+            quickSortHelper(arr, low, pivotIndex - 1);
+            quickSortHelper(arr, pivotIndex + 1, high);
+        }
+    }
+    
+    private int partition(int[] arr, int low, int high) {
+        int pivot = arr[high];
+        int i = low - 1;
+        
+        for (int j = low; j < high; j++) {
+            if (arr[j] <= pivot) {
+                i++;
+                int temp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = temp;
+            }
+        }
+        
+        int temp = arr[i + 1];
+        arr[i + 1] = arr[high];
+        arr[high] = temp;
+        return i + 1;
+    }
+}`,
+        explanation: "Randomized pivot selection prevents worst-case O(n²) performance on sorted arrays."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 4: 3-Way Quick Sort (Handles Duplicates Efficiently)
 // Time: O(n log n) average, O(n²) worst, Space: O(log n) average
@@ -499,6 +928,57 @@ function quickSort3Way(nums: number[]): number[] {
     
     quickSort3WayHelper(0, arr.length - 1);
     return arr;
+}`,
+        explanation: "3-way partitioning handles duplicate elements efficiently by creating three regions."
+      },
+      {
+        language: "Java",
+        code: `// Approach 4: 3-Way Quick Sort (Handles Duplicates Efficiently)
+// Time: O(n log n) average, O(n²) worst, Space: O(log n) average
+import java.util.*;
+class Solution {
+    public int[] quickSort3Way(int[] nums) {
+        int[] arr = Arrays.copyOf(nums, nums.length);
+        quickSort3WayHelper(arr, 0, arr.length - 1);
+        return arr;
+    }
+    
+    private void quickSort3WayHelper(int[] arr, int low, int high) {
+        if (low >= high) return;
+        
+        int[] pivotRange = partition3Way(arr, low, high);
+        int lt = pivotRange[0];
+        int gt = pivotRange[1];
+        
+        quickSort3WayHelper(arr, low, lt - 1);
+        quickSort3WayHelper(arr, gt + 1, high);
+    }
+    
+    private int[] partition3Way(int[] arr, int low, int high) {
+        int pivot = arr[low];
+        int lt = low;      // arr[low...lt-1] < pivot
+        int i = low + 1;   // arr[lt...i-1] = pivot
+        int gt = high + 1; // arr[gt...high] > pivot
+        
+        while (i < gt) {
+            if (arr[i] < pivot) {
+                int temp = arr[lt];
+                arr[lt] = arr[i];
+                arr[i] = temp;
+                lt++;
+                i++;
+            } else if (arr[i] > pivot) {
+                gt--;
+                int temp = arr[i];
+                arr[i] = arr[gt];
+                arr[gt] = temp;
+            } else {
+                i++;
+            }
+        }
+        
+        return new int[]{lt, gt};
+    }
 }`,
         explanation: "3-way partitioning handles duplicate elements efficiently by creating three regions."
       }
@@ -548,6 +1028,32 @@ function findPeakElement(nums: number[]): number {
         explanation: "Binary search eliminates half of array based on slope. Most efficient approach for finding a single peak."
       },
       {
+        language: "Java",
+        code: `// Approach 1: Binary Search Approach (Optimal)
+// Time: O(log n), Space: O(1)
+class Solution {
+    public int findPeakElement(int[] nums) {
+        int left = 0;
+        int right = nums.length - 1;
+        
+        while (left < right) {
+            int mid = left + (right - left) / 2;
+            
+            if (nums[mid] < nums[mid + 1]) {
+                // Peak is in right half
+                left = mid + 1;
+            } else {
+                // Peak is in left half (including mid)
+                right = mid;
+            }
+        }
+        
+        return left;
+    }
+}`,
+        explanation: "Binary search eliminates half of array based on slope. Most efficient approach for finding a single peak."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Linear Search (for comparison)
 // Time: O(n), Space: O(1)
@@ -558,6 +1064,22 @@ function findPeakElementLinear(nums: number[]): number {
         }
     }
     return nums.length - 1;
+}`,
+        explanation: "Linear search finds first peak element. Simple but less efficient than binary search."
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Linear Search (for comparison)
+// Time: O(n), Space: O(1)
+class Solution {
+    public int findPeakElementLinear(int[] nums) {
+        for (int i = 0; i < nums.length - 1; i++) {
+            if (nums[i] > nums[i + 1]) {
+                return i;
+            }
+        }
+        return nums.length - 1;
+    }
 }`,
         explanation: "Linear search finds first peak element. Simple but less efficient than binary search."
       },
@@ -578,6 +1100,29 @@ function findAllPeaks(nums: number[]): number[] {
     }
     
     return peaks;
+}`,
+        explanation: "Extension that finds all peak elements in the array. Useful when multiple peaks are needed."
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Find All Peaks
+// Time: O(n), Space: O(1)
+import java.util.*;
+class Solution {
+    public List<Integer> findAllPeaks(int[] nums) {
+        List<Integer> peaks = new ArrayList<>();
+        
+        for (int i = 0; i < nums.length; i++) {
+            boolean leftOk = i == 0 || nums[i] > nums[i - 1];
+            boolean rightOk = i == nums.length - 1 || nums[i] > nums[i + 1];
+            
+            if (leftOk && rightOk) {
+                peaks.add(i);
+            }
+        }
+        
+        return peaks;
+    }
 }`,
         explanation: "Extension that finds all peak elements in the array. Useful when multiple peaks are needed."
       },
@@ -616,6 +1161,47 @@ function findPeakGrid(mat: number[][]): number[] {
     }
     
     return [-1, -1];
+}`,
+        explanation: "Advanced 2D peak finding using column-wise binary search. Demonstrates extension to higher dimensions."
+      },
+      {
+        language: "Java",
+        code: `// Approach 4: 2D Peak Finding (Advanced)
+// Time: O(n log m), Space: O(1) where n = rows, m = columns
+import java.util.*;
+class Solution {
+    public int[] findPeakGrid(int[][] mat) {
+        int m = mat.length;
+        int n = mat[0].length;
+        
+        int left = 0;
+        int right = n - 1;
+        
+        while (left <= right) {
+            int mid = (left + right) / 2;
+            
+            // Find max element in middle column
+            int maxRow = 0;
+            for (int i = 1; i < m; i++) {
+                if (mat[i][mid] > mat[maxRow][mid]) {
+                    maxRow = i;
+                }
+            }
+            
+            int leftVal = mid > 0 ? mat[maxRow][mid - 1] : -1;
+            int rightVal = mid < n - 1 ? mat[maxRow][mid + 1] : -1;
+            
+            if (mat[maxRow][mid] > leftVal && mat[maxRow][mid] > rightVal) {
+                return new int[]{maxRow, mid};
+            } else if (mat[maxRow][mid] < leftVal) {
+                right = mid - 1;
+            } else {
+                left = mid + 1;
+            }
+        }
+        
+        return new int[]{-1, -1};
+    }
 }`,
         explanation: "Advanced 2D peak finding using column-wise binary search. Demonstrates extension to higher dimensions."
       }
