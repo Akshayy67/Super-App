@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Star,
   CheckCircle,
@@ -10,8 +10,10 @@ import {
   Lightbulb,
   Zap,
   TrendingUp,
+  Code,
 } from "lucide-react";
 import { Question } from "./InterviewSubjects";
+import { CodeViewer } from "./CodeViewer";
 
 interface QuestionCardProps {
   question: Question;
@@ -44,6 +46,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   setSelectedQuestions,
   setShowPracticeModal,
 }) => {
+  const [showCode, setShowCode] = useState(false);
+  const hasCodeImplementation = question.codeImplementation && question.codeImplementation.length > 0;
   return (
     <div
       className={`bg-white rounded-2xl border transition-all duration-300 ${
@@ -146,7 +150,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center space-x-3 mt-5 mb-4">
+        <div className="flex items-center space-x-3 mt-5 mb-4 flex-wrap gap-y-2">
           <button
             onClick={() => toggleAnswer(question.id)}
             className="flex items-center space-x-2 px-4 py-2.5 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-all duration-300 text-sm font-medium border border-blue-200"
@@ -154,15 +158,34 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             {isExpanded ? (
               <>
                 <EyeOff className="w-4 h-4" />
-                <span>Hide Answer</span>
+                <span>Hide Approach</span>
               </>
             ) : (
               <>
                 <Eye className="w-4 h-4" />
-                <span>View Answer</span>
+                <span>View Approach</span>
               </>
             )}
           </button>
+
+          {hasCodeImplementation && (
+            <button
+              onClick={() => setShowCode(!showCode)}
+              className="flex items-center space-x-2 px-4 py-2.5 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition-all duration-300 text-sm font-medium border border-green-200"
+            >
+              {showCode ? (
+                <>
+                  <EyeOff className="w-4 h-4" />
+                  <span>Hide Code</span>
+                </>
+              ) : (
+                <>
+                  <Code className="w-4 h-4" />
+                  <span>View Code</span>
+                </>
+              )}
+            </button>
+          )}
 
           <button className="flex items-center space-x-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all duration-300 text-sm font-medium border border-gray-200">
             <Volume2 className="w-4 h-4" />
@@ -184,18 +207,33 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         </div>
 
         {/* Expanded Content */}
-        {isExpanded && question.sampleAnswer && (
+        {isExpanded && (
           <div className="mt-6 space-y-4">
-            {/* Sample Answer */}
-            <div className="p-5 bg-blue-50 rounded-xl border border-blue-200">
-              <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                <Lightbulb className="w-5 h-5 mr-2 text-blue-600" />
-                Sample Answer
-              </h4>
-              <p className="text-gray-700 leading-relaxed">
-                {question.sampleAnswer}
-              </p>
-            </div>
+            {/* Approach Section */}
+            {question.approach && (
+              <div className="p-5 bg-blue-50 rounded-xl border border-blue-200">
+                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                  <Lightbulb className="w-5 h-5 mr-2 text-blue-600" />
+                  Approach & Strategy
+                </h4>
+                <p className="text-gray-700 leading-relaxed">
+                  {question.approach}
+                </p>
+              </div>
+            )}
+
+            {/* Fallback to Sample Answer if no approach is provided */}
+            {!question.approach && question.sampleAnswer && (
+              <div className="p-5 bg-blue-50 rounded-xl border border-blue-200">
+                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                  <Lightbulb className="w-5 h-5 mr-2 text-blue-600" />
+                  Sample Answer
+                </h4>
+                <p className="text-gray-700 leading-relaxed">
+                  {question.sampleAnswer}
+                </p>
+              </div>
+            )}
 
             {/* Tips */}
             {question.tips && (
@@ -237,6 +275,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Code Implementation Section */}
+        {showCode && hasCodeImplementation && (
+          <div className="mt-6">
+            <CodeViewer implementations={question.codeImplementation!} />
           </div>
         )}
       </div>
