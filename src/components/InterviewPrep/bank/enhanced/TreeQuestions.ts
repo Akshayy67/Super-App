@@ -53,7 +53,7 @@ function invertTreeIterative(root: TreeNode | null): TreeNode | null {
         const node = queue.shift()!;
         
         // Swap children
-        [node.left, node.right] = [root.right, root.left];
+        [node.left, node.right] = [node.right, node.left];
         
         if (node.left) queue.push(node.left);
         if (node.right) queue.push(node.right);
@@ -84,6 +84,81 @@ function invertTreeDFS(root: TreeNode | null): TreeNode | null {
     
     return root;
 }`,
+        explanation: "Iterative DFS with stack provides depth-first traversal without recursion. Good space control."
+      },
+      {
+        language: "Python",
+        code: `# Tree Node Definition
+class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+# Approach 1: Recursive (DFS)
+# Time: O(n), Space: O(h) where h is height
+def invert_tree(root):
+    if not root:
+        return None
+    
+    # Swap children
+    root.left, root.right = root.right, root.left
+    
+    # Recursively invert subtrees
+    invert_tree(root.left)
+    invert_tree(root.right)
+    
+    return root`,
+        explanation: "Recursive DFS approach is most intuitive. Swaps children at each node and recursively inverts subtrees."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Iterative (BFS)
+# Time: O(n), Space: O(w) where w is max width
+from collections import deque
+
+def invert_tree_iterative(root):
+    if not root:
+        return None
+    
+    queue = deque([root])
+    
+    while queue:
+        node = queue.popleft()
+        
+        # Swap children
+        node.left, node.right = node.right, node.left
+        
+        if node.left:
+            queue.append(node.left)
+        if node.right:
+            queue.append(node.right)
+    
+    return root`,
+        explanation: "Iterative BFS approach uses queue for level-by-level processing. Avoids stack overflow for deep trees."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Iterative (DFS with stack)
+# Time: O(n), Space: O(h) where h is height
+def invert_tree_dfs(root):
+    if not root:
+        return None
+    
+    stack = [root]
+    
+    while stack:
+        node = stack.pop()
+        
+        # Swap children
+        node.left, node.right = node.right, node.left
+        
+        if node.left:
+            stack.append(node.left)
+        if node.right:
+            stack.append(node.right)
+    
+    return root`,
         explanation: "Iterative DFS with stack provides depth-first traversal without recursion. Good space control."
       }
     ],
