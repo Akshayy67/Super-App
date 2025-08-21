@@ -35,6 +35,27 @@ function search(nums: number[], target: number): number {
         explanation: "Standard iterative binary search. Most space-efficient with O(1) space complexity."
       },
       {
+        language: "Python",
+        code: `# Approach 1: Standard Binary Search (Optimal)
+# Time: O(log n), Space: O(1)
+def search(nums, target):
+    left = 0
+    right = len(nums) - 1
+    
+    while left <= right:
+        mid = (left + right) // 2
+        
+        if nums[mid] == target:
+            return mid
+        elif nums[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    
+    return -1`,
+        explanation: "Standard iterative binary search. Most space-efficient with O(1) space complexity."
+      },
+      {
         language: "Java",
         code: `// Approach 1: Standard Binary Search (Optimal)
 // Time: O(log n), Space: O(1)
@@ -58,6 +79,28 @@ class Solution {
         return -1;
     }
 }`,
+        explanation: "Standard iterative binary search. Most space-efficient with O(1) space complexity."
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Standard Binary Search (Optimal)
+# Time: O(log n), Space: O(1)
+class Solution:
+    def search(self, nums, target):
+        left = 0
+        right = len(nums) - 1
+        
+        while left <= right:
+            mid = left + (right - left) // 2
+            
+            if nums[mid] == target:
+                return mid
+            elif nums[mid] < target:
+                left = mid + 1
+            else:
+                right = mid - 1
+        
+        return -1`,
         explanation: "Standard iterative binary search. Most space-efficient with O(1) space complexity."
       },
       {
@@ -109,6 +152,45 @@ class Solution {
         explanation: "Recursive binary search implementation. More intuitive but uses call stack space."
       },
       {
+        language: "Python",
+        code: `# Approach 2: Recursive Binary Search
+# Time: O(log n), Space: O(log n)
+def search_recursive(nums, target):
+    def binary_search(left, right):
+        if left > right:
+            return -1
+        
+        mid = (left + right) // 2
+        
+        if nums[mid] == target:
+            return mid
+        elif nums[mid] < target:
+            return binary_search(mid + 1, right)
+        else:
+            return binary_search(left, mid - 1)
+    
+    return binary_search(0, len(nums) - 1)
+
+# Class-based solution
+class Solution:
+    def search_recursive(self, nums, target):
+        def binary_search(left, right):
+            if left > right:
+                return -1
+            
+            mid = left + (right - left) // 2
+            
+            if nums[mid] == target:
+                return mid
+            elif nums[mid] < target:
+                return binary_search(mid + 1, right)
+            else:
+                return binary_search(left, mid - 1)
+        
+        return binary_search(0, len(nums) - 1)`,
+        explanation: "Recursive binary search implementation. More intuitive but uses call stack space."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: Find Insertion Position (Lower Bound)
 // Time: O(log n), Space: O(1)
@@ -152,6 +234,41 @@ class Solution {
         return left;
     }
 }`,
+        explanation: "Extension that finds insertion position for target. Uses left < right condition for bounds."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Find Insertion Position (Lower Bound)
+# Time: O(log n), Space: O(1)
+def search_insert(nums, target):
+    left = 0
+    right = len(nums)
+    
+    while left < right:
+        mid = (left + right) // 2
+        
+        if nums[mid] < target:
+            left = mid + 1
+        else:
+            right = mid
+    
+    return left
+
+# Class-based solution
+class Solution:
+    def search_insert(self, nums, target):
+        left = 0
+        right = len(nums)
+        
+        while left < right:
+            mid = left + (right - left) // 2
+            
+            if nums[mid] < target:
+                left = mid + 1
+            else:
+                right = mid
+        
+        return left`,
         explanation: "Extension that finds insertion position for target. Uses left < right condition for bounds."
       }
     ],
@@ -245,6 +362,65 @@ class Solution {
         return -1;
     }
 }`,
+        explanation: "Modified binary search handles rotated sorted arrays by determining which half is sorted."
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Modified Binary Search (Optimal)
+# Time: O(log n), Space: O(1)
+def search_rotated(nums, target):
+    left = 0
+    right = len(nums) - 1
+    
+    while left <= right:
+        mid = (left + right) // 2
+        
+        if nums[mid] == target:
+            return mid
+        
+        # Determine which half is sorted
+        if nums[left] <= nums[mid]:
+            # Left half is sorted
+            if nums[left] <= target < nums[mid]:
+                right = mid - 1
+            else:
+                left = mid + 1
+        else:
+            # Right half is sorted
+            if nums[mid] < target <= nums[right]:
+                left = mid + 1
+            else:
+                right = mid - 1
+    
+    return -1
+
+# Class-based solution
+class Solution:
+    def search(self, nums, target):
+        left = 0
+        right = len(nums) - 1
+        
+        while left <= right:
+            mid = left + (right - left) // 2
+            
+            if nums[mid] == target:
+                return mid
+            
+            # Determine which half is sorted
+            if nums[left] <= nums[mid]:
+                # Left half is sorted
+                if nums[left] <= target < nums[mid]:
+                    right = mid - 1
+                else:
+                    left = mid + 1
+            else:
+                # Right half is sorted
+                if nums[mid] < target <= nums[right]:
+                    left = mid + 1
+                else:
+                    right = mid - 1
+        
+        return -1`,
         explanation: "Modified binary search handles rotated sorted arrays by determining which half is sorted."
       },
       {
