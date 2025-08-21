@@ -33,6 +33,7 @@ import {
 import { vapi, isVapiConfigured, checkBrowserCompatibility, interviewer } from "../../lib/vapi.sdk";
 import { aiService } from "../../utils/aiService";
 import { InterviewFeedback } from "./InterviewFeedback";
+import { JAMSession } from "./JAMSession";
 
 interface InterviewQuestion {
   id: string;
@@ -73,6 +74,7 @@ export const MockInterview: React.FC = () => {
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("general");
   const [activeTab, setActiveTab] = useState<"templates" | "custom">("templates");
+  const [showJAMSession, setShowJAMSession] = useState(false);
   
   // Custom interview configuration
   const [customRole, setCustomRole] = useState("");
@@ -330,6 +332,14 @@ export const MockInterview: React.FC = () => {
       duration: 45,
       questionCount: 10,
       difficulty: "hard" as const,
+    },
+    {
+      id: "jam",
+      name: "JAM Session",
+      description: "Just A Minute practice with random topics",
+      duration: 2,
+      questionCount: 1,
+      difficulty: "medium" as const,
     },
   ];
 
@@ -712,6 +722,12 @@ export const MockInterview: React.FC = () => {
   };
 
   const startInterview = (templateId: string) => {
+    // Handle JAM session separately
+    if (templateId === "jam") {
+      setShowJAMSession(true);
+      return;
+    }
+
     const template = interviewTemplates.find((t) => t.id === templateId);
     if (!template) return;
 
@@ -1201,6 +1217,11 @@ Important:
         </div>
       </div>
     );
+  }
+
+  // Show JAM session if selected
+  if (showJAMSession) {
+    return <JAMSession onBack={() => setShowJAMSession(false)} />;
   }
 
   // If there's an active session, show the interview interface
@@ -1861,9 +1882,10 @@ Important:
                         template.id === 'behavioral' ? 'bg-gradient-to-br from-green-500 to-green-600' :
                         template.id === 'technical' ? 'bg-gradient-to-br from-purple-500 to-purple-600' :
                         template.id === 'quick' ? 'bg-gradient-to-br from-orange-500 to-orange-600' :
+                        template.id === 'jam' ? 'bg-gradient-to-br from-pink-500 to-rose-600' :
                         'bg-gradient-to-br from-indigo-500 to-indigo-600'
                       }`}>
-                        <Target className="w-5 h-5 text-white" />
+                        {template.id === 'jam' ? <MessageSquare className="w-5 h-5 text-white" /> : <Target className="w-5 h-5 text-white" />}
                       </div>
                       <h4 className="font-bold text-gray-900 text-lg">{template.name}</h4>
                     </div>
