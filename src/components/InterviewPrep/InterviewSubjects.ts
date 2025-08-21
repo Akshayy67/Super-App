@@ -15,3 +15,25 @@ export interface Question {
   practiceCount?: number;
   successRate?: number;
 }
+
+// Enhanced question interface with code implementations
+export interface CodeImplementation {
+  solution: string;
+  explanation: string;
+  timeComplexity: string;
+  spaceComplexity: string;
+  approach: string;
+}
+
+export interface EnhancedQuestion extends Question {
+  codeImplementations?: {
+    javascript?: CodeImplementation;
+    python?: CodeImplementation;
+    java?: CodeImplementation;
+    cpp?: CodeImplementation;
+  };
+  algorithmSteps?: string[];
+  commonMistakes?: string[];
+  optimizations?: string[];
+  relatedQuestions?: string[];
+}
