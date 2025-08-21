@@ -27,6 +27,22 @@ export const enhancedBitManipulationQuestions: Question[] = [
 }`,
       },
       {
+        language: "java",
+        explanation:
+          "XOR Approach: Java implementation using XOR properties. Since XOR is commutative and associative, all duplicate numbers cancel out, leaving only the single element. Time: O(n), Space: O(1)",
+        code: `public class Solution {
+    public int singleNumber(int[] nums) {
+        int result = 0;
+        
+        for (int num : nums) {
+            result ^= num;
+        }
+        
+        return result;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Hash Set Approach: We add numbers to a set as we see them, and remove them if we encounter them again. After processing all numbers, only the single element remains in the set. Time: O(n), Space: O(n)",
@@ -45,6 +61,28 @@ export const enhancedBitManipulationQuestions: Question[] = [
 }`,
       },
       {
+        language: "java",
+        explanation:
+          "Hash Set Approach: Java implementation using HashSet to track seen numbers. We add/remove numbers as we encounter them, leaving only the single element. Time: O(n), Space: O(n)",
+        code: `import java.util.*;
+
+public class Solution {
+    public int singleNumber(int[] nums) {
+        Set<Integer> seen = new HashSet<>();
+        
+        for (int num : nums) {
+            if (seen.contains(num)) {
+                seen.remove(num);
+            } else {
+                seen.add(num);
+            }
+        }
+        
+        return seen.iterator().next();
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Single Number II (Elements Appear 3 Times): This variation uses a finite state machine approach where we track ones and twos. Each bit position evolves independently based on the input. Time: O(n), Space: O(1)",
@@ -58,6 +96,24 @@ export const enhancedBitManipulationQuestions: Question[] = [
     }
     
     return ones;
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Single Number II (Elements Appear 3 Times): Java implementation using finite state machine with ones and twos variables. Each bit position tracks its count modulo 3. Time: O(n), Space: O(1)",
+        code: `public class Solution {
+    public int singleNumber(int[] nums) {
+        int ones = 0;
+        int twos = 0;
+        
+        for (int num : nums) {
+            ones = (ones ^ num) & ~twos;
+            twos = (twos ^ num) & ~ones;
+        }
+        
+        return ones;
+    }
 }`,
       },
       {
@@ -85,6 +141,35 @@ export const enhancedBitManipulationQuestions: Question[] = [
     }
     
     return [num1, num2];
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Single Number III (Two Single Elements): Java implementation that partitions array based on a differentiating bit. We use the rightmost set bit to separate the two single numbers. Time: O(n), Space: O(1)",
+        code: `public class Solution {
+    public int[] singleNumber(int[] nums) {
+        int xor = 0;
+        for (int num : nums) {
+            xor ^= num;
+        }
+        
+        // Find rightmost set bit
+        int rightmostBit = xor & (-xor);
+        
+        int num1 = 0;
+        int num2 = 0;
+        
+        for (int num : nums) {
+            if ((num & rightmostBit) != 0) {
+                num1 ^= num;
+            } else {
+                num2 ^= num;
+            }
+        }
+        
+        return new int[]{num1, num2};
+    }
 }`,
       },
     ],
@@ -127,6 +212,23 @@ export const enhancedBitManipulationQuestions: Question[] = [
 }`,
       },
       {
+        language: "java",
+        explanation:
+          "Brian Kernighan's Algorithm: Java implementation that efficiently removes the rightmost set bit in each iteration. This is optimal when the number of set bits is small. Time: O(number of 1 bits), Space: O(1)",
+        code: `public class Solution {
+    public int hammingWeight(int n) {
+        int count = 0;
+        
+        while (n != 0) {
+            n = n & (n - 1); // Remove rightmost set bit
+            count++;
+        }
+        
+        return count;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Bit Shift Approach: This approach checks each bit position by using a bitwise AND with 1, then shifts the number right. It always takes 32 iterations for a 32-bit integer. Time: O(32), Space: O(1)",
@@ -142,11 +244,38 @@ export const enhancedBitManipulationQuestions: Question[] = [
 }`,
       },
       {
+        language: "java",
+        explanation:
+          "Bit Shift Approach: Java implementation that checks each bit position systematically. We use unsigned right shift to handle negative numbers correctly. Time: O(32), Space: O(1)",
+        code: `public class Solution {
+    public int hammingWeight(int n) {
+        int count = 0;
+        
+        while (n != 0) {
+            count += n & 1;
+            n = n >>> 1; // Unsigned right shift
+        }
+        
+        return count;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Built-in Method: This approach uses JavaScript's built-in methods to convert the number to a binary string and count the '1' characters. While easy to understand, it's less efficient than bit manipulation. Time: O(log n), Space: O(log n)",
         code: `function hammingWeightBuiltIn(n: number): number {
     return n.toString(2).split('').filter(bit => bit === '1').length;
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Built-in Method: Java implementation using built-in Integer.bitCount() method. This is the most concise approach and is highly optimized in the JVM. Time: O(1), Space: O(1)",
+        code: `public class Solution {
+    public int hammingWeight(int n) {
+        return Integer.bitCount(n);
+    }
 }`,
       },
       {
@@ -165,6 +294,28 @@ export const enhancedBitManipulationQuestions: Question[] = [
            lookup[(n >> 8) & 0xff] + 
            lookup[(n >> 16) & 0xff] + 
            lookup[(n >> 24) & 0xff];
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Lookup Table Approach: Java implementation using precomputed lookup table for 8-bit numbers. This is efficient when the function is called frequently. Time: O(1) after preprocessing, Space: O(256)",
+        code: `public class Solution {
+    private static final int[] lookup = new int[256];
+    
+    static {
+        // Precompute for all 8-bit numbers
+        for (int i = 0; i < 256; i++) {
+            lookup[i] = (i & 1) + lookup[i >> 1];
+        }
+    }
+    
+    public int hammingWeight(int n) {
+        return lookup[n & 0xff] + 
+               lookup[(n >> 8) & 0xff] + 
+               lookup[(n >> 16) & 0xff] + 
+               lookup[(n >> 24) & 0xff];
+    }
 }`,
       },
     ],
@@ -208,6 +359,24 @@ export const enhancedBitManipulationQuestions: Question[] = [
 }`,
       },
       {
+        language: "java",
+        explanation:
+          "Dynamic Programming with Bit Manipulation: Java implementation using the optimal DP recurrence relation. Each number's bit count equals its right-shifted version plus its least significant bit. Time: O(n), Space: O(1) excluding output",
+        code: `public class Solution {
+    public int[] countBits(int n) {
+        int[] result = new int[n + 1];
+        result[0] = 0;
+        
+        for (int i = 1; i <= n; i++) {
+            // Key insight: dp[i] = dp[i >> 1] + (i & 1)
+            result[i] = result[i >> 1] + (i & 1);
+        }
+        
+        return result;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Using i & (i-1) Pattern: This approach uses the fact that i & (i-1) removes the rightmost set bit. The number of bits in i equals the number of bits in i & (i-1) plus 1. Time: O(n), Space: O(1) excluding output",
@@ -220,6 +389,23 @@ export const enhancedBitManipulationQuestions: Question[] = [
     }
     
     return result;
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Using i & (i-1) Pattern: Java implementation using Brian Kernighan's bit manipulation trick. This leverages the property that i & (i-1) removes the rightmost set bit. Time: O(n), Space: O(1) excluding output",
+        code: `public class Solution {
+    public int[] countBits(int n) {
+        int[] result = new int[n + 1];
+        result[0] = 0;
+        
+        for (int i = 1; i <= n; i++) {
+            result[i] = result[i & (i - 1)] + 1;
+        }
+        
+        return result;
+    }
 }`,
       },
       {
@@ -245,6 +431,30 @@ export const enhancedBitManipulationQuestions: Question[] = [
 }`,
       },
       {
+        language: "java",
+        explanation:
+          "Brute Force Approach: Java implementation that counts bits for each number independently. This is straightforward but less efficient than the DP approaches. Time: O(n log n), Space: O(1) excluding output",
+        code: `public class Solution {
+    public int[] countBits(int n) {
+        int[] result = new int[n + 1];
+        
+        for (int i = 0; i <= n; i++) {
+            int count = 0;
+            int num = i;
+            
+            while (num != 0) {
+                count += num & 1;
+                num >>= 1;
+            }
+            
+            result[i] = count;
+        }
+        
+        return result;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Using Built-in Method: This approach uses JavaScript's built-in methods to convert each number to a binary string and count the '1' characters. It's easy to understand but less efficient. Time: O(n log n), Space: O(n log n)",
@@ -256,6 +466,22 @@ export const enhancedBitManipulationQuestions: Question[] = [
     }
     
     return result;
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Using Built-in Method: Java implementation using Integer.bitCount() for each number. This is concise and leverages optimized JVM implementations. Time: O(n), Space: O(1) excluding output",
+        code: `public class Solution {
+    public int[] countBits(int n) {
+        int[] result = new int[n + 1];
+        
+        for (int i = 0; i <= n; i++) {
+            result[i] = Integer.bitCount(i);
+        }
+        
+        return result;
+    }
 }`,
       },
     ],
@@ -297,6 +523,23 @@ export const enhancedBitManipulationQuestions: Question[] = [
 }`,
       },
       {
+        language: "java",
+        explanation:
+          "Bit by Bit Reversal: Java implementation that processes one bit at a time. We build the result by shifting left and adding each bit from the input. Time: O(32), Space: O(1)",
+        code: `public class Solution {
+    public int reverseBits(int n) {
+        int result = 0;
+        
+        for (int i = 0; i < 32; i++) {
+            result = (result << 1) | (n & 1);
+            n >>>= 1;
+        }
+        
+        return result;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Divide and Conquer Approach: This approach reverses bits by repeatedly swapping groups of bits of decreasing size (16, 8, 4, 2, 1). This is very efficient and has constant time complexity. Time: O(1), Space: O(1)",
@@ -317,6 +560,31 @@ export const enhancedBitManipulationQuestions: Question[] = [
     n = ((n & 0xaaaaaaaa) >>> 1) | ((n & 0x55555555) << 1);
     
     return n >>> 0;
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Divide and Conquer Approach: Java implementation using divide and conquer strategy. We repeatedly swap groups of bits of decreasing size for ultra-fast reversal. Time: O(1), Space: O(1)",
+        code: `public class Solution {
+    public int reverseBits(int n) {
+        // Swap 16-bit halves
+        n = (n >>> 16) | (n << 16);
+        
+        // Swap 8-bit quarters
+        n = ((n & 0xff00ff00) >>> 8) | ((n & 0x00ff00ff) << 8);
+        
+        // Swap 4-bit nibbles
+        n = ((n & 0xf0f0f0f0) >>> 4) | ((n & 0x0f0f0f0f) << 4);
+        
+        // Swap 2-bit pairs
+        n = ((n & 0xcccccccc) >>> 2) | ((n & 0x33333333) << 2);
+        
+        // Swap 1-bit pairs
+        n = ((n & 0xaaaaaaaa) >>> 1) | ((n & 0x55555555) << 1);
+        
+        return n;
+    }
 }`,
       },
       {
@@ -341,6 +609,34 @@ export const enhancedBitManipulationQuestions: Question[] = [
            (lookup[(n >> 8) & 0xff] << 16) |
            (lookup[(n >> 16) & 0xff] << 8) |
            lookup[(n >> 24) & 0xff];
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Lookup Table Approach: Java implementation using precomputed lookup table for 8-bit reversals. This is optimal when the function is called frequently. Time: O(1) after preprocessing, Space: O(256)",
+        code: `public class Solution {
+    private static final int[] lookup = new int[256];
+    
+    static {
+        // Precompute reverse for all 8-bit numbers
+        for (int i = 0; i < 256; i++) {
+            int reversed = 0;
+            int num = i;
+            for (int j = 0; j < 8; j++) {
+                reversed = (reversed << 1) | (num & 1);
+                num >>= 1;
+            }
+            lookup[i] = reversed;
+        }
+    }
+    
+    public int reverseBits(int n) {
+        return (lookup[n & 0xff] << 24) |
+               (lookup[(n >>> 8) & 0xff] << 16) |
+               (lookup[(n >>> 16) & 0xff] << 8) |
+               lookup[(n >>> 24) & 0xff];
+    }
 }`,
       },
     ],
@@ -376,6 +672,16 @@ export const enhancedBitManipulationQuestions: Question[] = [
 }`,
       },
       {
+        language: "java",
+        explanation:
+          "Bit Manipulation Trick: Java implementation using the optimal bit manipulation trick. A power of 2 has exactly one bit set, so n & (n-1) removes that bit, resulting in 0. Time: O(1), Space: O(1)",
+        code: `public class Solution {
+    public boolean isPowerOfTwo(int n) {
+        return n > 0 && (n & (n - 1)) == 0;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Count Set Bits Approach: This approach counts the number of set bits in the binary representation of n. If n is a power of 2, there should be exactly one set bit. Time: O(log n), Space: O(1)",
@@ -389,6 +695,24 @@ export const enhancedBitManipulationQuestions: Question[] = [
     }
     
     return count === 1;
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Count Set Bits Approach: Java implementation that counts the number of set bits. A power of 2 has exactly one bit set in its binary representation. Time: O(log n), Space: O(1)",
+        code: `public class Solution {
+    public boolean isPowerOfTwo(int n) {
+        if (n <= 0) return false;
+        
+        int count = 0;
+        while (n > 0) {
+            count += n & 1;
+            n >>= 1;
+        }
+        
+        return count == 1;
+    }
 }`,
       },
       {
@@ -406,6 +730,22 @@ export const enhancedBitManipulationQuestions: Question[] = [
 }`,
       },
       {
+        language: "java",
+        explanation:
+          "Iterative Division: Java implementation using repeated division by 2. If n is a power of 2, we can keep dividing by 2 until we reach 1. Time: O(log n), Space: O(1)",
+        code: `public class Solution {
+    public boolean isPowerOfTwo(int n) {
+        if (n <= 0) return false;
+        
+        while (n % 2 == 0) {
+            n /= 2;
+        }
+        
+        return n == 1;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Using Built-in Method: This approach converts n to a binary string and checks if there's exactly one '1' character at the beginning. It's more readable but less efficient. Time: O(log n), Space: O(log n)",
@@ -414,6 +754,16 @@ export const enhancedBitManipulationQuestions: Question[] = [
     
     const binary = n.toString(2);
     return binary.indexOf('1') === binary.lastIndexOf('1') && binary.indexOf('1') === 0;
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Using Built-in Method: Java implementation using Integer.bitCount() to count set bits. A power of 2 has exactly one bit set. Time: O(1), Space: O(1)",
+        code: `public class Solution {
+    public boolean isPowerOfTwo(int n) {
+        return n > 0 && Integer.bitCount(n) == 1;
+    }
 }`,
       },
       {
@@ -428,6 +778,24 @@ export const enhancedBitManipulationQuestions: Question[] = [
     ]);
     
     return powersOfTwo.has(n);
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Lookup Table Approach: Java implementation using HashSet with all 32-bit powers of 2. This provides O(1) lookup time but uses extra space. Time: O(1), Space: O(log MAX_INT)",
+        code: `import java.util.*;
+
+public class Solution {
+    private static final Set<Integer> powersOfTwo = new HashSet<>(Arrays.asList(
+        1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384,
+        32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304,
+        8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824
+    ));
+    
+    public boolean isPowerOfTwo(int n) {
+        return powersOfTwo.contains(n);
+    }
 }`,
       },
     ],
@@ -469,6 +837,22 @@ export const enhancedBitManipulationQuestions: Question[] = [
 }`,
       },
       {
+        language: "java",
+        explanation:
+          "XOR Approach: Java implementation using XOR properties. We XOR all indices with all values, and the missing number remains since it appears only once. Time: O(n), Space: O(1)",
+        code: `public class Solution {
+    public int missingNumber(int[] nums) {
+        int missing = nums.length;
+        
+        for (int i = 0; i < nums.length; i++) {
+            missing ^= i ^ nums[i];
+        }
+        
+        return missing;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Sum Formula Approach: This approach calculates the expected sum of numbers from 0 to n using the formula n*(n+1)/2, and then subtracts the actual sum of the array. The difference is the missing number. Time: O(n), Space: O(1)",
@@ -478,6 +862,24 @@ export const enhancedBitManipulationQuestions: Question[] = [
     const actualSum = nums.reduce((sum, num) => sum + num, 0);
     
     return expectedSum - actualSum;
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Sum Formula Approach: Java implementation using arithmetic sum formula. We calculate the expected sum and subtract the actual sum to find the missing number. Time: O(n), Space: O(1)",
+        code: `public class Solution {
+    public int missingNumber(int[] nums) {
+        int n = nums.length;
+        int expectedSum = n * (n + 1) / 2;
+        int actualSum = 0;
+        
+        for (int num : nums) {
+            actualSum += num;
+        }
+        
+        return expectedSum - actualSum;
+    }
 }`,
       },
       {
@@ -504,6 +906,33 @@ export const enhancedBitManipulationQuestions: Question[] = [
 }`,
       },
       {
+        language: "java",
+        explanation:
+          "Binary Search Approach: Java implementation using binary search on sorted array. We find the first position where value doesn't equal index. Time: O(n log n) if sorting needed, O(log n) if sorted, Space: O(1)",
+        code: `import java.util.*;
+
+public class Solution {
+    public int missingNumber(int[] nums) {
+        Arrays.sort(nums);
+        
+        int left = 0;
+        int right = nums.length - 1;
+        
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            
+            if (nums[mid] == mid) {
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
+        }
+        
+        return left;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Set Approach: This approach adds all numbers in the array to a set, then checks which number from 0 to n is not in the set. Simple but uses extra space. Time: O(n), Space: O(n)",
@@ -517,6 +946,29 @@ export const enhancedBitManipulationQuestions: Question[] = [
     }
     
     return -1;
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Set Approach: Java implementation using HashSet to store all numbers, then iterate to find the missing one. Simple but uses extra space. Time: O(n), Space: O(n)",
+        code: `import java.util.*;
+
+public class Solution {
+    public int missingNumber(int[] nums) {
+        Set<Integer> numSet = new HashSet<>();
+        for (int num : nums) {
+            numSet.add(num);
+        }
+        
+        for (int i = 0; i <= nums.length; i++) {
+            if (!numSet.contains(i)) {
+                return i;
+            }
+        }
+        
+        return -1;
+    }
 }`,
       },
     ],
@@ -561,6 +1013,25 @@ export const enhancedBitManipulationQuestions: Question[] = [
 }`,
       },
       {
+        language: "java",
+        explanation:
+          "Right Shift Approach: Java implementation that finds the common prefix by right-shifting both numbers until they match. This represents the bitwise AND of the entire range. Time: O(log n), Space: O(1)",
+        code: `public class Solution {
+    public int rangeBitwiseAnd(int left, int right) {
+        int shift = 0;
+        
+        // Find common prefix
+        while (left != right) {
+            left >>= 1;
+            right >>= 1;
+            shift++;
+        }
+        
+        return left << shift;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "Brian Kernighan's Algorithm: This approach repeatedly removes the rightmost set bit from 'right' until it becomes less than or equal to 'left'. The resulting value is the bitwise AND of the range. Time: O(log n), Space: O(1)",
@@ -570,6 +1041,20 @@ export const enhancedBitManipulationQuestions: Question[] = [
     }
     
     return right;
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Brian Kernighan's Algorithm: Java implementation using Kernighan's bit manipulation trick. We remove rightmost set bits from right until it's ≤ left. Time: O(log n), Space: O(1)",
+        code: `public class Solution {
+    public int rangeBitwiseAnd(int left, int right) {
+        while (left < right) {
+            right = right & (right - 1); // Remove rightmost set bit
+        }
+        
+        return right;
+    }
 }`,
       },
       {
@@ -593,6 +1078,31 @@ export const enhancedBitManipulationQuestions: Question[] = [
     }
     
     return result;
+}`,
+      },
+      {
+        language: "java",
+        explanation:
+          "Bit by Bit Analysis: Java implementation that examines each bit position from MSB to LSB. When bits differ, all lower positions will be 0 in the result. Time: O(1) for 32-bit integers, Space: O(1)",
+        code: `public class Solution {
+    public int rangeBitwiseAnd(int left, int right) {
+        int result = 0;
+        
+        for (int i = 31; i >= 0; i--) {
+            int leftBit = (left >> i) & 1;
+            int rightBit = (right >> i) & 1;
+            
+            if (leftBit != rightBit) {
+                break; // All lower bits will be 0
+            }
+            
+            if (leftBit == 1) {
+                result |= (1 << i);
+            }
+        }
+        
+        return result;
+    }
 }`,
       },
     ],
