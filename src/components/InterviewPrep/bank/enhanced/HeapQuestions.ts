@@ -235,6 +235,68 @@ private void reverse(int[] nums) {
         explanation:
           "Java implementation using sorting. Simple approach using built-in Arrays.sort and manual reversal.",
       },
+      {
+        language: "Python",
+        code: `# Approach 1: Quick Select (Optimal average case)
+# Time: O(n) average, O(n²) worst, Space: O(1)
+def find_kth_largest(nums, k):
+    k = len(nums) - k  # Convert to kth smallest (0-indexed)
+    
+    def quick_select(left, right):
+        pivot = partition(left, right)
+        
+        if pivot == k:
+            return nums[pivot]
+        elif pivot < k:
+            return quick_select(pivot + 1, right)
+        else:
+            return quick_select(left, pivot - 1)
+    
+    def partition(left, right):
+        pivot_value = nums[right]
+        i = left
+        
+        for j in range(left, right):
+            if nums[j] <= pivot_value:
+                nums[i], nums[j] = nums[j], nums[i]
+                i += 1
+        
+        nums[i], nums[right] = nums[right], nums[i]
+        return i
+    
+    return quick_select(0, len(nums) - 1)`,
+        explanation: "Quick Select uses partitioning to find the kth element. Most efficient average case but can degrade to O(n²) in worst case."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Min Heap
+# Time: O(n log k), Space: O(k)
+import heapq
+
+def find_kth_largest_heap(nums, k):
+    # Use min heap to maintain k largest elements
+    min_heap = []
+    
+    for num in nums:
+        heapq.heappush(min_heap, num)
+        
+        # Keep heap size at k
+        if len(min_heap) > k:
+            heapq.heappop(min_heap)
+    
+    # Top of min heap is kth largest
+    return min_heap[0]`,
+        explanation: "Min Heap maintains k largest elements using Python's heapq module. Guaranteed O(n log k) time complexity."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Sorting
+# Time: O(n log n), Space: O(1)
+def find_kth_largest_sort(nums, k):
+    nums.sort(reverse=True)
+    return nums[k - 1]`,
+        explanation: "Simple sorting approach. Less efficient but easiest to implement and understand."
+      },
     ],
     tips: [
       "Quick select is optimal average case with O(n) time",
