@@ -8,6 +8,7 @@ import { systemDesignQuestions } from "./SystemDesignQuestions";
 import { cloudDevOpsQuestions } from "./CloudDevOpsQuestions";
 import { behavioralQuestions } from "./BehavioralQuestions";
 import { operatingSystemQuestions } from "./OperatingSystemQuestions";
+import { enhancedDSAQuestions } from "./enhanced";
 import { Question } from "../InterviewSubjects";
 
 // Export individual collections
@@ -21,6 +22,7 @@ export {
   cloudDevOpsQuestions,
   behavioralQuestions,
   operatingSystemQuestions,
+  enhancedDSAQuestions,
 };
 
 // Combined collection of all questions
@@ -34,11 +36,12 @@ export const allQuestions: Question[] = [
   ...cloudDevOpsQuestions,
   ...behavioralQuestions,
   ...operatingSystemQuestions,
+  ...enhancedDSAQuestions,
 ];
 
 // Map subject names to their respective question collections
 export const questionsBySubject: Record<string, Question[]> = {
-  "Algorithms & Data Structures": algorithmQuestions,
+  "Algorithms & Data Structures": [...algorithmQuestions, ...enhancedDSAQuestions],
   "Frontend Development": frontendQuestions,
   React: reactQuestions,
   JavaScript: javascriptQuestions,
@@ -47,6 +50,7 @@ export const questionsBySubject: Record<string, Question[]> = {
   "Cloud & DevOps": cloudDevOpsQuestions,
   Behavioral: behavioralQuestions,
   "Operating Systems": operatingSystemQuestions,
+  "Enhanced DSA": enhancedDSAQuestions,
 };
 
 // Helper function to get questions by subject name
