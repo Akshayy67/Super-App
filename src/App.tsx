@@ -135,35 +135,35 @@ function App() {
         />
       )}
       
-      <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row landscape-compact">
-        {/* Mobile Header */}
-        <div className="mobile-header lg:hidden bg-white shadow-sm border-b border-gray-200 p-3 sm:p-4 flex items-center justify-between relative z-30">
+      <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row">
+        {/* Simplified Mobile Header */}
+        <div className="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between">
           <button
             onClick={() => handleViewChange("dashboard")}
-            className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity min-w-0 flex-1 btn-touch"
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
           >
             <img
               src="/SuperApp.png"
               alt="Super Study Logo"
-              className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0"
+              className="w-8 h-8 object-contain"
               onError={(e) => {
                 console.error("Logo failed to load:", e);
                 e.currentTarget.style.display = "none";
               }}
             />
-            <span className="text-responsive-lg font-bold text-gray-900 truncate">
+            <span className="text-lg font-semibold text-gray-900">
               Super Study
             </span>
           </button>
           <button
             onClick={toggleMobileMenu}
-            className="btn-touch p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 flex-shrink-0 touch-manipulation"
+            className="p-2 rounded text-gray-600 hover:text-gray-900 hover:bg-gray-100"
             aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
           >
             {isMobileMenuOpen ? (
-              <X className="w-5 h-5 sm:w-6 sm:h-6" />
+              <X className="w-5 h-5" />
             ) : (
-              <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
+              <Menu className="w-5 h-5" />
             )}
           </button>
         </div>

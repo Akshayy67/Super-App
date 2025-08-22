@@ -77,13 +77,7 @@ export const StudyTools: React.FC = () => {
   ];
 
   const getColorClasses = (color: string) => {
-    const colors = {
-      blue: "bg-blue-100 text-blue-600 border-blue-200",
-      yellow: "bg-yellow-100 text-yellow-600 border-yellow-200",
-      green: "bg-green-100 text-green-600 border-green-200",
-      purple: "bg-purple-100 text-purple-600 border-purple-200",
-    };
-    return colors[color as keyof typeof colors] || colors.blue;
+    return "bg-gray-100 text-gray-600";
   };
 
   const getDocumentContent = async (documentId: string): Promise<string> => {
@@ -337,168 +331,139 @@ export const StudyTools: React.FC = () => {
   };
 
   return (
-    <div className="bg-white h-full flex flex-col" data-component="study-tools">
-      {/* Header */}
-      <div className="border-b border-gray-200 p-6">
-        <div className="flex items-center mb-4">
-          <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mr-4">
-            <Zap className="w-6 h-6 text-purple-600" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Study Tools</h2>
-            <p className="text-gray-600">
-              AI-powered tools to enhance your learning
+    <div className="h-full bg-gray-50 overflow-auto">
+      <div className="p-4">
+        <div className="max-w-4xl mx-auto">
+          {/* Simplified Header */}
+          <div className="mb-6">
+            <h1 className="text-xl font-semibold text-gray-900 mb-1">
+              AI Study Tools
+            </h1>
+            <p className="text-sm text-gray-600">
+              Enhance your learning with AI-powered study tools
             </p>
           </div>
-        </div>
 
-        {/* Tool Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {tools.map((tool) => {
-            const Icon = tool.icon;
-            const isSelected = selectedTool === tool.id;
+          <AIStatus />
 
-            return (
-              <button
-                key={tool.id}
-                onClick={() => setSelectedTool(isSelected ? null : tool.id)}
-                className={`p-4 border rounded-lg text-left transition-all ${
-                  isSelected
-                    ? `${getColorClasses(tool.color)} border-2`
-                    : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
-                }`}
-              >
-                <Icon
-                  className={`w-6 h-6 mb-3 ${
-                    isSelected ? "" : "text-gray-400"
-                  }`}
-                />
-                <h3
-                  className={`font-medium mb-2 ${
-                    isSelected ? "" : "text-gray-900"
-                  }`}
-                >
-                  {tool.name}
-                </h3>
-                <p
-                  className={`text-sm ${
-                    isSelected ? "opacity-80" : "text-gray-600"
-                  }`}
-                >
-                  {tool.description}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Tool Interface */}
-      {selectedTool && (
-        <div className="border-b border-gray-200 p-6">
-          <h3 className="text-lg font-semibold mb-4">
-            {tools.find((t) => t.id === selectedTool)?.name}
-          </h3>
-
-          <div className="space-y-4">
-            {/* Document Selection */}
-            {availableDocuments.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Document (Optional)
-                </label>
-                <select
-                  value={selectedDocument}
-                  onChange={(e) => setSelectedDocument(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Choose a document...</option>
-                  {availableDocuments.map((doc) => (
-                    <option key={doc.id} value={doc.id}>
-                      {doc.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Text Input */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {selectedTool === "explanation"
-                  ? "Concept to Explain"
-                  : "Text to Analyze"}
-              </label>
-              <textarea
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder={
-                  selectedTool === "explanation"
-                    ? "Enter a concept you want explained..."
-                    : selectedDocument
-                    ? "Text will be extracted from the selected document, or you can add additional text here..."
-                    : "Paste your text here..."
-                }
-              />
+          {/* Simplified Tool Selection */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+            <h2 className="text-base font-medium text-gray-900 mb-4">
+              Choose a Tool
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {tools.map((tool) => {
+                const Icon = tool.icon;
+                return (
+                  <button
+                    key={tool.id}
+                    onClick={() => setSelectedTool(tool.id)}
+                    className={`p-3 rounded border text-left transition-colors ${
+                      selectedTool === tool.id
+                        ? "border-blue-200 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="bg-gray-100 p-2 rounded">
+                        <Icon className="w-4 h-4 text-gray-600" />
+                      </div>
+                      <h3 className="font-medium text-gray-900">{tool.name}</h3>
+                    </div>
+                    <p className="text-sm text-gray-600">{tool.description}</p>
+                  </button>
+                );
+              })}
             </div>
-
-            <button
-              onClick={runTool}
-              disabled={isLoading || (!inputText.trim() && !selectedDocument)}
-              className="flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin mr-2" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Zap className="w-4 h-4 mr-2" />
-                  Run Tool
-                </>
-              )}
-            </button>
           </div>
-        </div>
-      )}
 
-      {/* Results */}
-      <div className="flex-1 overflow-auto p-6">
-        {results.length === 0 ? (
-          <div className="text-center py-12">
-            <Brain className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {selectedTool ? "Ready to analyze" : "Select a study tool"}
-            </h3>
-            <p className="text-gray-600">
-              {selectedTool
-                ? "Provide some text or select a document to get started"
-                : "Choose from our AI-powered study tools to enhance your learning experience"}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {results.map((result, index) => (
-              <div
-                key={index}
-                className="border border-gray-200 rounded-lg p-6"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {getResultTitle(result.type)}
-                  </h3>
-                  <span className="text-sm text-gray-500">
-                    {new Date(result.timestamp).toLocaleString()}
-                  </span>
+          {/* Simplified Input Section */}
+          {selectedTool && (
+            <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+              <h3 className="text-base font-medium text-gray-900 mb-4">
+                Input Content
+              </h3>
+
+              {/* Document Selection */}
+              {availableDocuments.length > 0 && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Document (Optional)
+                  </label>
+                  <select
+                    value={selectedDocument}
+                    onChange={(e) => setSelectedDocument(e.target.value)}
+                    className="w-full p-2 border border-gray-200 rounded text-sm"
+                  >
+                    <option value="">Choose a document...</option>
+                    {availableDocuments.map((doc) => (
+                      <option key={doc.id} value={doc.id}>
+                        {doc.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className="prose max-w-none">{formatResult(result)}</div>
+              )}
+
+              {/* Text Input */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Or Enter Text Directly
+                </label>
+                <textarea
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder="Paste your study material here..."
+                  className="w-full h-32 p-3 border border-gray-200 rounded text-sm resize-none"
+                />
               </div>
-            ))}
-          </div>
-        )}
+
+              <button
+                onClick={runTool}
+                disabled={isLoading || (!inputText.trim() && !selectedDocument)}
+                className="w-full flex items-center justify-center gap-2 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300 transition-colors"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4" />
+                    Run Tool
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Simplified Results */}
+          {results.length > 0 && (
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <h3 className="text-base font-medium text-gray-900 mb-4">
+                Results
+              </h3>
+              <div className="space-y-4">
+                {results.map((result, index) => (
+                  <div key={index} className="border border-gray-200 rounded p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-medium text-gray-500 uppercase">
+                        {result.type}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {new Date(result.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="prose prose-sm max-w-none">
+                      {formatResult(result)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
