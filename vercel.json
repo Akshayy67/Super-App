@@ -6,7 +6,9 @@
   "build": {
     "env": {
       "NODE_ENV": "production",
-      "ROLLUP_SKIP_NATIVE": "true"
+      "ROLLUP_SKIP_NATIVE": "true",
+      "ROLLUP_NO_NATIVE": "1",
+      "NODE_OPTIONS": "--max-old-space-size=4096"
     }
   }
 }

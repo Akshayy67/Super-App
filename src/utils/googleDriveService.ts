@@ -255,7 +255,7 @@ export class GoogleDriveService {
   private async createDriveFolder(metadata: any): Promise<any> {
     // Mock implementation - replace with actual Google Drive API call
     console.log('📁 Mock: Creating Drive folder:', metadata.name);
-    return {
+      return {
       id: `folder_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
       name: metadata.name,
       webViewLink: `https://drive.google.com/drive/folders/folder_${Date.now()}`,
@@ -266,7 +266,7 @@ export class GoogleDriveService {
   private async createDriveFile(metadata: any, content: string): Promise<any> {
     // Mock implementation - replace with actual Google Drive API call
     console.log('📄 Mock: Creating Drive file:', metadata.name);
-    return {
+      return {
       id: `file_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
       name: metadata.name,
       mimeType: metadata.mimeType,
@@ -317,7 +317,7 @@ export class GoogleDriveService {
    * Get service status
    */
   getStatus(): { isReady: boolean; teamFolders: number; lastSync?: Date } {
-    return {
+      return {
       isReady: this.isInitialized,
       teamFolders: this.teamFolders.size,
       lastSync: this.isInitialized ? new Date() : undefined

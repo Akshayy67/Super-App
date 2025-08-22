@@ -17,6 +17,15 @@ export default defineConfig({
           firebase: ["firebase/app", "firebase/auth", "firebase/firestore"],
         },
       },
+      // Disable native rollup binaries
+      external: [],
+      onwarn(warning, warn) {
+        // Suppress warnings about missing native binaries
+        if (warning.code === 'MODULE_NOT_FOUND' && warning.message.includes('@rollup/rollup-')) {
+          return;
+        }
+        warn(warning);
+      }
     },
   },
   server: {
@@ -29,6 +38,7 @@ export default defineConfig({
   },
   // Force Vite to use pure JavaScript implementation
   define: {
-    'process.env.ROLLUP_SKIP_NATIVE': 'true'
+    'process.env.ROLLUP_SKIP_NATIVE': 'true',
+    'process.env.ROLLUP_NO_NATIVE': '1'
   }
 });
