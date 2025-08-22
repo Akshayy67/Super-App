@@ -197,33 +197,36 @@ export const NotesManager: React.FC = () => {
   };
 
   return (
-    <div className="bg-white h-full flex flex-col" data-component="notes">
+    <div className="bg-white h-full flex flex-col scroll-area" data-component="notes">
       {/* Header */}
-      <div className="border-b border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-gray-900">Short Notes</h2>
-          <div className="flex items-center space-x-3">
+      <div className="border-b border-gray-200 p-responsive">
+        <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between mb-4">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-responsive-xl font-bold text-gray-900">Short Notes</h2>
+          </div>
+          <div className="flex items-center space-x-2 sm:space-x-3 overflow-x-auto">
             <button
               onClick={syncNotesToDrive}
-              className="flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+              className="btn-touch flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm touch-manipulation"
               title="Sync notes to Google Drive"
             >
-              <Cloud className="w-4 h-4 mr-2" />
-              Sync
+              <Cloud className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Sync</span>
             </button>
             <button
               onClick={() => setShowEditor(true)}
-              className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              className="btn-touch flex items-center px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm touch-manipulation"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              New Note
+              <Plus className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">New Note</span>
+              <span className="xs:hidden">New</span>
             </button>
           </div>
         </div>
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
           <input
             type="text"
             placeholder="Search short notes by title, content, or tags..."

@@ -1,3 +1,210 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Enhanced responsive design utilities */
+@layer base {
+  html {
+    /* Prevent horizontal scrolling on mobile */
+    overflow-x: hidden;
+    /* Smooth scrolling for better UX */
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    /* Prevent horizontal scrolling */
+    overflow-x: hidden;
+    /* Ensure full height on mobile devices */
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    /* Better text rendering on mobile */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Prevent zoom on input focus (iOS) */
+    -webkit-text-size-adjust: 100%;
+  }
+  
+  /* Fix for mobile viewport height issues */
+  #root {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+  
+  /* Prevent text selection on interactive elements */
+  button, [role="button"] {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  
+  /* Better touch targets for mobile */
+  button, input, select, textarea, [role="button"] {
+    min-height: 44px; /* Apple's recommended minimum touch target */
+  }
+}
+
+@layer components {
+  /* Responsive container with safe areas */
+  .container-safe {
+    @apply px-4 sm:px-6 lg:px-8;
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  
+  /* Mobile-first responsive grid */
+  .responsive-grid {
+    @apply grid gap-4;
+    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+  
+  /* Responsive text sizing */
+  .text-responsive-sm {
+    @apply text-sm sm:text-base;
+  }
+  
+  .text-responsive-base {
+    @apply text-base sm:text-lg;
+  }
+  
+  .text-responsive-lg {
+    @apply text-lg sm:text-xl lg:text-2xl;
+  }
+  
+  .text-responsive-xl {
+    @apply text-xl sm:text-2xl lg:text-3xl;
+  }
+  
+  /* Responsive padding and margins */
+  .p-responsive {
+    @apply p-4 sm:p-6 lg:p-8;
+  }
+  
+  .px-responsive {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  
+  .py-responsive {
+    @apply py-4 sm:py-6 lg:py-8;
+  }
+  
+  /* Mobile-friendly cards */
+  .card-responsive {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200;
+    @apply p-4 sm:p-6;
+    @apply hover:shadow-md transition-shadow;
+  }
+  
+  /* Responsive flex layouts */
+  .flex-responsive {
+    @apply flex flex-col sm:flex-row;
+  }
+  
+  .flex-responsive-reverse {
+    @apply flex flex-col-reverse sm:flex-row;
+  }
+  
+  /* Mobile navigation */
+  .mobile-nav-overlay {
+    @apply fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden;
+  }
+  
+  .mobile-nav-panel {
+    @apply fixed left-0 top-0 bottom-0 w-64 bg-white shadow-xl z-50;
+    @apply transform transition-transform duration-300 ease-in-out;
+  }
+  
+  /* Touch-friendly buttons */
+  .btn-touch {
+    @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
+    @apply touch-manipulation; /* Improves touch responsiveness */
+  }
+  
+  /* Responsive images */
+  .img-responsive {
+    @apply w-full h-auto max-w-full;
+  }
+  
+  /* Scrollable content areas */
+  .scroll-area {
+    @apply overflow-y-auto;
+    /* Better scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbars while keeping functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Responsive visibility utilities */
+  .mobile-only {
+    @apply block sm:hidden;
+  }
+  
+  .tablet-up {
+    @apply hidden sm:block;
+  }
+  
+  .desktop-only {
+    @apply hidden lg:block;
+  }
+  
+  /* Touch-specific utilities */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  .touch-pan-x {
+    touch-action: pan-x;
+  }
+  
+  .touch-pan-y {
+    touch-action: pan-y;
+  }
+  
+  /* Prevent text selection */
+  .select-none-touch {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+}
+
+/* Mobile-specific media queries */
+@media (max-width: 640px) {
+  /* Reduce motion for better mobile performance */
+  .reduce-motion-mobile * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  /* Better mobile form styling */
+  input, textarea, select {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+/* Landscape mobile optimizations */
+@media (max-height: 500px) and (orientation: landscape) {
+  .landscape-compact {
+    @apply py-2;
+  }
+  
+  .landscape-compact .mobile-header {
+    @apply py-2;
+  }
+}

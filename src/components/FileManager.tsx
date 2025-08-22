@@ -614,9 +614,9 @@ export const FileManager: React.FC<FileManagerProps> = () => {
   };
 
   return (
-    <div className="bg-white h-full flex flex-col" data-component="file-manager">
+    <div className="bg-white h-full flex flex-col scroll-area" data-component="file-manager">
       {/* Header */}
-      <div className="border-b border-gray-200 p-6">
+      <div className="border-b border-gray-200 p-responsive">
         {/* Error Banner */}
         {storageStatus.error && (
           <div
@@ -691,10 +691,11 @@ export const FileManager: React.FC<FileManagerProps> = () => {
           </div>
         )}
 
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">File Manager</h2>
-            <div className="flex items-center mt-1">
+        <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-responsive-xl font-bold text-gray-900 mb-2">File Manager</h2>
+            <div className="flex items-center space-x-2">
+              <span className="text-responsive-sm text-gray-600">Storage:</span>
               <div
                 className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                   storageStatus.type === "googleDrive"
@@ -728,17 +729,19 @@ export const FileManager: React.FC<FileManagerProps> = () => {
               </div>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3 overflow-x-auto">
             <button
               onClick={() => setShowNewFolder(true)}
-              className="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+              className="btn-touch flex items-center px-3 sm:px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm touch-manipulation"
             >
-              <FolderPlus className="w-4 h-4 mr-2" />
-              New Folder
+              <FolderPlus className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">New Folder</span>
+              <span className="xs:hidden">New</span>
             </button>
-            <label className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors">
-              <Upload className="w-4 h-4 mr-2" />
-              Upload Files
+            <label className="btn-touch flex items-center px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors text-sm touch-manipulation">
+              <Upload className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Upload Files</span>
+              <span className="xs:hidden">Upload</span>
               <input
                 type="file"
                 multiple
@@ -751,10 +754,10 @@ export const FileManager: React.FC<FileManagerProps> = () => {
         </div>
 
         {/* Breadcrumb */}
-        <div className="flex items-center space-x-2 mb-4">
+        <div className="flex items-center space-x-2 mb-4 overflow-x-auto scrollbar-hide">
           {getCurrentPath().map((pathItem, index) => (
             <React.Fragment key={index}>
-              {index > 0 && <span className="text-gray-400">/</span>}
+              {index > 0 && <span className="text-gray-400 flex-shrink-0">/</span>}
               <button
                 onClick={() => {
                   console.log(
@@ -765,7 +768,7 @@ export const FileManager: React.FC<FileManagerProps> = () => {
                   );
                   setCurrentFolderId(pathItem.id);
                 }}
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                className="btn-touch text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base whitespace-nowrap touch-manipulation"
               >
                 {pathItem.name}
               </button>
@@ -775,13 +778,13 @@ export const FileManager: React.FC<FileManagerProps> = () => {
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
           <input
             type="text"
             placeholder="Search files and folders..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
           />
         </div>
       </div>
@@ -842,7 +845,7 @@ export const FileManager: React.FC<FileManagerProps> = () => {
       )}
 
       {/* File List */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto scroll-area container-safe py-responsive">
         {currentFolderId && (
           <button
             onClick={() =>

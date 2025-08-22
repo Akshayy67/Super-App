@@ -59,30 +59,30 @@ export const InterviewPrep: React.FC = () => {
   const renderOverview = () => (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 sm:p-6 text-white">
         <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-2xl font-bold mb-2">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold mb-2">
               Welcome to Interview Prep Hub
             </h2>
-            <p className="text-blue-100 mb-4">
+            <p className="text-blue-100 mb-4 text-sm sm:text-base">
               Your comprehensive platform for mastering job interviews
             </p>
-            <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-4 sm:space-x-6">
               <div className="flex items-center space-x-2">
-                <Target className="w-5 h-5" />
-                <span className="text-sm">Prepare for your next interview</span>
+                <Target className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                <span className="text-xs sm:text-sm">Prepare for your next interview</span>
               </div>
             </div>
           </div>
-          <div className="hidden sm:block">
-            <Briefcase className="w-16 h-16 text-white/20" />
+          <div className="hidden sm:block flex-shrink-0">
+            <Briefcase className="w-12 h-12 sm:w-16 sm:h-16 text-white/20" />
           </div>
         </div>
       </div>
 
       {/* Feature Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {prepCards.map((card) => {
           const Icon = card.icon;
           const colorClasses = {
@@ -96,34 +96,34 @@ export const InterviewPrep: React.FC = () => {
             <div
               key={card.id}
               onClick={card.action}
-              className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-all cursor-pointer group"
+              className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200 hover:shadow-lg transition-all cursor-pointer group touch-manipulation"
             >
               <div className="flex items-start justify-between mb-4">
                 <div
-                  className={`p-3 rounded-lg ${
+                  className={`p-2 sm:p-3 rounded-lg ${
                     colorClasses[card.color as keyof typeof colorClasses]
                   } transition-colors`}
                 >
-                  <Icon className="w-6 h-6" />
+                  <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
                 {card.title}
               </h3>
-              <p className="text-sm text-gray-600 mb-3">{card.description}</p>
+              <p className="text-xs sm:text-sm text-gray-600 mb-3 line-clamp-3">{card.description}</p>
             </div>
           );
         })}
       </div>
 
       {/* Quick Tips Section */}
-      <div className="bg-yellow-50 rounded-xl p-6 border border-yellow-200">
+      <div className="bg-yellow-50 rounded-xl p-4 sm:p-6 border border-yellow-200">
         <div className="flex items-start space-x-3">
-          <Star className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-2">Pro Tip</h3>
-            <p className="text-sm text-gray-700">
+          <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">Pro Tip</h3>
+            <p className="text-xs sm:text-sm text-gray-700">
               Always research the company before your interview. Understanding
               their values, recent news, and culture shows genuine interest and
               helps you tailor your responses.
@@ -157,36 +157,36 @@ export const InterviewPrep: React.FC = () => {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="h-full flex flex-col bg-gray-50 scroll-area">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+      <div className="bg-white border-b border-gray-200 p-responsive">
+        <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-responsive-xl font-bold text-gray-900">
               Interview Preparation
             </h1>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-responsive-sm text-gray-600 mt-1">
               Master your interview skills with comprehensive preparation tools
             </p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center space-x-1 mt-4 overflow-x-auto">
+        <div className="flex items-center space-x-1 mt-4 overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all whitespace-nowrap ${
+                className={`btn-touch flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg transition-all whitespace-nowrap touch-manipulation ${
                   activeTab === tab.id
-                    ? "bg-blue-100 text-blue-700 border border-blue-200"
+                    ? "bg-blue-100 text-blue-700 border border-blue-200 shadow-sm"
                     : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
                 <Icon className="w-4 h-4" />
-                <span className="text-sm font-medium">{tab.label}</span>
+                <span className="text-xs sm:text-sm font-medium">{tab.label}</span>
               </button>
             );
           })}
@@ -194,7 +194,7 @@ export const InterviewPrep: React.FC = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto p-6">{renderContent()}</div>
+      <div className="flex-1 overflow-auto scroll-area container-safe py-responsive">{renderContent()}</div>
     </div>
   );
 };

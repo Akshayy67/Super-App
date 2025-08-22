@@ -460,22 +460,24 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
   ) : null;
 
   return (
-    <div className="bg-white h-full flex flex-col" data-component="ai-chat">
+    <div className="bg-white h-full flex flex-col scroll-area" data-component="ai-chat">
       {/* Header */}
-      <div className="border-b border-gray-200 p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mr-4">
-              <Brain className="w-6 h-6 text-purple-600" />
+      <div className="border-b border-gray-200 p-responsive">
+        <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center min-w-0 flex-1">
+            <div className="bg-purple-100 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0">
+              <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
             </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">AI Assistant</h2>
-              <p className="text-gray-600">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-responsive-xl font-bold text-gray-900">AI Assistant</h2>
+              <p className="text-responsive-sm text-gray-600 truncate">
                 Ask questions about your study materials
               </p>
             </div>
           </div>
-          <AIStatus />
+          <div className="flex-shrink-0">
+            <AIStatus />
+          </div>
         </div>
         {fileContext}
         {/* Removed cross-document access banner */}
@@ -488,7 +490,7 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-auto p-6 space-y-4">
+      <div className="flex-1 overflow-auto scroll-area container-safe py-responsive space-y-4">
         {messages.map((message) => (
           <div
             key={message.id}
@@ -563,14 +565,14 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
 
       {/* Suggested Questions */}
       {messages.length === 1 && (
-        <div className="border-t border-gray-200 p-4">
-          <p className="text-sm text-gray-600 mb-3">Try asking:</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div className="border-t border-gray-200 p-responsive">
+          <p className="text-responsive-sm text-gray-600 mb-3">Try asking:</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
             {suggestedQuestions.map((question, index) => (
               <button
                 key={index}
                 onClick={() => setInputMessage(question)}
-                className="text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm transition-colors"
+                className="btn-touch text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm transition-colors touch-manipulation"
               >
                 "{question}"
               </button>
@@ -580,8 +582,8 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
       )}
 
       {/* Input Area */}
-      <div className="border-t border-gray-200 p-4">
-        <div className="flex space-x-3">
+      <div className="border-t border-gray-200 p-responsive">
+        <div className="flex space-x-2 sm:space-x-3">
           <div className="flex-1 relative">
             <textarea
               value={inputMessage}
@@ -589,16 +591,17 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
               onKeyDown={handleKeyPress}
               placeholder="Ask me anything about your study materials..."
               rows={1}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              style={{ minHeight: "48px", maxHeight: "120px" }}
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm sm:text-base"
+              style={{ minHeight: "44px", maxHeight: "120px" }}
             />
           </div>
           <button
             onClick={handleSendMessage}
             disabled={!inputMessage.trim() || isLoading}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            className="btn-touch px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center touch-manipulation"
+            aria-label="Send message"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
       </div>
