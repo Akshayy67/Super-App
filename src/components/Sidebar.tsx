@@ -10,6 +10,8 @@ import {
   X,
   BookOpen,
   Briefcase,
+  Users,
+  RefreshCw,
 } from "lucide-react";
 import { realTimeAuth } from "../utils/realTimeAuth";
 
@@ -38,6 +40,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: "tools", label: "Study Tools", icon: Brain },
     { id: "flashcards", label: "Flash Cards", icon: BookOpen },
     { id: "interview", label: "Interview Prep", icon: Briefcase },
+    { id: "review", label: "Smart Review", icon: RefreshCw },
+    { id: "teams", label: "Team Space", icon: Users },
   ];
 
   return (
