@@ -139,6 +139,7 @@ export const TeamSpace: React.FC = () => {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [showJoinTeamModal, setShowJoinTeamModal] = useState(false);
   const [showEmailTest, setShowEmailTest] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const user = realTimeAuth.getCurrentUser();
 
@@ -670,10 +671,20 @@ export const TeamSpace: React.FC = () => {
   }
 
   return (
-    <div className="h-full flex">
+    <div className={`h-full flex ${isDarkMode ? 'dark' : ''}`}>
       {/* Teams Sidebar */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-4 border-b border-gray-200 space-y-2">
+      <div className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-2">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Team Management</h3>
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {isDarkMode ? '☀️' : '🌙'}
+            </button>
+          </div>
           <button
             onClick={() => setShowCreateTeam(true)}
             className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
@@ -695,17 +706,17 @@ export const TeamSpace: React.FC = () => {
             <button
               key={team.id}
               onClick={() => setSelectedTeam(team)}
-              className={`w-full p-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 ${
-                selectedTeam?.id === team.id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''
+              className={`w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-700 ${
+                selectedTeam?.id === team.id ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-600' : ''
               }`}
             >
               <div className="flex flex-col items-center text-center w-full">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mb-2">
-                  <Users className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-2">
+                  <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="w-full px-1">
-                  <h3 className="font-semibold text-gray-900 text-xs break-words leading-tight line-clamp-2">{team.name}</h3>
-                  <p className="text-xs text-gray-600 mt-1">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-xs break-words leading-tight line-clamp-2">{team.name}</h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                     {team.members.length} members
                   </p>
                 </div>
@@ -719,11 +730,11 @@ export const TeamSpace: React.FC = () => {
       {selectedTeam ? (
         <div className="flex-1 flex flex-col">
           {/* Team Header */}
-          <div className="bg-white border-b border-gray-200 p-4">
+          <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{selectedTeam.name}</h1>
-                <p className="text-gray-600">{selectedTeam.description}</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{selectedTeam.name}</h1>
+                <p className="text-gray-600 dark:text-gray-300">{selectedTeam.description}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -733,22 +744,22 @@ export const TeamSpace: React.FC = () => {
                   <UserPlus className="w-4 h-4" />
                   Invite
                 </button>
-                <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                <button className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
                   <Settings className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-4 mt-4 border-b border-gray-200">
+            <div className="flex gap-4 mt-4 border-b border-gray-200 dark:border-gray-700">
               {(['overview', 'files', 'chat', 'members', 'settings'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`pb-2 px-1 capitalize transition-colors ${
                     activeTab === tab
-                      ? 'border-b-2 border-blue-600 text-blue-600'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                   }`}
                 >
                   {tab}
