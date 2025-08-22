@@ -10,6 +10,9 @@ import {
   X,
   BookOpen,
   Briefcase,
+  Users,
+  Edit3,
+  Zap,
 } from "lucide-react";
 import { realTimeAuth } from "../utils/realTimeAuth";
 
@@ -37,11 +40,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: "chat", label: "AI Assistant", icon: MessageSquare },
     { id: "tools", label: "Study Tools", icon: Brain },
     { id: "flashcards", label: "Flash Cards", icon: BookOpen },
+    { id: "spaced-repetition", label: "Smart Review", icon: Zap },
     { id: "interview", label: "Interview Prep", icon: Briefcase },
+    { id: "collaborate", label: "Collaborate", icon: Edit3 },
+    { id: "team", label: "Team Space", icon: Users },
   ];
 
   return (
-    <div className="bg-white h-full shadow-lg border-r border-gray-200 flex flex-col">
+    <div className="bg-white dark:bg-gray-800 h-full shadow-lg border-r border-gray-200 dark:border-gray-700 flex flex-col">
       {/* Mobile Header */}
       {isMobile && (
         <div className="p-3 sm:p-4 border-b border-gray-200 flex items-center justify-between lg:hidden">
