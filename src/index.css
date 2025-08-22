@@ -1,8 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-<<<<<<< Current (Your changes)
-=======
 
 /* Enhanced responsive design utilities */
 @layer base {
@@ -49,20 +47,20 @@
 }
 
 @layer components {
-  /* Responsive container with safe areas */
+  /* Simplified container with safe areas */
   .container-safe {
     @apply px-4 sm:px-6 lg:px-8;
     padding-left: max(1rem, env(safe-area-inset-left));
     padding-right: max(1rem, env(safe-area-inset-right));
   }
   
-  /* Mobile-first responsive grid */
+  /* Clean mobile-first responsive grid */
   .responsive-grid {
     @apply grid gap-4;
     @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
   }
   
-  /* Responsive text sizing */
+  /* Simplified responsive text sizing */
   .text-responsive-sm {
     @apply text-sm sm:text-base;
   }
@@ -79,27 +77,27 @@
     @apply text-xl sm:text-2xl lg:text-3xl;
   }
   
-  /* Responsive padding and margins */
+  /* Minimal responsive padding */
   .p-responsive {
-    @apply p-4 sm:p-6 lg:p-8;
+    @apply p-4 sm:p-6;
   }
   
   .px-responsive {
-    @apply px-4 sm:px-6 lg:px-8;
+    @apply px-4 sm:px-6;
   }
   
   .py-responsive {
-    @apply py-4 sm:py-6 lg:py-8;
+    @apply py-4 sm:py-6;
   }
   
-  /* Mobile-friendly cards */
+  /* Clean minimal cards */
   .card-responsive {
-    @apply bg-white rounded-lg shadow-sm border border-gray-200;
+    @apply bg-white rounded-lg border border-gray-200;
     @apply p-4 sm:p-6;
-    @apply hover:shadow-md transition-shadow;
+    @apply hover:border-gray-300 transition-colors;
   }
   
-  /* Responsive flex layouts */
+  /* Simplified flex layouts */
   .flex-responsive {
     @apply flex flex-col sm:flex-row;
   }
@@ -108,20 +106,32 @@
     @apply flex flex-col-reverse sm:flex-row;
   }
   
-  /* Mobile navigation */
+  /* Clean mobile navigation */
   .mobile-nav-overlay {
     @apply fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden;
   }
   
   .mobile-nav-panel {
-    @apply fixed left-0 top-0 bottom-0 w-64 bg-white shadow-xl z-50;
+    @apply fixed left-0 top-0 bottom-0 w-64 bg-white z-50;
     @apply transform transition-transform duration-300 ease-in-out;
   }
   
-  /* Touch-friendly buttons */
+  /* Minimal touch-friendly buttons */
   .btn-touch {
     @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
-    @apply touch-manipulation; /* Improves touch responsiveness */
+    @apply touch-manipulation;
+  }
+  
+  /* Clean button styles */
+  .btn-minimal {
+    @apply px-3 py-2 text-sm rounded transition-colors;
+    @apply border border-gray-200 hover:border-gray-300;
+    @apply bg-white hover:bg-gray-50;
+  }
+  
+  .btn-primary {
+    @apply px-3 py-2 text-sm rounded transition-colors;
+    @apply bg-blue-600 hover:bg-blue-700 text-white;
   }
   
   /* Responsive images */
@@ -129,7 +139,7 @@
     @apply w-full h-auto max-w-full;
   }
   
-  /* Scrollable content areas */
+  /* Clean scrollable content areas */
   .scroll-area {
     @apply overflow-y-auto;
     /* Better scrolling on iOS */
@@ -185,15 +195,8 @@
   }
 }
 
-/* Mobile-specific media queries */
+/* Mobile-specific optimizations */
 @media (max-width: 640px) {
-  /* Reduce motion for better mobile performance */
-  .reduce-motion-mobile * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-  
   /* Better mobile form styling */
   input, textarea, select {
     font-size: 16px; /* Prevents zoom on iOS */
@@ -210,4 +213,3 @@
     @apply py-2;
   }
 }
->>>>>>> Incoming (Background Agent changes)

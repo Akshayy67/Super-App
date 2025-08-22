@@ -2,14 +2,8 @@ import React, { useState } from "react";
 import {
   Star,
   CheckCircle,
-  Copy,
   Eye,
   EyeOff,
-  Volume2,
-  Play,
-  Lightbulb,
-  Zap,
-  TrendingUp,
   Code,
 } from "lucide-react";
 import { Question } from "./InterviewSubjects";
@@ -48,231 +42,114 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 }) => {
   const [showCode, setShowCode] = useState(false);
   const hasCodeImplementation = question.codeImplementation && question.codeImplementation.length > 0;
+  
   return (
-    <div
-      className={`bg-white rounded-2xl border transition-all duration-300 ${
-        isPracticed
-          ? "border-green-200 bg-green-50 shadow-sm"
-          : "border-gray-200 shadow-sm hover:shadow-md"
-      }`}
-    >
-      <div className="p-6">
-        {/* Question Header */}
-        <div className="flex items-start justify-between mb-4">
+    <div className={`bg-white rounded-lg border transition-all ${
+      isPracticed
+        ? "border-green-200 bg-green-50/30"
+        : "border-gray-200 hover:border-gray-300"
+    }`}>
+      <div className="p-4">
+        {/* Simple Header */}
+        <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
-            <div className="flex items-center space-x-3 mb-3">
-              <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                Question #{index + 1}
-              </span>
-              <span
-                className={`text-xs px-3 py-1 rounded-full border ${getDifficultyColor(
-                  question.difficulty
-                )}`}
-              >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs text-gray-500">#{index + 1}</span>
+              <span className={`text-xs px-2 py-1 rounded ${getDifficultyColor(question.difficulty)}`}>
                 {question.difficulty}
               </span>
-              <span
-                className={`text-xs px-3 py-1 rounded-full border ${getTypeColor(
-                  question.type
-                )}`}
-              >
-                {question.type}
-              </span>
-              {question.estimatedTime && (
-                <span className="text-xs px-3 py-1 rounded-full border bg-gray-100 text-gray-600">
-                  {question.estimatedTime} min
-                </span>
-              )}
             </div>
-
-            <h3 className="text-xl font-semibold text-gray-900 mb-3 leading-relaxed">
+            <h3 className="text-lg font-medium text-gray-900 leading-relaxed">
               {question.question}
             </h3>
-
-            {question.tags && (
-              <div className="flex flex-wrap gap-2">
-                {question.tags.map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (setSelectedQuestions && setShowPracticeModal) {
-                        // This is a workaround since we're not directly modifying the parent's state
-                        // In a real app, you'd pass a proper onSelectTag handler
-                        const event = new CustomEvent("tagSelected", {
-                          detail: tag,
-                        });
-                        document.dispatchEvent(event);
-                      }
-                    }}
-                    className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded-full border border-gray-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors"
-                  >
-                    #{tag}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
-
-          <div className="flex items-center space-x-2 ml-4">
+          
+          {/* Minimal Actions */}
+          <div className="flex items-center gap-1 ml-3">
             <button
               onClick={() => toggleFavorite(question.id)}
-              className={`p-3 rounded-xl transition-all duration-300 ${
+              className={`p-2 rounded transition-colors ${
                 isFavorite
-                  ? "bg-yellow-100 text-yellow-600 border border-yellow-200"
-                  : "bg-gray-100 text-gray-400 hover:text-gray-600 border border-gray-200"
+                  ? "text-yellow-500"
+                  : "text-gray-400 hover:text-gray-600"
               }`}
             >
-              <Star
-                className="w-5 h-5"
-                fill={isFavorite ? "currentColor" : "none"}
-              />
+              <Star className="w-4 h-4" fill={isFavorite ? "currentColor" : "none"} />
             </button>
-
             <button
               onClick={() => togglePracticed(question.id)}
-              className={`p-3 rounded-xl transition-all duration-300 ${
+              className={`p-2 rounded transition-colors ${
                 isPracticed
-                  ? "bg-green-100 text-green-600 border border-green-200"
-                  : "bg-gray-100 text-gray-400 hover:text-gray-600 border border-gray-200"
+                  ? "text-green-500"
+                  : "text-gray-400 hover:text-gray-600"
               }`}
             >
-              <CheckCircle className="w-5 h-5" />
-            </button>
-
-            <button
-              onClick={() => copyQuestion(question.question)}
-              className="p-3 bg-gray-100 text-gray-400 rounded-xl hover:text-gray-600 transition-all duration-300 border border-gray-200"
-            >
-              <Copy className="w-5 h-5" />
+              <CheckCircle className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center space-x-3 mt-5 mb-4 flex-wrap gap-y-2">
-          <button
-            onClick={() => toggleAnswer(question.id)}
-            className="flex items-center space-x-2 px-4 py-2.5 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-all duration-300 text-sm font-medium border border-blue-200"
-          >
-            {isExpanded ? (
-              <>
-                <EyeOff className="w-4 h-4" />
-                <span>Hide Approach</span>
-              </>
-            ) : (
-              <>
-                <Eye className="w-4 h-4" />
-                <span>View Approach</span>
-              </>
-            )}
-          </button>
-
-          {hasCodeImplementation && (
-            <button
-              onClick={() => setShowCode(!showCode)}
-              className="flex items-center space-x-2 px-4 py-2.5 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition-all duration-300 text-sm font-medium border border-green-200"
-            >
-              {showCode ? (
-                <>
-                  <EyeOff className="w-4 h-4" />
-                  <span>Hide Code</span>
-                </>
-              ) : (
-                <>
-                  <Code className="w-4 h-4" />
-                  <span>View Code</span>
-                </>
-              )}
-            </button>
+        {/* Simple Action Button */}
+        <button
+          onClick={() => toggleAnswer(question.id)}
+          className="w-full flex items-center justify-center gap-2 py-2 text-sm text-blue-600 hover:text-blue-700 transition-colors"
+        >
+          {isExpanded ? (
+            <>
+              <EyeOff className="w-4 h-4" />
+              Hide Answer
+            </>
+          ) : (
+            <>
+              <Eye className="w-4 h-4" />
+              Show Answer
+            </>
           )}
+        </button>
 
-          <button className="flex items-center space-x-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all duration-300 text-sm font-medium border border-gray-200">
-            <Volume2 className="w-4 h-4" />
-            <span>Practice Aloud</span>
-          </button>
-
-          {setSelectedQuestions && setShowPracticeModal && (
-            <button
-              onClick={() => {
-                setSelectedQuestions([question.id]);
-                setShowPracticeModal(true);
-              }}
-              className="flex items-center space-x-2 px-4 py-2.5 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-all duration-300 text-sm font-medium border border-purple-200"
-            >
-              <Play className="w-4 h-4" />
-              <span>Practice This</span>
-            </button>
-          )}
-        </div>
-
-        {/* Expanded Content */}
+        {/* Simplified Expanded Content */}
         {isExpanded && (
-          <div className="mt-6 space-y-4">
-            {/* Approach Section */}
+          <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
+            {/* Answer */}
             {question.approach && (
-              <div className="p-5 bg-blue-50 rounded-xl border border-blue-200">
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                  <Lightbulb className="w-5 h-5 mr-2 text-blue-600" />
-                  Approach & Strategy
-                </h4>
-                <p className="text-gray-700 leading-relaxed">
+              <div className="p-3 bg-gray-50 rounded">
+                <p className="text-gray-700 text-sm leading-relaxed">
                   {question.approach}
                 </p>
               </div>
             )}
 
-            {/* Fallback to Sample Answer if no approach is provided */}
             {!question.approach && question.sampleAnswer && (
-              <div className="p-5 bg-blue-50 rounded-xl border border-blue-200">
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                  <Lightbulb className="w-5 h-5 mr-2 text-blue-600" />
-                  Sample Answer
-                </h4>
-                <p className="text-gray-700 leading-relaxed">
+              <div className="p-3 bg-gray-50 rounded">
+                <p className="text-gray-700 text-sm leading-relaxed">
                   {question.sampleAnswer}
                 </p>
               </div>
             )}
 
-            {/* Tips */}
-            {question.tips && (
-              <div className="p-5 bg-yellow-50 rounded-xl border border-yellow-200">
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                  <Zap className="w-5 h-5 mr-2 text-yellow-600" />
-                  Tips for Answering
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {question.tips.map((tip, idx) => (
-                    <div
-                      key={idx}
-                      className="text-gray-700 flex items-start bg-white p-3 rounded-lg border border-yellow-100"
-                    >
-                      <CheckCircle className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">{tip}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* Code Toggle */}
+            {hasCodeImplementation && (
+              <button
+                onClick={() => setShowCode(!showCode)}
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                <Code className="w-4 h-4" />
+                {showCode ? "Hide Code" : "View Code"}
+              </button>
             )}
 
-            {/* Follow-up Questions */}
-            {question.followUps && (
-              <div className="p-5 bg-purple-50 rounded-xl border border-purple-200">
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                  <TrendingUp className="w-5 h-5 mr-2 text-purple-600" />
-                  Potential Follow-ups
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {question.followUps.map((followUp, idx) => (
-                    <div
-                      key={idx}
-                      className="text-gray-700 bg-white p-3 rounded-lg border border-purple-100"
-                    >
-                      <span className="text-sm">• {followUp}</span>
-                    </div>
+            {/* Tips (simplified) */}
+            {question.tips && question.tips.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Tips</p>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  {question.tips.slice(0, 3).map((tip, idx) => (
+                    <li key={idx} className="flex items-start">
+                      <span className="text-gray-400 mr-2 mt-1">•</span>
+                      <span>{tip}</span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             )}
           </div>
@@ -280,7 +157,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
         {/* Code Implementation Section */}
         {showCode && hasCodeImplementation && (
-          <div className="mt-6">
+          <div className="mt-4 pt-4 border-t border-gray-100">
             <CodeViewer implementations={question.codeImplementation!} />
           </div>
         )}
