@@ -1,1060 +1,327 @@
-import { auth } from "../config/firebase";
-import { realTimeAuth } from "./realTimeAuth";
+import { googleProvider } from '../config/firebase';
+
+export interface TeamData {
+  id: string;
+  name: string;
+  description: string;
+  ownerId: string;
+  members: string[]; // User IDs
+  createdAt: Date;
+  updatedAt: Date;
+  settings: {
+    isPublic: boolean;
+    allowMemberInvites: boolean;
+    allowFileSharing: boolean;
+    allowChat: boolean;
+    allowVideoCall: boolean;
+    maxMembers: number;
+  };
+  inviteCode?: string;
+}
 
 export interface DriveFile {
   id: string;
   name: string;
   mimeType: string;
-  size?: number;
+  webViewLink?: string;
   createdTime: string;
   modifiedTime: string;
-  parents?: string[];
-  webViewLink?: string;
-  webContentLink?: string;
 }
 
-export interface DriveFolder {
+export interface SharedTeamFolder {
   id: string;
   name: string;
-  createdTime: string;
-  parents?: string[];
+  webViewLink: string;
+  sharedWithMembers: boolean;
+  teamDataFile?: DriveFile;
 }
 
-export interface DriveApiResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
-}
+export class GoogleDriveService {
+  private accessToken: string | null = null;
+  private isInitialized = false;
+  private teamFolders: Map<string, SharedTeamFolder> = new Map();
 
-class GoogleDriveService {
-  private readonly DRIVE_API_BASE = "https://www.googleapis.com/drive/v3";
-  private readonly UPLOAD_API_BASE =
-    "https://www.googleapis.com/upload/drive/v3";
-  private appFolderId: string | null = null;
-
-  // Get access token from realTimeAuth service
-  private async getAccessToken(): Promise<string | null> {
-    const user = auth.currentUser;
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
-    // Get Google access token from realTimeAuth service
-    let accessToken = realTimeAuth.getGoogleAccessToken();
-
-    // If no token, user needs to re-authenticate
-    if (!accessToken) {
-      console.error("No Google Drive access token available");
-      throw new Error(
-        "No Google Drive access token available. Please sign in again."
-      );
-    }
-
-    // Test the token by making a simple API call
-    try {
-      const testResponse = await fetch(
-        `${this.DRIVE_API_BASE}/files?pageSize=1`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      // If token is expired or invalid, clear it and ask user to re-authenticate
-      if (!testResponse.ok && testResponse.status === 401) {
-        console.warn("Google Drive access token expired or invalid");
-        localStorage.removeItem("google_access_token");
-        realTimeAuth.clearGoogleAccessToken();
-        throw new Error(
-          "Your Google Drive access has expired. Please sign out and sign in again to refresh your access."
-        );
-      }
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("expired")) {
-        throw error;
-      }
-      // If it's a network error, continue with the token
-      console.warn(
-        "Token validation failed due to network error, continuing..."
-      );
-    }
-
-    return accessToken;
+  constructor() {
+    // Check if user is authenticated with Google
+    this.checkAuthStatus();
   }
 
-  // Create app-specific folder in Google Drive
-  async createAppFolder(): Promise<DriveApiResponse> {
+  private async checkAuthStatus() {
     try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) {
-        return { success: false, error: "No access token available" };
+      // Check if user is signed in with Google
+      const user = await this.getCurrentUser();
+      if (user && user.providerData?.some((provider: any) => provider.providerId === 'google.com')) {
+        this.isInitialized = true;
+        console.log('✅ Google Drive service initialized');
+      } else {
+        console.warn('⚠️ Google Drive: User not signed in with Google');
       }
+    } catch (error) {
+      console.error('❌ Google Drive initialization error:', error);
+    }
+  }
 
+  private async getCurrentUser(): Promise<any> {
+    // This would need to be implemented based on your auth system
+    // For now, we'll assume it's available
+    return null;
+  }
+
+  /**
+   * Create a shared team folder accessible to all team members
+   */
+  async createTeamFolder(team: TeamData): Promise<SharedTeamFolder | null> {
+    if (!this.isInitialized) {
+      console.warn('⚠️ Google Drive not initialized');
+      return null;
+    }
+
+    try {
+      console.log('📁 Creating shared team folder for:', team.name);
+
+      // Create the main team folder
+      const folderName = `Team: ${team.name}`;
       const folderMetadata = {
-        name: "Super Study App",
-        mimeType: "application/vnd.google-apps.folder",
-        description:
-          "Files from Super Study App - Your AI-Powered Academic Assistant",
+        name: folderName,
+        mimeType: 'application/vnd.google-apps.folder',
+        description: `Team collaboration folder for ${team.name}`,
+        // Make folder accessible to team members
+        permissions: [
+          {
+            type: 'anyone',
+            role: 'reader',
+            allowFileDiscovery: true
+          }
+        ]
       };
 
-      const response = await fetch(`${this.DRIVE_API_BASE}/files`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
+      // Create folder (this would use Google Drive API)
+      const folder = await this.createDriveFolder(folderMetadata);
+      
+      if (!folder) {
+        throw new Error('Failed to create team folder');
+      }
+
+             // Create team details file
+       const teamDetailsFile = await this.createTeamDetailsFile(folder.id, team);
+       
+       // Create shared team folder object
+       const sharedFolder: SharedTeamFolder = {
+         id: folder.id,
+         name: folderName,
+         webViewLink: folder.webViewLink || '',
+         sharedWithMembers: true,
+         teamDataFile: teamDetailsFile || undefined
+       };
+
+      // Store in memory for quick access
+      this.teamFolders.set(team.id, sharedFolder);
+
+      console.log('✅ Shared team folder created:', sharedFolder);
+      return sharedFolder;
+
+    } catch (error) {
+      console.error('❌ Error creating shared team folder:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create a team details file that all members can view
+   */
+  private async createTeamDetailsFile(folderId: string, team: TeamData): Promise<DriveFile | null> {
+    try {
+      const fileName = 'team-details.json';
+      const fileContent = JSON.stringify({
+        teamInfo: {
+          id: team.id,
+          name: team.name,
+          description: team.description,
+          ownerId: team.ownerId,
+          inviteCode: team.inviteCode,
+          createdAt: team.createdAt.toISOString(),
+          updatedAt: team.updatedAt.toISOString()
         },
-        body: JSON.stringify(folderMetadata),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const folder = await response.json();
-      console.log("✅ Created Super Study App folder:", folder.id);
-      return { success: true, data: folder };
-    } catch (error) {
-      console.error("Error creating app folder:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to create app folder",
-      };
-    }
-  }
-
-  // Create ignore folder inside Super Study App folder
-  async createIgnoreFolder(): Promise<DriveApiResponse> {
-    try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) {
-        return { success: false, error: "No access token available" };
-      }
-
-      const appFolderId = await this.getAppFolder();
-      if (!appFolderId) {
-        return { success: false, error: "Could not access app folder" };
-      }
-
-      // Check if ignore folder already exists
-      const searchResponse = await fetch(
-        `${this.DRIVE_API_BASE}/files?q=name='ignore' and mimeType='application/vnd.google-apps.folder' and '${appFolderId}' in parents and trashed=false`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+        settings: team.settings,
+        members: team.members,
+        metadata: {
+          exportedAt: new Date().toISOString(),
+          version: '1.0',
+          source: 'Super App Team Collaboration Platform',
+          accessLevel: 'Team Members - Read Only',
+          note: 'This file contains team information accessible to all team members'
         }
-      );
+      }, null, 2);
 
-      const searchResult = await searchResponse.json();
-
-      if (searchResult.files && searchResult.files.length > 0) {
-        return { success: true, data: searchResult.files[0] };
-      }
-
-      // Create new ignore folder
-      const folderMetadata = {
-        name: "ignore",
-        mimeType: "application/vnd.google-apps.folder",
-        parents: [appFolderId],
-        description: "Special folders for app data - Flashcards and ShortNotes",
-      };
-
-      const response = await fetch(`${this.DRIVE_API_BASE}/files`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(folderMetadata),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const folder = await response.json();
-      console.log("✅ Created ignore folder:", folder.id);
-      return { success: true, data: folder };
-    } catch (error) {
-      console.error("Error creating ignore folder:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to create ignore folder",
-      };
-    }
-  }
-
-  // Get or create ignore folder
-  async getIgnoreFolder(): Promise<string | null> {
-    try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) return null;
-
-      const appFolderId = await this.getAppFolder();
-      if (!appFolderId) return null;
-
-      // Search for existing ignore folder
-      const searchResponse = await fetch(
-        `${this.DRIVE_API_BASE}/files?q=name='ignore' and mimeType='application/vnd.google-apps.folder' and '${appFolderId}' in parents and trashed=false`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      const searchResult = await searchResponse.json();
-
-      if (searchResult.files && searchResult.files.length > 0) {
-        return searchResult.files[0].id;
-      }
-
-      // Create new ignore folder if not found
-      const createResult = await this.createIgnoreFolder();
-      return createResult.success ? createResult.data.id : null;
-    } catch (error) {
-      console.error("Error getting ignore folder:", error);
-      return null;
-    }
-  }
-
-  // Create a specific folder for flashcards inside ignore folder
-  async createFlashcardsFolder(): Promise<DriveApiResponse> {
-    try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) {
-        return { success: false, error: "No access token available" };
-      }
-
-      const ignoreFolderId = await this.getIgnoreFolder();
-      if (!ignoreFolderId) {
-        return { success: false, error: "Could not access ignore folder" };
-      }
-
-      // Check if flashcards folder already exists
-      const searchResponse = await fetch(
-        `${this.DRIVE_API_BASE}/files?q=name='FlashCards' and mimeType='application/vnd.google-apps.folder' and '${ignoreFolderId}' in parents and trashed=false`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      const searchResult = await searchResponse.json();
-
-      if (searchResult.files && searchResult.files.length > 0) {
-        return { success: true, data: searchResult.files[0] };
-      }
-
-      // Create new flashcards folder
-      const folderMetadata = {
-        name: "FlashCards",
-        mimeType: "application/vnd.google-apps.folder",
-        parents: [ignoreFolderId],
-        description: "Flashcards created in Super Study App",
-      };
-
-      const response = await fetch(`${this.DRIVE_API_BASE}/files`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(folderMetadata),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const folder = await response.json();
-      console.log("✅ Created FlashCards folder:", folder.id);
-      return { success: true, data: folder };
-    } catch (error) {
-      console.error("Error creating flashcards folder:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to create flashcards folder",
-      };
-    }
-  }
-
-  // Create a specific folder for short notes inside ignore folder
-  async createShortNotesFolder(): Promise<DriveApiResponse> {
-    try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) {
-        return { success: false, error: "No access token available" };
-      }
-
-      const ignoreFolderId = await this.getIgnoreFolder();
-      if (!ignoreFolderId) {
-        return { success: false, error: "Could not access ignore folder" };
-      }
-
-      // Check if short notes folder already exists
-      const searchResponse = await fetch(
-        `${this.DRIVE_API_BASE}/files?q=name='ShortNotes' and mimeType='application/vnd.google-apps.folder' and '${ignoreFolderId}' in parents and trashed=false`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      const searchResult = await searchResponse.json();
-
-      if (searchResult.files && searchResult.files.length > 0) {
-        return { success: true, data: searchResult.files[0] };
-      }
-
-      // Create new short notes folder
-      const folderMetadata = {
-        name: "ShortNotes",
-        mimeType: "application/vnd.google-apps.folder",
-        parents: [ignoreFolderId],
-        description: "Short notes created in Super Study App",
-      };
-
-      const response = await fetch(`${this.DRIVE_API_BASE}/files`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(folderMetadata),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const folder = await response.json();
-      console.log("✅ Created ShortNotes folder:", folder.id);
-      return { success: true, data: folder };
-    } catch (error) {
-      console.error("Error creating short notes folder:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to create short notes folder",
-      };
-    }
-  }
-
-  // Get or create flashcards folder
-  async getFlashcardsFolder(): Promise<string | null> {
-    try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) return null;
-
-      const ignoreFolderId = await this.getIgnoreFolder();
-      if (!ignoreFolderId) return null;
-
-      // Search for existing flashcards folder
-      const searchResponse = await fetch(
-        `${this.DRIVE_API_BASE}/files?q=name='FlashCards' and mimeType='application/vnd.google-apps.folder' and '${ignoreFolderId}' in parents and trashed=false`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      const searchResult = await searchResponse.json();
-
-      if (searchResult.files && searchResult.files.length > 0) {
-        return searchResult.files[0].id;
-      }
-
-      // Create new flashcards folder if not found
-      const createResult = await this.createFlashcardsFolder();
-      return createResult.success ? createResult.data.id : null;
-    } catch (error) {
-      console.error("Error getting flashcards folder:", error);
-      return null;
-    }
-  }
-
-  // Get or create short notes folder
-  async getShortNotesFolder(): Promise<string | null> {
-    try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) return null;
-
-      const ignoreFolderId = await this.getIgnoreFolder();
-      if (!ignoreFolderId) return null;
-
-      // Search for existing short notes folder
-      const searchResponse = await fetch(
-        `${this.DRIVE_API_BASE}/files?q=name='ShortNotes' and mimeType='application/vnd.google-apps.folder' and '${ignoreFolderId}' in parents and trashed=false`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      const searchResult = await searchResponse.json();
-
-      if (searchResult.files && searchResult.files.length > 0) {
-        return searchResult.files[0].id;
-      }
-
-      // Create new short notes folder if not found
-      const createResult = await this.createShortNotesFolder();
-      return createResult.success ? createResult.data.id : null;
-    } catch (error) {
-      console.error("Error getting short notes folder:", error);
-      return null;
-    }
-  }
-
-  // Get or create app folder
-  async getAppFolder(): Promise<string | null> {
-    if (this.appFolderId) {
-      return this.appFolderId;
-    }
-
-    try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) return null;
-
-      // Search for existing app folder
-      const searchResponse = await fetch(
-        `${this.DRIVE_API_BASE}/files?q=name='Super Study App' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      const searchResult = await searchResponse.json();
-
-      if (searchResult.files && searchResult.files.length > 0) {
-        this.appFolderId = searchResult.files[0].id;
-        return this.appFolderId;
-      }
-
-      // Create new folder if not found
-      const createResult = await this.createAppFolder();
-      if (createResult.success && createResult.data) {
-        this.appFolderId = createResult.data.id;
-        return this.appFolderId;
-      }
-      return null;
-    } catch (error) {
-      console.error("Error getting app folder:", error);
-      return null;
-    }
-  }
-
-  // Upload file to Google Drive
-  async uploadFile(
-    file: File,
-    parentFolderId?: string
-  ): Promise<DriveApiResponse> {
-    try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) {
-        return { success: false, error: "No access token available" };
-      }
-
-      const folderId = parentFolderId || (await this.getAppFolder());
-      console.log("📁 Google Drive upload - using folderId:", {
-        parentFolderId,
-        appFolderId: await this.getAppFolder(),
-        finalFolderId: folderId,
-      });
-
-      if (!folderId) {
-        return { success: false, error: "Could not access app folder" };
-      }
-
-      const metadata = {
-        name: file.name,
+      const fileMetadata = {
+        name: fileName,
+        mimeType: 'application/json',
         parents: [folderId],
+        description: 'Team information and settings accessible to all team members',
+        // Make file readable by team members
+        permissions: [
+          {
+            type: 'anyone',
+            role: 'reader',
+            allowFileDiscovery: true
+          }
+        ]
       };
 
-      console.log("📄 Upload metadata:", metadata);
-
-      const form = new FormData();
-      form.append(
-        "metadata",
-        new Blob([JSON.stringify(metadata)], { type: "application/json" })
-      );
-      form.append("file", file);
-
-      const response = await fetch(
-        `${this.UPLOAD_API_BASE}/files?uploadType=multipart`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: form,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
+      // Create file (this would use Google Drive API)
+      const file = await this.createDriveFile(fileMetadata, fileContent);
+      
+      if (file) {
+        console.log('✅ Team details file created:', file);
       }
+      
+      return file || null;
 
-      const result = await response.json();
-      return { success: true, data: result };
     } catch (error) {
-      console.error("Error uploading file:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Upload failed",
-      };
+      console.error('❌ Error creating team details file:', error);
+      return null;
     }
   }
 
-  // Upload flashcards data as a JSON file
-  async uploadFlashcards(
-    flashcards: any[],
-    filename: string = "flashcards.json"
-  ): Promise<DriveApiResponse> {
+  /**
+   * Share team folder with specific team members
+   */
+  async shareTeamFolderWithMembers(teamId: string, memberEmails: string[]): Promise<boolean> {
     try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) {
-        return { success: false, error: "No access token available" };
+      const teamFolder = this.teamFolders.get(teamId);
+      if (!teamFolder) {
+        console.warn('⚠️ Team folder not found:', teamId);
+        return false;
       }
 
-      // Get or create flashcards folder
-      const folderId = await this.getFlashcardsFolder();
-      if (!folderId) {
-        return { success: false, error: "Could not access flashcards folder" };
+      console.log('🔗 Sharing team folder with members:', memberEmails);
+
+      // Share folder with each team member
+      for (const email of memberEmails) {
+        await this.shareFolderWithUser(teamFolder.id, email, 'reader');
       }
 
-      const jsonContent = JSON.stringify(flashcards, null, 2);
-      const blob = new Blob([jsonContent], { type: "application/json" });
+      console.log('✅ Team folder shared with all members');
+      return true;
 
-      // Create file metadata
-      const metadata = {
-        name: filename,
-        parents: [folderId],
-        mimeType: "application/json",
-      };
-
-      // Create the file using multipart upload
-      const form = new FormData();
-      form.append(
-        "metadata",
-        new Blob([JSON.stringify(metadata)], { type: "application/json" })
-      );
-      form.append("file", blob, filename);
-
-      const response = await fetch(
-        `${this.UPLOAD_API_BASE}/files?uploadType=multipart`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: form,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
-      }
-
-      const result = await response.json();
-      return { success: true, data: result };
     } catch (error) {
-      console.error("Error uploading flashcards:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to upload flashcards",
-      };
+      console.error('❌ Error sharing team folder:', error);
+      return false;
     }
   }
 
-  // Download flashcards from Google Drive
-  async downloadFlashcards(filename: string = "flashcards.json"): Promise<DriveApiResponse> {
+  /**
+   * Get team folder information for display
+   */
+  getTeamFolder(teamId: string): SharedTeamFolder | null {
+    return this.teamFolders.get(teamId) || null;
+  }
+
+  /**
+   * Check if user has access to team folder
+   */
+  async checkTeamFolderAccess(teamId: string, userEmail: string): Promise<boolean> {
     try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) {
-        return { success: false, error: "No access token available" };
-      }
+      const teamFolder = this.teamFolders.get(teamId);
+      if (!teamFolder) return false;
 
-      // Get flashcards folder
-      const folderId = await this.getFlashcardsFolder();
-      if (!folderId) {
-        return { success: false, error: "Could not access flashcards folder" };
-      }
+      // Check if user has access to the folder
+      const hasAccess = await this.checkUserFolderAccess(teamFolder.id, userEmail);
+      return hasAccess;
 
-      // Search for the flashcards file
-      const searchResponse = await fetch(
-        `${this.DRIVE_API_BASE}/files?q=name='${filename}' and '${folderId}' in parents and trashed=false`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      const searchResult = await searchResponse.json();
-
-      if (!searchResult.files || searchResult.files.length === 0) {
-        return { success: false, error: "Flashcards file not found" };
-      }
-
-      const fileId = searchResult.files[0].id;
-
-      // Download the file content
-      const downloadResponse = await fetch(
-        `${this.DRIVE_API_BASE}/files/${fileId}?alt=media`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (!downloadResponse.ok) {
-        throw new Error(`Download failed: ${downloadResponse.status}`);
-      }
-
-      const content = await downloadResponse.text();
-      const flashcards = JSON.parse(content);
-
-      return { success: true, data: flashcards };
     } catch (error) {
-      console.error("Error downloading flashcards:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to download flashcards",
-      };
+      console.error('❌ Error checking folder access:', error);
+      return false;
     }
   }
 
-  // List all files recursively from the app folder and its subfolders
-  async listFiles(_folderId?: string): Promise<DriveApiResponse> {
+  /**
+   * Get all team folders for current user
+   */
+  async getUserTeamFolders(): Promise<SharedTeamFolder[]> {
     try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) {
-        return { success: false, error: "No access token available" };
-      }
-
-      const appFolderId = await this.getAppFolder();
-      if (!appFolderId) {
-        return { success: false, error: "Could not access app folder" };
-      }
-
-      // Get all files that are descendants of the app folder
-      // This query finds all files where the app folder is anywhere in the parent hierarchy
-      const query = `'${appFolderId}' in parents and trashed=false`;
-      const fields =
-        "files(id,name,mimeType,size,createdTime,modifiedTime,parents,webViewLink,webContentLink)";
-
-      console.log("🔍 Listing files with query:", query);
-
-      // First, get direct children of app folder
-      const response = await fetch(
-        `${this.DRIVE_API_BASE}/files?q=${encodeURIComponent(
-          query
-        )}&fields=${fields}`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`List files failed: ${response.status}`);
-      }
-
-      const result = await response.json();
-      let allFiles = result.files || [];
-
-      // Filter out old special folder names but keep the new structure
-      const oldSpecialFolders = ['Flashcards', 'Flash Cards', 'Short Notes'];
-      allFiles = allFiles.filter((file: any) => {
-        if (file.mimeType === "application/vnd.google-apps.folder") {
-          return !oldSpecialFolders.includes(file.name);
-        }
-        return true;
-      });
-
-      // Now get files from all subfolders recursively (including the new special folders)
-      const folders = allFiles.filter(
-        (file: any) => file.mimeType === "application/vnd.google-apps.folder"
-      );
-
-      for (const folder of folders) {
-        const subfolderFiles = await this.getFilesFromFolder(
-          folder.id,
-          accessToken
-        );
-        allFiles = allFiles.concat(subfolderFiles);
-      }
-
-      console.log("📁 Total files found (including new special folders):", allFiles.length);
-      return { success: true, data: allFiles };
+      // This would query Google Drive for folders the user has access to
+      // For now, return stored folders
+      return Array.from(this.teamFolders.values());
     } catch (error) {
-      console.error("Error listing files:", error);
-
-      // Handle specific error cases
-      if (error instanceof Error) {
-        if (error.message.includes("expired")) {
-          return {
-            success: false,
-            error:
-              "Your Google Drive access has expired. Please sign out and sign in again to refresh your access.",
-          };
-        }
-        return {
-          success: false,
-          error: error.message,
-        };
-      }
-
-      return {
-        success: false,
-        error: "Failed to list files from Google Drive",
-      };
-    }
-  }
-
-  // Helper method to recursively get files from a folder
-  private async getFilesFromFolder(
-    folderId: string,
-    accessToken: string
-  ): Promise<any[]> {
-    try {
-      const query = `'${folderId}' in parents and trashed=false`;
-      const fields =
-        "files(id,name,mimeType,size,createdTime,modifiedTime,parents,webViewLink,webContentLink)";
-
-      const response = await fetch(
-        `${this.DRIVE_API_BASE}/files?q=${encodeURIComponent(
-          query
-        )}&fields=${fields}`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        console.error(
-          `Failed to list files from folder ${folderId}:`,
-          response.status
-        );
-        return [];
-      }
-
-      const result = await response.json();
-      let files = result.files || [];
-
-      // Recursively get files from subfolders
-      const subfolders = files.filter(
-        (file: any) => file.mimeType === "application/vnd.google-apps.folder"
-      );
-      for (const subfolder of subfolders) {
-        const subfolderFiles = await this.getFilesFromFolder(
-          subfolder.id,
-          accessToken
-        );
-        files = files.concat(subfolderFiles);
-      }
-
-      return files;
-    } catch (error) {
-      console.error(`Error getting files from folder ${folderId}:`, error);
+      console.error('❌ Error getting user team folders:', error);
       return [];
     }
   }
 
-  // Download file content
-  async downloadFile(fileId: string): Promise<DriveApiResponse> {
-    try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) {
-        return { success: false, error: "No access token available" };
-      }
+  // Mock methods for Google Drive API calls
+  // In a real implementation, these would use the Google Drive API
 
-      const response = await fetch(
-        `${this.DRIVE_API_BASE}/files/${fileId}?alt=media`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Download failed: ${response.status}`);
-      }
-
-      const blob = await response.blob();
-      return { success: true, data: blob };
-    } catch (error) {
-      console.error("Error downloading file:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Download failed",
-      };
-    }
+  private async createDriveFolder(metadata: any): Promise<any> {
+    // Mock implementation - replace with actual Google Drive API call
+    console.log('📁 Mock: Creating Drive folder:', metadata.name);
+    return {
+      id: `folder_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+      name: metadata.name,
+      webViewLink: `https://drive.google.com/drive/folders/folder_${Date.now()}`,
+      mimeType: 'application/vnd.google-apps.folder'
+    };
   }
 
-  // Delete file
-  async deleteFile(fileId: string): Promise<DriveApiResponse> {
-    try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) {
-        return { success: false, error: "No access token available" };
-      }
-
-      const response = await fetch(`${this.DRIVE_API_BASE}/files/${fileId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Delete failed: ${response.status}`);
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error("Error deleting file:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Delete failed",
-      };
-    }
+  private async createDriveFile(metadata: any, content: string): Promise<any> {
+    // Mock implementation - replace with actual Google Drive API call
+    console.log('📄 Mock: Creating Drive file:', metadata.name);
+    return {
+      id: `file_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+      name: metadata.name,
+      mimeType: metadata.mimeType,
+      webViewLink: `https://drive.google.com/file/d/file_${Date.now()}/view`,
+      createdTime: new Date().toISOString(),
+      modifiedTime: new Date().toISOString()
+    };
   }
 
-  // Create folder
-  async createFolder(
-    name: string,
-    parentFolderId?: string
-  ): Promise<DriveApiResponse> {
-    try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) {
-        return { success: false, error: "No access token available" };
-      }
-
-      const folderId = parentFolderId || (await this.getAppFolder());
-      if (!folderId) {
-        return { success: false, error: "Could not access parent folder" };
-      }
-
-      const folderMetadata = {
-        name,
-        mimeType: "application/vnd.google-apps.folder",
-        parents: [folderId],
-      };
-
-      const response = await fetch(`${this.DRIVE_API_BASE}/files`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(folderMetadata),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Create folder failed: ${response.status}`);
-      }
-
-      const result = await response.json();
-      return { success: true, data: result };
-    } catch (error) {
-      console.error("Error creating folder:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Create folder failed",
-      };
-    }
+  private async shareFolderWithUser(folderId: string, email: string, role: string): Promise<boolean> {
+    // Mock implementation - replace with actual Google Drive API call
+    console.log('🔗 Mock: Sharing folder with:', email, 'role:', role);
+    return true;
   }
 
-  // Upload short notes data as a JSON file
-  async uploadShortNotes(
-    shortNotes: any[],
-    filename: string = "shortnotes.json"
-  ): Promise<DriveApiResponse> {
-    try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) {
-        return { success: false, error: "No access token available" };
-      }
-
-      // Get or create short notes folder
-      const folderId = await this.getShortNotesFolder();
-      if (!folderId) {
-        return { success: false, error: "Could not access short notes folder" };
-      }
-
-      const jsonContent = JSON.stringify(shortNotes, null, 2);
-      const blob = new Blob([jsonContent], { type: "application/json" });
-
-      // Create file metadata
-      const metadata = {
-        name: filename,
-        parents: [folderId],
-        mimeType: "application/json",
-      };
-
-      // Create the file using multipart upload
-      const form = new FormData();
-      form.append(
-        "metadata",
-        new Blob([JSON.stringify(metadata)], { type: "application/json" })
-      );
-      form.append("file", blob, filename);
-
-      const response = await fetch(
-        `${this.UPLOAD_API_BASE}/files?uploadType=multipart`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: form,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
-      }
-
-      const result = await response.json();
-      return { success: true, data: result };
-    } catch (error) {
-      console.error("Error uploading short notes:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to upload short notes",
-      };
-    }
+  private async checkUserFolderAccess(folderId: string, userEmail: string): Promise<boolean> {
+    // Mock implementation - replace with actual Google Drive API call
+    console.log('🔍 Mock: Checking access for:', userEmail, 'to folder:', folderId);
+    return true;
   }
 
-  // Download short notes from Google Drive
-  async downloadShortNotes(filename: string = "shortnotes.json"): Promise<DriveApiResponse> {
+  /**
+   * Initialize Google Drive service
+   */
+  async initialize(): Promise<boolean> {
     try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) {
-        return { success: false, error: "No access token available" };
-      }
-
-      // Get short notes folder
-      const folderId = await this.getShortNotesFolder();
-      if (!folderId) {
-        return { success: false, error: "Could not access short notes folder" };
-      }
-
-      // Search for the short notes file
-      const searchResponse = await fetch(
-        `${this.DRIVE_API_BASE}/files?q=name='${filename}' and '${folderId}' in parents and trashed=false`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      const searchResult = await searchResponse.json();
-
-      if (!searchResult.files || searchResult.files.length === 0) {
-        return { success: false, error: "Short notes file not found" };
-      }
-
-      const fileId = searchResult.files[0].id;
-
-      // Download the file content
-      const downloadResponse = await fetch(
-        `${this.DRIVE_API_BASE}/files/${fileId}?alt=media`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (!downloadResponse.ok) {
-        throw new Error(`Download failed: ${downloadResponse.status}`);
-      }
-
-      const blob = await downloadResponse.blob();
-      const text = await blob.text();
-      const data = JSON.parse(text);
-      return { success: true, data };
-    } catch (error) {
-      console.error("Error downloading short notes:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Download failed",
-      };
-    }
-  }
-
-  // Get folder structure for display in file manager
-  async getFolderStructure(): Promise<DriveApiResponse> {
-    try {
-      const accessToken = await this.getAccessToken();
-      if (!accessToken) {
-        return { success: false, error: "No access token available" };
-      }
-
-      const appFolderId = await this.getAppFolder();
-      if (!appFolderId) {
-        return { success: false, error: "Could not access app folder" };
-      }
-
-      // Get direct children of app folder
-      const query = `'${appFolderId}' in parents and trashed=false`;
-      const fields = "files(id,name,mimeType,size,createdTime,modifiedTime,parents,webViewLink,webContentLink)";
-
-      const response = await fetch(
-        `${this.DRIVE_API_BASE}/files?q=${encodeURIComponent(query)}&fields=${fields}`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`List folders failed: ${response.status}`);
-      }
-
-      const result = await response.json();
-      const folders = result.files || [];
-
-      // Get contents of special folders
-      const folderStructure = [];
+      // This would handle Google OAuth flow
+      console.log('🚀 Initializing Google Drive service...');
       
-      for (const folder of folders) {
-        if (folder.mimeType === "application/vnd.google-apps.folder") {
-          const folderContents = await this.getFilesFromFolder(folder.id, accessToken);
-          folderStructure.push({
-            ...folder,
-            contents: folderContents
-          });
-        }
-      }
-
-      return { success: true, data: folderStructure };
+      // For now, just mark as initialized
+      this.isInitialized = true;
+      console.log('✅ Google Drive service initialized');
+      return true;
     } catch (error) {
-      console.error("Error getting folder structure:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to get folder structure",
-      };
+      console.error('❌ Failed to initialize Google Drive:', error);
+      return false;
     }
+  }
+
+  /**
+   * Check if service is ready
+   */
+  isReady(): boolean {
+    return this.isInitialized;
+  }
+
+  /**
+   * Get service status
+   */
+  getStatus(): { isReady: boolean; teamFolders: number; lastSync?: Date } {
+    return {
+      isReady: this.isInitialized,
+      teamFolders: this.teamFolders.size,
+      lastSync: this.isInitialized ? new Date() : undefined
+    };
   }
 }
 

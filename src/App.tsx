@@ -9,6 +9,9 @@ import { AIChat } from "./components/AIChat";
 import { StudyTools } from "./components/StudyTools";
 import { FlashCards } from "./components/FlashCards";
 import { InterviewPrep } from "./components/InterviewPrep/InterviewPrep";
+import { SmartReview } from "./components/SmartReview";
+import { TeamSpace } from "./components/TeamSpace";
+import { ThemeSwitcher } from "./components/ThemeSwitcher";
 // Removed unused FilePreview import
 import ErrorBoundary from "./components/ErrorBoundary";
 import { realTimeAuth } from "./utils/realTimeAuth";
@@ -16,6 +19,7 @@ import { realTimeAuth } from "./utils/realTimeAuth";
 import { Menu, X } from "lucide-react";
 import { GlobalNoteCreator } from "./components/GlobalNoteCreator";
 import { useGlobalCopyListener } from "./hooks/useGlobalCopyListener";
+import { collaborationService } from "./services/collaborationService";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -34,10 +38,20 @@ function App() {
       console.log("👤 Auth state changed:", { user: !!user, userId: user?.id });
       setIsAuthenticated(!!user);
       // Removed unused setCurrentUser
+      
+      // Update presence when auth state changes
+      if (user) {
+        collaborationService.updatePresence('online');
+      } else {
+        collaborationService.updatePresence('offline');
+      }
     });
 
     // Clean up listener on component unmount
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      collaborationService.cleanup();
+    };
   }, []);
 
   // Close mobile menu when screen size changes to desktop
@@ -108,6 +122,10 @@ function App() {
         return <FlashCards />;
       case "interview":
         return <InterviewPrep />;
+      case "review":
+        return <SmartReview />;
+      case "teams":
+        return <TeamSpace />;
       default:
         return <Dashboard onViewChange={handleViewChange} />;
     }
@@ -116,7 +134,7 @@ function App() {
   if (!isAuthenticated) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
           <AuthForm onAuthSuccess={handleAuthSuccess} />
         </div>
       </ErrorBoundary>
@@ -135,9 +153,9 @@ function App() {
         />
       )}
       
-      <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row landscape-compact">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col lg:flex-row landscape-compact transition-colors duration-200">
         {/* Mobile Header */}
-        <div className="mobile-header lg:hidden bg-white shadow-sm border-b border-gray-200 p-3 sm:p-4 flex items-center justify-between relative z-30">
+        <div className="mobile-header lg:hidden bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 p-3 sm:p-4 flex items-center justify-between relative z-30">
           <button
             onClick={() => handleViewChange("dashboard")}
             className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity min-w-0 flex-1 btn-touch"
@@ -151,21 +169,24 @@ function App() {
                 e.currentTarget.style.display = "none";
               }}
             />
-            <span className="text-responsive-lg font-bold text-gray-900 truncate">
+            <span className="text-responsive-lg font-bold text-gray-900 dark:text-gray-100 truncate">
               Super Study
             </span>
           </button>
-          <button
-            onClick={toggleMobileMenu}
-            className="btn-touch p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 flex-shrink-0 touch-manipulation"
-            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-          >
-            {isMobileMenuOpen ? (
-              <X className="w-5 h-5 sm:w-6 sm:h-6" />
-            ) : (
-              <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
-            )}
-          </button>
+          <div className="flex items-center space-x-2">
+            <ThemeSwitcher />
+            <button
+              onClick={toggleMobileMenu}
+              className="btn-touch p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0 touch-manipulation"
+              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
+              ) : (
+                <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu Overlay */}

@@ -105,7 +105,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
   // Show centered loading state while page is loading
   if (pageLoading) {
     return (
-      <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-white">
+      <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-white dark:bg-gray-900">
         {/* Background Particle Effect */}
         <div className="absolute inset-0 z-0 opacity-60">
           <ParticleField
@@ -123,8 +123,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
         </div>
 
         {/* Subtle Light Blue Accents */}
-        <div className="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-100/60 to-indigo-100/60 rounded-full blur-3xl animate-pulse-slow"></div>
-        <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-50/70 to-cyan-50/70 rounded-full blur-3xl animate-pulse-slow animation-delay-2000"></div>
+        <div className="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-100/60 dark:from-blue-900/40 to-indigo-100/60 dark:to-indigo-900/40 rounded-full blur-3xl animate-pulse-slow"></div>
+        <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-50/70 dark:from-blue-900/30 to-cyan-50/70 dark:to-cyan-900/30 rounded-full blur-3xl animate-pulse-slow animation-delay-2000"></div>
 
                  {/* Centered Loading Content */}
          <div className="z-10 relative text-center flex flex-col items-center">
@@ -138,10 +138,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
              Loading Super App
            </h2>
           
-          {/* Loading Subtitle */}
-          <p className="text-gray-600 text-lg font-medium max-w-xs mx-auto">
-            Preparing your productivity suite...
-          </p>
+                   {/* Loading Subtitle */}
+         <p className="text-gray-600 dark:text-gray-400 text-lg font-medium max-w-xs mx-auto">
+           Preparing your productivity suite...
+         </p>
           
           {/* Loading Dots */}
           <div className="flex justify-center space-x-2 mt-6">
@@ -157,7 +157,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
   // Show centered loading state during sign-in process
   if (loading) {
     return (
-      <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-white">
+      <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-white dark:bg-gray-900">
         {/* Background Particle Effect */}
         <div className="absolute inset-0 z-0 opacity-60">
           <ParticleField
@@ -190,10 +190,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
              Signing In
            </h2>
           
-          {/* Loading Subtitle */}
-          <p className="text-gray-600 text-lg font-medium max-w-xs mx-auto">
-            Connecting to Google...
-          </p>
+                   {/* Loading Subtitle */}
+         <p className="text-gray-600 dark:text-gray-400 text-lg font-medium max-w-xs mx-auto">
+           Connecting to Google...
+         </p>
           
           {/* Loading Dots */}
           <div className="flex justify-center space-x-2 mt-6">
@@ -207,7 +207,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
   }
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center container-safe overflow-hidden bg-white">
+    <div className="min-h-screen relative flex items-center justify-center container-safe overflow-hidden bg-white dark:bg-gray-900">
       {/* Background Particle Effect */}
       <div className="absolute inset-0 z-0 opacity-40 sm:opacity-60">
         <ParticleField
@@ -232,13 +232,13 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
       <div className="w-full max-w-sm sm:max-w-md z-10 relative">
         {/* Enhanced Auth Card */}
         <div
-          className={`relative bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-100/50 p-6 sm:p-8 lg:p-12 transition-all duration-700 backdrop-blur-sm hover:shadow-3xl hover:scale-[1.02] ${
+          className={`relative bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-100/50 dark:border-blue-900/50 p-6 sm:p-8 lg:p-12 transition-all duration-700 backdrop-blur-sm hover:shadow-3xl hover:scale-[1.02] ${
             mounted ? "opacity-100" : "opacity-0"
           }`}
         >
           {/* Enhanced Card Glow */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/40 to-indigo-50/40 rounded-3xl blur-xl -z-10"></div>
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-100/20 to-purple-100/20 rounded-3xl blur-2xl -z-20 animate-pulse-slow"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/40 dark:from-blue-900/20 to-indigo-50/40 dark:to-indigo-900/20 rounded-3xl blur-xl -z-10"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-100/20 dark:from-blue-900/10 to-purple-100/20 dark:to-purple-900/10 rounded-3xl blur-2xl -z-20 animate-pulse-slow"></div>
           
           {/* App Logo with Enhanced Effects */}
           <div className="flex flex-col items-center mb-8 sm:mb-12">
