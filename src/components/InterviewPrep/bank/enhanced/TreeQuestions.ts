@@ -41,6 +41,31 @@ function invertTree(root: TreeNode | null): TreeNode | null {
         explanation: "Recursive DFS approach is most intuitive. Swaps children at each node and recursively inverts subtrees."
       },
       {
+        language: "Python",
+        code: `# Tree Node Definition
+class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+# Approach 1: Recursive (DFS)
+# Time: O(n), Space: O(h) where h is height
+def invertTree(root):
+    if not root:
+        return None
+    
+    # Swap children
+    root.left, root.right = root.right, root.left
+    
+    # Recursively invert subtrees
+    invertTree(root.left)
+    invertTree(root.right)
+    
+    return root`,
+        explanation: "Recursive DFS approach is most intuitive. Swaps children at each node and recursively inverts subtrees."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Iterative (BFS)
 // Time: O(n), Space: O(w) where w is max width
@@ -64,6 +89,32 @@ function invertTreeIterative(root: TreeNode | null): TreeNode | null {
         explanation: "Iterative BFS approach uses queue for level-by-level processing. Avoids stack overflow for deep trees."
       },
       {
+        language: "Python",
+        code: `# Approach 2: Iterative (BFS)
+# Time: O(n), Space: O(w) where w is max width
+from collections import deque
+
+def invertTreeIterative(root):
+    if not root:
+        return None
+    
+    queue = deque([root])
+    
+    while queue:
+        node = queue.popleft()
+        
+        # Swap children
+        node.left, node.right = node.right, node.left
+        
+        if node.left:
+            queue.append(node.left)
+        if node.right:
+            queue.append(node.right)
+    
+    return root`,
+        explanation: "Iterative BFS approach uses queue for level-by-level processing. Avoids stack overflow for deep trees."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: Iterative (DFS with stack)
 // Time: O(n), Space: O(h) where h is height
@@ -84,6 +135,30 @@ function invertTreeDFS(root: TreeNode | null): TreeNode | null {
     
     return root;
 }`,
+        explanation: "Iterative DFS with stack provides depth-first traversal without recursion. Good space control."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Iterative (DFS with stack)
+# Time: O(n), Space: O(h) where h is height
+def invertTreeDFS(root):
+    if not root:
+        return None
+    
+    stack = [root]
+    
+    while stack:
+        node = stack.pop()
+        
+        # Swap children
+        node.left, node.right = node.right, node.left
+        
+        if node.left:
+            stack.append(node.left)
+        if node.right:
+            stack.append(node.right)
+    
+    return root`,
         explanation: "Iterative DFS with stack provides depth-first traversal without recursion. Good space control."
       }
     ],
@@ -119,6 +194,17 @@ function maxDepth(root: TreeNode | null): number {
         explanation: "Recursive DFS approach is most natural for tree problems. Returns 1 + maximum of left and right subtree depths."
       },
       {
+        language: "Python",
+        code: `# Approach 1: Recursive DFS
+# Time: O(n), Space: O(h) where h is height
+def maxDepth(root):
+    if not root:
+        return 0
+    
+    return 1 + max(maxDepth(root.left), maxDepth(root.right))`,
+        explanation: "Recursive DFS approach is most natural for tree problems. Returns 1 + maximum of left and right subtree depths."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Iterative BFS
 // Time: O(n), Space: O(w) where w is max width
@@ -145,6 +231,34 @@ function maxDepthBFS(root: TreeNode | null): number {
         explanation: "Iterative BFS processes level by level with explicit depth tracking. Good for understanding tree structure."
       },
       {
+        language: "Python",
+        code: `# Approach 2: Iterative BFS
+# Time: O(n), Space: O(w) where w is max width
+from collections import deque
+
+def maxDepthBFS(root):
+    if not root:
+        return 0
+    
+    queue = deque([root])
+    depth = 0
+    
+    while queue:
+        level_size = len(queue)
+        depth += 1
+        
+        for _ in range(level_size):
+            node = queue.popleft()
+            
+            if node.left:
+                queue.append(node.left)
+            if node.right:
+                queue.append(node.right)
+    
+    return depth`,
+        explanation: "Iterative BFS processes level by level with explicit depth tracking. Good for understanding tree structure."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: Iterative DFS with stack
 // Time: O(n), Space: O(h)
@@ -164,6 +278,29 @@ function maxDepthDFS(root: TreeNode | null): number {
     
     return maxDepth;
 }`,
+        explanation: "Iterative DFS with stack pairs nodes with their depths. Alternative iterative approach without recursion."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Iterative DFS with stack
+# Time: O(n), Space: O(h)
+def maxDepthDFS(root):
+    if not root:
+        return 0
+    
+    stack = [(root, 1)]
+    max_depth = 0
+    
+    while stack:
+        node, depth = stack.pop()
+        max_depth = max(max_depth, depth)
+        
+        if node.left:
+            stack.append((node.left, depth + 1))
+        if node.right:
+            stack.append((node.right, depth + 1))
+    
+    return max_depth`,
         explanation: "Iterative DFS with stack pairs nodes with their depths. Alternative iterative approach without recursion."
       }
     ],
@@ -207,6 +344,27 @@ function isSameTree(p: TreeNode | null, q: TreeNode | null): boolean {
         explanation: "Recursive approach is most readable with clear null handling. Compares values and recursively checks subtrees."
       },
       {
+        language: "Python",
+        code: `# Approach 1: Recursive Approach (Optimal)
+# Time: O(n), Space: O(h)
+def isSameTree(p, q):
+    # Both null
+    if not p and not q:
+        return True
+    
+    # One null, one not null
+    if not p or not q:
+        return False
+    
+    # Values different
+    if p.val != q.val:
+        return False
+    
+    # Check subtrees
+    return isSameTree(p.left, q.left) and isSameTree(p.right, q.right)`,
+        explanation: "Recursive approach is most readable with clear null handling. Compares values and recursively checks subtrees."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Iterative DFS with Stack
 // Time: O(n), Space: O(h)
@@ -228,6 +386,27 @@ function isSameTreeIterative(p: TreeNode | null, q: TreeNode | null): boolean {
         explanation: "Iterative DFS with stack avoids potential stack overflow for deep trees. Uses stack for depth-first traversal."
       },
       {
+        language: "Python",
+        code: `# Approach 2: Iterative DFS with Stack
+# Time: O(n), Space: O(h)
+def isSameTreeIterative(p, q):
+    stack = [(p, q)]
+    
+    while stack:
+        node1, node2 = stack.pop()
+        
+        if not node1 and not node2:
+            continue
+        if not node1 or not node2 or node1.val != node2.val:
+            return False
+        
+        stack.append((node1.left, node2.left))
+        stack.append((node1.right, node2.right))
+    
+    return True`,
+        explanation: "Iterative DFS with stack avoids potential stack overflow for deep trees. Uses stack for depth-first traversal."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: BFS Approach
 // Time: O(n), Space: O(w) where w is max width
@@ -246,6 +425,29 @@ function isSameTreeBFS(p: TreeNode | null, q: TreeNode | null): boolean {
     
     return true;
 }`,
+        explanation: "BFS approach provides level-by-level comparison using queue. Good for understanding tree structure."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: BFS Approach
+# Time: O(n), Space: O(w) where w is max width
+from collections import deque
+
+def isSameTreeBFS(p, q):
+    queue = deque([(p, q)])
+    
+    while queue:
+        node1, node2 = queue.popleft()
+        
+        if not node1 and not node2:
+            continue
+        if not node1 or not node2 or node1.val != node2.val:
+            return False
+        
+        queue.append((node1.left, node2.left))
+        queue.append((node1.right, node2.right))
+    
+    return True`,
         explanation: "BFS approach provides level-by-level comparison using queue. Good for understanding tree structure."
       }
     ],
@@ -288,6 +490,24 @@ function isValidBST(root: TreeNode | null): boolean {
         explanation: "Bounds checking approach maintains min/max constraints at each node. Most intuitive and efficient method."
       },
       {
+        language: "Python",
+        code: `# Approach 1: Bounds Checking (Optimal)
+# Time: O(n), Space: O(h)
+def isValidBST(root):
+    def validate(node, min_val, max_val):
+        if not node:
+            return True
+        
+        if node.val <= min_val or node.val >= max_val:
+            return False
+        
+        return (validate(node.left, min_val, node.val) and 
+                validate(node.right, node.val, max_val))
+    
+    return validate(root, float('-inf'), float('inf'))`,
+        explanation: "Bounds checking approach maintains min/max constraints at each node. Most intuitive and efficient method."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Inorder Traversal
 // Time: O(n), Space: O(h)
@@ -307,6 +527,28 @@ function isValidBSTInorder(root: TreeNode | null): boolean {
     
     return inorder(root);
 }`,
+        explanation: "Inorder traversal leverages BST property that values should be strictly increasing. Elegant recursive solution."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Inorder Traversal
+# Time: O(n), Space: O(h)
+def isValidBSTInorder(root):
+    def inorder(node):
+        if not node:
+            return True
+        
+        if not inorder(node.left):
+            return False
+        
+        if inorder.prev is not None and node.val <= inorder.prev:
+            return False
+        inorder.prev = node.val
+        
+        return inorder(node.right)
+    
+    inorder.prev = None
+    return inorder(root)`,
         explanation: "Inorder traversal leverages BST property that values should be strictly increasing. Elegant recursive solution."
       },
       {
@@ -337,6 +579,31 @@ function isValidBSTIterative(root: TreeNode | null): boolean {
         explanation: "Iterative inorder traversal avoids stack overflow for deep trees. Same logic as recursive version."
       },
       {
+        language: "Python",
+        code: `# Approach 3: Iterative Inorder
+# Time: O(n), Space: O(h)
+def isValidBSTIterative(root):
+    stack = []
+    current = root
+    prev = None
+    
+    while stack or current:
+        while current:
+            stack.append(current)
+            current = current.left
+        
+        current = stack.pop()
+        
+        if prev is not None and current.val <= prev:
+            return False
+        prev = current.val
+        
+        current = current.right
+    
+    return True`,
+        explanation: "Iterative inorder traversal avoids stack overflow for deep trees. Same logic as recursive version."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 4: Safe Bounds with Node References
 // Time: O(n), Space: O(h)
@@ -353,6 +620,25 @@ function isValidBSTSafe(root: TreeNode | null): boolean {
     
     return validate(root, null, null);
 }`,
+        explanation: "Safe bounds approach uses node references instead of numeric bounds to handle integer overflow cases."
+      },
+      {
+        language: "Python",
+        code: `# Approach 4: Safe Bounds with Node References
+# Time: O(n), Space: O(h)
+def isValidBSTSafe(root):
+    def validate(node, min_node, max_node):
+        if not node:
+            return True
+        
+        if ((min_node and node.val <= min_node.val) or 
+            (max_node and node.val >= max_node.val)):
+            return False
+        
+        return (validate(node.left, min_node, node) and 
+                validate(node.right, node, max_node))
+    
+    return validate(root, None, None)`,
         explanation: "Safe bounds approach uses node references instead of numeric bounds to handle integer overflow cases."
       }
     ],
@@ -399,6 +685,26 @@ function lowestCommonAncestor(root: TreeNode | null, p: TreeNode, q: TreeNode): 
         explanation: "Recursive approach leverages BST property to determine subtree direction. Most intuitive for BST problems."
       },
       {
+        language: "Python",
+        code: `# Approach 1: Recursive (Optimal for BST)
+# Time: O(h), Space: O(h) where h is height
+def lowestCommonAncestor(root, p, q):
+    if not root:
+        return None
+    
+    # Both nodes are in left subtree
+    if p.val < root.val and q.val < root.val:
+        return lowestCommonAncestor(root.left, p, q)
+    
+    # Both nodes are in right subtree
+    if p.val > root.val and q.val > root.val:
+        return lowestCommonAncestor(root.right, p, q)
+    
+    # Nodes are on different sides, current node is LCA
+    return root`,
+        explanation: "Recursive approach leverages BST property to determine subtree direction. Most intuitive for BST problems."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Iterative (Space Efficient)
 // Time: O(h), Space: O(1)
@@ -420,6 +726,24 @@ function lowestCommonAncestorIterative(root: TreeNode | null, p: TreeNode, q: Tr
         explanation: "Iterative solution provides same logic as recursive but with O(1) space complexity."
       },
       {
+        language: "Python",
+        code: `# Approach 2: Iterative (Space Efficient)
+# Time: O(h), Space: O(1)
+def lowestCommonAncestorIterative(root, p, q):
+    current = root
+    
+    while current:
+        if p.val < current.val and q.val < current.val:
+            current = current.left
+        elif p.val > current.val and q.val > current.val:
+            current = current.right
+        else:
+            return current
+    
+    return None`,
+        explanation: "Iterative solution provides same logic as recursive but with O(1) space complexity."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: For General Binary Tree (Not BST)
 // Time: O(n), Space: O(h)
@@ -432,6 +756,22 @@ function lowestCommonAncestorBT(root: TreeNode | null, p: TreeNode, q: TreeNode)
     if (left && right) return root; // Found both nodes in different subtrees
     return left || right; // Return the non-null result
 }`,
+        explanation: "General binary tree solution doesn't use BST properties. Works by finding nodes in left and right subtrees."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: For General Binary Tree (Not BST)
+# Time: O(n), Space: O(h)
+def lowestCommonAncestorBT(root, p, q):
+    if not root or root == p or root == q:
+        return root
+    
+    left = lowestCommonAncestorBT(root.left, p, q)
+    right = lowestCommonAncestorBT(root.right, p, q)
+    
+    if left and right:
+        return root  # Found both nodes in different subtrees
+    return left or right  # Return the non-null result`,
         explanation: "General binary tree solution doesn't use BST properties. Works by finding nodes in left and right subtrees."
       }
     ],
@@ -485,6 +825,37 @@ function levelOrder(root: TreeNode | null): number[][] {
         explanation: "BFS naturally processes nodes level by level using queue. Most intuitive and standard approach."
       },
       {
+        language: "Python",
+        code: `# Approach 1: BFS with Queue (Standard approach)
+# Time: O(n), Space: O(w) where w is max width
+from collections import deque
+
+def levelOrder(root):
+    if not root:
+        return []
+    
+    result = []
+    queue = deque([root])
+    
+    while queue:
+        level_size = len(queue)
+        current_level = []
+        
+        for _ in range(level_size):
+            node = queue.popleft()
+            current_level.append(node.val)
+            
+            if node.left:
+                queue.append(node.left)
+            if node.right:
+                queue.append(node.right)
+        
+        result.append(current_level)
+    
+    return result`,
+        explanation: "BFS naturally processes nodes level by level using queue. Most intuitive and standard approach."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: DFS Approach (Less intuitive but possible)
 // Time: O(n), Space: O(h)
@@ -510,6 +881,29 @@ function levelOrderDFS(root: TreeNode | null): number[][] {
         explanation: "DFS approach requires tracking current level. Demonstrates alternative thinking for level order traversal."
       },
       {
+        language: "Python",
+        code: `# Approach 2: DFS Approach (Less intuitive but possible)
+# Time: O(n), Space: O(h)
+def levelOrderDFS(root):
+    result = []
+    
+    def dfs(node, level):
+        if not node:
+            return
+        
+        if len(result) == level:
+            result.append([])
+        
+        result[level].append(node.val)
+        
+        dfs(node.left, level + 1)
+        dfs(node.right, level + 1)
+    
+    dfs(root, 0)
+    return result`,
+        explanation: "DFS approach requires tracking current level. Demonstrates alternative thinking for level order traversal."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 3: Return Flattened Array Instead of Levels
 // Time: O(n), Space: O(w)
@@ -529,6 +923,31 @@ function levelOrderFlat(root: TreeNode | null): number[] {
     
     return result;
 }`,
+        explanation: "Flattened array approach returns single array without level separation. Simpler output format."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Return Flattened Array Instead of Levels
+# Time: O(n), Space: O(w)
+from collections import deque
+
+def levelOrderFlat(root):
+    if not root:
+        return []
+    
+    result = []
+    queue = deque([root])
+    
+    while queue:
+        node = queue.popleft()
+        result.append(node.val)
+        
+        if node.left:
+            queue.append(node.left)
+        if node.right:
+            queue.append(node.right)
+    
+    return result`,
         explanation: "Flattened array approach returns single array without level separation. Simpler output format."
       }
     ],
@@ -588,6 +1007,37 @@ function buildTree(preorder: number[], inorder: number[]): TreeNode | null {
         explanation: "Hash map approach provides O(1) inorder index lookups. Most efficient solution with optimal time complexity."
       },
       {
+        language: "Python",
+        code: `# Approach 1: Recursive with Hash Map for O(1) lookups
+# Time: O(n), Space: O(n)
+def buildTree(preorder, inorder):
+    inorder_map = {val: i for i, val in enumerate(inorder)}
+    preorder_index = 0
+    
+    def build(inorder_start, inorder_end):
+        nonlocal preorder_index
+        
+        if inorder_start > inorder_end:
+            return None
+        
+        # Root is always the next element in preorder
+        root_val = preorder[preorder_index]
+        preorder_index += 1
+        root = TreeNode(root_val)
+        
+        # Find root position in inorder
+        inorder_index = inorder_map[root_val]
+        
+        # Build left subtree first (preorder: root, left, right)
+        root.left = build(inorder_start, inorder_index - 1)
+        root.right = build(inorder_index + 1, inorder_end)
+        
+        return root
+    
+    return build(0, len(inorder) - 1)`,
+        explanation: "Hash map approach provides O(1) inorder index lookups. Most efficient solution with optimal time complexity."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Alternative without hash map (less efficient)
 // Time: O(n²), Space: O(n)
@@ -610,6 +1060,31 @@ function buildTreeBasic(preorder: number[], inorder: number[]): TreeNode | null 
     
     return root;
 }`,
+        explanation: "Basic recursive approach demonstrates fundamental concept without hash map. Less efficient due to O(n) searches."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Alternative without hash map (less efficient)
+# Time: O(n²), Space: O(n)
+def buildTreeBasic(preorder, inorder):
+    if not preorder or not inorder:
+        return None
+    
+    root_val = preorder[0]
+    root = TreeNode(root_val)
+    
+    root_index = inorder.index(root_val)
+    
+    # Split arrays
+    left_inorder = inorder[:root_index]
+    right_inorder = inorder[root_index + 1:]
+    left_preorder = preorder[1:1 + len(left_inorder)]
+    right_preorder = preorder[1 + len(left_inorder):]
+    
+    root.left = buildTreeBasic(left_preorder, left_inorder)
+    root.right = buildTreeBasic(right_preorder, right_inorder)
+    
+    return root`,
         explanation: "Basic recursive approach demonstrates fundamental concept without hash map. Less efficient due to O(n) searches."
       }
     ],
@@ -661,6 +1136,31 @@ function kthSmallest(root: TreeNode | null, k: number): number {
         explanation: "Recursive inorder traversal with early termination. Most intuitive approach leveraging BST sorted property."
       },
       {
+        language: "Python",
+        code: `# Approach 1: Inorder Traversal (Optimal)
+# Time: O(h + k), Space: O(h)
+def kthSmallest(root, k):
+    def inorder(node):
+        if not node:
+            return False
+        
+        if inorder(node.left):
+            return True
+        
+        inorder.count += 1
+        if inorder.count == k:
+            inorder.result = node.val
+            return True
+        
+        return inorder(node.right)
+    
+    inorder.count = 0
+    inorder.result = 0
+    inorder(root)
+    return inorder.result`,
+        explanation: "Recursive inorder traversal with early termination. Most intuitive approach leveraging BST sorted property."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Iterative Inorder
 // Time: O(h + k), Space: O(h)
@@ -685,6 +1185,31 @@ function kthSmallestIterative(root: TreeNode | null, k: number): number {
     
     return -1; // Should not reach here if k is valid
 }`,
+        explanation: "Iterative inorder traversal gives more control over the process. Avoids potential stack overflow."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Iterative Inorder
+# Time: O(h + k), Space: O(h)
+def kthSmallestIterative(root, k):
+    stack = []
+    current = root
+    count = 0
+    
+    while stack or current:
+        while current:
+            stack.append(current)
+            current = current.left
+        
+        current = stack.pop()
+        count += 1
+        
+        if count == k:
+            return current.val
+        
+        current = current.right
+    
+    return -1  # Should not reach here if k is valid`,
         explanation: "Iterative inorder traversal gives more control over the process. Avoids potential stack overflow."
       },
       {
@@ -723,6 +1248,41 @@ function kthSmallestMorris(root: TreeNode | null, k: number): number {
     
     return -1;
 }`,
+        explanation: "Morris traversal achieves O(1) space by temporarily modifying tree structure. Advanced optimization technique."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Morris Traversal (O(1) space)
+# Time: O(n), Space: O(1)
+def kthSmallestMorris(root, k):
+    current = root
+    count = 0
+    
+    while current:
+        if not current.left:
+            count += 1
+            if count == k:
+                return current.val
+            current = current.right
+        else:
+            # Find inorder predecessor
+            predecessor = current.left
+            while predecessor.right and predecessor.right != current:
+                predecessor = predecessor.right
+            
+            if not predecessor.right:
+                # Make current right child of predecessor
+                predecessor.right = current
+                current = current.left
+            else:
+                # Revert changes
+                predecessor.right = None
+                count += 1
+                if count == k:
+                    return current.val
+                current = current.right
+    
+    return -1`,
         explanation: "Morris traversal achieves O(1) space by temporarily modifying tree structure. Advanced optimization technique."
       }
     ],
@@ -794,6 +1354,47 @@ class Codec {
         explanation: "Preorder traversal naturally encodes tree structure. Most intuitive approach for serialization/deserialization."
       },
       {
+        language: "Python",
+        code: `# Approach 1: Preorder DFS Approach
+# Time: O(n) for both operations, Space: O(n)
+class Codec:
+    def serialize(self, root):
+        """Encodes a tree to a single string."""
+        result = []
+        
+        def preorder(node):
+            if not node:
+                result.append("null")
+                return
+            
+            result.append(str(node.val))
+            preorder(node.left)
+            preorder(node.right)
+        
+        preorder(root)
+        return ",".join(result)
+    
+    def deserialize(self, data):
+        """Decodes your encoded data to tree."""
+        values = data.split(",")
+        self.index = 0
+        
+        def build_tree():
+            if self.index >= len(values) or values[self.index] == "null":
+                self.index += 1
+                return None
+            
+            node = TreeNode(int(values[self.index]))
+            self.index += 1
+            node.left = build_tree()
+            node.right = build_tree()
+            
+            return node
+        
+        return build_tree()`,
+        explanation: "Preorder traversal naturally encodes tree structure. Most intuitive approach for serialization/deserialization."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: BFS Level Order Approach
 // Time: O(n) for both operations, Space: O(n)
@@ -847,6 +1448,59 @@ class CodecBFS {
     }
 }`,
         explanation: "BFS approach creates level-by-level encoding using queue. Alternative perspective on tree serialization."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: BFS Level Order Approach
+# Time: O(n) for both operations, Space: O(n)
+from collections import deque
+
+class CodecBFS:
+    def serialize(self, root):
+        """Encodes a tree to a single string."""
+        if not root:
+            return ""
+        
+        result = []
+        queue = deque([root])
+        
+        while queue:
+            node = queue.popleft()
+            
+            if node:
+                result.append(str(node.val))
+                queue.append(node.left)
+                queue.append(node.right)
+            else:
+                result.append("null")
+        
+        return ",".join(result)
+    
+    def deserialize(self, data):
+        """Decodes your encoded data to tree."""
+        if not data:
+            return None
+        
+        values = data.split(",")
+        root = TreeNode(int(values[0]))
+        queue = deque([root])
+        index = 1
+        
+        while queue and index < len(values):
+            node = queue.popleft()
+            
+            if values[index] != "null":
+                node.left = TreeNode(int(values[index]))
+                queue.append(node.left)
+            index += 1
+            
+            if index < len(values) and values[index] != "null":
+                node.right = TreeNode(int(values[index]))
+                queue.append(node.right)
+            index += 1
+        
+        return root`,
+        explanation: "BFS approach creates level-by-level encoding using queue. Alternative perspective on tree serialization."
       }
     ],
     tips: [
@@ -899,6 +1553,33 @@ function maxPathSum(root: TreeNode | null): number {
         explanation: "Post-order DFS approach naturally handles bottom-up calculation. Most efficient solution for this problem."
       },
       {
+        language: "Python",
+        code: `# Approach 1: Post-order DFS with Global Maximum (Optimal)
+# Time: O(n), Space: O(h)
+def maxPathSum(root):
+    def max_gain(node):
+        if not node:
+            return 0
+        
+        # Maximum gain from left and right subtrees (ignore negative gains)
+        left_gain = max(max_gain(node.left), 0)
+        right_gain = max(max_gain(node.right), 0)
+        
+        # Current path sum including this node as the highest point
+        current_path_sum = node.val + left_gain + right_gain
+        
+        # Update global maximum
+        max_gain.max_sum = max(max_gain.max_sum, current_path_sum)
+        
+        # Return maximum gain this node can contribute to its parent
+        return node.val + max(left_gain, right_gain)
+    
+    max_gain.max_sum = float('-inf')
+    max_gain(root)
+    return max_gain.max_sum`,
+        explanation: "Post-order DFS approach naturally handles bottom-up calculation. Most efficient solution for this problem."
+      },
+      {
         language: "TypeScript",
         code: `// Approach 2: Alternative with Path Tracking (for debugging)
 // Time: O(n), Space: O(h)
@@ -938,6 +1619,45 @@ function maxPathSumWithPath(root: TreeNode | null): { maxSum: number; path: numb
     maxGainWithPath(root);
     return { maxSum, path: bestPath };
 }`,
+        explanation: "Alternative approach that tracks actual path nodes. Useful for debugging and understanding the solution."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Alternative with Path Tracking (for debugging)
+# Time: O(n), Space: O(h)
+def maxPathSumWithPath(root):
+    def max_gain_with_path(node):
+        if not node:
+            return {'gain': 0, 'path': []}
+        
+        left_result = max_gain_with_path(node.left)
+        right_result = max_gain_with_path(node.right)
+        
+        left_gain = max(left_result['gain'], 0)
+        right_gain = max(right_result['gain'], 0)
+        
+        current_path_sum = node.val + left_gain + right_gain
+        
+        if current_path_sum > max_gain_with_path.max_sum:
+            max_gain_with_path.max_sum = current_path_sum
+            max_gain_with_path.best_path = (
+                (left_result['path'] if left_gain > 0 else []) + 
+                [node.val] + 
+                (right_result['path'] if right_gain > 0 else [])
+            )
+        
+        best_gain = max(left_gain, right_gain)
+        best_sub_path = left_result['path'] if best_gain == left_gain else right_result['path']
+        
+        return {
+            'gain': node.val + best_gain,
+            'path': best_sub_path + [node.val]
+        }
+    
+    max_gain_with_path.max_sum = float('-inf')
+    max_gain_with_path.best_path = []
+    max_gain_with_path(root)
+    return {'maxSum': max_gain_with_path.max_sum, 'path': max_gain_with_path.best_path}`,
         explanation: "Alternative approach that tracks actual path nodes. Useful for debugging and understanding the solution."
       }
     ],
