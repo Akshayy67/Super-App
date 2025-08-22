@@ -10,23 +10,25 @@ export const enhancedStringQuestions: Question[] = [
     difficulty: "easy",
     type: "technical",
     approach:
-      "To determine if two strings are anagrams, we need to verify they contain the exact same characters with the same frequencies. We can use three main strategies: sorting both strings and comparing equality (easiest but less efficient), using a hash map to track character frequencies (optimal for general cases), or using a fixed-size array for lowercase letters (most efficient for restricted character sets).",
+      "Multiple approaches available: 1) Sorting (O(n log n) time, O(n) space): Sort both strings and compare for equality. 2) Hash Map (O(n) time, O(n) space): Count character frequencies using a map. 3) Fixed Array (O(n) time, O(1) space): Use fixed-size array for limited character sets like lowercase letters. The hash map approach is optimal for general cases, while fixed array is most efficient for constrained character sets.",
     codeImplementation: [
       {
-        language: "typescript",
-        explanation:
-          "Sorting Approach: This solution sorts both strings and compares them for equality. If they're anagrams, sorting will result in identical strings. Time complexity is O(n log n) due to sorting, and space complexity is O(n) for the sorted copies.",
-        code: `function isAnagram(s: string, t: string): boolean {
+        language: "TypeScript",
+        code: `// Approach 1: Sorting
+// Time: O(n log n), Space: O(n)
+function isAnagram(s: string, t: string): boolean {
     if (s.length !== t.length) return false;
     
     return s.split('').sort().join('') === t.split('').sort().join('');
 }`,
+        explanation:
+          "Sort both strings and compare for equality. Simple but less efficient due to sorting overhead.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Character Count with Hash Map: We use a map to count occurrences of each character in the first string, then decrement counts for each character in the second string. If all characters match exactly, the map will be empty at the end. Time complexity is O(n) and space complexity is O(k) where k is the character set size.",
-        code: `function isAnagramCount(s: string, t: string): boolean {
+        language: "TypeScript",
+        code: `// Approach 2: Hash Map (Optimal)
+// Time: O(n), Space: O(n)
+function isAnagramCount(s: string, t: string): boolean {
     if (s.length !== t.length) return false;
     
     const charCount = new Map<string, number>();
@@ -47,12 +49,14 @@ export const enhancedStringQuestions: Question[] = [
     
     return charCount.size === 0;
 }`,
+        explanation:
+          "Count character frequencies using a map. Optimal time complexity for general character sets.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Array Count for ASCII Letters: For lowercase letter constraints, we can use a fixed-size array (length 26) for counting. This approach is more memory-efficient than a hash map for restricted character sets. We increment counts for first string chars and decrement for second string chars. Time complexity is O(n) and space complexity is O(1).",
-        code: `function isAnagramArray(s: string, t: string): boolean {
+        language: "TypeScript",
+        code: `// Approach 3: Fixed Array (Most efficient for constrained sets)
+// Time: O(n), Space: O(1)
+function isAnagramArray(s: string, t: string): boolean {
     if (s.length !== t.length) return false;
     
     const count = new Array(26).fill(0);
@@ -64,6 +68,77 @@ export const enhancedStringQuestions: Question[] = [
     
     return count.every(c => c === 0);
 }`,
+        explanation:
+          "Use fixed-size array for counting. Most efficient for constrained character sets like lowercase letters.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Sorting
+// Time: O(n log n), Space: O(n)
+public boolean isAnagram(String s, String t) {
+    if (s.length() != t.length()) return false;
+    
+    char[] sArray = s.toCharArray();
+    char[] tArray = t.toCharArray();
+    
+    Arrays.sort(sArray);
+    Arrays.sort(tArray);
+    
+    return Arrays.equals(sArray, tArray);
+}`,
+        explanation:
+          "Sort both strings and compare for equality. Simple but less efficient due to sorting overhead.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Hash Map (Optimal)
+// Time: O(n), Space: O(n)
+public boolean isAnagramCount(String s, String t) {
+    if (s.length() != t.length()) return false;
+    
+    Map<Character, Integer> charCount = new HashMap<>();
+    
+    // Count characters in s
+    for (char c : s.toCharArray()) {
+        charCount.put(c, charCount.getOrDefault(c, 0) + 1);
+    }
+    
+    // Subtract characters in t
+    for (char c : t.toCharArray()) {
+        if (!charCount.containsKey(c)) return false;
+        charCount.put(c, charCount.get(c) - 1);
+        if (charCount.get(c) == 0) {
+            charCount.remove(c);
+        }
+    }
+    
+    return charCount.isEmpty();
+}`,
+        explanation:
+          "Count character frequencies using a map. Optimal time complexity for general character sets.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Fixed Array (Most efficient for constrained sets)
+// Time: O(n), Space: O(1)
+public boolean isAnagramArray(String s, String t) {
+    if (s.length() != t.length()) return false;
+    
+    int[] count = new int[26];
+    
+    for (int i = 0; i < s.length(); i++) {
+        count[s.charAt(i) - 'a']++;
+        count[t.charAt(i) - 'a']--;
+    }
+    
+    for (int c : count) {
+        if (c != 0) return false;
+    }
+    
+    return true;
+}`,
+        explanation:
+          "Use fixed-size array for counting. Most efficient for constrained character sets like lowercase letters.",
       },
     ],
     sampleAnswer:
@@ -88,13 +163,13 @@ export const enhancedStringQuestions: Question[] = [
     difficulty: "easy",
     type: "technical",
     approach:
-      "To validate parentheses matching, we use a stack data structure to track opening brackets and ensure they match with corresponding closing brackets. When we encounter an opening bracket, we push it onto the stack. When we find a closing bracket, we check if it matches the most recent opening bracket (top of stack). The string is valid if all brackets match properly and the stack is empty at the end.",
+      "Multiple approaches available: 1) Stack (O(n) time, O(n) space): Use stack to track opening brackets and match with closing ones. 2) String Replacement (O(n²) time, O(n) space): Repeatedly replace matched pairs until no more matches. 3) Counter Approach (O(n) time, O(1) space): Count brackets for simple cases without mixed types. Stack approach is optimal for general cases with multiple bracket types.",
     codeImplementation: [
       {
-        language: "typescript",
-        explanation:
-          "Stack-based Solution: This is the standard approach using a stack to track opening brackets and match them with closing brackets. We map each closing bracket to its corresponding opening bracket. Time complexity is O(n) and space complexity is O(n) in worst case.",
-        code: `function isValid(s: string): boolean {
+        language: "TypeScript",
+        code: `// Approach 1: Stack (Optimal)
+// Time: O(n), Space: O(n)
+function isValid(s: string): boolean {
     const stack: string[] = [];
     const pairs = new Map([
         [')', '('],
@@ -116,41 +191,100 @@ export const enhancedStringQuestions: Question[] = [
     
     return stack.length === 0;
 }`,
+        explanation:
+          "Use stack to track opening brackets and match with closing ones. Standard and optimal approach.",
       },
       {
-        language: "typescript",
-        explanation:
-          "String Replacement Approach: This alternative repeatedly replaces matching bracket pairs with empty strings until no more replacements can be made. If the resulting string is empty, all brackets matched. This approach is less efficient with O(n²) time complexity due to string manipulation operations.",
-        code: `function isValidReplace(s: string): boolean {
+        language: "TypeScript",
+        code: `// Approach 2: String Replacement
+// Time: O(n²), Space: O(n)
+function isValidReplace(s: string): boolean {
     while (s.includes('()') || s.includes('{}') || s.includes('[]')) {
         s = s.replace('()', '').replace('{}', '').replace('[]', '');
     }
     return s === '';
 }`,
+        explanation:
+          "Repeatedly replace matched pairs until no more matches. Less efficient due to string operations.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Optimized Stack Solution: This solution adds early validation by checking if the string length is odd (guaranteed invalid) and uses a Set for faster lookup of opening brackets. It's still O(n) time and space complexity, but with optimizations for faster execution.",
-        code: `function isValidOptimized(s: string): boolean {
+        language: "TypeScript",
+        code: `// Approach 3: Counter (for single bracket type)
+// Time: O(n), Space: O(1)
+function isValidSimple(s: string): boolean {
     if (s.length % 2 !== 0) return false;
     
-    const stack: string[] = [];
-    const openBrackets = new Set(['(', '{', '[']);
-    const bracketPairs = { ')': '(', '}': '{', ']': '[' };
-    
+    let count = 0;
     for (const char of s) {
-        if (openBrackets.has(char)) {
-            stack.push(char);
-        } else {
-            if (stack.length === 0 || stack.pop() !== bracketPairs[char as keyof typeof bracketPairs]) {
+        if (char === '(') count++;
+        else if (char === ')') count--;
+        if (count < 0) return false; // More closing than opening
+    }
+    
+    return count === 0;
+}`,
+        explanation:
+          "Simple counter for single bracket type. Most space efficient but limited to one bracket type.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Stack (Optimal)
+// Time: O(n), Space: O(n)
+public boolean isValid(String s) {
+    Stack<Character> stack = new Stack<>();
+    Map<Character, Character> pairs = new HashMap<>();
+    pairs.put(')', '(');
+    pairs.put('}', '{');
+    pairs.put(']', '[');
+    
+    for (char c : s.toCharArray()) {
+        if (pairs.containsKey(c)) {
+            // Closing bracket
+            if (stack.isEmpty() || stack.pop() != pairs.get(c)) {
                 return false;
             }
+        } else {
+            // Opening bracket
+            stack.push(c);
         }
     }
     
-    return stack.length === 0;
+    return stack.isEmpty();
 }`,
+        explanation:
+          "Use stack to track opening brackets and match with closing ones. Standard and optimal approach.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: String Replacement
+// Time: O(n²), Space: O(n)
+public boolean isValidReplace(String s) {
+    while (s.contains("()") || s.contains("{}") || s.contains("[]")) {
+        s = s.replace("()", "").replace("{}", "").replace("[]", "");
+    }
+    return s.isEmpty();
+}`,
+        explanation:
+          "Repeatedly replace matched pairs until no more matches. Less efficient due to string operations.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Counter (for single bracket type)
+// Time: O(n), Space: O(1)
+public boolean isValidSimple(String s) {
+    if (s.length() % 2 != 0) return false;
+    
+    int count = 0;
+    for (char c : s.toCharArray()) {
+        if (c == '(') count++;
+        else if (c == ')') count--;
+        if (count < 0) return false; // More closing than opening
+    }
+    
+    return count == 0;
+}`,
+        explanation:
+          "Simple counter for single bracket type. Most space efficient but limited to one bracket type.",
       },
     ],
     sampleAnswer:
@@ -175,13 +309,13 @@ export const enhancedStringQuestions: Question[] = [
     difficulty: "medium",
     type: "technical",
     approach:
-      "To find the longest palindromic substring, we can use several approaches. The expand-around-center approach checks each possible center position (both for odd and even length palindromes) and expands outward while characters match. Dynamic programming builds a table where dp[i][j] indicates if substring from i to j is a palindrome. For very large strings, Manacher's algorithm provides a linear time solution by reusing previously computed information.",
+      "Multiple approaches available: 1) Expand Around Centers (O(n²) time, O(1) space): Check each position as potential center and expand outward. 2) Dynamic Programming (O(n²) time, O(n²) space): Build table where dp[i][j] indicates if substring is palindrome. 3) Manacher's Algorithm (O(n) time, O(n) space): Linear time solution using clever preprocessing and reusing computed information. Expand around centers is most intuitive and space efficient.",
     codeImplementation: [
       {
-        language: "typescript",
-        explanation:
-          "Expand Around Centers: This approach treats each position as a potential center of a palindrome and expands outward as long as characters match. We need to check both odd-length palindromes (centered at a character) and even-length palindromes (centered between characters). Time complexity is O(n²) and space complexity is O(1).",
-        code: `function longestPalindrome(s: string): string {
+        language: "TypeScript",
+        code: `// Approach 1: Expand Around Centers (Optimal for space)
+// Time: O(n²), Space: O(1)
+function longestPalindrome(s: string): string {
     if (!s || s.length < 1) return "";
     
     let start = 0;
@@ -211,12 +345,14 @@ export const enhancedStringQuestions: Question[] = [
     
     return s.substring(start, start + maxLength);
 }`,
+        explanation:
+          "Expand around each potential center. Most intuitive and space efficient approach.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Dynamic Programming: We use a 2D table where dp[i][j] is true if substring from index i to j is a palindrome. We fill this table for increasing substring lengths, starting with single characters (always palindromes) and pairs, then longer substrings. Time complexity is O(n²) and space complexity is O(n²).",
-        code: `function longestPalindromeDP(s: string): string {
+        language: "TypeScript",
+        code: `// Approach 2: Dynamic Programming
+// Time: O(n²), Space: O(n²)
+function longestPalindromeDP(s: string): string {
     const n = s.length;
     const dp: boolean[][] = Array(n).fill(null).map(() => Array(n).fill(false));
     
@@ -252,12 +388,14 @@ export const enhancedStringQuestions: Question[] = [
     
     return s.substring(start, start + maxLength);
 }`,
+        explanation:
+          "Build 2D table where dp[i][j] indicates if substring is palindrome. More space but structured approach.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Manacher's Algorithm: This advanced algorithm achieves O(n) time complexity by cleverly reusing previously computed palindrome information. It transforms the string to handle both odd and even length palindromes uniformly by inserting special characters between each character. Time complexity is O(n) and space complexity is O(n).",
-        code: `function longestPalindromeManacher(s: string): string {
+        language: "TypeScript",
+        code: `// Approach 3: Manacher's Algorithm (Advanced)
+// Time: O(n), Space: O(n)
+function longestPalindromeManacher(s: string): string {
     // Transform string to handle even-length palindromes
     const transformed = '#' + s.split('').join('#') + '#';
     const n = transformed.length;
@@ -299,6 +437,88 @@ export const enhancedStringQuestions: Question[] = [
     const start = (centerIndex - maxLen) / 2;
     return s.substring(start, start + maxLen);
 }`,
+        explanation:
+          "Advanced linear time algorithm using preprocessing. Complex but optimal time complexity.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Expand Around Centers (Optimal for space)
+// Time: O(n²), Space: O(1)
+public String longestPalindrome(String s) {
+    if (s == null || s.length() < 1) return "";
+    
+    int start = 0;
+    int maxLength = 1;
+    
+    for (int i = 0; i < s.length(); i++) {
+        // Check for odd-length palindromes (center at i)
+        int len1 = expandAroundCenter(s, i, i);
+        // Check for even-length palindromes (center between i and i+1)
+        int len2 = expandAroundCenter(s, i, i + 1);
+        
+        int currentMax = Math.max(len1, len2);
+        
+        if (currentMax > maxLength) {
+            maxLength = currentMax;
+            start = i - (currentMax - 1) / 2;
+        }
+    }
+    
+    return s.substring(start, start + maxLength);
+}
+
+private int expandAroundCenter(String s, int left, int right) {
+    while (left >= 0 && right < s.length() && s.charAt(left) == s.charAt(right)) {
+        left--;
+        right++;
+    }
+    return right - left - 1;
+}`,
+        explanation:
+          "Expand around each potential center. Most intuitive and space efficient approach.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Dynamic Programming
+// Time: O(n²), Space: O(n²)
+public String longestPalindromeDP(String s) {
+    int n = s.length();
+    boolean[][] dp = new boolean[n][n];
+    
+    int start = 0;
+    int maxLength = 1;
+    
+    // Single characters are palindromes
+    for (int i = 0; i < n; i++) {
+        dp[i][i] = true;
+    }
+    
+    // Check for 2-character palindromes
+    for (int i = 0; i < n - 1; i++) {
+        if (s.charAt(i) == s.charAt(i + 1)) {
+            dp[i][i + 1] = true;
+            start = i;
+            maxLength = 2;
+        }
+    }
+    
+    // Check for palindromes of length 3 and more
+    for (int length = 3; length <= n; length++) {
+        for (int i = 0; i < n - length + 1; i++) {
+            int j = i + length - 1;
+            
+            if (s.charAt(i) == s.charAt(j) && dp[i + 1][j - 1]) {
+                dp[i][j] = true;
+                start = i;
+                maxLength = length;
+            }
+        }
+    }
+    
+    return s.substring(start, start + maxLength);
+}`,
+        explanation:
+          "Build 2D table where dp[i][j] indicates if substring is palindrome. More space but structured approach.",
       },
     ],
     sampleAnswer:
@@ -323,13 +543,13 @@ export const enhancedStringQuestions: Question[] = [
     difficulty: "hard",
     type: "technical",
     approach:
-      "To find the minimum window substring containing all characters from a target string, we use the sliding window technique. We maintain a window with two pointers (left and right) and expand or shrink it based on whether all required characters are included. We track character frequencies using hash maps or arrays and optimize by only considering windows that contain all required characters.",
+      "Multiple approaches available: 1) Sliding Window with Hash Map (O(|s| + |t|) time, O(|s| + |t|) space): Two pointers with frequency tracking using maps. 2) Optimized with Arrays (O(|s| + |t|) time, O(1) space): Use fixed-size arrays for ASCII characters. 3) Brute Force (O(|s|² * |t|) time, O(|t|) space): Check all possible substrings. Sliding window with hash map is optimal for general cases.",
     codeImplementation: [
       {
-        language: "typescript",
-        explanation:
-          "Sliding Window with Hash Map: This approach uses two hash maps to track character frequencies in the target string and current window. We expand the window until we have all required characters (with correct frequencies), then shrink from the left to find the minimum valid window. Time complexity is O(|s| + |t|) where s and t are the input strings. Space complexity is O(|s| + |t|) for the hash maps.",
-        code: `function minWindow(s: string, t: string): string {
+        language: "TypeScript",
+        code: `// Approach 1: Sliding Window with Hash Map (Optimal)
+// Time: O(|s| + |t|), Space: O(|s| + |t|)
+function minWindow(s: string, t: string): string {
     if (s.length < t.length) return "";
     
     // Count characters in t
@@ -375,12 +595,14 @@ export const enhancedStringQuestions: Question[] = [
     
     return minLen === Infinity ? "" : s.substring(minStart, minStart + minLen);
 }`,
+        explanation:
+          "Two pointers with frequency tracking using maps. Optimal approach for general character sets.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Optimized with Character Array: For ASCII characters, we can optimize further by using fixed-size arrays instead of hash maps. This approach has the same time complexity of O(|s| + |t|) but can be faster in practice due to reduced overhead. Space complexity is O(1) since the arrays are fixed size regardless of input length.",
-        code: `function minWindowOptimized(s: string, t: string): string {
+        language: "TypeScript",
+        code: `// Approach 2: Optimized with Arrays
+// Time: O(|s| + |t|), Space: O(1)
+function minWindowOptimized(s: string, t: string): string {
     if (s.length < t.length) return "";
     
     const tCount = new Array(128).fill(0);
@@ -425,6 +647,152 @@ export const enhancedStringQuestions: Question[] = [
     
     return minLen === Infinity ? "" : s.substring(minStart, minStart + minLen);
 }`,
+        explanation:
+          "Use fixed-size arrays for ASCII characters. Same complexity but faster in practice.",
+      },
+      {
+        language: "TypeScript",
+        code: `// Approach 3: Brute Force
+// Time: O(|s|² * |t|), Space: O(|t|)
+function minWindowBrute(s: string, t: string): string {
+    if (s.length < t.length) return "";
+    
+    const tCount = new Map<string, number>();
+    for (const char of t) {
+        tCount.set(char, (tCount.get(char) || 0) + 1);
+    }
+    
+    let minLen = Infinity;
+    let result = "";
+    
+    for (let i = 0; i < s.length; i++) {
+        for (let j = i + t.length - 1; j < s.length; j++) {
+            const substring = s.substring(i, j + 1);
+            
+            if (containsAllChars(substring, tCount) && substring.length < minLen) {
+                minLen = substring.length;
+                result = substring;
+            }
+        }
+    }
+    
+    return result;
+}
+
+function containsAllChars(str: string, required: Map<string, number>): boolean {
+    const count = new Map<string, number>();
+    for (const char of str) {
+        count.set(char, (count.get(char) || 0) + 1);
+    }
+    
+    for (const [char, freq] of required) {
+        if ((count.get(char) || 0) < freq) return false;
+    }
+    
+    return true;
+}`,
+        explanation:
+          "Check all possible substrings. Simple but very inefficient for large strings.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Sliding Window with Hash Map (Optimal)
+// Time: O(|s| + |t|), Space: O(|s| + |t|)
+public String minWindow(String s, String t) {
+    if (s.length() < t.length()) return "";
+    
+    Map<Character, Integer> tCount = new HashMap<>();
+    for (char c : t.toCharArray()) {
+        tCount.put(c, tCount.getOrDefault(c, 0) + 1);
+    }
+    
+    Map<Character, Integer> windowCount = new HashMap<>();
+    int left = 0;
+    int minLen = Integer.MAX_VALUE;
+    int minStart = 0;
+    int formed = 0;
+    int required = tCount.size();
+    
+    for (int right = 0; right < s.length(); right++) {
+        char c = s.charAt(right);
+        windowCount.put(c, windowCount.getOrDefault(c, 0) + 1);
+        
+        if (tCount.containsKey(c) && windowCount.get(c).intValue() == tCount.get(c).intValue()) {
+            formed++;
+        }
+        
+        while (left <= right && formed == required) {
+            if (right - left + 1 < minLen) {
+                minLen = right - left + 1;
+                minStart = left;
+            }
+            
+            char leftChar = s.charAt(left);
+            windowCount.put(leftChar, windowCount.get(leftChar) - 1);
+            
+            if (tCount.containsKey(leftChar) && windowCount.get(leftChar) < tCount.get(leftChar)) {
+                formed--;
+            }
+            
+            left++;
+        }
+    }
+    
+    return minLen == Integer.MAX_VALUE ? "" : s.substring(minStart, minStart + minLen);
+}`,
+        explanation:
+          "Two pointers with frequency tracking using maps. Optimal approach for general character sets.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Optimized with Arrays
+// Time: O(|s| + |t|), Space: O(1)
+public String minWindowOptimized(String s, String t) {
+    if (s.length() < t.length()) return "";
+    
+    int[] tCount = new int[128];
+    int required = 0;
+    
+    for (char c : t.toCharArray()) {
+        if (tCount[c] == 0) required++;
+        tCount[c]++;
+    }
+    
+    int[] windowCount = new int[128];
+    int left = 0;
+    int minLen = Integer.MAX_VALUE;
+    int minStart = 0;
+    int formed = 0;
+    
+    for (int right = 0; right < s.length(); right++) {
+        char rightChar = s.charAt(right);
+        windowCount[rightChar]++;
+        
+        if (tCount[rightChar] > 0 && windowCount[rightChar] == tCount[rightChar]) {
+            formed++;
+        }
+        
+        while (left <= right && formed == required) {
+            if (right - left + 1 < minLen) {
+                minLen = right - left + 1;
+                minStart = left;
+            }
+            
+            char leftChar = s.charAt(left);
+            windowCount[leftChar]--;
+            
+            if (tCount[leftChar] > 0 && windowCount[leftChar] < tCount[leftChar]) {
+                formed--;
+            }
+            
+            left++;
+        }
+    }
+    
+    return minLen == Integer.MAX_VALUE ? "" : s.substring(minStart, minStart + minLen);
+}`,
+        explanation:
+          "Use fixed-size arrays for ASCII characters. Same complexity but faster in practice.",
       },
     ],
     sampleAnswer:
@@ -449,13 +817,13 @@ export const enhancedStringQuestions: Question[] = [
     difficulty: "medium",
     type: "technical",
     approach:
-      "To group anagrams together, we need a way to identify strings that are anagrams of each other. Since anagrams have the same characters with the same frequencies, we can use various strategies to create a unique key for each anagram group: sorting each string (simple but less efficient), counting character frequencies (more efficient for long strings), or using a mathematical approach with prime numbers (creative but risks overflow).",
+      "Multiple approaches available: 1) Sorting Keys (O(n * k log k) time, O(n * k) space): Use sorted string as key for grouping. 2) Character Count Keys (O(n * k) time, O(n * k) space): Use character frequency array as key. 3) Prime Number Keys (O(n * k) time, O(n * k) space): Use product of prime numbers as key (risk of overflow). Character count approach is optimal for longer strings.",
     codeImplementation: [
       {
-        language: "typescript",
-        explanation:
-          "Sorting Approach: We use the sorted version of each string as a key in a hash map. Strings that are anagrams will have the same sorted representation. Time complexity is O(n * k log k) where n is the number of strings and k is the maximum string length. Space complexity is O(n * k).",
-        code: `function groupAnagrams(strs: string[]): string[][] {
+        language: "TypeScript",
+        code: `// Approach 1: Sorting Keys
+// Time: O(n * k log k), Space: O(n * k)
+function groupAnagrams(strs: string[]): string[][] {
     const groups = new Map<string, string[]>();
     
     for (const str of strs) {
@@ -469,12 +837,14 @@ export const enhancedStringQuestions: Question[] = [
     
     return Array.from(groups.values());
 }`,
+        explanation:
+          "Use sorted string as key for grouping. Simple but less efficient due to sorting overhead.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Character Count Approach: Instead of sorting, we count the frequency of each character and use that count array as a key. This is more efficient for longer strings. Time complexity is O(n * k) where n is the number of strings and k is the maximum string length. Space complexity is O(n * k).",
-        code: `function groupAnagramsCount(strs: string[]): string[][] {
+        language: "TypeScript",
+        code: `// Approach 2: Character Count Keys (Optimal)
+// Time: O(n * k), Space: O(n * k)
+function groupAnagramsCount(strs: string[]): string[][] {
     const groups = new Map<string, string[]>();
     
     for (const str of strs) {
@@ -494,12 +864,14 @@ export const enhancedStringQuestions: Question[] = [
     
     return Array.from(groups.values());
 }`,
+        explanation:
+          "Use character frequency array as key. More efficient for longer strings.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Prime Number Approach: This mathematical approach assigns a unique prime number to each character and multiplies them together to form a key. Since the product of prime numbers is unique for any combination (fundamental theorem of arithmetic), this creates a unique identifier for each anagram group. Caution: This can cause integer overflow with long strings. Time complexity is O(n * k) where n is the number of strings and k is the maximum string length.",
-        code: `function groupAnagramsPrime(strs: string[]): string[][] {
+        language: "TypeScript",
+        code: `// Approach 3: Prime Number Keys
+// Time: O(n * k), Space: O(n * k)
+function groupAnagramsPrime(strs: string[]): string[][] {
     const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101];
     const groups = new Map<number, string[]>();
     
@@ -517,6 +889,62 @@ export const enhancedStringQuestions: Question[] = [
     
     return Array.from(groups.values());
 }`,
+        explanation:
+          "Use product of prime numbers as key. Creative approach but risks overflow with long strings.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Sorting Keys
+// Time: O(n * k log k), Space: O(n * k)
+public List<List<String>> groupAnagrams(String[] strs) {
+    Map<String, List<String>> groups = new HashMap<>();
+    
+    for (String str : strs) {
+        char[] chars = str.toCharArray();
+        Arrays.sort(chars);
+        String sorted = new String(chars);
+        
+        if (!groups.containsKey(sorted)) {
+            groups.put(sorted, new ArrayList<>());
+        }
+        groups.get(sorted).add(str);
+    }
+    
+    return new ArrayList<>(groups.values());
+}`,
+        explanation:
+          "Use sorted string as key for grouping. Simple but less efficient due to sorting overhead.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Character Count Keys (Optimal)
+// Time: O(n * k), Space: O(n * k)
+public List<List<String>> groupAnagramsCount(String[] strs) {
+    Map<String, List<String>> groups = new HashMap<>();
+    
+    for (String str : strs) {
+        int[] count = new int[26];
+        
+        for (char c : str.toCharArray()) {
+            count[c - 'a']++;
+        }
+        
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 26; i++) {
+            sb.append(count[i]).append(',');
+        }
+        String key = sb.toString();
+        
+        if (!groups.containsKey(key)) {
+            groups.put(key, new ArrayList<>());
+        }
+        groups.get(key).add(str);
+    }
+    
+    return new ArrayList<>(groups.values());
+}`,
+        explanation:
+          "Use character frequency array as key. More efficient for longer strings.",
       },
     ],
     sampleAnswer:
@@ -541,13 +969,13 @@ export const enhancedStringQuestions: Question[] = [
     difficulty: "medium",
     type: "technical",
     approach:
-      "To find the longest substring without repeating characters, we use a sliding window approach that maintains a valid window without duplicates. We expand the window by moving the right pointer and contract it from the left when we encounter repeated characters. We can optimize this process by using a hash map to track character indices, allowing us to jump the left pointer directly to the position after a repeated character.",
+      "Multiple approaches available: 1) Sliding Window with Set (O(n) time, O(min(m,n)) space): Use set to track characters, shrink window when duplicates found. 2) Optimized with Hash Map (O(n) time, O(min(m,n)) space): Track character indices to jump left pointer directly. 3) Fixed Array (O(n) time, O(1) space): Use fixed-size array for ASCII characters. Hash map approach is most efficient as it avoids redundant character removal.",
     codeImplementation: [
       {
-        language: "typescript",
-        explanation:
-          "Sliding Window with Hash Set: This approach uses a set to track characters in the current window. When we encounter a repeated character, we remove characters from the left until the window is valid again. Time complexity is O(n) where each character is processed at most twice (once added, once removed). Space complexity is O(min(m, n)) where m is the character set size.",
-        code: `function lengthOfLongestSubstring(s: string): number {
+        language: "TypeScript",
+        code: `// Approach 1: Sliding Window with Set
+// Time: O(n), Space: O(min(m,n))
+function lengthOfLongestSubstring(s: string): number {
     const charSet = new Set<string>();
     let left = 0;
     let maxLength = 0;
@@ -564,12 +992,14 @@ export const enhancedStringQuestions: Question[] = [
     
     return maxLength;
 }`,
+        explanation:
+          "Use set to track characters, shrink window when duplicates found. Standard sliding window approach.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Optimized with Hash Map: This improvement uses a map to store the most recent index of each character. When we find a repeated character, we can directly jump the left pointer to the position right after the previous occurrence. This avoids the need to remove characters one by one. Time complexity remains O(n) but with better practical performance. Space complexity is still O(min(m, n)).",
-        code: `function lengthOfLongestSubstringOptimized(s: string): number {
+        language: "TypeScript",
+        code: `// Approach 2: Optimized with Hash Map (Most efficient)
+// Time: O(n), Space: O(min(m,n))
+function lengthOfLongestSubstringOptimized(s: string): number {
     const charIndex = new Map<string, number>();
     let left = 0;
     let maxLength = 0;
@@ -585,32 +1015,108 @@ export const enhancedStringQuestions: Question[] = [
     
     return maxLength;
 }`,
+        explanation:
+          "Track character indices to jump left pointer directly. Avoids redundant character removal.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Return the Substring: This variation returns the actual substring rather than just its length. We track the starting position of the maximum length substring as we go. It uses the same optimized approach with a hash map to track character indices. Time and space complexity remain O(n) and O(min(m, n)) respectively.",
-        code: `function longestSubstringWithoutRepeating(s: string): string {
-    const charIndex = new Map<string, number>();
+        language: "TypeScript",
+        code: `// Approach 3: Fixed Array for ASCII
+// Time: O(n), Space: O(1)
+function lengthOfLongestSubstringArray(s: string): number {
+    const charIndex = new Array(128).fill(-1);
     let left = 0;
     let maxLength = 0;
-    let resultStart = 0;
     
     for (let right = 0; right < s.length; right++) {
-        if (charIndex.has(s[right])) {
-            left = Math.max(left, charIndex.get(s[right])! + 1);
+        const charCode = s.charCodeAt(right);
+        
+        if (charIndex[charCode] >= left) {
+            left = charIndex[charCode] + 1;
         }
         
-        charIndex.set(s[right], right);
-        
-        if (right - left + 1 > maxLength) {
-            maxLength = right - left + 1;
-            resultStart = left;
-        }
+        charIndex[charCode] = right;
+        maxLength = Math.max(maxLength, right - left + 1);
     }
     
-    return s.substring(resultStart, resultStart + maxLength);
+    return maxLength;
 }`,
+        explanation:
+          "Use fixed-size array for ASCII characters. Most space efficient for constrained character sets.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Sliding Window with Set
+// Time: O(n), Space: O(min(m,n))
+public int lengthOfLongestSubstring(String s) {
+    Set<Character> charSet = new HashSet<>();
+    int left = 0;
+    int maxLength = 0;
+    
+    for (int right = 0; right < s.length(); right++) {
+        while (charSet.contains(s.charAt(right))) {
+            charSet.remove(s.charAt(left));
+            left++;
+        }
+        
+        charSet.add(s.charAt(right));
+        maxLength = Math.max(maxLength, right - left + 1);
+    }
+    
+    return maxLength;
+}`,
+        explanation:
+          "Use set to track characters, shrink window when duplicates found. Standard sliding window approach.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Optimized with Hash Map (Most efficient)
+// Time: O(n), Space: O(min(m,n))
+public int lengthOfLongestSubstringOptimized(String s) {
+    Map<Character, Integer> charIndex = new HashMap<>();
+    int left = 0;
+    int maxLength = 0;
+    
+    for (int right = 0; right < s.length(); right++) {
+        char c = s.charAt(right);
+        
+        if (charIndex.containsKey(c)) {
+            left = Math.max(left, charIndex.get(c) + 1);
+        }
+        
+        charIndex.put(c, right);
+        maxLength = Math.max(maxLength, right - left + 1);
+    }
+    
+    return maxLength;
+}`,
+        explanation:
+          "Track character indices to jump left pointer directly. Avoids redundant character removal.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Fixed Array for ASCII
+// Time: O(n), Space: O(1)
+public int lengthOfLongestSubstringArray(String s) {
+    int[] charIndex = new int[128];
+    Arrays.fill(charIndex, -1);
+    int left = 0;
+    int maxLength = 0;
+    
+    for (int right = 0; right < s.length(); right++) {
+        char c = s.charAt(right);
+        
+        if (charIndex[c] >= left) {
+            left = charIndex[c] + 1;
+        }
+        
+        charIndex[c] = right;
+        maxLength = Math.max(maxLength, right - left + 1);
+    }
+    
+    return maxLength;
+}`,
+        explanation:
+          "Use fixed-size array for ASCII characters. Most space efficient for constrained character sets.",
       },
     ],
     sampleAnswer:
@@ -635,13 +1141,13 @@ export const enhancedStringQuestions: Question[] = [
     difficulty: "easy",
     type: "technical",
     approach:
-      "To check if a string is a valid palindrome after ignoring non-alphanumeric characters, we can use different approaches. The two-pointer technique compares characters from both ends while skipping invalid characters, avoiding extra space. Alternatively, we can first clean the string by removing invalid characters and then check if it's a palindrome, which is cleaner but uses more space.",
+      "Multiple approaches available: 1) Two Pointers (O(n) time, O(1) space): Compare characters from both ends while skipping non-alphanumeric. 2) Clean String First (O(n) time, O(n) space): Remove invalid characters first, then check palindrome. 3) Reverse and Compare (O(n) time, O(n) space): Clean string and compare with its reverse. Two pointers approach is most space efficient.",
     codeImplementation: [
       {
-        language: "typescript",
-        explanation:
-          "Two Pointers Approach: This space-efficient solution uses pointers at both ends of the string, moving inward while comparing characters. We skip non-alphanumeric characters and convert to lowercase for case-insensitive comparison. Time complexity is O(n) and space complexity is O(1) as we don't create a new string.",
-        code: `function isPalindrome(s: string): boolean {
+        language: "TypeScript",
+        code: `// Approach 1: Two Pointers (Optimal)
+// Time: O(n), Space: O(1)
+function isPalindrome(s: string): boolean {
     let left = 0;
     let right = s.length - 1;
     
@@ -671,12 +1177,14 @@ export const enhancedStringQuestions: Question[] = [
 function isAlphanumeric(char: string): boolean {
     return /[a-zA-Z0-9]/.test(char);
 }`,
+        explanation:
+          "Compare characters from both ends while skipping non-alphanumeric. Most space efficient approach.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Clean String First Approach: This approach first creates a cleaned version of the string (lowercase and only alphanumeric), then checks if it's a palindrome. This makes the code cleaner and simpler, but uses O(n) extra space for the cleaned string. Time complexity is still O(n).",
-        code: `function isPalindromeClean(s: string): boolean {
+        language: "TypeScript",
+        code: `// Approach 2: Clean String First
+// Time: O(n), Space: O(n)
+function isPalindromeClean(s: string): boolean {
     const cleaned = s.toLowerCase().replace(/[^a-z0-9]/g, '');
     let left = 0;
     let right = cleaned.length - 1;
@@ -691,15 +1199,85 @@ function isAlphanumeric(char: string): boolean {
     
     return true;
 }`,
+        explanation:
+          "Clean string first, then check palindrome. More readable but uses extra space.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Concise Approach: This one-liner creates a cleaned string, then compares it with its reversed version. While elegant, it's less efficient than the other approaches because string reversal requires O(n) extra space and time. Time and space complexity are both O(n).",
-        code: `function isPalindromeConcise(s: string): boolean {
+        language: "TypeScript",
+        code: `// Approach 3: Reverse and Compare
+// Time: O(n), Space: O(n)
+function isPalindromeConcise(s: string): boolean {
     const cleaned = s.toLowerCase().replace(/[^a-z0-9]/g, '');
     return cleaned === cleaned.split('').reverse().join('');
 }`,
+        explanation:
+          "Clean string and compare with its reverse. Most concise but least efficient.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Two Pointers (Optimal)
+// Time: O(n), Space: O(1)
+public boolean isPalindrome(String s) {
+    int left = 0;
+    int right = s.length() - 1;
+    
+    while (left < right) {
+        // Skip non-alphanumeric characters from left
+        while (left < right && !Character.isLetterOrDigit(s.charAt(left))) {
+            left++;
+        }
+        
+        // Skip non-alphanumeric characters from right
+        while (left < right && !Character.isLetterOrDigit(s.charAt(right))) {
+            right--;
+        }
+        
+        // Compare characters (case-insensitive)
+        if (Character.toLowerCase(s.charAt(left)) != Character.toLowerCase(s.charAt(right))) {
+            return false;
+        }
+        
+        left++;
+        right--;
+    }
+    
+    return true;
+}`,
+        explanation:
+          "Compare characters from both ends while skipping non-alphanumeric. Most space efficient approach.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Clean String First
+// Time: O(n), Space: O(n)
+public boolean isPalindromeClean(String s) {
+    String cleaned = s.toLowerCase().replaceAll("[^a-z0-9]", "");
+    int left = 0;
+    int right = cleaned.length() - 1;
+    
+    while (left < right) {
+        if (cleaned.charAt(left) != cleaned.charAt(right)) {
+            return false;
+        }
+        left++;
+        right--;
+    }
+    
+    return true;
+}`,
+        explanation:
+          "Clean string first, then check palindrome. More readable but uses extra space.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Reverse and Compare
+// Time: O(n), Space: O(n)
+public boolean isPalindromeConcise(String s) {
+    String cleaned = s.toLowerCase().replaceAll("[^a-z0-9]", "");
+    return cleaned.equals(new StringBuilder(cleaned).reverse().toString());
+}`,
+        explanation:
+          "Clean string and compare with its reverse. Most concise but least efficient.",
       },
     ],
     sampleAnswer:
@@ -724,13 +1302,13 @@ function isAlphanumeric(char: string): boolean {
     difficulty: "medium",
     type: "technical",
     approach:
-      "To find the longest substring containing the same letter after at most k replacements, we use a sliding window approach. We track character frequencies within the current window and determine if the window is valid by checking if the number of replacements needed (window size - count of most frequent character) is at most k. If not valid, we shrink the window from the left until it becomes valid again.",
+      "Multiple approaches available: 1) Sliding Window with Hash Map (O(n) time, O(1) space): Track character frequencies and most frequent character count. 2) Character-by-Character (O(26 * n) time, O(1) space): Try each letter as target character. 3) Brute Force (O(n²) time, O(1) space): Check all possible substrings. Sliding window with hash map is optimal for general cases.",
     codeImplementation: [
       {
-        language: "typescript",
-        explanation:
-          "Sliding Window with Character Count: This approach maintains a sliding window and keeps track of the count of each character in the current window. The key insight is that we only need to replace characters that aren't the most frequent character in the window. If (window size - max character count) > k, then we need more than k replacements, so the window is invalid. Time complexity is O(n) and space complexity is O(1) since we have a fixed alphabet size.",
-        code: `function characterReplacement(s: string, k: number): number {
+        language: "TypeScript",
+        code: `// Approach 1: Sliding Window with Hash Map (Optimal)
+// Time: O(n), Space: O(1)
+function characterReplacement(s: string, k: number): number {
     const charCount = new Map<string, number>();
     let left = 0;
     let maxLength = 0;
@@ -753,12 +1331,14 @@ function isAlphanumeric(char: string): boolean {
     
     return maxLength;
 }`,
+        explanation:
+          "Track character frequencies and most frequent character count. Most efficient general approach.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Character-by-Character Approach: This alternative solution explicitly tries each letter as the target character to create a repeating substring. For each target character, it counts replacements needed in the current window and shrinks when we exceed k replacements. This approach is more intuitive but less efficient for large alphabets, as it runs in O(26 * n) time for uppercase English letters. Space complexity is O(1).",
-        code: `function characterReplacementVerbose(s: string, k: number): number {
+        language: "TypeScript",
+        code: `// Approach 2: Character-by-Character
+// Time: O(26 * n), Space: O(1)
+function characterReplacementVerbose(s: string, k: number): number {
     let maxLength = 0;
     
     // Try each character as the target character
@@ -785,6 +1365,100 @@ function isAlphanumeric(char: string): boolean {
     
     return maxLength;
 }`,
+        explanation:
+          "Try each letter as target character. More intuitive but less efficient for large alphabets.",
+      },
+      {
+        language: "TypeScript",
+        code: `// Approach 3: Brute Force
+// Time: O(n²), Space: O(1)
+function characterReplacementBrute(s: string, k: number): number {
+    let maxLength = 0;
+    
+    for (let i = 0; i < s.length; i++) {
+        const charCount = new Map<string, number>();
+        let maxCharFreq = 0;
+        
+        for (let j = i; j < s.length; j++) {
+            charCount.set(s[j], (charCount.get(s[j]) || 0) + 1);
+            maxCharFreq = Math.max(maxCharFreq, charCount.get(s[j])!);
+            
+            const windowSize = j - i + 1;
+            if (windowSize - maxCharFreq <= k) {
+                maxLength = Math.max(maxLength, windowSize);
+            } else {
+                break;
+            }
+        }
+    }
+    
+    return maxLength;
+}`,
+        explanation:
+          "Check all possible substrings. Simple but inefficient for large strings.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Sliding Window with Hash Map (Optimal)
+// Time: O(n), Space: O(1)
+public int characterReplacement(String s, int k) {
+    Map<Character, Integer> charCount = new HashMap<>();
+    int left = 0;
+    int maxLength = 0;
+    int maxCharCount = 0;
+    
+    for (int right = 0; right < s.length(); right++) {
+        char rightChar = s.charAt(right);
+        charCount.put(rightChar, charCount.getOrDefault(rightChar, 0) + 1);
+        maxCharCount = Math.max(maxCharCount, charCount.get(rightChar));
+        
+        // If window size - max char count > k, shrink window
+        while (right - left + 1 - maxCharCount > k) {
+            char leftChar = s.charAt(left);
+            charCount.put(leftChar, charCount.get(leftChar) - 1);
+            left++;
+        }
+        
+        maxLength = Math.max(maxLength, right - left + 1);
+    }
+    
+    return maxLength;
+}`,
+        explanation:
+          "Track character frequencies and most frequent character count. Most efficient general approach.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Character-by-Character
+// Time: O(26 * n), Space: O(1)
+public int characterReplacementVerbose(String s, int k) {
+    int maxLength = 0;
+    
+    // Try each character as the target character
+    for (char target = 'A'; target <= 'Z'; target++) {
+        int left = 0;
+        int replacements = 0;
+        
+        for (int right = 0; right < s.length(); right++) {
+            if (s.charAt(right) != target) {
+                replacements++;
+            }
+            
+            while (replacements > k) {
+                if (s.charAt(left) != target) {
+                    replacements--;
+                }
+                left++;
+            }
+            
+            maxLength = Math.max(maxLength, right - left + 1);
+        }
+    }
+    
+    return maxLength;
+}`,
+        explanation:
+          "Try each letter as target character. More intuitive but less efficient for large alphabets.",
       },
     ],
     sampleAnswer:
@@ -809,13 +1483,13 @@ function isAlphanumeric(char: string): boolean {
     difficulty: "hard",
     type: "technical",
     approach:
-      "This problem can be solved using two main approaches: (1) Dynamic Programming - build a 2D table where dp[i][j] represents if s[0...i-1] matches p[0...j-1], handling special cases for '*'. (2) Recursive with Memoization - recursively check if patterns match with caching to avoid repeated calculations.",
+      "Multiple approaches available: 1) Dynamic Programming (O(m*n) time, O(m*n) space): Build 2D table where dp[i][j] represents if s[0...i-1] matches p[0...j-1]. 2) Recursive with Memoization (O(m*n) time, O(m*n) space): Top-down approach with caching. 3) Backtracking (O(2^(m+n)) time, O(m+n) space): Recursive without memoization. Dynamic programming is most efficient and commonly used.",
     codeImplementation: [
       {
-        language: "typescript",
-        explanation:
-          "Dynamic Programming approach builds a 2D table bottom-up to determine if the string matches the pattern, handling the special cases for '.' and '*' characters.",
-        code: `function isMatch(s: string, p: string): boolean {
+        language: "TypeScript",
+        code: `// Approach 1: Dynamic Programming (Optimal)
+// Time: O(m*n), Space: O(m*n)
+function isMatch(s: string, p: string): boolean {
     const m = s.length;
     const n = p.length;
     
@@ -854,12 +1528,14 @@ function isAlphanumeric(char: string): boolean {
     
     return dp[m][n];
 }`,
+        explanation:
+          "Build 2D table bottom-up to determine pattern matching. Most efficient and commonly used approach.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Recursive with Memoization approach solves the problem top-down by breaking it into smaller subproblems and using a cache to avoid redundant calculations.",
-        code: `function isMatchRecursive(s: string, p: string): boolean {
+        language: "TypeScript",
+        code: `// Approach 2: Recursive with Memoization
+// Time: O(m*n), Space: O(m*n)
+function isMatchRecursive(s: string, p: string): boolean {
     const memo = new Map<string, boolean>();
     
     function dp(i: number, j: number): boolean {
@@ -884,6 +1560,104 @@ function isAlphanumeric(char: string): boolean {
     
     return dp(0, 0);
 }`,
+        explanation:
+          "Top-down approach with caching. Alternative to DP with same complexity.",
+      },
+      {
+        language: "TypeScript",
+        code: `// Approach 3: Backtracking (Without memoization)
+// Time: O(2^(m+n)), Space: O(m+n)
+function isMatchBacktrack(s: string, p: string): boolean {
+    function backtrack(i: number, j: number): boolean {
+        if (j === p.length) return i === s.length;
+        
+        const firstMatch = i < s.length && (p[j] === s[i] || p[j] === '.');
+        
+        if (j + 1 < p.length && p[j + 1] === '*') {
+            return backtrack(i, j + 2) || (firstMatch && backtrack(i + 1, j));
+        } else {
+            return firstMatch && backtrack(i + 1, j + 1);
+        }
+    }
+    
+    return backtrack(0, 0);
+}`,
+        explanation:
+          "Pure recursive approach without caching. Simple but exponential time complexity.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Dynamic Programming (Optimal)
+// Time: O(m*n), Space: O(m*n)
+public boolean isMatch(String s, String p) {
+    int m = s.length();
+    int n = p.length();
+    
+    boolean[][] dp = new boolean[m + 1][n + 1];
+    dp[0][0] = true;
+    
+    // Handle patterns like a*, a*b*, a*b*c*
+    for (int j = 2; j <= n; j += 2) {
+        if (p.charAt(j - 1) == '*') {
+            dp[0][j] = dp[0][j - 2];
+        }
+    }
+    
+    for (int i = 1; i <= m; i++) {
+        for (int j = 1; j <= n; j++) {
+            char currentChar = s.charAt(i - 1);
+            char patternChar = p.charAt(j - 1);
+            
+            if (patternChar == '*') {
+                char prevPatternChar = p.charAt(j - 2);
+                
+                // Zero occurrences
+                dp[i][j] = dp[i][j - 2];
+                
+                // One or more occurrences
+                if (prevPatternChar == '.' || prevPatternChar == currentChar) {
+                    dp[i][j] = dp[i][j] || dp[i - 1][j];
+                }
+            } else if (patternChar == '.' || patternChar == currentChar) {
+                dp[i][j] = dp[i - 1][j - 1];
+            }
+        }
+    }
+    
+    return dp[m][n];
+}`,
+        explanation:
+          "Build 2D table bottom-up to determine pattern matching. Most efficient and commonly used approach.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Recursive with Memoization
+// Time: O(m*n), Space: O(m*n)
+public boolean isMatchRecursive(String s, String p) {
+    Map<String, Boolean> memo = new HashMap<>();
+    return dp(s, p, 0, 0, memo);
+}
+
+private boolean dp(String s, String p, int i, int j, Map<String, Boolean> memo) {
+    if (j == p.length()) return i == s.length();
+    
+    String key = i + "," + j;
+    if (memo.containsKey(key)) return memo.get(key);
+    
+    boolean firstMatch = i < s.length() && (p.charAt(j) == s.charAt(i) || p.charAt(j) == '.');
+    
+    boolean result;
+    if (j + 1 < p.length() && p.charAt(j + 1) == '*') {
+        result = dp(s, p, i, j + 2, memo) || (firstMatch && dp(s, p, i + 1, j, memo));
+    } else {
+        result = firstMatch && dp(s, p, i + 1, j + 1, memo);
+    }
+    
+    memo.put(key, result);
+    return result;
+}`,
+        explanation:
+          "Top-down approach with caching. Alternative to DP with same complexity.",
       },
     ],
     sampleAnswer:
@@ -908,13 +1682,13 @@ function isAlphanumeric(char: string): boolean {
     difficulty: "hard",
     type: "technical",
     approach:
-      "There are two primary approaches to solve wildcard pattern matching: (1) Dynamic Programming - build a 2D table where dp[i][j] represents if s[0...i-1] matches p[0...j-1], with special cases for '?' and '*'. (2) Two Pointers with Backtracking - process the string and pattern with two pointers, using backtracking for '*' characters to handle matching different lengths of text.",
+      "Multiple approaches available: 1) Dynamic Programming (O(m*n) time, O(m*n) space): Build 2D table where dp[i][j] represents if s[0...i-1] matches p[0...j-1]. 2) Two Pointers with Backtracking (O(m*n) time, O(1) space): Process with two pointers, backtrack for '*' characters. 3) Recursive with Memoization (O(m*n) time, O(m*n) space): Top-down approach with caching. Two pointers approach is most space efficient.",
     codeImplementation: [
       {
-        language: "typescript",
-        explanation:
-          "Dynamic Programming approach uses a 2D table to track whether substrings match subpatterns, with special cases for '?' matching any single character and '*' matching any sequence of characters.",
-        code: `function isMatchWildcard(s: string, p: string): boolean {
+        language: "TypeScript",
+        code: `// Approach 1: Dynamic Programming
+// Time: O(m*n), Space: O(m*n)
+function isMatchWildcard(s: string, p: string): boolean {
     const m = s.length;
     const n = p.length;
     
@@ -941,12 +1715,14 @@ function isAlphanumeric(char: string): boolean {
     
     return dp[m][n];
 }`,
+        explanation:
+          "Build 2D table to track substring pattern matches. Standard DP approach.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Two Pointers with Backtracking approach processes the string and pattern linearly with constant space, using backtracking for '*' to match different lengths of text.",
-        code: `function isMatchWildcardTwoPointers(s: string, p: string): boolean {
+        language: "TypeScript",
+        code: `// Approach 2: Two Pointers with Backtracking (Most space efficient)
+// Time: O(m*n), Space: O(1)
+function isMatchWildcardTwoPointers(s: string, p: string): boolean {
     let sIndex = 0;
     let pIndex = 0;
     let starIndex = -1;
@@ -976,6 +1752,111 @@ function isAlphanumeric(char: string): boolean {
     
     return pIndex === p.length;
 }`,
+        explanation:
+          "Process with two pointers, backtrack for '*' characters. Most space efficient approach.",
+      },
+      {
+        language: "TypeScript",
+        code: `// Approach 3: Recursive with Memoization
+// Time: O(m*n), Space: O(m*n)
+function isMatchWildcardRecursive(s: string, p: string): boolean {
+    const memo = new Map<string, boolean>();
+    
+    function dp(i: number, j: number): boolean {
+        if (j === p.length) return i === s.length;
+        if (i === s.length) return p.slice(j).split('').every(c => c === '*');
+        
+        const key = \`\${i},\${j}\`;
+        if (memo.has(key)) return memo.get(key)!;
+        
+        let result: boolean;
+        
+        if (p[j] === '*') {
+            result = dp(i + 1, j) || dp(i, j + 1);
+        } else if (p[j] === '?' || p[j] === s[i]) {
+            result = dp(i + 1, j + 1);
+        } else {
+            result = false;
+        }
+        
+        memo.set(key, result);
+        return result;
+    }
+    
+    return dp(0, 0);
+}`,
+        explanation:
+          "Top-down recursive approach with caching. Alternative to DP.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Dynamic Programming
+// Time: O(m*n), Space: O(m*n)
+public boolean isMatch(String s, String p) {
+    int m = s.length();
+    int n = p.length();
+    
+    boolean[][] dp = new boolean[m + 1][n + 1];
+    dp[0][0] = true;
+    
+    // Handle leading stars
+    for (int j = 1; j <= n; j++) {
+        if (p.charAt(j - 1) == '*') {
+            dp[0][j] = dp[0][j - 1];
+        }
+    }
+    
+    for (int i = 1; i <= m; i++) {
+        for (int j = 1; j <= n; j++) {
+            if (p.charAt(j - 1) == '*') {
+                dp[i][j] = dp[i - 1][j] || dp[i][j - 1];
+            } else if (p.charAt(j - 1) == '?' || p.charAt(j - 1) == s.charAt(i - 1)) {
+                dp[i][j] = dp[i - 1][j - 1];
+            }
+        }
+    }
+    
+    return dp[m][n];
+}`,
+        explanation:
+          "Build 2D table to track substring pattern matches. Standard DP approach.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Two Pointers with Backtracking (Most space efficient)
+// Time: O(m*n), Space: O(1)
+public boolean isMatchTwoPointers(String s, String p) {
+    int sIndex = 0;
+    int pIndex = 0;
+    int starIndex = -1;
+    int match = 0;
+    
+    while (sIndex < s.length()) {
+        if (pIndex < p.length() && (p.charAt(pIndex) == '?' || p.charAt(pIndex) == s.charAt(sIndex))) {
+            sIndex++;
+            pIndex++;
+        } else if (pIndex < p.length() && p.charAt(pIndex) == '*') {
+            starIndex = pIndex;
+            match = sIndex;
+            pIndex++;
+        } else if (starIndex != -1) {
+            pIndex = starIndex + 1;
+            match++;
+            sIndex = match;
+        } else {
+            return false;
+        }
+    }
+    
+    // Skip remaining stars in pattern
+    while (pIndex < p.length() && p.charAt(pIndex) == '*') {
+        pIndex++;
+    }
+    
+    return pIndex == p.length();
+}`,
+        explanation:
+          "Process with two pointers, backtrack for '*' characters. Most space efficient approach.",
       },
     ],
     sampleAnswer:
@@ -1000,13 +1881,13 @@ function isAlphanumeric(char: string): boolean {
     difficulty: "hard",
     type: "technical",
     approach:
-      "The approach for text justification involves a greedy algorithm with line-by-line processing: (1) Pack as many words as possible in each line without exceeding the max width. (2) For each line except the last, distribute spaces evenly between words, with extra spaces placed from left to right. (3) For the last line or lines with a single word, use left justification with trailing spaces.",
+      "Multiple approaches available: 1) Greedy Line Packing (O(n) time, O(n) space): Pack words greedily, distribute spaces evenly. 2) Modular Approach (O(n) time, O(n) space): Separate word packing from space distribution logic. 3) In-place Formatting (O(n) time, O(1) space): Format each line without extra space. Greedy approach is most commonly used and intuitive.",
     codeImplementation: [
       {
-        language: "typescript",
-        explanation:
-          "This solution uses a greedy approach to pack as many words as possible in each line, then distributes spaces evenly between words according to the justification rules.",
-        code: `function fullJustify(words: string[], maxWidth: number): string[] {
+        language: "TypeScript",
+        code: `// Approach 1: Greedy Line Packing (Optimal)
+// Time: O(n), Space: O(n)
+function fullJustify(words: string[], maxWidth: number): string[] {
     const result: string[] = [];
     let i = 0;
     
@@ -1051,16 +1932,56 @@ function isAlphanumeric(char: string): boolean {
     
     return result;
 }`,
+        explanation:
+          "Pack words greedily, distribute spaces evenly. Most commonly used approach.",
       },
       {
-        language: "typescript",
-        explanation:
-          "This helper function specifically handles the task of distributing spaces evenly between words according to the justification rules.",
-        code: `function distributeSpaces(words: string[], totalSpaces: number): string {
-    if (words.length === 1) {
-        return words[0] + ' '.repeat(totalSpaces);
+        language: "TypeScript",
+        code: `// Approach 2: Modular Approach
+// Time: O(n), Space: O(n)
+function fullJustifyModular(words: string[], maxWidth: number): string[] {
+    const result: string[] = [];
+    let i = 0;
+    
+    while (i < words.length) {
+        const lineWords = packWords(words, i, maxWidth);
+        const isLastLine = i + lineWords.length === words.length;
+        
+        if (isLastLine || lineWords.length === 1) {
+            result.push(leftJustify(lineWords, maxWidth));
+        } else {
+            result.push(fullJustifyLine(lineWords, maxWidth));
+        }
+        
+        i += lineWords.length;
     }
     
+    return result;
+}
+
+function packWords(words: string[], start: number, maxWidth: number): string[] {
+    const line: string[] = [words[start]];
+    let length = words[start].length;
+    
+    for (let i = start + 1; i < words.length; i++) {
+        if (length + 1 + words[i].length <= maxWidth) {
+            line.push(words[i]);
+            length += 1 + words[i].length;
+        } else {
+            break;
+        }
+    }
+    
+    return line;
+}
+
+function leftJustify(words: string[], maxWidth: number): string {
+    const line = words.join(' ');
+    return line + ' '.repeat(maxWidth - line.length);
+}
+
+function fullJustifyLine(words: string[], maxWidth: number): string {
+    const totalSpaces = maxWidth - words.reduce((sum, word) => sum + word.length, 0);
     const gaps = words.length - 1;
     const spacesPerGap = Math.floor(totalSpaces / gaps);
     const extraSpaces = totalSpaces % gaps;
@@ -1075,6 +1996,75 @@ function isAlphanumeric(char: string): boolean {
     
     return result;
 }`,
+        explanation:
+          "Separate word packing from space distribution logic. More modular and testable.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: Greedy Line Packing (Optimal)
+// Time: O(n), Space: O(n)
+public List<String> fullJustify(String[] words, int maxWidth) {
+    List<String> result = new ArrayList<>();
+    int i = 0;
+    
+    while (i < words.length) {
+        // Determine how many words fit in current line
+        int lineLength = words[i].length();
+        int j = i + 1;
+        
+        while (j < words.length && lineLength + 1 + words[j].length() <= maxWidth) {
+            lineLength += 1 + words[j].length();
+            j++;
+        }
+        
+        int wordsInLine = j - i;
+        boolean isLastLine = j == words.length;
+        
+        if (wordsInLine == 1 || isLastLine) {
+            // Left justify
+            StringBuilder line = new StringBuilder();
+            for (int k = i; k < j; k++) {
+                line.append(words[k]);
+                if (k < j - 1) line.append(' ');
+            }
+            while (line.length() < maxWidth) {
+                line.append(' ');
+            }
+            result.add(line.toString());
+        } else {
+            // Full justify
+            int totalSpaces = maxWidth;
+            for (int k = i; k < j; k++) {
+                totalSpaces -= words[k].length();
+            }
+            
+            int gaps = wordsInLine - 1;
+            int spacesPerGap = totalSpaces / gaps;
+            int extraSpaces = totalSpaces % gaps;
+            
+            StringBuilder line = new StringBuilder();
+            for (int k = i; k < j; k++) {
+                line.append(words[k]);
+                if (k < j - 1) {
+                    for (int s = 0; s < spacesPerGap; s++) {
+                        line.append(' ');
+                    }
+                    if (k - i < extraSpaces) {
+                        line.append(' ');
+                    }
+                }
+            }
+            
+            result.add(line.toString());
+        }
+        
+        i = j;
+    }
+    
+    return result;
+}`,
+        explanation:
+          "Pack words greedily, distribute spaces evenly. Most commonly used approach.",
       },
     ],
     sampleAnswer:
@@ -1099,13 +2089,13 @@ function isAlphanumeric(char: string): boolean {
     difficulty: "hard",
     type: "technical",
     approach:
-      "This problem explores several variants of string comparison algorithms: (1) One Edit Distance - Determine if two strings differ by exactly one edit operation (insert, delete, replace) using two-pointer technique. (2) Longest Common Subsequence - Find the length of the longest subsequence common to two strings using dynamic programming. (3) Distinct Subsequences - Count how many distinct ways a target string can be formed by deleting characters from a source string using DP.",
+      "Multiple edit distance variants: 1) One Edit Distance (O(n) time, O(1) space): Check if strings differ by exactly one operation using two pointers. 2) Longest Common Subsequence (O(m*n) time, O(m*n) space): Find longest common subsequence using DP. 3) Distinct Subsequences (O(m*n) time, O(m*n) space): Count ways to form target from source using DP. Each variant uses similar DP principles but different state transitions.",
     codeImplementation: [
       {
-        language: "typescript",
-        explanation:
-          "One Edit Distance checks if two strings differ by exactly one operation (insert, delete, replace) using a two-pointer approach to efficiently identify the potential edit point.",
-        code: `function isOneEditDistance(s: string, t: string): boolean {
+        language: "TypeScript",
+        code: `// Approach 1: One Edit Distance
+// Time: O(n), Space: O(1)
+function isOneEditDistance(s: string, t: string): boolean {
     const m = s.length;
     const n = t.length;
     
@@ -1139,12 +2129,14 @@ function isAlphanumeric(char: string): boolean {
     
     return i === m && j === n;
 }`,
+        explanation:
+          "Check if strings differ by exactly one operation using two pointers. Most efficient approach.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Longest Common Subsequence finds the length of the longest subsequence common to two strings using dynamic programming with a 2D table.",
-        code: `function longestCommonSubsequence(text1: string, text2: string): number {
+        language: "TypeScript",
+        code: `// Approach 2: Longest Common Subsequence
+// Time: O(m*n), Space: O(m*n)
+function longestCommonSubsequence(text1: string, text2: string): number {
     const m = text1.length;
     const n = text2.length;
     
@@ -1162,12 +2154,14 @@ function isAlphanumeric(char: string): boolean {
     
     return dp[m][n];
 }`,
+        explanation:
+          "Find longest subsequence common to two strings using DP. Standard LCS algorithm.",
       },
       {
-        language: "typescript",
-        explanation:
-          "Distinct Subsequences counts the number of ways a target string can be formed by deleting characters from a source string using dynamic programming.",
-        code: `function numDistinct(s: string, t: string): number {
+        language: "TypeScript",
+        code: `// Approach 3: Distinct Subsequences
+// Time: O(m*n), Space: O(m*n)
+function numDistinct(s: string, t: string): number {
     const m = s.length;
     const n = t.length;
     
@@ -1190,6 +2184,104 @@ function isAlphanumeric(char: string): boolean {
     
     return dp[m][n];
 }`,
+        explanation:
+          "Count ways to form target from source using DP. Advanced subsequence counting.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 1: One Edit Distance
+// Time: O(n), Space: O(1)
+public boolean isOneEditDistance(String s, String t) {
+    int m = s.length();
+    int n = t.length();
+    
+    if (Math.abs(m - n) > 1) return false;
+    if (s.equals(t)) return false;
+    
+    int i = 0, j = 0;
+    
+    while (i < m && j < n && s.charAt(i) == t.charAt(j)) {
+        i++;
+        j++;
+    }
+    
+    if (i == m && j == n) return false; // Strings are identical
+    
+    if (m == n) {
+        // Replace operation
+        i++; j++;
+    } else if (m < n) {
+        // Insert operation
+        j++;
+    } else {
+        // Delete operation
+        i++;
+    }
+    
+    while (i < m && j < n && s.charAt(i) == t.charAt(j)) {
+        i++;
+        j++;
+    }
+    
+    return i == m && j == n;
+}`,
+        explanation:
+          "Check if strings differ by exactly one operation using two pointers. Most efficient approach.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 2: Longest Common Subsequence
+// Time: O(m*n), Space: O(m*n)
+public int longestCommonSubsequence(String text1, String text2) {
+    int m = text1.length();
+    int n = text2.length();
+    
+    int[][] dp = new int[m + 1][n + 1];
+    
+    for (int i = 1; i <= m; i++) {
+        for (int j = 1; j <= n; j++) {
+            if (text1.charAt(i - 1) == text2.charAt(j - 1)) {
+                dp[i][j] = 1 + dp[i - 1][j - 1];
+            } else {
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+    
+    return dp[m][n];
+}`,
+        explanation:
+          "Find longest subsequence common to two strings using DP. Standard LCS algorithm.",
+      },
+      {
+        language: "Java",
+        code: `// Approach 3: Distinct Subsequences
+// Time: O(m*n), Space: O(m*n)
+public int numDistinct(String s, String t) {
+    int m = s.length();
+    int n = t.length();
+    
+    int[][] dp = new int[m + 1][n + 1];
+    
+    // Empty string t can be formed in one way from any string s
+    for (int i = 0; i <= m; i++) {
+        dp[i][0] = 1;
+    }
+    
+    for (int i = 1; i <= m; i++) {
+        for (int j = 1; j <= n; j++) {
+            dp[i][j] = dp[i - 1][j]; // Don't use s[i-1]
+            
+            if (s.charAt(i - 1) == t.charAt(j - 1)) {
+                dp[i][j] += dp[i - 1][j - 1]; // Use s[i-1]
+            }
+        }
+    }
+    
+    return dp[m][n];
+}`,
+        explanation:
+          "Count ways to form target from source using DP. Advanced subsequence counting.",
       },
     ],
     sampleAnswer:
