@@ -9,6 +9,9 @@ import { AIChat } from "./components/AIChat";
 import { StudyTools } from "./components/StudyTools";
 import { FlashCards } from "./components/FlashCards";
 import { InterviewPrep } from "./components/InterviewPrep/InterviewPrep";
+import { CollaborativeEditor } from "./components/CollaborativeEditor/CollaborativeEditor";
+import { SpacedRepetitionDashboard } from "./components/SpacedRepetitionDashboard";
+import { TeamWorkspace } from "./components/TeamWorkspace/TeamWorkspace";
 // Removed unused FilePreview import
 import ErrorBoundary from "./components/ErrorBoundary";
 import { realTimeAuth } from "./utils/realTimeAuth";
@@ -16,6 +19,9 @@ import { realTimeAuth } from "./utils/realTimeAuth";
 import { Menu, X } from "lucide-react";
 import { GlobalNoteCreator } from "./components/GlobalNoteCreator";
 import { useGlobalCopyListener } from "./hooks/useGlobalCopyListener";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { FloatingThemeSwitcher } from "./components/ThemeSwitcher";
+import { spacedRepetition, ReviewCard } from "./utils/spacedRepetition";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -23,6 +29,7 @@ function App() {
   const [activeView, setActiveView] = useState("dashboard");
   // Removed unused previewFile state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [reviewCards, setReviewCards] = useState<ReviewCard[]>([]);
   
   // Global copy listener for note creation
   const { copyEvent, isModalVisible, closeModal } = useGlobalCopyListener();
@@ -108,6 +115,22 @@ function App() {
         return <FlashCards />;
       case "interview":
         return <InterviewPrep />;
+      case "collaborate":
+        return <CollaborativeEditor />;
+      case "spaced-repetition":
+        return (
+          <SpacedRepetitionDashboard
+            cards={reviewCards}
+            onCardUpdate={(card) => {
+              setReviewCards(prev => prev.map(c => c.id === card.id ? card : c));
+            }}
+            onBatchImport={(cards) => {
+              setReviewCards(prev => [...prev, ...cards]);
+            }}
+          />
+        );
+      case "team":
+        return <TeamWorkspace />;
       default:
         return <Dashboard onViewChange={handleViewChange} />;
     }
@@ -115,16 +138,20 @@ function App() {
 
   if (!isAuthenticated) {
     return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50">
-          <AuthForm onAuthSuccess={handleAuthSuccess} />
-        </div>
-      </ErrorBoundary>
+      <ThemeProvider>
+        <ErrorBoundary>
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+            <AuthForm onAuthSuccess={handleAuthSuccess} />
+            <FloatingThemeSwitcher />
+          </div>
+        </ErrorBoundary>
+      </ThemeProvider>
     );
   }
 
   return (
-    <ErrorBoundary>
+    <ThemeProvider>
+      <ErrorBoundary>
       {/* Global Note Creator Modal */}
       {isModalVisible && copyEvent && (
         <GlobalNoteCreator
@@ -207,8 +234,12 @@ function App() {
 
         {/* File Preview Modal */}
         {/* Removed FilePreview usage since previewFile and setPreviewFile are removed */}
+        
+        {/* Floating Theme Switcher */}
+        <FloatingThemeSwitcher />
       </div>
     </ErrorBoundary>
+    </ThemeProvider>
   );
 }
 
