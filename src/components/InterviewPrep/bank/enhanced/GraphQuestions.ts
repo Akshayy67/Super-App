@@ -50,6 +50,38 @@ export const enhancedGraphQuestions: Question[] = [
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "DFS Approach: This solution uses depth-first search to explore each land cell and all its connected land cells, marking them as visited. Each time we find an unvisited land cell, we increment our island counter and explore the entire island. Time: O(m * n), Space: O(m * n) worst case for recursion stack",
+        code: `def numIslands(grid):
+    if not grid or not grid[0]:
+        return 0
+    
+    rows = len(grid)
+    cols = len(grid[0])
+    islands = 0
+    
+    def dfs(row, col):
+        if row < 0 or row >= rows or col < 0 or col >= cols or grid[row][col] == '0':
+            return
+        
+        grid[row][col] = '0' # Mark as visited
+        
+        # Explore all 4 directions
+        dfs(row + 1, col)
+        dfs(row - 1, col)
+        dfs(row, col + 1)
+        dfs(row, col - 1)
+    
+    for row in range(rows):
+        for col in range(cols):
+            if grid[row][col] == '1':
+                islands += 1
+                dfs(row, col)
+    
+    return islands`,
+      },
+      {
         language: "Java",
         explanation:
           "DFS Approach: Java implementation using Depth-First Search to explore the grid. We mark visited cells by changing their value and restore them during backtracking. Time: O(m*n), Space: O(m*n)",
@@ -133,53 +165,43 @@ export const enhancedGraphQuestions: Question[] = [
 }`,
       },
       {
-        language: "Java",
+        language: "Python",
         explanation:
-          "BFS Approach: Java implementation using breadth-first search to explore islands level by level. We use a queue to keep track of cells to explore instead of recursion. Time: O(m * n), Space: O(min(m, n)) for the queue in worst case",
-        code: `import java.util.*;
+          "BFS Approach: This solution uses breadth-first search to explore islands level by level. Instead of using recursion, we use a queue to keep track of cells to explore. Time: O(m * n), Space: O(min(m, n)) for the queue in worst case",
+        code: `from collections import deque
 
-public class Solution {
-    public int numIslands(char[][] grid) {
-        if (grid == null || grid.length == 0) return 0;
-        
-        int rows = grid.length;
-        int cols = grid[0].length;
-        int islands = 0;
-        
-        int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-        
-        for (int row = 0; row < rows; row++) {
-            for (int col = 0; col < cols; col++) {
-                if (grid[row][col] == '1') {
-                    islands++;
+def numIslandsBFS(grid):
+    if not grid or not grid[0]:
+        return 0
+    
+    rows = len(grid)
+    cols = len(grid[0])
+    islands = 0
+    
+    directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+    
+    for row in range(rows):
+        for col in range(cols):
+            if grid[row][col] == '1':
+                islands += 1
+                
+                queue = deque([(row, col)])
+                grid[row][col] = '0'
+                
+                while queue:
+                    r, c = queue.popleft()
                     
-                    Queue<int[]> queue = new LinkedList<>();
-                    queue.offer(new int[]{row, col});
-                    grid[row][col] = '0';
-                    
-                    while (!queue.isEmpty()) {
-                        int[] cell = queue.poll();
-                        int r = cell[0], c = cell[1];
+                    for dr, dc in directions:
+                        new_row = r + dr
+                        new_col = c + dc
                         
-                        for (int[] dir : directions) {
-                            int newRow = r + dir[0];
-                            int newCol = c + dir[1];
-                            
-                            if (newRow >= 0 && newRow < rows && 
-                                newCol >= 0 && newCol < cols && 
-                                grid[newRow][newCol] == '1') {
-                                grid[newRow][newCol] = '0';
-                                queue.offer(new int[]{newRow, newCol});
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        return islands;
-    }
-}`,
+                        if (0 <= new_row < rows and 
+                            0 <= new_col < cols and 
+                            grid[new_row][new_col] == '1'):
+                            grid[new_row][new_col] = '0'
+                            queue.append((new_row, new_col))
+    
+    return islands`,
       },
       {
         language: "typescript",
@@ -411,49 +433,39 @@ public class Solution {
 }`,
       },
       {
-        language: "java",
+        language: "Python",
         explanation:
-          "DFS Cycle Detection: Java implementation using depth-first search with three states to detect cycles in the directed graph. If we encounter a node in 'visiting' state, we've found a cycle. Time: O(V + E), Space: O(V + E)",
-        code: `import java.util.*;
-
-public class Solution {
-    public boolean canFinish(int numCourses, int[][] prerequisites) {
-        // Build adjacency list
-        List<List<Integer>> graph = new ArrayList<>();
-        for (int i = 0; i < numCourses; i++) {
-            graph.add(new ArrayList<>());
-        }
-        
-        for (int[] prereq : prerequisites) {
-            graph.get(prereq[1]).add(prereq[0]);
-        }
-        
-        // 0: unvisited, 1: visiting, 2: visited
-        int[] state = new int[numCourses];
-        
-        for (int i = 0; i < numCourses; i++) {
-            if (state[i] == 0 && hasCycle(graph, state, i)) {
-                return false;
-            }
-        }
-        
-        return true;
-    }
+          "DFS Cycle Detection: This approach uses depth-first search with three states (unvisited, visiting, visited) to detect cycles in the directed graph. If we encounter a node that's already in the 'visiting' state, we've found a cycle. Time: O(V + E), Space: O(V + E)",
+        code: `def canFinish(numCourses, prerequisites):
+    # Build adjacency list
+    graph = [[] for _ in range(numCourses)]
     
-    private boolean hasCycle(List<List<Integer>> graph, int[] state, int course) {
-        if (state[course] == 1) return true;  // Back edge found, cycle detected
-        if (state[course] == 2) return false; // Already processed
+    for course, prereq in prerequisites:
+        graph[prereq].append(course)
+    
+    # 0: unvisited, 1: visiting, 2: visited
+    state = [0] * numCourses
+    
+    def hasCycle(course):
+        if state[course] == 1:
+            return True  # Back edge found, cycle detected
+        if state[course] == 2:
+            return False  # Already processed
         
-        state[course] = 1; // Mark as visiting
+        state[course] = 1  # Mark as visiting
         
-        for (int nextCourse : graph.get(course)) {
-            if (hasCycle(graph, state, nextCourse)) return true;
-        }
+        for nextCourse in graph[course]:
+            if hasCycle(nextCourse):
+                return True
         
-        state[course] = 2; // Mark as visited
-        return false;
-    }
-}`,
+        state[course] = 2  # Mark as visited
+        return False
+    
+    for i in range(numCourses):
+        if state[i] == 0 and hasCycle(i):
+            return False
+    
+    return True`,
       },
       {
         language: "typescript",
@@ -495,52 +507,38 @@ public class Solution {
 }`,
       },
       {
-        language: "java",
+        language: "Python",
         explanation:
-          "Kahn's Algorithm (Topological Sort): Java implementation using breadth-first search to perform topological sort. We start with nodes having no dependencies and progressively remove them. Time: O(V + E), Space: O(V + E)",
-        code: `import java.util.*;
+          "Kahn's Algorithm (Topological Sort): This approach uses breadth-first search to perform a topological sort of the graph. We start with nodes that have no dependencies, and progressively remove them from the graph. If there's a cycle, we won't be able to process all courses. Time: O(V + E), Space: O(V + E)",
+        code: `from collections import deque
 
-public class Solution {
-    public boolean canFinish(int numCourses, int[][] prerequisites) {
-        List<List<Integer>> graph = new ArrayList<>();
-        int[] indegree = new int[numCourses];
+def canFinishKahn(numCourses, prerequisites):
+    graph = [[] for _ in range(numCourses)]
+    indegree = [0] * numCourses
+    
+    # Build graph and calculate indegrees
+    for course, prereq in prerequisites:
+        graph[prereq].append(course)
+        indegree[course] += 1
+    
+    # Find courses with no prerequisites
+    queue = deque()
+    for i in range(numCourses):
+        if indegree[i] == 0:
+            queue.append(i)
+    
+    processed_courses = 0
+    
+    while queue:
+        course = queue.popleft()
+        processed_courses += 1
         
-        // Initialize graph
-        for (int i = 0; i < numCourses; i++) {
-            graph.add(new ArrayList<>());
-        }
-        
-        // Build graph and calculate indegrees
-        for (int[] prereq : prerequisites) {
-            graph.get(prereq[1]).add(prereq[0]);
-            indegree[prereq[0]]++;
-        }
-        
-        // Find courses with no prerequisites
-        Queue<Integer> queue = new LinkedList<>();
-        for (int i = 0; i < numCourses; i++) {
-            if (indegree[i] == 0) {
-                queue.offer(i);
-            }
-        }
-        
-        int processedCourses = 0;
-        
-        while (!queue.isEmpty()) {
-            int course = queue.poll();
-            processedCourses++;
-            
-            for (int nextCourse : graph.get(course)) {
-                indegree[nextCourse]--;
-                if (indegree[nextCourse] == 0) {
-                    queue.offer(nextCourse);
-                }
-            }
-        }
-        
-        return processedCourses == numCourses;
-    }
-}`,
+        for next_course in graph[course]:
+            indegree[next_course] -= 1
+            if indegree[next_course] == 0:
+                queue.append(next_course)
+    
+    return processed_courses == numCourses`,
       },
     ],
     sampleAnswer: `See the code implementations tab for different approaches to solve this problem.`,
@@ -606,6 +604,54 @@ public class Solution {
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Kahn's Algorithm (Topological Sort): This approach uses BFS starting with courses that have no prerequisites. As we process each course, we reduce the indegree of its dependent courses. If we can process all courses, we have a valid ordering. Time: O(V + E), Space: O(V + E)",
+        code: `import java.util.*;
+
+public class Solution {
+    public boolean canFinish(int numCourses, int[][] prerequisites) {
+        List<List<Integer>> graph = new ArrayList<>();
+        int[] indegree = new int[numCourses];
+        
+        // Initialize graph
+        for (int i = 0; i < numCourses; i++) {
+            graph.add(new ArrayList<>());
+        }
+        
+        // Build graph and calculate indegrees
+        for (int[] prereq : prerequisites) {
+            graph.get(prereq[1]).add(prereq[0]);
+            indegree[prereq[0]]++;
+        }
+        
+        // Find courses with no prerequisites
+        Queue<Integer> queue = new LinkedList<>();
+        for (int i = 0; i < numCourses; i++) {
+            if (indegree[i] == 0) {
+                queue.offer(i);
+            }
+        }
+        
+        int processedCourses = 0;
+        
+        while (!queue.isEmpty()) {
+            int course = queue.poll();
+            processedCourses++;
+            
+            for (int nextCourse : graph.get(course)) {
+                indegree[nextCourse]--;
+                if (indegree[nextCourse] == 0) {
+                    queue.offer(nextCourse);
+                }
+            }
+        }
+        
+        return processedCourses == numCourses;
+    }
+}`,
+      },
+      {
         language: "typescript",
         explanation:
           "DFS Approach with Post-order: This approach uses DFS with cycle detection. We add courses to the order after processing all their prerequisites (post-order). Since we process prerequisites first, we need to reverse the final order. Time: O(V + E), Space: O(V + E)",
@@ -644,6 +690,43 @@ public class Solution {
     return order.reverse(); // Reverse post-order to get topological order
 }`,
       },
+      {
+        language: "Python",
+        explanation:
+          "DFS Approach with Post-order: This approach uses DFS with cycle detection. We add courses to the order after processing all their prerequisites (post-order). Since we process prerequisites first, we need to reverse the final order. Time: O(V + E), Space: O(V + E)",
+        code: `def findOrderDFS(numCourses, prerequisites):
+    graph = [[] for _ in range(numCourses)]
+    
+    for course, prereq in prerequisites:
+        graph[prereq].append(course)
+    
+    state = [0] * numCourses  # 0: unvisited, 1: visiting, 2: visited
+    order = []
+    
+    def dfs(course):
+        if state[course] == 1:
+            return False  # Cycle detected
+        if state[course] == 2:
+            return True   # Already processed
+        
+        state[course] = 1  # Mark as visiting
+        
+        for next_course in graph[course]:
+            if not dfs(next_course):
+                return False
+        
+        state[course] = 2  # Mark as visited
+        order.append(course)  # Add to order after processing dependencies
+        
+        return True
+    
+    for i in range(numCourses):
+        if state[i] == 0 and not dfs(i):
+            return []
+    
+    return order[::-1]  # Reverse post-order to get topological order`,
+      },
+
     ],
     sampleAnswer: `See the code implementations tab for different approaches to solve this problem.`,
     tips: [
@@ -707,53 +790,36 @@ function cloneGraph(node: GraphNode | null): GraphNode | null {
 }`,
       },
       {
-        language: "java",
+        language: "Python",
         explanation:
-          "DFS with HashMap Approach: Java implementation using depth-first search to traverse the original graph. We check if we've already cloned each node using a HashMap to avoid infinite recursion. Time complexity is O(V+E) where V is the number of vertices and E is the number of edges. Space complexity is O(V) for the HashMap and recursion stack.",
-        code: `// Graph Node Definition
-class Node {
-    public int val;
-    public List<Node> neighbors;
-    
-    public Node() {
-        val = 0;
-        neighbors = new ArrayList<Node>();
-    }
-    
-    public Node(int _val) {
-        val = _val;
-        neighbors = new ArrayList<Node>();
-    }
-    
-    public Node(int _val, ArrayList<Node> _neighbors) {
-        val = _val;
-        neighbors = _neighbors;
-    }
-}
+          "DFS with HashMap Approach: We first define a GraphNode class, then use depth-first search to traverse the original graph. For each node, we check if we've already cloned it using a HashMap. If not, we create a new node, store it in our map, then recursively clone all its neighbors. Time complexity is O(V+E) where V is the number of vertices and E is the number of edges. Space complexity is O(V) for the HashMap and recursion stack.",
+        code: `# Graph Node Definition
+class GraphNode:
+    def __init__(self, val=0, neighbors=None):
+        self.val = val
+        self.neighbors = neighbors if neighbors is not None else []
 
-import java.util.*;
-
-public class Solution {
-    private Map<Node, Node> cloned = new HashMap<>();
+def cloneGraph(node):
+    if not node:
+        return None
     
-    public Node cloneGraph(Node node) {
-        if (node == null) return null;
+    cloned = {}
+    
+    def dfs(original):
+        if original in cloned:
+            return cloned[original]
         
-        if (cloned.containsKey(node)) {
-            return cloned.get(node);
-        }
+        clone = GraphNode(original.val)
+        cloned[original] = clone
         
-        Node clone = new Node(node.val);
-        cloned.put(node, clone);
+        for neighbor in original.neighbors:
+            clone.neighbors.append(dfs(neighbor))
         
-        for (Node neighbor : node.neighbors) {
-            clone.neighbors.add(cloneGraph(neighbor));
-        }
-        
-        return clone;
-    }
-}`,
+        return clone
+    
+    return dfs(node)`,
       },
+
       {
         language: "typescript",
         explanation:
@@ -784,39 +850,34 @@ public class Solution {
 }`,
       },
       {
-        language: "java",
+        language: "Python",
         explanation:
-          "BFS with HashMap Approach: Java implementation using breadth-first search with a queue to iterate through nodes. We create clones first, then process neighbors level-by-level. More iterative and uses less stack space than DFS. Time complexity remains O(V+E) and space complexity is O(V).",
-        code: `import java.util.*;
+          "BFS with HashMap Approach: We use breadth-first search with a queue to iterate through the nodes. We create the clones first, then process the neighbors in a level-by-level fashion. This is more iterative and uses less stack space than the DFS solution. Time complexity remains O(V+E) and space complexity is O(V).",
+        code: `from collections import deque
 
-public class Solution {
-    public Node cloneGraph(Node node) {
-        if (node == null) return null;
+def cloneGraphBFS(node):
+    if not node:
+        return None
+    
+    cloned = {}
+    queue = deque([node])
+    
+    # Clone the starting node
+    cloned[node] = GraphNode(node.val)
+    
+    while queue:
+        current = queue.popleft()
         
-        Map<Node, Node> cloned = new HashMap<>();
-        Queue<Node> queue = new LinkedList<>();
-        
-        // Clone the starting node
-        cloned.put(node, new Node(node.val));
-        queue.offer(node);
-        
-        while (!queue.isEmpty()) {
-            Node current = queue.poll();
+        for neighbor in current.neighbors:
+            if neighbor not in cloned:
+                cloned[neighbor] = GraphNode(neighbor.val)
+                queue.append(neighbor)
             
-            for (Node neighbor : current.neighbors) {
-                if (!cloned.containsKey(neighbor)) {
-                    cloned.put(neighbor, new Node(neighbor.val));
-                    queue.offer(neighbor);
-                }
-                
-                cloned.get(current).neighbors.add(cloned.get(neighbor));
-            }
-        }
-        
-        return cloned.get(node);
-    }
-}`,
+            cloned[current].neighbors.append(cloned[neighbor])
+    
+    return cloned[node]`,
       },
+
       {
         language: "typescript",
         explanation:
@@ -922,9 +983,53 @@ public class Solution {
 }`,
       },
       {
-        language: "java",
+        language: "Python",
         explanation:
-          "DFS from Ocean Borders Approach: Java implementation performing two separate DFS starting from Pacific and Atlantic border cells. We flow up to cells with height >= current. Any cell reachable from both oceans is part of our answer. Time complexity is O(m*n) where m and n are the dimensions of the matrix. Space complexity is O(m*n) for the visited arrays.",
+          "DFS from Ocean Borders Approach: We perform two separate DFS, starting from Pacific and Atlantic border cells. Instead of flowing down, we flow up (to cells with height >= current). Any cell reachable from both oceans is part of our answer. Time complexity is O(m*n) where m and n are the dimensions of the matrix. Space complexity is O(m*n) for the visited arrays.",
+        code: `def pacificAtlantic(heights):
+    if not heights or not heights[0]:
+        return []
+    
+    rows = len(heights)
+    cols = len(heights[0])
+    
+    pacific_reachable = [[False] * cols for _ in range(rows)]
+    atlantic_reachable = [[False] * cols for _ in range(rows)]
+    
+    directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+    
+    def dfs(row, col, reachable, prev_height):
+        if (row < 0 or row >= rows or col < 0 or col >= cols or 
+            reachable[row][col] or heights[row][col] < prev_height):
+            return
+        
+        reachable[row][col] = True
+        
+        for dr, dc in directions:
+            dfs(row + dr, col + dc, reachable, heights[row][col])
+    
+    # Start DFS from Pacific borders (top and left)
+    for i in range(rows):
+        dfs(i, 0, pacific_reachable, heights[i][0])
+        dfs(i, cols - 1, atlantic_reachable, heights[i][cols - 1])
+    
+    for j in range(cols):
+        dfs(0, j, pacific_reachable, heights[0][j])
+        dfs(rows - 1, j, atlantic_reachable, heights[rows - 1][j])
+    
+    # Find cells reachable by both oceans
+    result = []
+    for i in range(rows):
+        for j in range(cols):
+            if pacific_reachable[i][j] and atlantic_reachable[i][j]:
+                result.append([i, j])
+    
+    return result`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "DFS from Ocean Borders Approach: We perform two separate DFS, starting from Pacific and Atlantic border cells. Instead of flowing down, we flow up (to cells with height >= current). Any cell reachable from both oceans is part of our answer. Time complexity is O(m*n) where m and n are the dimensions of the matrix. Space complexity is O(m*n) for the visited arrays.",
         code: `import java.util.*;
 
 public class Solution {
@@ -1111,6 +1216,38 @@ public class Solution {
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Dijkstra's Algorithm: This is the most efficient approach for graphs with non-negative weights. We use a priority queue (simulated here with a sorted array) to always process the node with the shortest distance next. Time complexity is O((V+E)logV) where V is the number of vertices and E is the number of edges. Space complexity is O(V+E) for the adjacency list and distances map.",
+        code: `import heapq
+
+def networkDelayTime(times, n, k):
+    graph = {}
+    for u, v, w in times:
+        if u not in graph:
+            graph[u] = []
+        graph[u].append((v, w))
+    
+    pq = [(0, k)]
+    distances = {i: float('inf') for i in range(1, n + 1)}
+    distances[k] = 0
+    
+    while pq:
+        current_dist, node = heapq.heappop(pq)
+        
+        if current_dist > distances[node]:
+            continue
+            
+        if node in graph:
+            for neighbor, weight in graph[node]:
+                new_dist = current_dist + weight
+                if new_dist < distances[neighbor]:
+                    distances[neighbor] = new_dist
+                    heapq.heappush(pq, (new_dist, neighbor))
+    
+    return max(distances.values()) if len(distances) == n else -1`,
+      },
+      {
         language: "typescript",
         explanation:
           "Bellman-Ford Algorithm: This algorithm can handle graphs with negative edge weights (though not negative cycles). It's generally slower than Dijkstra's but more versatile. Time complexity is O(V*E) which is worse than Dijkstra's, but it can handle negative weights. Space complexity is O(V).",
@@ -1135,6 +1272,38 @@ public class Solution {
     
     return maxTime;
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Bellman-Ford Algorithm: This algorithm can handle graphs with negative edge weights (though not negative cycles). It's generally slower than Dijkstra's but more versatile. Time complexity is O(V*E) which is worse than Dijkstra's, but it can handle negative weights. Space complexity is O(V).",
+        code: `import heapq
+
+def networkDelayTime(times, n, k):
+    graph = {}
+    for u, v, w in times:
+        if u not in graph:
+            graph[u] = []
+        graph[u].append((v, w))
+    
+    pq = [(0, k)]
+    distances = {i: float('inf') for i in range(1, n + 1)}
+    distances[k] = 0
+    
+    while pq:
+        current_dist, node = heapq.heappop(pq)
+        
+        if current_dist > distances[node]:
+            continue
+            
+        if node in graph:
+            for neighbor, weight in graph[node]:
+                new_dist = current_dist + weight
+                if new_dist < distances[neighbor]:
+                    distances[neighbor] = new_dist
+                    heapq.heappush(pq, (new_dist, neighbor))
+    
+    return max(distances.values()) if len(distances) == n else -1`,
       },
       {
         language: "typescript",
@@ -1233,6 +1402,38 @@ public class Solution {
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Standard BFS Approach: We use BFS to find the shortest path by exploring all possible one-character changes at each step. We track the level (or distance) as we go. Time complexity is O(M²*N) where M is the word length and N is the number of words in the word list. Space complexity is O(M*N).",
+        code: `import heapq
+
+def networkDelayTime(times, n, k):
+    graph = {}
+    for u, v, w in times:
+        if u not in graph:
+            graph[u] = []
+        graph[u].append((v, w))
+    
+    pq = [(0, k)]
+    distances = {i: float('inf') for i in range(1, n + 1)}
+    distances[k] = 0
+    
+    while pq:
+        current_dist, node = heapq.heappop(pq)
+        
+        if current_dist > distances[node]:
+            continue
+            
+        if node in graph:
+            for neighbor, weight in graph[node]:
+                new_dist = current_dist + weight
+                if new_dist < distances[neighbor]:
+                    distances[neighbor] = new_dist
+                    heapq.heappush(pq, (new_dist, neighbor))
+    
+    return max(distances.values()) if len(distances) == n else -1`,
+      },
+      {
         language: "typescript",
         explanation:
           "Bidirectional BFS: This approach runs BFS from both beginWord and endWord simultaneously, which can significantly reduce the search space. We stop when the two searches meet in the middle. Time complexity remains O(M²*N) but with a much better average case performance. Space complexity is still O(M*N).",
@@ -1278,6 +1479,38 @@ public class Solution {
     
     return 0;
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Bidirectional BFS: This approach runs BFS from both beginWord and endWord simultaneously, which can significantly reduce the search space. We stop when the two searches meet in the middle. Time complexity remains O(M²*N) but with a much better average case performance. Space complexity is still O(M*N).",
+        code: `import heapq
+
+def networkDelayTime(times, n, k):
+    graph = {}
+    for u, v, w in times:
+        if u not in graph:
+            graph[u] = []
+        graph[u].append((v, w))
+    
+    pq = [(0, k)]
+    distances = {i: float('inf') for i in range(1, n + 1)}
+    distances[k] = 0
+    
+    while pq:
+        current_dist, node = heapq.heappop(pq)
+        
+        if current_dist > distances[node]:
+            continue
+            
+        if node in graph:
+            for neighbor, weight in graph[node]:
+                new_dist = current_dist + weight
+                if new_dist < distances[neighbor]:
+                    distances[neighbor] = new_dist
+                    heapq.heappush(pq, (new_dist, neighbor))
+    
+    return max(distances.values()) if len(distances) == n else -1`,
       },
       {
         language: "typescript",
@@ -1339,7 +1572,7 @@ function isOneCharDiff(word1: string, word2: string): boolean {
       },
     ],
     sampleAnswer:
-      "See the code implementations tab for detailed solutions using standard BFS, bidirectional BFS, and explicit graph building approaches. The bidirectional BFS is typically the most efficient for large inputs.",
+      "See the code implementations tab for detailed solutions using standard BFS, bidirectional BFS, and explicit graph building approaches. The key is to use a HashMap to track already cloned nodes to handle cycles in the graph.",
     tips: [
       "BFS finds shortest path in unweighted graph",
       "Generate neighbors by changing each character",
@@ -1427,6 +1660,38 @@ function isOneCharDiff(word1: string, word2: string): boolean {
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Optimized Union-Find Implementation: We implement the Union-Find data structure with both path compression and union by rank optimizations. The find operation uses path compression by directly linking each node to its root during traversal, which flattens the tree. The union operation uses rank to always attach the shorter tree to the taller one, keeping the tree balanced. With these optimizations, operations run in O(α(n)) amortized time, where α is the inverse Ackermann function (practically constant).",
+        code: `import heapq
+
+def networkDelayTime(times, n, k):
+    graph = {}
+    for u, v, w in times:
+        if u not in graph:
+            graph[u] = []
+        graph[u].append((v, w))
+    
+    pq = [(0, k)]
+    distances = {i: float('inf') for i in range(1, n + 1)}
+    distances[k] = 0
+    
+    while pq:
+        current_dist, node = heapq.heappop(pq)
+        
+        if current_dist > distances[node]:
+            continue
+            
+        if node in graph:
+            for neighbor, weight in graph[node]:
+                new_dist = current_dist + weight
+                if new_dist < distances[neighbor]:
+                    distances[neighbor] = new_dist
+                    heapq.heappush(pq, (new_dist, neighbor))
+    
+    return max(distances.values()) if len(distances) == n else -1`,
+      },
+      {
         language: "typescript",
         explanation:
           "Application - Counting Connected Components: One common application of Union-Find is to count the number of connected components in an undirected graph. We start with n components (each node in its own set) and then union edges. The final component count tells us how many connected components exist in the graph.",
@@ -1505,6 +1770,38 @@ function isOneCharDiff(word1: string, word2: string): boolean {
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Kruskal's Algorithm: This approach sorts all edges by weight and greedily adds them to the MST if they don't create a cycle. We use Union-Find to efficiently check for cycles. Time complexity is O(E log E) due to sorting, where E is the number of edges. Space complexity is O(V) where V is the number of vertices.",
+        code: `import heapq
+
+def networkDelayTime(times, n, k):
+    graph = {}
+    for u, v, w in times:
+        if u not in graph:
+            graph[u] = []
+        graph[u].append((v, w))
+    
+    pq = [(0, k)]
+    distances = {i: float('inf') for i in range(1, n + 1)}
+    distances[k] = 0
+    
+    while pq:
+        current_dist, node = heapq.heappop(pq)
+        
+        if current_dist > distances[node]:
+            continue
+            
+        if node in graph:
+            for neighbor, weight in graph[node]:
+                new_dist = current_dist + weight
+                if new_dist < distances[neighbor]:
+                    distances[neighbor] = new_dist
+                    heapq.heappush(pq, (new_dist, neighbor))
+    
+    return max(distances.values()) if len(distances) == n else -1`,
+      },
+      {
         language: "typescript",
         explanation:
           "Prim's Algorithm: This approach grows the MST from a single vertex, always choosing the minimum weight edge that connects a vertex in the tree to a vertex outside. We use a priority queue (simulated with a sorted array here) to efficiently find the next edge to add. Time complexity is O(E log V) and space complexity is O(V).",
@@ -1546,6 +1843,38 @@ function isOneCharDiff(word1: string, word2: string): boolean {
     
     return mst;
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Prim's Algorithm: This approach grows the MST from a single vertex, always choosing the minimum weight edge that connects a vertex in the tree to a vertex outside. We use a priority queue (simulated with a sorted array here) to efficiently find the next edge to add. Time complexity is O(E log V) and space complexity is O(V).",
+        code: `import heapq
+
+def networkDelayTime(times, n, k):
+    graph = {}
+    for u, v, w in times:
+        if u not in graph:
+            graph[u] = []
+        graph[u].append((v, w))
+    
+    pq = [(0, k)]
+    distances = {i: float('inf') for i in range(1, n + 1)}
+    distances[k] = 0
+    
+    while pq:
+        current_dist, node = heapq.heappop(pq)
+        
+        if current_dist > distances[node]:
+            continue
+            
+        if node in graph:
+            for neighbor, weight in graph[node]:
+                new_dist = current_dist + weight
+                if new_dist < distances[neighbor]:
+                    distances[neighbor] = new_dist
+                    heapq.heappush(pq, (new_dist, neighbor))
+    
+    return max(distances.values()) if len(distances) == n else -1`,
       },
       {
         language: "typescript",

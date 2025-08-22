@@ -23,6 +23,16 @@ export const enhancedStringQuestions: Question[] = [
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Sorting Approach: This solution sorts both strings and compares them for equality. If they're anagrams, sorting will result in identical strings. Time complexity is O(n log n) due to sorting, and space complexity is O(n) for the sorted copies.",
+        code: `def isAnagram(s, t):
+    if len(s) != len(t):
+        return False
+    
+    return sorted(s) == sorted(t)`,
+      },
+      {
         language: "typescript",
         explanation:
           "Character Count with Hash Map: We use a map to count occurrences of each character in the first string, then decrement counts for each character in the second string. If all characters match exactly, the map will be empty at the end. Time complexity is O(n) and space complexity is O(k) where k is the character set size.",
@@ -49,6 +59,30 @@ export const enhancedStringQuestions: Question[] = [
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Character Count with Hash Map: We use a dictionary to count occurrences of each character in the first string, then decrement counts for each character in the second string. If all characters match exactly, the dictionary will be empty at the end. Time complexity is O(n) and space complexity is O(k) where k is the character set size.",
+        code: `def isAnagramCount(s, t):
+    if len(s) != len(t):
+        return False
+    
+    char_count = {}
+    
+    # Count characters in s
+    for char in s:
+        char_count[char] = char_count.get(char, 0) + 1
+    
+    # Subtract characters in t
+    for char in t:
+        if char not in char_count:
+            return False
+        char_count[char] -= 1
+        if char_count[char] == 0:
+            del char_count[char]
+    
+    return len(char_count) == 0`,
+      },
+      {
         language: "typescript",
         explanation:
           "Array Count for ASCII Letters: For lowercase letter constraints, we can use a fixed-size array (length 26) for counting. This approach is more memory-efficient than a hash map for restricted character sets. We increment counts for first string chars and decrement for second string chars. Time complexity is O(n) and space complexity is O(1).",
@@ -64,6 +98,22 @@ export const enhancedStringQuestions: Question[] = [
     
     return count.every(c => c === 0);
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Array Count for ASCII Letters: For lowercase letter constraints, we can use a fixed-size array (length 26) for counting. This approach is more memory-efficient than a hash map for restricted character sets. We increment counts for first string chars and decrement for second string chars. Time complexity is O(n) and space complexity is O(1).",
+        code: `def isAnagramArray(s, t):
+    if len(s) != len(t):
+        return False
+    
+    count = [0] * 26
+    
+    for i in range(len(s)):
+        count[ord(s[i]) - ord('a')] += 1
+        count[ord(t[i]) - ord('a')] -= 1
+    
+    return all(c == 0 for c in count)`,
       },
     ],
     sampleAnswer:
@@ -118,6 +168,29 @@ export const enhancedStringQuestions: Question[] = [
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Stack-based Solution: This is the standard approach using a stack to track opening brackets and match them with closing brackets. We map each closing bracket to its corresponding opening bracket. Time complexity is O(n) and space complexity is O(n) in worst case.",
+        code: `def isValid(s):
+    stack = []
+    pairs = {
+        ')': '(',
+        '}': '{',
+        ']': '['
+    }
+    
+    for char in s:
+        if char in pairs:
+            # Closing bracket
+            if not stack or stack.pop() != pairs[char]:
+                return False
+        else:
+            # Opening bracket
+            stack.append(char)
+    
+    return len(stack) == 0`,
+      },
+      {
         language: "typescript",
         explanation:
           "String Replacement Approach: This alternative repeatedly replaces matching bracket pairs with empty strings until no more replacements can be made. If the resulting string is empty, all brackets matched. This approach is less efficient with O(n²) time complexity due to string manipulation operations.",
@@ -127,6 +200,15 @@ export const enhancedStringQuestions: Question[] = [
     }
     return s === '';
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "String Replacement Approach: This alternative repeatedly replaces matching bracket pairs with empty strings until no more replacements can be made. If the resulting string is empty, all brackets matched. This approach is less efficient with O(n²) time complexity due to string manipulation operations.",
+        code: `def isValidReplace(s):
+    while '()' in s or '{}' in s or '[]' in s:
+        s = s.replace('()', '').replace('{}', '').replace('[]', '')
+    return s == ''`,
       },
       {
         language: "typescript",
@@ -151,6 +233,27 @@ export const enhancedStringQuestions: Question[] = [
     
     return stack.length === 0;
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Optimized Stack Solution: This solution adds early validation by checking if the string length is odd (guaranteed invalid) and uses a set for faster lookup of opening brackets. It's still O(n) time and space complexity, but with optimizations for faster execution.",
+        code: `def isValidOptimized(s):
+    if len(s) % 2 != 0:
+        return False
+    
+    stack = []
+    open_brackets = {'(', '{', '['}
+    bracket_pairs = {')': '(', '}': '{', ']': '['}
+    
+    for char in s:
+        if char in open_brackets:
+            stack.append(char)
+        else:
+            if not stack or stack.pop() != bracket_pairs[char]:
+                return False
+    
+    return len(stack) == 0`,
       },
     ],
     sampleAnswer:
@@ -213,6 +316,37 @@ export const enhancedStringQuestions: Question[] = [
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Expand Around Centers: This approach treats each position as a potential center of a palindrome and expands outward as long as characters match. We need to check both odd-length palindromes (centered at a character) and even-length palindromes (centered between characters). Time complexity is O(n²) and space complexity is O(1).",
+        code: `def longestPalindrome(s):
+    if not s or len(s) < 1:
+        return ""
+    
+    start = 0
+    max_length = 1
+    
+    def expand_around_center(left, right):
+        while left >= 0 and right < len(s) and s[left] == s[right]:
+            left -= 1
+            right += 1
+        return right - left - 1
+    
+    for i in range(len(s)):
+        # Check for odd-length palindromes (center at i)
+        len1 = expand_around_center(i, i)
+        # Check for even-length palindromes (center between i and i+1)
+        len2 = expand_around_center(i, i + 1)
+        
+        current_max = max(len1, len2)
+        
+        if current_max > max_length:
+            max_length = current_max
+            start = i - (current_max - 1) // 2
+    
+    return s[start:start + max_length]`,
+      },
+      {
         language: "typescript",
         explanation:
           "Dynamic Programming: We use a 2D table where dp[i][j] is true if substring from index i to j is a palindrome. We fill this table for increasing substring lengths, starting with single characters (always palindromes) and pairs, then longer substrings. Time complexity is O(n²) and space complexity is O(n²).",
@@ -252,6 +386,40 @@ export const enhancedStringQuestions: Question[] = [
     
     return s.substring(start, start + maxLength);
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Dynamic Programming: We use a 2D table where dp[i][j] is true if substring from index i to j is a palindrome. We fill this table for increasing substring lengths, starting with single characters (always palindromes) and pairs, then longer substrings. Time complexity is O(n²) and space complexity is O(n²).",
+        code: `def longestPalindromeDP(s):
+    n = len(s)
+    dp = [[False] * n for _ in range(n)]
+    
+    start = 0
+    max_length = 1
+    
+    # Single characters are palindromes
+    for i in range(n):
+        dp[i][i] = True
+    
+    # Check for 2-character palindromes
+    for i in range(n - 1):
+        if s[i] == s[i + 1]:
+            dp[i][i + 1] = True
+            start = i
+            max_length = 2
+    
+    # Check for palindromes of length 3 and more
+    for length in range(3, n + 1):
+        for i in range(n - length + 1):
+            j = i + length - 1
+            
+            if s[i] == s[j] and dp[i + 1][j - 1]:
+                dp[i][j] = True
+                start = i
+                max_length = length
+    
+    return s[start:start + max_length]`,
       },
       {
         language: "typescript",
@@ -299,6 +467,45 @@ export const enhancedStringQuestions: Question[] = [
     const start = (centerIndex - maxLen) / 2;
     return s.substring(start, start + maxLen);
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Manacher's Algorithm: This advanced algorithm achieves O(n) time complexity by cleverly reusing previously computed palindrome information. It transforms the string to handle both odd and even length palindromes uniformly by inserting special characters between each character. Time complexity is O(n) and space complexity is O(n).",
+        code: `def longestPalindromeManacher(s):
+    # Transform string to handle even-length palindromes
+    transformed = '#' + '#'.join(s) + '#'
+    n = len(transformed)
+    P = [0] * n
+    center = 0
+    right = 0
+    
+    for i in range(n):
+        mirror = 2 * center - i
+        
+        if i < right:
+            P[i] = min(right - i, P[mirror])
+        
+        # Try to expand palindrome centered at i
+        while i + P[i] + 1 < n and i - P[i] - 1 >= 0 and transformed[i + P[i] + 1] == transformed[i - P[i] - 1]:
+            P[i] += 1
+        
+        # If palindrome centered at i extends past right, adjust center and right
+        if i + P[i] > right:
+            center = i
+            right = i + P[i]
+    
+    # Find the longest palindrome
+    max_len = 0
+    center_index = 0
+    
+    for i in range(n):
+        if P[i] > max_len:
+            max_len = P[i]
+            center_index = i
+    
+    start = (center_index - max_len) // 2
+    return s[start:start + max_len]`,
       },
     ],
     sampleAnswer:
@@ -377,6 +584,51 @@ export const enhancedStringQuestions: Question[] = [
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Sliding Window with Hash Map: This approach uses two hash maps to track character frequencies in the target string and current window. We expand the window until we have all required characters (with correct frequencies), then shrink from the left to find the minimum valid window. Time complexity is O(|s| + |t|) where s and t are the input strings. Space complexity is O(|s| + |t|) for the hash maps.",
+        code: `def minWindow(s, t):
+    if len(s) < len(t):
+        return ""
+    
+    # Count characters in t
+    t_count = {}
+    for char in t:
+        t_count[char] = t_count.get(char, 0) + 1
+    
+    window_count = {}
+    left = 0
+    min_len = float('inf')
+    min_start = 0
+    formed = 0 # Number of unique characters in window with desired frequency
+    required = len(t_count)
+    
+    for right in range(len(s)):
+        char = s[right]
+        window_count[char] = window_count.get(char, 0) + 1
+        
+        # Check if current character's frequency matches desired frequency
+        if char in t_count and window_count[char] == t_count[char]:
+            formed += 1
+        
+        # Try to shrink window from left
+        while left <= right and formed == required:
+            # Update minimum window if current is smaller
+            if right - left + 1 < min_len:
+                min_len = right - left + 1
+                min_start = left
+            
+            left_char = s[left]
+            window_count[left_char] -= 1
+            
+            if left_char in t_count and window_count[left_char] < t_count[left_char]:
+                formed -= 1
+            
+            left += 1
+    
+    return s[min_start:min_start + min_len] if min_len != float('inf') else ""`,
+      },
+      {
         language: "typescript",
         explanation:
           "Optimized with Character Array: For ASCII characters, we can optimize further by using fixed-size arrays instead of hash maps. This approach has the same time complexity of O(|s| + |t|) but can be faster in practice due to reduced overhead. Space complexity is O(1) since the arrays are fixed size regardless of input length.",
@@ -426,6 +678,51 @@ export const enhancedStringQuestions: Question[] = [
     return minLen === Infinity ? "" : s.substring(minStart, minStart + minLen);
 }`,
       },
+      {
+        language: "Python",
+        explanation:
+          "Optimized with Character Array: For ASCII characters, we can optimize further by using fixed-size arrays instead of hash maps. This approach has the same time complexity of O(|s| + |t|) but can be faster in practice due to reduced overhead. Space complexity is O(1) since the arrays are fixed size regardless of input length.",
+        code: `def minWindowOptimized(s, t):
+    if len(s) < len(t):
+        return ""
+    
+    t_count = [0] * 128
+    required = 0
+    
+    # Count characters in t
+    for char in t:
+        if t_count[ord(char)] == 0:
+            required += 1
+        t_count[ord(char)] += 1
+    
+    window_count = [0] * 128
+    left = 0
+    min_len = float('inf')
+    min_start = 0
+    formed = 0
+    
+    for right in range(len(s)):
+        right_char = ord(s[right])
+        window_count[right_char] += 1
+        
+        if t_count[right_char] > 0 and window_count[right_char] == t_count[right_char]:
+            formed += 1
+        
+        while left <= right and formed == required:
+            if right - left + 1 < min_len:
+                min_len = right - left + 1
+                min_start = left
+            
+            left_char = ord(s[left])
+            window_count[left_char] -= 1
+            
+            if t_count[left_char] > 0 and window_count[left_char] < t_count[left_char]:
+                formed -= 1
+            
+            left += 1
+    
+    return s[min_start:min_start + min_len] if min_len != float('inf') else ""`,
+      },
     ],
     sampleAnswer:
       "See the code implementations tab for sliding window approaches to find the minimum window substring. The main approach uses hash maps to track character frequencies, while the optimized version uses fixed-size arrays for ASCII characters. Both maintain a window that expands to include required characters and shrinks to find the minimum valid substring.",
@@ -471,6 +768,22 @@ export const enhancedStringQuestions: Question[] = [
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Sorting Approach: We use the sorted version of each string as a key in a hash map. Strings that are anagrams will have the same sorted representation. Time complexity is O(n * k log k) where n is the number of strings and k is the maximum string length. Space complexity is O(n * k).",
+        code: `def groupAnagrams(strs):
+    groups = {}
+    
+    for s in strs:
+        sorted_s = ''.join(sorted(s))
+        
+        if sorted_s not in groups:
+            groups[sorted_s] = []
+        groups[sorted_s].append(s)
+    
+    return list(groups.values())`,
+      },
+      {
         language: "typescript",
         explanation:
           "Character Count Approach: Instead of sorting, we count the frequency of each character and use that count array as a key. This is more efficient for longer strings. Time complexity is O(n * k) where n is the number of strings and k is the maximum string length. Space complexity is O(n * k).",
@@ -496,6 +809,27 @@ export const enhancedStringQuestions: Question[] = [
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Character Count Approach: Instead of sorting, we count the frequency of each character and use that count array as a key. This is more efficient for longer strings. Time complexity is O(n * k) where n is the number of strings and k is the maximum string length. Space complexity is O(n * k).",
+        code: `def groupAnagramsCount(strs):
+    groups = {}
+    
+    for s in strs:
+        count = [0] * 26
+        
+        for char in s:
+            count[ord(char) - ord('a')] += 1
+        
+        key = ','.join(map(str, count))
+        
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(s)
+    
+    return list(groups.values())`,
+      },
+      {
         language: "typescript",
         explanation:
           "Prime Number Approach: This mathematical approach assigns a unique prime number to each character and multiplies them together to form a key. Since the product of prime numbers is unique for any combination (fundamental theorem of arithmetic), this creates a unique identifier for each anagram group. Caution: This can cause integer overflow with long strings. Time complexity is O(n * k) where n is the number of strings and k is the maximum string length.",
@@ -517,6 +851,25 @@ export const enhancedStringQuestions: Question[] = [
     
     return Array.from(groups.values());
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Prime Number Approach: This mathematical approach assigns a unique prime number to each character and multiplies them together to form a key. Since the product of prime numbers is unique for any combination (fundamental theorem of arithmetic), this creates a unique identifier for each anagram group. Caution: This can cause integer overflow with long strings. Time complexity is O(n * k) where n is the number of strings and k is the maximum string length.",
+        code: `def groupAnagramsPrime(strs):
+    primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101]
+    groups = {}
+    
+    for s in strs:
+        key = 1
+        for char in s:
+            key *= primes[ord(char) - ord('a')]
+        
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(s)
+    
+    return list(groups.values())`,
       },
     ],
     sampleAnswer:
@@ -566,6 +919,25 @@ export const enhancedStringQuestions: Question[] = [
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Sliding Window with Hash Set: This approach uses a set to track characters in the current window. When we encounter a repeated character, we remove characters from the left until the window is valid again. Time complexity is O(n) where each character is processed at most twice (once added, once removed). Space complexity is O(min(m, n)) where m is the character set size.",
+        code: `def lengthOfLongestSubstring(s):
+    char_set = set()
+    left = 0
+    max_length = 0
+    
+    for right in range(len(s)):
+        while s[right] in char_set:
+            char_set.remove(s[left])
+            left += 1
+        
+        char_set.add(s[right])
+        max_length = max(max_length, right - left + 1)
+    
+    return max_length`,
+      },
+      {
         language: "typescript",
         explanation:
           "Optimized with Hash Map: This improvement uses a map to store the most recent index of each character. When we find a repeated character, we can directly jump the left pointer to the position right after the previous occurrence. This avoids the need to remove characters one by one. Time complexity remains O(n) but with better practical performance. Space complexity is still O(min(m, n)).",
@@ -585,6 +957,24 @@ export const enhancedStringQuestions: Question[] = [
     
     return maxLength;
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Optimized with Hash Map: This improvement uses a map to store the most recent index of each character. When we find a repeated character, we can directly jump the left pointer to the position right after the previous occurrence. This avoids the need to remove characters one by one. Time complexity remains O(n) but with better practical performance. Space complexity is still O(min(m, n)).",
+        code: `def lengthOfLongestSubstringOptimized(s):
+    char_index = {}
+    left = 0
+    max_length = 0
+    
+    for right in range(len(s)):
+        if s[right] in char_index:
+            left = max(left, char_index[s[right]] + 1)
+        
+        char_index[s[right]] = right
+        max_length = max(max_length, right - left + 1)
+    
+    return max_length`,
       },
       {
         language: "typescript",
@@ -611,6 +1001,28 @@ export const enhancedStringQuestions: Question[] = [
     
     return s.substring(resultStart, resultStart + maxLength);
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Return the Substring: This variation returns the actual substring rather than just its length. We track the starting position of the maximum length substring as we go. It uses the same optimized approach with a hash map to track character indices. Time and space complexity remain O(n) and O(min(m, n)) respectively.",
+        code: `def longestSubstringWithoutRepeating(s):
+    char_index = {}
+    left = 0
+    max_length = 0
+    result_start = 0
+    
+    for right in range(len(s)):
+        if s[right] in char_index:
+            left = max(left, char_index[s[right]] + 1)
+        
+        char_index[s[right]] = right
+        
+        if right - left + 1 > max_length:
+            max_length = right - left + 1
+            result_start = left
+    
+    return s[result_start:result_start + max_length]`,
       },
     ],
     sampleAnswer:
@@ -673,6 +1085,35 @@ function isAlphanumeric(char: string): boolean {
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Two Pointers Approach: This space-efficient solution uses pointers at both ends of the string, moving inward while comparing characters. We skip non-alphanumeric characters and convert to lowercase for case-insensitive comparison. Time complexity is O(n) and space complexity is O(1) as we don't create a new string.",
+        code: `def isPalindrome(s):
+    left = 0
+    right = len(s) - 1
+    
+    while left < right:
+        # Skip non-alphanumeric characters from left
+        while left < right and not isAlphanumeric(s[left]):
+            left += 1
+        
+        # Skip non-alphanumeric characters from right
+        while left < right and not isAlphanumeric(s[right]):
+            right -= 1
+        
+        # Compare characters (case-insensitive)
+        if s[left].lower() != s[right].lower():
+            return False
+        
+        left += 1
+        right -= 1
+    
+    return True
+
+def isAlphanumeric(char):
+    return char.isalnum()`,
+      },
+      {
         language: "typescript",
         explanation:
           "Clean String First Approach: This approach first creates a cleaned version of the string (lowercase and only alphanumeric), then checks if it's a palindrome. This makes the code cleaner and simpler, but uses O(n) extra space for the cleaned string. Time complexity is still O(n).",
@@ -693,6 +1134,23 @@ function isAlphanumeric(char: string): boolean {
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Clean String First Approach: This approach first creates a cleaned version of the string (lowercase and only alphanumeric), then checks if it's a palindrome. This makes the code cleaner and simpler, but uses O(n) extra space for the cleaned string. Time complexity is still O(n).",
+        code: `def isPalindromeClean(s):
+    cleaned = ''.join(c for c in s.lower() if c.isalnum())
+    left = 0
+    right = len(cleaned) - 1
+    
+    while left < right:
+        if cleaned[left] != cleaned[right]:
+            return False
+        left += 1
+        right -= 1
+    
+    return True`,
+      },
+      {
         language: "typescript",
         explanation:
           "Concise Approach: This one-liner creates a cleaned string, then compares it with its reversed version. While elegant, it's less efficient than the other approaches because string reversal requires O(n) extra space and time. Time and space complexity are both O(n).",
@@ -700,6 +1158,14 @@ function isAlphanumeric(char: string): boolean {
     const cleaned = s.toLowerCase().replace(/[^a-z0-9]/g, '');
     return cleaned === cleaned.split('').reverse().join('');
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Concise Approach: This one-liner creates a cleaned string, then compares it with its reversed version. While elegant, it's less efficient than the other approaches because string reversal requires O(n) extra space and time. Time and space complexity are both O(n).",
+        code: `def isPalindromeConcise(s):
+    cleaned = ''.join(c for c in s.lower() if c.isalnum())
+    return cleaned == cleaned[::-1]`,
       },
     ],
     sampleAnswer:
@@ -755,6 +1221,31 @@ function isAlphanumeric(char: string): boolean {
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Sliding Window with Character Count: This approach maintains a sliding window and keeps track of the count of each character in the current window. The key insight is that we only need to replace characters that aren't the most frequent character in the window. If (window size - max character count) > k, then we need more than k replacements, so the window is invalid. Time complexity is O(n) and space complexity is O(1) since we have a fixed alphabet size.",
+        code: `def characterReplacement(s, k):
+    char_count = {}
+    left = 0
+    max_length = 0
+    max_char_count = 0
+    
+    for right in range(len(s)):
+        char = s[right]
+        char_count[char] = char_count.get(char, 0) + 1
+        max_char_count = max(max_char_count, char_count[char])
+        
+        # If window size - max char count > k, shrink window
+        while right - left + 1 - max_char_count > k:
+            left_char = s[left]
+            char_count[left_char] -= 1
+            left += 1
+        
+        max_length = max(max_length, right - left + 1)
+    
+    return max_length`,
+      },
+      {
         language: "typescript",
         explanation:
           "Character-by-Character Approach: This alternative solution explicitly tries each letter as the target character to create a repeating substring. For each target character, it counts replacements needed in the current window and shrinks when we exceed k replacements. This approach is more intuitive but less efficient for large alphabets, as it runs in O(26 * n) time for uppercase English letters. Space complexity is O(1).",
@@ -785,6 +1276,32 @@ function isAlphanumeric(char: string): boolean {
     
     return maxLength;
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Character-by-Character Approach: This alternative solution explicitly tries each letter as the target character to create a repeating substring. For each target character, it counts replacements needed in the current window and shrinks when we exceed k replacements. This approach is more intuitive but less efficient for large alphabets, as it runs in O(26 * n) time for uppercase English letters. Space complexity is O(1).",
+        code: `def characterReplacementVerbose(s, k):
+    max_length = 0
+    
+    # Try each character as the target character
+    for target_char_code in range(65, 91): # A-Z
+        target = chr(target_char_code)
+        left = 0
+        replacements = 0
+        
+        for right in range(len(s)):
+            if s[right] != target:
+                replacements += 1
+            
+            while replacements > k:
+                if s[left] != target:
+                    replacements -= 1
+                left += 1
+            
+            max_length = max(max_length, right - left + 1)
+    
+    return max_length`,
       },
     ],
     sampleAnswer:
@@ -856,6 +1373,43 @@ function isAlphanumeric(char: string): boolean {
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Dynamic Programming approach builds a 2D table bottom-up to determine if the string matches the pattern, handling the special cases for '.' and '*' characters.",
+        code: `def isMatch(s, p):
+    m = len(s)
+    n = len(p)
+    
+    # dp[i][j] = true if s[0...i-1] matches p[0...j-1]
+    dp = [[False] * (n + 1) for _ in range(m + 1)]
+    
+    dp[0][0] = True # Empty string matches empty pattern
+    
+    # Handle patterns like a*, a*b*, a*b*c*
+    for j in range(2, n + 1, 2):
+        if p[j - 1] == '*':
+            dp[0][j] = dp[0][j - 2]
+    
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            current_char = s[i - 1]
+            pattern_char = p[j - 1]
+            
+            if pattern_char == '*':
+                prev_pattern_char = p[j - 2]
+                
+                # Zero occurrences
+                dp[i][j] = dp[i][j - 2]
+                
+                # One or more occurrences
+                if prev_pattern_char == '.' or prev_pattern_char == current_char:
+                    dp[i][j] = dp[i][j] or dp[i - 1][j]
+            elif pattern_char == '.' or pattern_char == current_char:
+                dp[i][j] = dp[i - 1][j - 1]
+    
+    return dp[m][n]`,
+      },
+      {
         language: "typescript",
         explanation:
           "Recursive with Memoization approach solves the problem top-down by breaking it into smaller subproblems and using a cache to avoid redundant calculations.",
@@ -884,6 +1438,32 @@ function isAlphanumeric(char: string): boolean {
     
     return dp(0, 0);
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Recursive with Memoization approach solves the problem top-down by breaking it into smaller subproblems and using a cache to avoid redundant calculations.",
+        code: `def isMatchRecursive(s, p):
+    memo = {}
+    
+    def dp(i, j):
+        if (i, j) in memo:
+            return memo[(i, j)]
+        
+        if j == len(p):
+            return i == len(s)
+        
+        first_match = i < len(s) and (p[j] == s[i] or p[j] == '.')
+        
+        if j + 1 < len(p) and p[j + 1] == '*':
+            result = dp(i, j + 2) or (first_match and dp(i + 1, j))
+        else:
+            result = first_match and dp(i + 1, j + 1)
+        
+        memo[(i, j)] = result
+        return result
+    
+    return dp(0, 0)`,
       },
     ],
     sampleAnswer:
@@ -943,6 +1523,32 @@ function isAlphanumeric(char: string): boolean {
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Dynamic Programming approach uses a 2D table to track whether substrings match subpatterns, with special cases for '?' matching any single character and '*' matching any sequence of characters.",
+        code: `def isMatchWildcard(s, p):
+    m = len(s)
+    n = len(p)
+    
+    dp = [[False] * (n + 1) for _ in range(m + 1)]
+    
+    dp[0][0] = True
+    
+    # Handle leading stars
+    for j in range(1, n + 1):
+        if p[j - 1] == '*':
+            dp[0][j] = dp[0][j - 1]
+    
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if p[j - 1] == '*':
+                dp[i][j] = dp[i - 1][j] or dp[i][j - 1]
+            elif p[j - 1] == '?' or p[j - 1] == s[i - 1]:
+                dp[i][j] = dp[i - 1][j - 1]
+    
+    return dp[m][n]`,
+      },
+      {
         language: "typescript",
         explanation:
           "Two Pointers with Backtracking approach processes the string and pattern linearly with constant space, using backtracking for '*' to match different lengths of text.",
@@ -976,6 +1582,37 @@ function isAlphanumeric(char: string): boolean {
     
     return pIndex === p.length;
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Two Pointers with Backtracking approach processes the string and pattern linearly with constant space, using backtracking for '*' to match different lengths of text.",
+        code: `def isMatchWildcardTwoPointers(s, p):
+    s_index = 0
+    p_index = 0
+    star_index = -1
+    match = 0
+    
+    while s_index < len(s):
+        if p_index < len(p) and (p[p_index] == '?' or p[p_index] == s[s_index]):
+            s_index += 1
+            p_index += 1
+        elif p_index < len(p) and p[p_index] == '*':
+            star_index = p_index
+            match = s_index
+            p_index += 1
+        elif star_index != -1:
+            p_index = star_index + 1
+            match += 1
+            s_index = match
+        else:
+            return False
+    
+    # Skip remaining stars in pattern
+    while p_index < len(p) and p[p_index] == '*':
+        p_index += 1
+    
+    return p_index == len(p)`,
       },
     ],
     sampleAnswer:
@@ -1053,6 +1690,48 @@ function isAlphanumeric(char: string): boolean {
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "This solution uses a greedy approach to pack as many words as possible in each line, then distributes spaces evenly between words according to the justification rules.",
+        code: `def fullJustify(words, maxWidth):
+    result = []
+    i = 0
+    
+    while i < len(words):
+        # Determine how many words fit in current line
+        line_length = len(words[i])
+        j = i + 1
+        
+        while j < len(words) and line_length + 1 + len(words[j]) <= maxWidth:
+            line_length += 1 + len(words[j])
+            j += 1
+        
+        words_in_line = j - i
+        is_last_line = j == len(words)
+        
+        if words_in_line == 1 or is_last_line:
+            # Left justify
+            line = ' '.join(words[i:j]) + ' ' * (maxWidth - line_length)
+            result.append(line)
+        else:
+            # Full justify
+            total_spaces = maxWidth - sum(len(w) for w in words[i:j])
+            gaps = words_in_line - 1
+            spaces_per_gap = total_spaces // gaps
+            extra_spaces = total_spaces % gaps
+            
+            line = ''
+            for k in range(i, j):
+                line += words[k]
+                if k < j - 1:
+                    line += ' ' * (spaces_per_gap + (k - i < extra_spaces))
+            result.append(line)
+        
+        i = j
+    
+    return result`,
+      },
+      {
         language: "typescript",
         explanation:
           "This helper function specifically handles the task of distributing spaces evenly between words according to the justification rules.",
@@ -1075,6 +1754,26 @@ function isAlphanumeric(char: string): boolean {
     
     return result;
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "This helper function specifically handles the task of distributing spaces evenly between words according to the justification rules.",
+        code: `def distributeSpaces(words, total_spaces):
+    if len(words) == 1:
+        return words[0] + ' ' * total_spaces
+    
+    gaps = len(words) - 1
+    spaces_per_gap = total_spaces // gaps
+    extra_spaces = total_spaces % gaps
+    
+    result = ''
+    for i in range(len(words)):
+        result += words[i]
+        if i < len(words) - 1:
+            result += ' ' * (spaces_per_gap + (i < extra_spaces))
+    
+    return result`,
       },
     ],
     sampleAnswer:
@@ -1141,6 +1840,46 @@ function isAlphanumeric(char: string): boolean {
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "One Edit Distance checks if two strings differ by exactly one operation (insert, delete, replace) using a two-pointer approach to efficiently identify the potential edit point.",
+        code: `def isOneEditDistance(s, t):
+    m = len(s)
+    n = len(t)
+    
+    if abs(m - n) > 1:
+        return False
+    if s == t:
+        return False
+    
+    i = 0
+    j = 0
+    
+    while i < m and j < n and s[i] == t[j]:
+        i += 1
+        j += 1
+    
+    if i == m and j == n:
+        return False # Strings are identical
+    
+    if m == n:
+        # Replace operation
+        i += 1
+        j += 1
+    elif m < n:
+        # Insert operation
+        j += 1
+    else:
+        # Delete operation
+        i += 1
+    
+    while i < m and j < n and s[i] == t[j]:
+        i += 1
+        j += 1
+    
+    return i == m and j == n`,
+      },
+      {
         language: "typescript",
         explanation:
           "Longest Common Subsequence finds the length of the longest subsequence common to two strings using dynamic programming with a 2D table.",
@@ -1162,6 +1901,25 @@ function isAlphanumeric(char: string): boolean {
     
     return dp[m][n];
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Longest Common Subsequence finds the length of the longest subsequence common to two strings using dynamic programming with a 2D table.",
+        code: `def longestCommonSubsequence(text1, text2):
+    m = len(text1)
+    n = len(text2)
+    
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if text1[i - 1] == text2[j - 1]:
+                dp[i][j] = 1 + dp[i - 1][j - 1]
+            else:
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+    
+    return dp[m][n]`,
       },
       {
         language: "typescript",
@@ -1190,6 +1948,29 @@ function isAlphanumeric(char: string): boolean {
     
     return dp[m][n];
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Distinct Subsequences counts the number of ways a target string can be formed by deleting characters from a source string using dynamic programming.",
+        code: `def numDistinct(s, t):
+    m = len(s)
+    n = len(t)
+    
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    
+    # Empty string t can be formed in one way from any string s
+    for i in range(m + 1):
+        dp[i][0] = 1
+    
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            dp[i][j] = dp[i - 1][j] # Don't use s[i-1]
+            
+            if s[i - 1] == t[j - 1]:
+                dp[i][j] += dp[i - 1][j - 1] # Use s[i-1]
+    
+    return dp[m][n]`,
       },
     ],
     sampleAnswer:
