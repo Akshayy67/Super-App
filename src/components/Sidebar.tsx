@@ -12,6 +12,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import { realTimeAuth } from "../utils/realTimeAuth";
+import { ThemeSwitcher } from "./ThemeSwitcher";
 
 interface SidebarProps {
   activeView: string;
@@ -41,10 +42,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <div className="bg-white h-full shadow-lg border-r border-gray-200 flex flex-col">
+    <div className="bg-white dark:bg-gray-800 h-full shadow-lg border-r border-gray-200 dark:border-gray-700 flex flex-col">
       {/* Mobile Header */}
       {isMobile && (
-        <div className="p-3 sm:p-4 border-b border-gray-200 flex items-center justify-between lg:hidden">
+        <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between lg:hidden">
           <button
             onClick={() => onViewChange("dashboard")}
             className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity min-w-0 flex-1 btn-touch"
@@ -58,13 +59,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 e.currentTarget.style.display = "none";
               }}
             />
-            <span className="text-responsive-lg font-bold text-gray-900 truncate">
+            <span className="text-responsive-lg font-bold text-gray-900 dark:text-gray-100 truncate">
               Super Study
             </span>
           </button>
           <button
             onClick={onCloseMobile}
-            className="btn-touch p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 flex-shrink-0 touch-manipulation"
+            className="btn-touch p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0 touch-manipulation"
             aria-label="Close menu"
           >
             <X className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -74,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Desktop Header */}
       <div
-        className={`p-4 sm:p-6 border-b border-gray-200 ${
+        className={`p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 ${
           isMobile ? "hidden lg:block" : ""
         }`}
       >
@@ -92,9 +93,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 e.currentTarget.style.display = "none";
               }}
             />
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Super Study</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 truncate">Super Study</h1>
           </div>
-          <p className="text-xs sm:text-sm text-gray-600 ml-11 sm:ml-13 truncate">AI Academic Assistant</p>
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 ml-11 sm:ml-13 truncate">AI Academic Assistant</p>
         </button>
       </div>
 
@@ -110,8 +111,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => onViewChange(item.id)}
                   className={`w-full flex items-center px-3 sm:px-4 py-3 sm:py-3 text-left rounded-lg transition-all btn-touch touch-manipulation ${
                     isActive
-                      ? "bg-blue-100 text-blue-700 border border-blue-200 shadow-sm"
-                      : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                      ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 shadow-sm"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
                   }`}
                 >
                   <Icon className="w-5 h-5 mr-3 flex-shrink-0" />
@@ -123,23 +124,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </ul>
       </nav>
 
-      <div className="p-3 sm:p-4 border-t border-gray-200">
+      <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700">
+        {/* Theme Switcher for Desktop */}
+        <div className="hidden lg:flex justify-center mb-3">
+          <ThemeSwitcher />
+        </div>
+        
         <div className="flex items-center mb-3">
-          <div className="bg-blue-100 w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-            <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+          <div className="bg-blue-100 dark:bg-blue-900/30 w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+            <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
               {user?.username || "User"}
             </p>
-            <p className="text-xs text-gray-500 truncate">
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
               {user?.email || "user@example.com"}
             </p>
           </div>
         </div>
         <button
           onClick={onLogout}
-          className="w-full flex items-center px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors btn-touch touch-manipulation"
+          className="w-full flex items-center px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors btn-touch touch-manipulation"
         >
           <LogOut className="w-4 h-4 mr-2 flex-shrink-0" />
           <span className="truncate">Sign Out</span>
