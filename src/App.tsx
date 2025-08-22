@@ -9,6 +9,8 @@ import { AIChat } from "./components/AIChat";
 import { StudyTools } from "./components/StudyTools";
 import { FlashCards } from "./components/FlashCards";
 import { InterviewPrep } from "./components/InterviewPrep/InterviewPrep";
+import { SmartReview } from "./components/SmartReview";
+import { TeamSpace } from "./components/TeamSpace";
 // Removed unused FilePreview import
 import ErrorBoundary from "./components/ErrorBoundary";
 import { realTimeAuth } from "./utils/realTimeAuth";
@@ -16,6 +18,7 @@ import { realTimeAuth } from "./utils/realTimeAuth";
 import { Menu, X } from "lucide-react";
 import { GlobalNoteCreator } from "./components/GlobalNoteCreator";
 import { useGlobalCopyListener } from "./hooks/useGlobalCopyListener";
+import { collaborationService } from "./services/collaborationService";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -34,10 +37,20 @@ function App() {
       console.log("👤 Auth state changed:", { user: !!user, userId: user?.id });
       setIsAuthenticated(!!user);
       // Removed unused setCurrentUser
+      
+      // Update presence when auth state changes
+      if (user) {
+        collaborationService.updatePresence('online');
+      } else {
+        collaborationService.updatePresence('offline');
+      }
     });
 
     // Clean up listener on component unmount
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      collaborationService.cleanup();
+    };
   }, []);
 
   // Close mobile menu when screen size changes to desktop
@@ -108,6 +121,10 @@ function App() {
         return <FlashCards />;
       case "interview":
         return <InterviewPrep />;
+      case "review":
+        return <SmartReview />;
+      case "teams":
+        return <TeamSpace />;
       default:
         return <Dashboard onViewChange={handleViewChange} />;
     }
