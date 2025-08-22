@@ -1,6 +1,6 @@
 import { Question } from "../InterviewSubjects";
 
-// Collection of 65 most asked puzzle questions from GeeksforGeeks
+// Collection of 65 most asked puzzle questions
 export const puzzleQuestions: Question[] = [
   // Logical Puzzles
   {

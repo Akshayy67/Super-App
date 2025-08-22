@@ -40,6 +40,18 @@ function App() {
     return unsubscribe;
   }, []);
 
+  // Close mobile menu when screen size changes to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) { // lg breakpoint
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const handleAuthSuccess = () => {
     console.log("🎉 Auth success handler called, setting view to dashboard");
     setActiveView("dashboard");
@@ -104,7 +116,9 @@ function App() {
   if (!isAuthenticated) {
     return (
       <ErrorBoundary>
-        <AuthForm onAuthSuccess={handleAuthSuccess} />
+        <div className="min-h-screen bg-gray-50">
+          <AuthForm onAuthSuccess={handleAuthSuccess} />
+        </div>
       </ErrorBoundary>
     );
   }
@@ -121,12 +135,12 @@ function App() {
         />
       )}
       
-      <div className="h-screen bg-gray-50 flex flex-col lg:flex-row">
+      <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row landscape-compact">
         {/* Mobile Header */}
-        <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 p-3 sm:p-4 flex items-center justify-between">
+        <div className="mobile-header lg:hidden bg-white shadow-sm border-b border-gray-200 p-3 sm:p-4 flex items-center justify-between relative z-30">
           <button
             onClick={() => handleViewChange("dashboard")}
-            className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity min-w-0 flex-1"
+            className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity min-w-0 flex-1 btn-touch"
           >
             <img
               src="/SuperApp.png"
@@ -137,13 +151,14 @@ function App() {
                 e.currentTarget.style.display = "none";
               }}
             />
-            <span className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+            <span className="text-responsive-lg font-bold text-gray-900 truncate">
               Super Study
             </span>
           </button>
           <button
             onClick={toggleMobileMenu}
-            className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 flex-shrink-0"
+            className="btn-touch p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 flex-shrink-0 touch-manipulation"
+            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
           >
             {isMobileMenuOpen ? (
               <X className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -153,28 +168,24 @@ function App() {
           </button>
         </div>
 
-        {/* Sidebar - Desktop & Mobile Overlay */}
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div
+            className="mobile-nav-overlay"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Sidebar - Desktop & Mobile */}
         <div
           className={`
-          ${isMobileMenuOpen ? "fixed inset-0 z-50" : "hidden"}
-          lg:relative lg:block lg:w-64 lg:flex-shrink-0
-        `}
-        >
-          {/* Mobile Overlay */}
-          {isMobileMenuOpen && (
-            <div
-              className="fixed inset-0 bg-black bg-opacity-50 lg:hidden"
-              onClick={() => setIsMobileMenuOpen(false)}
-            />
-          )}
-
-          {/* Sidebar Content */}
-          <div
-            className={`
-            ${isMobileMenuOpen ? "absolute left-0 top-0 w-64" : "w-full"}
-            h-full lg:h-auto
+            ${isMobileMenuOpen ? "mobile-nav-panel" : "hidden"}
+            lg:relative lg:block lg:w-64 xl:w-72 lg:flex-shrink-0
+            ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
           `}
-          >
+        >
+          <div className="h-full lg:h-auto">
             <Sidebar
               activeView={activeView}
               onViewChange={handleViewChange}
@@ -186,8 +197,12 @@ function App() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-          <div className="flex-1 overflow-hidden">{renderActiveView()}</div>
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0 relative">
+          <div className="flex-1 overflow-hidden scroll-area">
+            <div className="h-full">
+              {renderActiveView()}
+            </div>
+          </div>
         </div>
 
         {/* File Preview Modal */}

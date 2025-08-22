@@ -14,6 +14,7 @@ export const enhancedArrayQuestions: Question[] = [
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 1: Hash Map (Optimal)
 // Time: O(n), Space: O(n)
 function twoSum(nums: number[], target: number): number[] {
@@ -34,6 +35,7 @@ function twoSum(nums: number[], target: number): number[] {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 2: Brute Force
 // Time: O(n²), Space: O(1)
 function twoSumBruteForce(nums: number[], target: number): number[] {
@@ -51,6 +53,7 @@ function twoSumBruteForce(nums: number[], target: number): number[] {
       },
       {
         language: "Java",
+        approach: "optimal",
         code: `// Approach 1: Hash Map (Optimal)
 // Time: O(n), Space: O(n)
 public int[] twoSum(int[] nums, int target) {
@@ -71,6 +74,7 @@ public int[] twoSum(int[] nums, int target) {
       },
       {
         language: "Java",
+        approach: "brute-force",
         code: `// Approach 2: Brute Force
 // Time: O(n²), Space: O(1)
 public int[] twoSumBruteForce(int[] nums, int target) {
@@ -85,6 +89,34 @@ public int[] twoSumBruteForce(int[] nums, int target) {
 }`,
         explanation:
           "Brute force checks every possible pair. Simple but inefficient for large arrays.",
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Hash Map (Optimal)
+# Time: O(n), Space: O(n)
+def two_sum(nums, target):
+    num_map = {}
+    
+    for i, num in enumerate(nums):
+        complement = target - num
+        if complement in num_map:
+            return [num_map[complement], i]
+        num_map[num] = i
+    
+    return []`,
+        explanation: "Hash map stores each number with its index. For each element, we check if its complement exists in the map."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Brute Force
+# Time: O(n²), Space: O(1)
+def two_sum_brute_force(nums, target):
+    for i in range(len(nums)):
+        for j in range(i + 1, len(nums)):
+            if nums[i] + nums[j] == target:
+                return [i, j]
+    return []`,
+        explanation: "Brute force checks every possible pair. Simple but inefficient for large arrays."
       },
     ],
     tips: [
@@ -111,6 +143,7 @@ public int[] twoSumBruteForce(int[] nums, int target) {
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Single Pass Solution (Optimal)
 // Time: O(n), Space: O(1)
 function maxProfit(prices: number[]): number {
@@ -132,6 +165,7 @@ function maxProfit(prices: number[]): number {
       },
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Alternative: Dynamic Programming approach
 // Time: O(n), Space: O(1)
 function maxProfitDP(prices: number[]): number {
@@ -152,6 +186,7 @@ function maxProfitDP(prices: number[]): number {
       },
       {
         language: "Java",
+        approach: "optimal",
         code: `// Single Pass Solution (Optimal)
 // Time: O(n), Space: O(1)
 public int maxProfit(int[] prices) {
@@ -173,6 +208,7 @@ public int maxProfit(int[] prices) {
       },
       {
         language: "Java",
+        approach: "moderate",
         code: `// Alternative: Dynamic Programming approach
 // Time: O(n), Space: O(1)
 public int maxProfitDP(int[] prices) {
@@ -190,6 +226,44 @@ public int maxProfitDP(int[] prices) {
 }`,
         explanation:
           "DP approach maintains states for buying and selling. Buy represents max profit after buying, sell represents max profit after selling.",
+      },
+      {
+        language: "Python",
+        code: `# Single Pass Solution (Optimal)
+# Time: O(n), Space: O(1)
+def max_profit(prices):
+    if not prices:
+        return 0
+    
+    min_price = float('inf')
+    max_profit = 0
+    
+    for price in prices:
+        if price < min_price:
+            min_price = price
+        elif price - min_price > max_profit:
+            max_profit = price - min_price
+    
+    return max_profit`,
+        explanation: "Track minimum price and calculate profit at each step. Greedy approach ensures we buy at the lowest price before selling."
+      },
+      {
+        language: "Python",
+        code: `# Alternative: Dynamic Programming approach
+# Time: O(n), Space: O(1)
+def max_profit_dp(prices):
+    if len(prices) <= 1:
+        return 0
+    
+    buy = -prices[0]  # Max profit after buying
+    sell = 0          # Max profit after selling
+    
+    for i in range(1, len(prices)):
+        buy = max(buy, -prices[i])
+        sell = max(sell, buy + prices[i])
+    
+    return sell`,
+        explanation: "DP approach maintains states for buying and selling. Buy represents max profit after buying, sell represents max profit after selling."
       },
     ],
     tips: [
@@ -216,6 +290,7 @@ public int maxProfitDP(int[] prices) {
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 1: Hash Set (Optimal)
 // Time: O(n), Space: O(n)
 function containsDuplicate(nums: number[]): boolean {
@@ -235,6 +310,7 @@ function containsDuplicate(nums: number[]): boolean {
       },
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 2: Sorting
 // Time: O(n log n), Space: O(1)
 function containsDuplicateSort(nums: number[]): boolean {
@@ -253,6 +329,7 @@ function containsDuplicateSort(nums: number[]): boolean {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 3: Length comparison (Most concise)
 // Time: O(n), Space: O(n)
 function containsDuplicateConcise(nums: number[]): boolean {
@@ -263,6 +340,7 @@ function containsDuplicateConcise(nums: number[]): boolean {
       },
       {
         language: "Java",
+        approach: "optimal",
         code: `// Approach 1: Hash Set (Optimal)
 // Time: O(n), Space: O(n)
 public boolean containsDuplicate(int[] nums) {
@@ -282,6 +360,7 @@ public boolean containsDuplicate(int[] nums) {
       },
       {
         language: "Java",
+        approach: "moderate",
         code: `// Approach 2: Sorting
 // Time: O(n log n), Space: O(1)
 public boolean containsDuplicateSort(int[] nums) {
@@ -300,6 +379,7 @@ public boolean containsDuplicateSort(int[] nums) {
       },
       {
         language: "Java",
+        approach: "brute-force",
         code: `// Approach 3: Length comparison (Most concise)
 // Time: O(n), Space: O(n)
 public boolean containsDuplicateConcise(int[] nums) {
@@ -311,6 +391,43 @@ public boolean containsDuplicateConcise(int[] nums) {
 }`,
         explanation:
           "Create a HashSet from the array. If the set size is different from array length, there are duplicates.",
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Hash Set (Optimal)
+# Time: O(n), Space: O(n)
+def contains_duplicate(nums):
+    seen = set()
+    
+    for num in nums:
+        if num in seen:
+            return True
+        seen.add(num)
+    
+    return False`,
+        explanation: "Use a set to track seen numbers. Return True immediately when we find a duplicate."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Sorting
+# Time: O(n log n), Space: O(1)
+def contains_duplicate_sort(nums):
+    nums.sort()
+    
+    for i in range(1, len(nums)):
+        if nums[i] == nums[i - 1]:
+            return True
+    
+    return False`,
+        explanation: "Sort the array first, then check adjacent elements for duplicates. Uses less space but slower due to sorting."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Length comparison (Most concise)
+# Time: O(n), Space: O(n)
+def contains_duplicate_concise(nums):
+    return len(set(nums)) != len(nums)`,
+        explanation: "Create a set from the array. If the set size is different from array length, there are duplicates."
       },
     ],
     tips: [
@@ -337,6 +454,7 @@ public boolean containsDuplicateConcise(int[] nums) {
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 1: Two Passes (Optimal)
 // Time: O(n), Space: O(1) extra space
 function productExceptSelf(nums: number[]): number[] {
@@ -362,6 +480,7 @@ function productExceptSelf(nums: number[]): number[] {
       },
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 2: Left and Right Arrays
 // Time: O(n), Space: O(n)
 function productExceptSelfVerbose(nums: number[]): number[] {
@@ -478,6 +597,74 @@ public int[] productExceptSelfDivision(int[] nums) {
     
     return result;
 }`,
+        explanation:
+          "Division method is simple but not allowed in this problem. Shows why we need alternative approaches.",
+      },
+      {
+        language: "Python",
+        approach: "optimal",
+        code: `# Approach 1: Two Passes (Optimal)
+# Time: O(n), Space: O(1) extra space
+def product_except_self(nums):
+    n = len(nums)
+    result = [1] * n
+    
+    # First pass: calculate left products
+    for i in range(1, n):
+        result[i] = result[i - 1] * nums[i - 1]
+    
+    # Second pass: multiply by right products
+    right_product = 1
+    for i in range(n - 1, -1, -1):
+        result[i] *= right_product
+        right_product *= nums[i]
+    
+    return result`,
+        explanation:
+          "Two-pass approach: first calculate left products, then multiply by right products. Most space efficient.",
+      },
+      {
+        language: "Python",
+        approach: "moderate",
+        code: `# Approach 2: Left and Right Arrays
+# Time: O(n), Space: O(n)
+def product_except_self_verbose(nums):
+    n = len(nums)
+    left = [1] * n
+    right = [1] * n
+    result = [1] * n
+    
+    # Calculate left products
+    for i in range(1, n):
+        left[i] = left[i - 1] * nums[i - 1]
+    
+    # Calculate right products
+    for i in range(n - 2, -1, -1):
+        right[i] = right[i + 1] * nums[i + 1]
+    
+    # Combine results
+    for i in range(n):
+        result[i] = left[i] * right[i]
+    
+    return result`,
+        explanation:
+          "Creates separate arrays for left and right products. Easier to understand but uses more space.",
+      },
+      {
+        language: "Python",
+        approach: "moderate",
+        code: `# Approach 3: Division Method (Not allowed in this problem)
+# Time: O(n), Space: O(1)
+def product_except_self_division(nums):
+    total_product = 1
+    for num in nums:
+        total_product *= num
+    
+    result = []
+    for num in nums:
+        result.append(total_product // num)
+    
+    return result`,
         explanation:
           "Division method is simple but not allowed in this problem. Shows why we need alternative approaches.",
       },
@@ -692,6 +879,85 @@ private int maxSubArrayRec(int[] nums, int left, int right) {
         explanation:
           "Divide and conquer approach splits array and finds maximum of left, right, and crossing subarrays.",
       },
+      {
+        language: "Python",
+        code: `# Approach 1: Kadane's Algorithm (Optimal)
+# Time: O(n), Space: O(1)
+def max_sub_array(nums):
+    if not nums:
+        return 0
+    
+    max_so_far = max_ending_here = nums[0]
+    
+    for i in range(1, len(nums)):
+        max_ending_here = max(nums[i], max_ending_here + nums[i])
+        max_so_far = max(max_so_far, max_ending_here)
+    
+    return max_so_far`,
+        explanation: "Kadane's algorithm tracks maximum sum ending at each position and global maximum. Optimal O(n) solution."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Return Indices of Subarray
+# Time: O(n), Space: O(1)
+def max_sub_array_with_indices(nums):
+    if not nums:
+        return {'sum': 0, 'start': 0, 'end': 0}
+    
+    max_so_far = max_ending_here = nums[0]
+    start = end = temp_start = 0
+    
+    for i in range(1, len(nums)):
+        if max_ending_here < 0:
+            max_ending_here = nums[i]
+            temp_start = i
+        else:
+            max_ending_here += nums[i]
+        
+        if max_ending_here > max_so_far:
+            max_so_far = max_ending_here
+            start = temp_start
+            end = i
+    
+    return {'sum': max_so_far, 'start': start, 'end': end}`,
+        explanation: "Extended Kadane's algorithm that returns the start and end indices of the maximum subarray."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Divide and Conquer
+# Time: O(n log n), Space: O(log n)
+def max_sub_array_dc(nums):
+    def max_crossing_sum(arr, left, mid, right):
+        left_sum = float('-inf')
+        current_sum = 0
+        
+        for i in range(mid, left - 1, -1):
+            current_sum += arr[i]
+            left_sum = max(left_sum, current_sum)
+        
+        right_sum = float('-inf')
+        current_sum = 0
+        
+        for i in range(mid + 1, right + 1):
+            current_sum += arr[i]
+            right_sum = max(right_sum, current_sum)
+        
+        return left_sum + right_sum
+    
+    def max_sub_array_rec(arr, left, right):
+        if left == right:
+            return arr[left]
+        
+        mid = (left + right) // 2
+        left_max = max_sub_array_rec(arr, left, mid)
+        right_max = max_sub_array_rec(arr, mid + 1, right)
+        cross_max = max_crossing_sum(arr, left, mid, right)
+        
+        return max(left_max, right_max, cross_max)
+    
+    return max_sub_array_rec(nums, 0, len(nums) - 1)`,
+        explanation: "Divide and conquer approach splits array and finds maximum of left, right, and crossing subarrays."
+      },
     ],
     tips: [
       "Kadane's algorithm is the optimal O(n) solution",
@@ -850,6 +1116,77 @@ public int[][] mergeInPlace(int[][] intervals) {
 }`,
         explanation:
           "In-place merging modifies the original array. More space efficient but modifies input.",
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Sort then Merge (Optimal)
+# Time: O(n log n), Space: O(n)
+def merge(intervals):
+    if len(intervals) <= 1:
+        return intervals
+    
+    # Sort by start time
+    intervals.sort(key=lambda x: x[0])
+    
+    merged = [intervals[0]]
+    
+    for i in range(1, len(intervals)):
+        current = intervals[i]
+        last_merged = merged[-1]
+        
+        if current[0] <= last_merged[1]:
+            # Overlapping intervals, merge them
+            last_merged[1] = max(last_merged[1], current[1])
+        else:
+            # Non-overlapping interval, add to result
+            merged.append(current)
+    
+    return merged`,
+        explanation: "Sort intervals by start time first, then merge overlapping ones. Most intuitive approach."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Using List Comprehension (Functional)
+# Time: O(n log n), Space: O(n)
+def merge_functional(intervals):
+    if len(intervals) <= 1:
+        return intervals
+    
+    intervals.sort(key=lambda x: x[0])
+    
+    result = []
+    for current in intervals:
+        if not result or result[-1][1] < current[0]:
+            result.append(current)
+        else:
+            result[-1][1] = max(result[-1][1], current[1])
+    
+    return result`,
+        explanation: "Functional approach using list operations. Same logic but more Pythonic style."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: In-place Merging
+# Time: O(n log n), Space: O(1)
+def merge_in_place(intervals):
+    if len(intervals) <= 1:
+        return intervals
+    
+    intervals.sort(key=lambda x: x[0])
+    
+    write_index = 0
+    
+    for i in range(1, len(intervals)):
+        if intervals[i][0] <= intervals[write_index][1]:
+            # Overlapping, merge
+            intervals[write_index][1] = max(intervals[write_index][1], intervals[i][1])
+        else:
+            # Non-overlapping, move to next position
+            write_index += 1
+            intervals[write_index] = intervals[i]
+    
+    return intervals[:write_index + 1]`,
+        explanation: "In-place merging modifies the original array. More space efficient but modifies input."
       },
     ],
     tips: [
@@ -1016,6 +1353,80 @@ public void rotateCyclic(int[] nums, int k) {
 }`,
         explanation:
           "Moves elements in cycles. Handles cases where gcd(n, k) > 1. In-place but more complex.",
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Reverse Method (Optimal)
+# Time: O(n), Space: O(1)
+def rotate(nums, k):
+    if not nums:
+        return
+    
+    n = len(nums)
+    k = k % n  # Handle k > array length
+    
+    # Helper function to reverse array in place
+    def reverse(start, end):
+        while start < end:
+            nums[start], nums[end] = nums[end], nums[start]
+            start += 1
+            end -= 1
+    
+    # Reverse entire array
+    reverse(0, n - 1)
+    # Reverse first k elements
+    reverse(0, k - 1)
+    # Reverse remaining elements
+    reverse(k, n - 1)`,
+        explanation: "Reverse method: reverse all, then reverse first k and remaining elements. Most elegant approach."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Extra Array
+# Time: O(n), Space: O(n)
+def rotate_extra_array(nums, k):
+    if not nums:
+        return
+    
+    n = len(nums)
+    k = k % n
+    result = [0] * n
+    
+    for i in range(n):
+        result[(i + k) % n] = nums[i]
+    
+    for i in range(n):
+        nums[i] = result[i]`,
+        explanation: "Uses temporary array to store rotated elements. Simple to understand but uses extra space."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Cyclic Replacements
+# Time: O(n), Space: O(1)
+def rotate_cyclic(nums, k):
+    if not nums:
+        return
+    
+    n = len(nums)
+    k = k % n
+    count = 0
+    
+    for start in range(n):
+        if count >= n:
+            break
+            
+        current = start
+        prev = nums[start]
+        
+        while True:
+            next_pos = (current + k) % n
+            nums[next_pos], prev = prev, nums[next_pos]
+            current = next_pos
+            count += 1
+            
+            if start == current:
+                break`,
+        explanation: "Moves elements in cycles. Handles cases where gcd(n, k) > 1. In-place but more complex."
       },
     ],
     tips: [
@@ -1240,6 +1651,88 @@ public List<List<Integer>> threeSumBruteForce(int[] nums) {
         explanation:
           "Brute force checks all possible triplets. Simple but very inefficient for large arrays.",
       },
+      {
+        language: "Python",
+        code: `# Approach 1: Two Pointers (Optimal)
+# Time: O(n²), Space: O(1) excluding output
+def three_sum(nums):
+    result = []
+    nums.sort()
+    
+    for i in range(len(nums) - 2):
+        # Skip duplicates for first number
+        if i > 0 and nums[i] == nums[i - 1]:
+            continue
+        
+        left = i + 1
+        right = len(nums) - 1
+        
+        while left < right:
+            total = nums[i] + nums[left] + nums[right]
+            
+            if total == 0:
+                result.append([nums[i], nums[left], nums[right]])
+                
+                # Skip duplicates for second number
+                while left < right and nums[left] == nums[left + 1]:
+                    left += 1
+                # Skip duplicates for third number
+                while left < right and nums[right] == nums[right - 1]:
+                    right -= 1
+                
+                left += 1
+                right -= 1
+            elif total < 0:
+                left += 1
+            else:
+                right -= 1
+    
+    return result`,
+        explanation: "Sort array first, then use two pointers technique. Most efficient approach for 3Sum problem."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Hash Set
+# Time: O(n²), Space: O(n)
+def three_sum_hash_set(nums):
+    result = []
+    n = len(nums)
+    
+    for i in range(n - 2):
+        seen = set()
+        
+        for j in range(i + 1, n):
+            complement = -(nums[i] + nums[j])
+            
+            if complement in seen:
+                triplet = sorted([nums[i], nums[j], complement])
+                if triplet not in result:
+                    result.append(triplet)
+            
+            seen.add(nums[j])
+    
+    return result`,
+        explanation: "Uses hash set to find complement. Less efficient due to duplicate checking and list operations."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Brute Force
+# Time: O(n³), Space: O(1)
+def three_sum_brute_force(nums):
+    result = []
+    n = len(nums)
+    
+    for i in range(n - 2):
+        for j in range(i + 1, n - 1):
+            for k in range(j + 1, n):
+                if nums[i] + nums[j] + nums[k] == 0:
+                    triplet = sorted([nums[i], nums[j], nums[k]])
+                    if triplet not in result:
+                        result.append(triplet)
+    
+    return result`,
+        explanation: "Brute force checks all possible triplets. Simple but very inefficient for large arrays."
+      },
     ],
     tips: [
       "Sort array first to enable two-pointer technique",
@@ -1410,6 +1903,74 @@ public int maxAreaDP(int[] height) {
         explanation:
           "Dynamic programming approach that tracks maximum area ending at each position.",
       },
+      {
+        language: "Python",
+        code: `# Approach 1: Two Pointers (Optimal)
+# Time: O(n), Space: O(1)
+def max_area(height):
+    if not height or len(height) < 2:
+        return 0
+    
+    left = 0
+    right = len(height) - 1
+    max_water = 0
+    
+    while left < right:
+        # Calculate current area
+        width = right - left
+        current_height = min(height[left], height[right])
+        current_area = width * current_height
+        
+        max_water = max(max_water, current_area)
+        
+        # Move pointer with smaller height
+        if height[left] < height[right]:
+            left += 1
+        else:
+            right -= 1
+    
+    return max_water`,
+        explanation: "Two pointers start at both ends and move inward. Always move the pointer with smaller height."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Brute Force
+# Time: O(n²), Space: O(1)
+def max_area_brute_force(height):
+    if not height or len(height) < 2:
+        return 0
+    
+    max_water = 0
+    
+    for i in range(len(height)):
+        for j in range(i + 1, len(height)):
+            width = j - i
+            current_height = min(height[i], height[j])
+            area = width * current_height
+            max_water = max(max_water, area)
+    
+    return max_water`,
+        explanation: "Checks all possible pairs of lines. Simple to understand but inefficient for large arrays."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Dynamic Programming
+# Time: O(n), Space: O(n)
+def max_area_dp(height):
+    if not height or len(height) < 2:
+        return 0
+    
+    n = len(height)
+    dp = [0] * n
+    
+    for i in range(n):
+        for j in range(i + 1, n):
+            area = (j - i) * min(height[i], height[j])
+            dp[i] = max(dp[i], area)
+    
+    return max(dp)`,
+        explanation: "Dynamic programming approach that tracks maximum area ending at each position."
+      },
     ],
     tips: [
       "Two pointers start at both ends and move inward",
@@ -1560,6 +2121,66 @@ public int findMinLinear(int[] nums) {
 }`,
         explanation:
           "Simple linear scan approach. Used as fallback when binary search complexity is not needed.",
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Binary Search (Optimal)
+# Time: O(log n), Space: O(1)
+def find_min(nums):
+    if not nums:
+        return None
+    
+    left = 0
+    right = len(nums) - 1
+    
+    while left < right:
+        mid = (left + right) // 2
+        
+        if nums[mid] > nums[right]:
+            # Minimum is in right half
+            left = mid + 1
+        else:
+            # Minimum is in left half (including mid)
+            right = mid
+    
+    return nums[left]`,
+        explanation: "Binary search approach compares mid element with right element to determine rotation point."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Handle Duplicates
+# Time: O(log n), Space: O(1)
+def find_min_with_duplicates(nums):
+    if not nums:
+        return None
+    
+    left = 0
+    right = len(nums) - 1
+    
+    while left < right:
+        mid = (left + right) // 2
+        
+        if nums[mid] > nums[right]:
+            left = mid + 1
+        elif nums[mid] < nums[right]:
+            right = mid
+        else:
+            # nums[mid] == nums[right], can't determine which side
+            right -= 1
+    
+    return nums[left]`,
+        explanation: "Modified binary search that handles arrays with duplicate elements by decrementing right pointer."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Linear Scan (Fallback)
+# Time: O(n), Space: O(1)
+def find_min_linear(nums):
+    if not nums:
+        return None
+    
+    return min(nums)`,
+        explanation: "Simple linear scan approach. Used as fallback when binary search complexity is not needed."
       },
     ],
     tips: [
@@ -1833,6 +2454,123 @@ public List<List<Integer>> fourSumBruteForce(int[] nums, int target) {
         explanation:
           "Brute force checks all possible quadruplets. Simple but very inefficient for large arrays. Added duplicate skipping for efficiency.",
       },
+      {
+        language: "Python",
+        code: `# Approach 1: Two Pointers (Extension of 3Sum)
+# Time: O(n³), Space: O(1) excluding output
+def four_sum(nums, target):
+    if not nums or len(nums) < 4:
+        return []
+    
+    result = []
+    nums.sort()
+    n = len(nums)
+    
+    for i in range(n - 3):
+        if i > 0 and nums[i] == nums[i - 1]:
+            continue
+        
+        for j in range(i + 1, n - 2):
+            if j > i + 1 and nums[j] == nums[j - 1]:
+                continue
+            
+            left = j + 1
+            right = n - 1
+            
+            while left < right:
+                total = nums[i] + nums[j] + nums[left] + nums[right]
+                
+                if total == target:
+                    result.append([nums[i], nums[j], nums[left], nums[right]])
+                    
+                    while left < right and nums[left] == nums[left + 1]:
+                        left += 1
+                    while left < right and nums[right] == nums[right - 1]:
+                        right -= 1
+                    
+                    left += 1
+                    right -= 1
+                elif total < target:
+                    left += 1
+                else:
+                    right -= 1
+    
+    return result`,
+        explanation: "Extension of 3Sum with additional nested loop. Uses two pointers for innermost pair."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Hash Map
+# Time: O(n³), Space: O(n)
+def four_sum_hash(nums, target):
+    if not nums or len(nums) < 4:
+        return []
+    
+    result = []
+    n = len(nums)
+    nums.sort()
+    
+    for i in range(n - 3):
+        if i > 0 and nums[i] == nums[i - 1]:
+            continue
+        
+        for j in range(i + 1, n - 2):
+            if j > i + 1 and nums[j] == nums[j - 1]:
+                continue
+            
+            seen = set()
+            
+            for k in range(j + 1, n):
+                if k > j + 1 and nums[k] == nums[k - 1] and k < n - 1:
+                    continue
+                
+                complement = target - nums[i] - nums[j] - nums[k]
+                
+                if complement in seen:
+                    result.append([nums[i], nums[j], complement, nums[k]])
+                    
+                    while k + 1 < n and nums[k] == nums[k + 1]:
+                        k += 1
+                
+                seen.add(nums[k])
+    
+    return result`,
+        explanation: "Uses hash set to find complement of three numbers. Alternative approach to two pointers."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Brute Force
+# Time: O(n⁴), Space: O(1)
+def four_sum_brute_force(nums, target):
+    if not nums or len(nums) < 4:
+        return []
+    
+    result = []
+    n = len(nums)
+    nums.sort()
+    
+    for i in range(n - 3):
+        if i > 0 and nums[i] == nums[i - 1]:
+            continue
+        
+        for j in range(i + 1, n - 2):
+            if j > i + 1 and nums[j] == nums[j - 1]:
+                continue
+            
+            for k in range(j + 1, n - 1):
+                if k > j + 1 and nums[k] == nums[k - 1]:
+                    continue
+                
+                for l in range(k + 1, n):
+                    if l > k + 1 and nums[l] == nums[l - 1]:
+                        continue
+                    
+                    if nums[i] + nums[j] + nums[k] + nums[l] == target:
+                        result.append([nums[i], nums[j], nums[k], nums[l]])
+    
+    return result`,
+        explanation: "Brute force checks all possible quadruplets. Simple but very inefficient for large arrays. Added duplicate skipping for efficiency."
+      },
     ],
     tips: [
       "Extension of 3Sum with additional nested loop",
@@ -2046,6 +2784,91 @@ public int trapStack(int[] height) {
         explanation:
           "Stack approach processes water layer by layer. More complex but shows different perspective.",
       },
+      {
+        language: "Python",
+        code: `# Approach 1: Two Pointers (Optimal)
+# Time: O(n), Space: O(1)
+def trap(height):
+    if not height or len(height) <= 2:
+        return 0
+    
+    left = 0
+    right = len(height) - 1
+    left_max = 0
+    right_max = 0
+    water = 0
+    
+    while left < right:
+        if height[left] < height[right]:
+            if height[left] >= left_max:
+                left_max = height[left]
+            else:
+                water += left_max - height[left]
+            left += 1
+        else:
+            if height[right] >= right_max:
+                right_max = height[right]
+            else:
+                water += right_max - height[right]
+            right -= 1
+    
+    return water`,
+        explanation: "Two pointers approach tracks left and right maximum heights. Most space efficient solution."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Dynamic Programming
+# Time: O(n), Space: O(n)
+def trap_dp(height):
+    if not height or len(height) <= 2:
+        return 0
+    
+    n = len(height)
+    left_max = [0] * n
+    right_max = [0] * n
+    
+    left_max[0] = height[0]
+    for i in range(1, n):
+        left_max[i] = max(left_max[i - 1], height[i])
+    
+    right_max[n - 1] = height[n - 1]
+    for i in range(n - 2, -1, -1):
+        right_max[i] = max(right_max[i + 1], height[i])
+    
+    water = 0
+    for i in range(n):
+        water += min(left_max[i], right_max[i]) - height[i]
+    
+    return water`,
+        explanation: "DP approach pre-computes left and right maximum heights for each position."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Stack
+# Time: O(n), Space: O(n)
+def trap_stack(height):
+    if not height or len(height) <= 2:
+        return 0
+    
+    stack = []
+    water = 0
+    
+    for i in range(len(height)):
+        while stack and height[i] > height[stack[-1]]:
+            top = stack.pop()
+            
+            if not stack:
+                break
+            
+            distance = i - stack[-1] - 1
+            bounded_height = min(height[i], height[stack[-1]]) - height[top]
+            water += distance * bounded_height
+        
+        stack.append(i)
+    
+    return water`,
+        explanation: "Stack approach processes water layer by layer. More complex but shows different perspective."
+      },
     ],
     tips: [
       "Water level at position = min(max_left, max_right) - height[i]",
@@ -2229,6 +3052,74 @@ public List<List<Integer>> findSubarraysWithSum(int[] nums, int k) {
     
     return result;
 }`,
+        explanation:
+          "Modified version that returns the actual subarrays instead of just count.",
+      },
+      {
+        language: "Python",
+        approach: "optimal",
+        code: `# Approach 1: Prefix Sum with Hash Map (Optimal)
+# Time: O(n), Space: O(n)
+def subarray_sum(nums, k):
+    prefix_sum_count = {0: 1}  # Empty subarray has sum 0
+    count = 0
+    prefix_sum = 0
+    
+    for num in nums:
+        prefix_sum += num
+        
+        # Check if there's a prefix sum such that current - prefix = k
+        if prefix_sum - k in prefix_sum_count:
+            count += prefix_sum_count[prefix_sum - k]
+        
+        prefix_sum_count[prefix_sum] = prefix_sum_count.get(prefix_sum, 0) + 1
+    
+    return count`,
+        explanation:
+          "Uses prefix sums to convert to two-sum problem. Hash map tracks frequency of prefix sums seen.",
+      },
+      {
+        language: "Python",
+        approach: "brute-force",
+        code: `# Approach 2: Brute Force
+# Time: O(n²), Space: O(1)
+def subarray_sum_brute(nums, k):
+    count = 0
+    
+    for i in range(len(nums)):
+        current_sum = 0
+        for j in range(i, len(nums)):
+            current_sum += nums[j]
+            if current_sum == k:
+                count += 1
+    
+    return count`,
+        explanation:
+          "Checks all possible subarrays. Simple to understand but inefficient for large arrays.",
+      },
+      {
+        language: "Python",
+        approach: "moderate",
+        code: `# Approach 3: Return Actual Subarrays
+# Time: O(n), Space: O(n)
+def find_subarrays_with_sum(nums, k):
+    result = []
+    prefix_sum_indices = {0: [-1]}  # Empty subarray
+    
+    prefix_sum = 0
+    
+    for i in range(len(nums)):
+        prefix_sum += nums[i]
+        
+        if prefix_sum - k in prefix_sum_indices:
+            for start_index in prefix_sum_indices[prefix_sum - k]:
+                result.append(nums[start_index + 1:i + 1])
+        
+        if prefix_sum not in prefix_sum_indices:
+            prefix_sum_indices[prefix_sum] = []
+        prefix_sum_indices[prefix_sum].append(i)
+    
+    return result`,
         explanation:
           "Modified version that returns the actual subarrays instead of just count.",
       },
@@ -2478,6 +3369,93 @@ public boolean nextPermutationBuiltIn(int[] nums) {
         explanation:
           "Implementation similar to Java's Collections.nextPermutation(). Returns boolean to indicate if next permutation exists.",
       },
+      {
+        language: "Python",
+        approach: "optimal",
+        code: `# Approach 1: In-place Algorithm (Optimal)
+# Time: O(n), Space: O(1)
+def next_permutation(nums):
+    i = len(nums) - 2
+    
+    # Step 1: Find first decreasing element from right
+    while i >= 0 and nums[i] >= nums[i + 1]:
+        i -= 1
+    
+    if i >= 0:
+        # Step 2: Find smallest element greater than nums[i]
+        j = len(nums) - 1
+        while nums[j] <= nums[i]:
+            j -= 1
+        
+        # Step 3: Swap elements
+        nums[i], nums[j] = nums[j], nums[i]
+    
+    # Step 4: Reverse suffix
+    reverse(nums, i + 1)
+
+def reverse(nums, start):
+    left, right = start, len(nums) - 1
+    while left < right:
+        nums[left], nums[right] = nums[right], nums[left]
+        left += 1
+        right -= 1`,
+        explanation:
+          "In-place algorithm: find pivot, swap with next greater element, then reverse suffix.",
+      },
+      {
+        language: "Python",
+        approach: "moderate",
+        code: `# Approach 2: Generate All Permutations (for understanding)
+# Time: O(n!), Space: O(n!)
+def get_all_permutations(nums):
+    result = []
+    
+    def backtrack(current, remaining):
+        if len(remaining) == 0:
+            result.append(current[:])
+            return
+        
+        for i in range(len(remaining)):
+            current.append(remaining[i])
+            new_remaining = remaining[:i] + remaining[i+1:]
+            backtrack(current, new_remaining)
+            current.pop()
+    
+    backtrack([], nums)
+    return sorted(result)`,
+        explanation:
+          "Backtracking approach to generate all permutations. Used for understanding the concept.",
+      },
+      {
+        language: "Python",
+        approach: "moderate",
+        code: `# Approach 3: Built-in Next Permutation
+# Time: O(n), Space: O(1)
+def next_permutation_builtin(nums):
+    # Find longest non-increasing suffix
+    i = len(nums) - 1
+    while i > 0 and nums[i - 1] >= nums[i]:
+        i -= 1
+    
+    # If no pivot found, array is largest permutation
+    if i <= 0:
+        nums.reverse()
+        return False
+    
+    # Find rightmost successor to pivot
+    j = len(nums) - 1
+    while nums[j] <= nums[i - 1]:
+        j -= 1
+    
+    # Swap with pivot
+    nums[i - 1], nums[j] = nums[j], nums[i - 1]
+    
+    # Reverse the suffix
+    nums[i:] = nums[i:][::-1]
+    return True`,
+        explanation:
+          "Implementation similar to Python's itertools.permutations(). Returns boolean to indicate if next permutation exists.",
+      },
     ],
     tips: [
       "Find rightmost character that is smaller than character next to it",
@@ -2673,6 +3651,87 @@ public int[] maxSlidingWindowHeap(int[] nums, int k) {
         explanation:
           "Java implementation using PriorityQueue (Max Heap). Maintains the window's maximum at the top of the heap.",
       },
+      {
+        language: "Python",
+        approach: "optimal",
+        code: `# Approach 1: Deque (Optimal)
+# Time: O(n), Space: O(k)
+from collections import deque
+
+def max_sliding_window(nums, k):
+    if not nums or k == 0:
+        return []
+    
+    result = []
+    dq = deque()  # Store indices
+    
+    for i in range(len(nums)):
+        # Remove indices outside current window
+        while dq and dq[0] <= i - k:
+            dq.popleft()
+        
+        # Remove indices of smaller elements (maintain decreasing order)
+        while dq and nums[dq[-1]] <= nums[i]:
+            dq.pop()
+        
+        dq.append(i)
+        
+        # Start recording results after first window
+        if i >= k - 1:
+            result.append(nums[dq[0]])
+    
+    return result`,
+        explanation:
+          "Deque maintains indices in decreasing order of values. Front always contains maximum of current window.",
+      },
+      {
+        language: "Python",
+        approach: "brute-force",
+        code: `# Approach 2: Brute Force
+# Time: O(n * k), Space: O(1)
+def max_sliding_window_brute(nums, k):
+    if not nums or k == 0:
+        return []
+    
+    result = []
+    
+    for i in range(len(nums) - k + 1):
+        max_val = max(nums[i:i + k])
+        result.append(max_val)
+    
+    return result`,
+        explanation:
+          "Checks maximum in each window. Simple to understand but inefficient for large windows.",
+      },
+      {
+        language: "Python",
+        approach: "moderate",
+        code: `# Approach 3: Max Heap (Priority Queue)
+# Time: O(n log k), Space: O(k)
+import heapq
+
+def max_sliding_window_heap(nums, k):
+    if not nums or k == 0:
+        return []
+    
+    result = []
+    max_heap = []  # Store (-value, index) for max heap
+    
+    for i in range(len(nums)):
+        # Add current element (negative for max heap)
+        heapq.heappush(max_heap, (-nums[i], i))
+        
+        # Remove elements outside window
+        while max_heap and max_heap[0][1] <= i - k:
+            heapq.heappop(max_heap)
+        
+        if i >= k - 1:
+            result.append(-max_heap[0][0])
+    
+    return result`,
+        explanation:
+          "Uses priority queue to track maximum. Alternative approach with different time complexity trade-offs.",
+      },
     ],
     tips: [
       "Deque maintains indices in decreasing order of values",
@@ -2859,6 +3918,73 @@ public int firstMissingPositiveSet(int[] nums) {
 }`,
         explanation:
           "Java implementation using HashSet. Straightforward approach but uses O(n) extra space.",
+      },
+      {
+        language: "Python",
+        approach: "optimal",
+        code: `# Approach 1: Cyclic Sort (Optimal)
+# Time: O(n), Space: O(1)
+def first_missing_positive(nums):
+    n = len(nums)
+    
+    # Step 1: Place each positive number i at index i-1
+    for i in range(n):
+        while (nums[i] > 0 and nums[i] <= n and 
+               nums[nums[i] - 1] != nums[i]):
+            nums[nums[i] - 1], nums[i] = nums[i], nums[nums[i] - 1]
+    
+    # Step 2: Find first missing positive
+    for i in range(n):
+        if nums[i] != i + 1:
+            return i + 1
+    
+    return n + 1`,
+        explanation:
+          "Cyclic sort places each positive number at its correct index, then finds first missing positive.",
+      },
+      {
+        language: "Python",
+        approach: "moderate",
+        code: `# Approach 2: Array as Hash Set
+# Time: O(n), Space: O(1)
+def first_missing_positive_hash(nums):
+    n = len(nums)
+    
+    # Step 1: Handle edge cases and mark presence using array indices
+    for i in range(n):
+        if nums[i] <= 0 or nums[i] > n:
+            nums[i] = n + 1  # Mark as invalid
+    
+    # Step 2: Use sign to mark presence
+    for i in range(n):
+        num = abs(nums[i])
+        if num <= n:
+            nums[num - 1] = -abs(nums[num - 1])
+    
+    # Step 3: Find first positive index
+    for i in range(n):
+        if nums[i] > 0:
+            return i + 1
+    
+    return n + 1`,
+        explanation:
+          "Uses array indices and sign manipulation to mark presence of numbers. In-place approach.",
+      },
+      {
+        language: "Python",
+        approach: "moderate",
+        code: `# Approach 3: Set Approach
+# Time: O(n), Space: O(n)
+def first_missing_positive_set(nums):
+    num_set = set(nums)
+    
+    for i in range(1, len(nums) + 2):
+        if i not in num_set:
+            return i
+    
+    return len(nums) + 1`,
+        explanation:
+          "Uses hash set to track seen numbers. Simple but uses extra space.",
       },
     ],
     tips: [

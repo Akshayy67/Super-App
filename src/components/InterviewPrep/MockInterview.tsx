@@ -105,6 +105,15 @@ export const MockInterview: React.FC = () => {
   // Feedback state
   const [showFeedback, setShowFeedback] = useState(false);
 
+  // Reset to templates view when component mounts or tab is clicked
+  useEffect(() => {
+    setActiveTab("templates");
+    setSelectedTemplate("general");
+    setIsInterviewStarted(false);
+    setActiveSession(null);
+    setShowJAMSession(false);
+  }, []);
+
   useEffect(() => {
     // Check VAPI configuration and browser compatibility
     const checkSetup = () => {

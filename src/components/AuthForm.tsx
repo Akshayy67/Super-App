@@ -207,32 +207,32 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
   }
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-white">
+    <div className="min-h-screen relative flex items-center justify-center container-safe overflow-hidden bg-white">
       {/* Background Particle Effect */}
-      <div className="absolute inset-0 z-0 opacity-60">
+      <div className="absolute inset-0 z-0 opacity-40 sm:opacity-60">
         <ParticleField
-          baseCount={200}
+          baseCount={150}
           connectLines={true}
-          lineDistance={180}
-          speedFactor={0.5}
+          lineDistance={150}
+          speedFactor={0.4}
           particleColor="#1e40af"
           glowColor="#3b82f6"
-          brightness={1.4}
-          sizeFactor={1.3}
-          lineColor="rgba(30, 64, 175, 0.5)"
-          lineWidthFactor={0.9}
+          brightness={1.2}
+          sizeFactor={1.1}
+          lineColor="rgba(30, 64, 175, 0.4)"
+          lineWidthFactor={0.8}
         />
       </div>
 
       {/* Subtle Light Blue Accents */}
-      <div className="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-100/60 to-indigo-100/60 rounded-full blur-3xl animate-pulse-slow"></div>
-      <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-50/70 to-cyan-50/70 rounded-full blur-3xl animate-pulse-slow animation-delay-2000"></div>
+      <div className="absolute -top-32 -left-32 sm:-top-40 sm:-left-40 w-64 h-64 sm:w-80 sm:h-80 bg-gradient-to-br from-blue-100/60 to-indigo-100/60 rounded-full blur-3xl animate-pulse-slow"></div>
+      <div className="absolute -bottom-32 -right-32 sm:-bottom-40 sm:-right-40 w-64 h-64 sm:w-80 sm:h-80 bg-gradient-to-br from-blue-50/70 to-cyan-50/70 rounded-full blur-3xl animate-pulse-slow animation-delay-2000"></div>
 
       {/* Content Layer */}
-      <div className="w-full max-w-md z-10 relative">
+      <div className="w-full max-w-sm sm:max-w-md z-10 relative">
         {/* Enhanced Auth Card */}
         <div
-          className={`relative bg-white rounded-3xl shadow-2xl border border-blue-100/50 p-12 transition-all duration-700 backdrop-blur-sm hover:shadow-3xl hover:scale-[1.02] ${
+          className={`relative bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-100/50 p-6 sm:p-8 lg:p-12 transition-all duration-700 backdrop-blur-sm hover:shadow-3xl hover:scale-[1.02] ${
             mounted ? "opacity-100" : "opacity-0"
           }`}
         >
@@ -241,18 +241,18 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
           <div className="absolute inset-0 bg-gradient-to-br from-blue-100/20 to-purple-100/20 rounded-3xl blur-2xl -z-20 animate-pulse-slow"></div>
           
           {/* App Logo with Enhanced Effects */}
-          <div className="flex flex-col items-center mb-12">
+          <div className="flex flex-col items-center mb-8 sm:mb-12">
             <div className="relative group">
               {/* Multiple glow layers for depth */}
               <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full blur-lg opacity-20 animate-pulse-slow"></div>
               <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full blur-xl opacity-15 animate-pulse-slow animation-delay-2000"></div>
               
               {/* Logo container with hover effects */}
-              <div className="relative z-10 p-4 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100/30 group-hover:border-blue-200/50 transition-all duration-500 group-hover:shadow-lg">
+              <div className="relative z-10 p-3 sm:p-4 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100/30 group-hover:border-blue-200/50 transition-all duration-500 group-hover:shadow-lg">
                 <img
                   src="/SuperApp.png"
                   alt="Super App"
-                  className={`h-24 w-auto drop-shadow-lg animate-float transition-all duration-700 group-hover:scale-110 ${
+                  className={`h-16 sm:h-20 lg:h-24 w-auto drop-shadow-lg animate-float transition-all duration-700 group-hover:scale-110 ${
                     mounted ? "opacity-100" : "opacity-0"
                   }`}
                 />
@@ -261,7 +261,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
             
             {/* Enhanced Title */}
             <h1
-              className={`text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 bg-clip-text text-transparent tracking-tight animate-reveal animation-delay-500 ${
+              className={`text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 bg-clip-text text-transparent tracking-tight animate-reveal animation-delay-500 text-center ${
                 mounted ? "opacity-100" : "opacity-0"
               }`}
             >

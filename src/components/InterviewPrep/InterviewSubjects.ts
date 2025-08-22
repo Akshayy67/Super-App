@@ -1,11 +1,11 @@
 // Code implementation interface
 export interface CodeImplementation {
-  language: "pseudo" | "java" | "python";
-  approach: "brute-force" | "moderate" | "optimal";
+  language: string;
+  approach?: "brute-force" | "moderate" | "optimal" | "general";
   code: string;
-  timeComplexity: string;
-  spaceComplexity: string;
-  explanation: string;
+  timeComplexity?: string;
+  spaceComplexity?: string;
+  explanation?: string;
 }
 
 // Question interface definition
@@ -17,11 +17,7 @@ export interface Question {
   type: "behavioral" | "technical" | "situational" | "general";
   sampleAnswer?: string;
   approach?: string; // Separate approach explanation from sample answer
-  codeImplementation?: {
-    language: string;
-    code: string;
-    explanation?: string;
-  }[];
+  codeImplementation?: CodeImplementation[];
   tips?: string[];
   followUps?: string[];
   tags?: string[];

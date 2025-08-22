@@ -50,6 +50,14 @@ export const QuestionBank: React.FC = () => {
     }
   }, []);
 
+  // Reset to categories view when component mounts or tab is clicked
+  useEffect(() => {
+    setSelectedCategory("all");
+    setSearchQuery("");
+    setSelectedDifficulty("all");
+    setSelectedType("all");
+  }, []);
+
   // Define questions based on selected category
   const questions = useMemo(() => {
     if (selectedCategory && selectedCategory !== "all") {
@@ -485,73 +493,73 @@ export const QuestionBank: React.FC = () => {
   console.log(`Total questions before filtering: ${questions.length}`);
 
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
-      <div className="text-center">
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-500 via-purple-600 to-pink-500 rounded-full mb-6 shadow-lg">
-          <BookOpen className="w-10 h-10 text-white" />
+    <div className="space-y-6">
+      {/* Welcome Header - Only show when viewing categories */}
+      {selectedCategory === "all" && (
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">
+                Question Bank Hub
+              </h2>
+              <p className="text-blue-100 mb-4">
+                Choose a category to start practicing with our comprehensive collection of interview questions
+              </p>
+              <div className="flex items-center space-x-2">
+                <BookOpen className="w-5 h-5" />
+                <span className="text-sm">Select a category below to begin</span>
+              </div>
+            </div>
+            <div className="hidden sm:block">
+              <BookOpen className="w-16 h-16 text-white/20" />
+            </div>
+          </div>
         </div>
-        <h1 className="text-4xl font-bold text-gray-900 mb-3">
-          Interview Question Bank
-        </h1>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-          Master your interview skills with our comprehensive collection of
-          questions
-        </p>
-
-      </div>
+      )}
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-        <div className="flex flex-col lg:flex-row gap-4">
+      <div className="bg-white rounded-xl p-6 border border-gray-200">
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Search */}
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search questions, tags, or keywords..."
+                placeholder="Search questions by keywords or tags..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-lg"
-            >
-              <option value="all">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name} ({cat.questionCount})
-                </option>
-              ))}
-            </select>
-
+          {/* Difficulty Filter */}
+          <div className="sm:w-32">
             <select
               value={selectedDifficulty}
               onChange={(e) => setSelectedDifficulty(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-lg"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="all">All Levels</option>
+              <option value="all">All Difficulties</option>
               <option value="easy">Easy</option>
               <option value="medium">Medium</option>
               <option value="hard">Hard</option>
             </select>
+          </div>
 
+          {/* Type Filter */}
+          <div className="sm:w-32">
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-lg"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">All Types</option>
-              <option value="general">General</option>
-              <option value="behavioral">Behavioral</option>
               <option value="technical">Technical</option>
+              <option value="behavioral">Behavioral</option>
               <option value="situational">Situational</option>
+              <option value="general">General</option>
             </select>
           </div>
         </div>

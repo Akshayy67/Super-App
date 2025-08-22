@@ -81,6 +81,15 @@ export const InterviewTips: React.FC = () => {
   ); // Default 2 weeks from now
   const [prepTimeline, setPrepTimeline] = useState<TimelineStep[]>([]);
 
+  // Reset to tips overview when component mounts or tab is clicked
+  useEffect(() => {
+    setIsPracticeModeActive(false);
+    setCurrentPracticeTip(null);
+    setPracticeFeedback("");
+    setPracticeResponse("");
+    setSearchQuery("");
+  }, []);
+
   // Generate prep timeline based on interview date
   useEffect(() => {
     if (interviewDate) {

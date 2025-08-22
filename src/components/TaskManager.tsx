@@ -626,24 +626,24 @@ export const TaskManager: React.FC = () => {
   };
 
   return (
-    <div className="bg-white h-full flex flex-col" data-component="tasks">
+    <div className="bg-white h-full flex flex-col scroll-area" data-component="tasks">
       {/* Header */}
-      <div className="border-b border-gray-200 p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 space-y-4 sm:space-y-0">
+      <div className="border-b border-gray-200 p-responsive">
+        <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+            <h2 className="text-responsive-xl font-bold text-gray-900 mb-2">
               To-Do List
             </h2>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto scrollbar-hide">
               <StreakDisplay streakData={streakData} className="min-w-max" />
             </div>
           </div>
-          <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
+          <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0 overflow-x-auto">
             {/* Sort Dropdown */}
             <div className="relative dropdown-container">
               <button
                 onClick={() => setShowSortOptions(!showSortOptions)}
-                className="flex items-center px-2 sm:px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors text-sm"
+                className="btn-touch flex items-center px-2 sm:px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors text-sm touch-manipulation"
               >
                 <ArrowUpDown className="w-4 h-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Sort</span>
@@ -711,7 +711,7 @@ export const TaskManager: React.FC = () => {
 
             <button
               onClick={() => setShowAddTask(true)}
-              className="flex items-center px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm sm:text-base"
+              className="btn-touch flex items-center px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm sm:text-base touch-manipulation"
             >
               <Plus className="w-4 h-4 mr-1 sm:mr-2" />
               <span className="hidden xs:inline">Add Task</span>
@@ -908,7 +908,7 @@ export const TaskManager: React.FC = () => {
       </div>
 
       {/* Task List */}
-      <div className="flex-1 overflow-auto p-4 sm:p-6">
+      <div className="flex-1 overflow-auto scroll-area container-safe py-responsive">
         {/* Search Results Indicator */}
         {(searchQuery.trim() || getActiveFiltersCount() > 0) && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1017,8 +1017,8 @@ export const TaskManager: React.FC = () => {
 
       {/* Add/Edit Task Modal */}
       {(showAddTask || editingTask) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-6">
+          <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto scroll-area">
             <div className="p-4 sm:p-6 border-b border-gray-200">
               <h3 className="text-base sm:text-lg font-semibold">
                 {editingTask ? "Edit Task" : "Add New Task"}
