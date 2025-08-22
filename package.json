@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "vercel-build": "vite build",
+    "build": "ROLLUP_SKIP_NATIVE=true vite build",
+    "vercel-build": "ROLLUP_SKIP_NATIVE=true vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

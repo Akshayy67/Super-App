@@ -27,4 +27,8 @@ export default defineConfig({
     port: 4173,
     host: true,
   },
+  // Force Vite to use pure JavaScript implementation
+  define: {
+    'process.env.ROLLUP_SKIP_NATIVE': 'true'
+  }
 });
