@@ -626,12 +626,12 @@ export const TaskManager: React.FC = () => {
   };
 
   return (
-    <div className="bg-white h-full flex flex-col scroll-area" data-component="tasks">
+    <div className="bg-white dark:bg-gray-900 h-full flex flex-col scroll-area" data-component="tasks">
       {/* Header */}
-      <div className="border-b border-gray-200 p-responsive">
+      <div className="border-b border-gray-200 dark:border-gray-700 p-responsive">
         <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
           <div className="flex-1 min-w-0">
-            <h2 className="text-responsive-xl font-bold text-gray-900 mb-2">
+            <h2 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               To-Do List
             </h2>
             <div className="overflow-x-auto scrollbar-hide">

@@ -134,27 +134,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
 
   const getColorClasses = (color: string, urgent?: boolean) => {
     const colors = {
-      blue: "bg-blue-100 text-blue-600",
-      green: "bg-green-100 text-green-600",
-      purple: "bg-purple-100 text-purple-600",
-      yellow: "bg-yellow-100 text-yellow-600",
+      blue: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
+      green: "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400",
+      purple: "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400",
+      yellow: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400",
       orange: urgent
-        ? "bg-orange-100 text-orange-600"
-        : "bg-orange-50 text-orange-500",
-      red: urgent ? "bg-red-100 text-red-600" : "bg-red-50 text-red-500",
+        ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
+        : "bg-orange-50 dark:bg-orange-900/20 text-orange-500 dark:text-orange-400",
+      red: urgent ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400",
     };
     return colors[color as keyof typeof colors] || colors.blue;
   };
 
   return (
-    <div className="bg-gray-50 h-full overflow-auto scroll-area" data-component="dashboard">
+    <div className="bg-gray-50 dark:bg-gray-900 h-full overflow-auto scroll-area" data-component="dashboard">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-responsive">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-responsive">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-responsive-xl font-bold text-gray-900 mb-2">
+          <h1 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
             Welcome back, {user?.username}!
           </h1>
-          <p className="text-responsive-sm text-gray-600">
+          <p className="text-responsive-sm text-gray-600 dark:text-gray-400">
             Here's an overview of your study progress and recent activity.
           </p>
         </div>
@@ -173,10 +173,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
               >
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1 truncate">
+                    <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
                       {stat.title}
                     </p>
-                    <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900">
+                    <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
                       {stat.value}
                     </p>
                   </div>
@@ -196,18 +196,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
 
         {/* Overdue Tasks Alert - Enhanced mobile layout */}
         {stats.overdueTasks > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
             <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center">
               <div className="flex items-start sm:items-center flex-1">
-                <div className="bg-red-100 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
+                <div className="bg-red-100 dark:bg-red-900/30 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-sm sm:text-base font-medium text-red-800">
+                  <h3 className="text-sm sm:text-base font-medium text-red-800 dark:text-red-300">
                     {stats.overdueTasks} overdue task
                     {stats.overdueTasks > 1 ? "s" : ""}
                   </h3>
-                  <p className="text-xs sm:text-sm text-red-600 mt-1">
+                  <p className="text-xs sm:text-sm text-red-600 dark:text-red-400 mt-1">
                     You have tasks that are past their due date. Review them to
                     stay on track.
                   </p>
@@ -215,7 +215,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
               </div>
               <button
                 onClick={() => onViewChange("tasks")}
-                className="btn-touch px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium self-start sm:self-auto"
+                className="btn-touch px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors text-sm font-medium self-start sm:self-auto"
               >
                 View Tasks
               </button>
@@ -228,27 +228,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
           {/* Quick Actions - Improved mobile layout */}
           <div className="xl:col-span-1 order-2 xl:order-1">
             <div className="card-responsive">
-              <h2 className="text-responsive-base font-semibold text-gray-900 mb-4">
+              <h2 className="text-responsive-base font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Quick Actions
               </h2>
               <div className="grid grid-cols-1 xs:grid-cols-2 xl:grid-cols-1 gap-3">
                 <button
                   onClick={() => onViewChange("files")}
-                  className="w-full flex items-center px-3 sm:px-4 py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm btn-touch"
+                  className="w-full flex items-center px-3 sm:px-4 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm btn-touch"
                 >
                   <Upload className="w-5 h-5 mr-3 flex-shrink-0" />
                   <span className="truncate">Upload New Files</span>
                 </button>
                 <button
                   onClick={() => onViewChange("tasks")}
-                  className="w-full flex items-center px-3 sm:px-4 py-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm btn-touch"
+                  className="w-full flex items-center px-3 sm:px-4 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors text-sm btn-touch"
                 >
                   <CheckSquare className="w-5 h-5 mr-3 flex-shrink-0" />
                   <span className="truncate">Add New Task</span>
                 </button>
                 <button
                   onClick={() => onViewChange("notes")}
-                  className="w-full flex items-center px-3 sm:px-4 py-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors text-sm btn-touch"
+                  className="w-full flex items-center px-3 sm:px-4 py-3 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors text-sm btn-touch"
                 >
                   <StickyNote className="w-5 h-5 mr-3 flex-shrink-0" />
                   <span className="truncate">Create Note</span>
