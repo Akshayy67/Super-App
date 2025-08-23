@@ -68,6 +68,18 @@ interface Team {
   updatedAt: Timestamp;
 }
 
+interface ProjectTask {
+  id: string;
+  title: string;
+  description: string;
+  status: 'pending' | 'in-progress' | 'completed' | 'blocked';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  assignedTo: string;
+  dueDate?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 interface Project {
   id: string;
   teamId: string;
@@ -81,6 +93,7 @@ interface Project {
   members: string[];
   tasks: number;
   completedTasks: number;
+  projectTasks: ProjectTask[]; // Add actual task details
   documents: string[];
   tags: string[];
   color: string;
@@ -123,6 +136,7 @@ export const TeamWorkspace: React.FC = () => {
   const [currentUserRole, setCurrentUserRole] = useState<string>('member');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeView, setActiveView] = useState<'overview' | 'members' | 'projects' | 'activity'>('overview');
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadTeams();
@@ -185,6 +199,83 @@ export const TeamWorkspace: React.FC = () => {
       setActivities(activitiesData.sort((a, b) => 
         b.timestamp.toMillis() - a.timestamp.toMillis()
       ));
+    });
+  };
+
+  const addSampleTodos = () => {
+    if (projects.length === 0) return;
+    
+    const sampleTodos: ProjectTask[] = [
+      {
+        id: `todo-${Date.now()}-1`,
+        title: 'Design user interface',
+        description: 'Create wireframes and mockups for the main dashboard',
+        status: 'in-progress',
+        priority: 'high',
+        assignedTo: Object.keys(selectedTeam?.members || {})[0] || '',
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: `todo-${Date.now()}-2`,
+        title: 'Set up database schema',
+        description: 'Design and implement the database structure',
+        status: 'pending',
+        priority: 'medium',
+        assignedTo: Object.keys(selectedTeam?.members || {})[0] || '',
+        dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: `todo-${Date.now()}-3`,
+        title: 'Write API documentation',
+        description: 'Document all endpoints and their usage',
+        status: 'completed',
+        priority: 'low',
+        assignedTo: Object.keys(selectedTeam?.members || {})[0] || '',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: `todo-${Date.now()}-4`,
+        title: 'Fix authentication bug',
+        description: 'Resolve login issues in production environment',
+        status: 'blocked',
+        priority: 'urgent',
+        assignedTo: Object.keys(selectedTeam?.members || {})[0] || '',
+        dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ];
+
+    // Add sample todos to the first project
+    const updatedProjects = projects.map((project, index) => {
+      if (index === 0) {
+        return {
+          ...project,
+          projectTasks: sampleTodos,
+          tasks: sampleTodos.length,
+          completedTasks: sampleTodos.filter(t => t.status === 'completed').length
+        };
+      }
+      return project;
+    });
+
+    setProjects(updatedProjects);
+  };
+
+  const toggleProjectExpansion = (projectId: string) => {
+    setExpandedProjects(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(projectId)) {
+        newSet.delete(projectId);
+      } else {
+        newSet.add(projectId);
+      }
+      return newSet;
     });
   };
 
@@ -318,6 +409,7 @@ export const TeamWorkspace: React.FC = () => {
       members: [realTimeAuth.getCurrentUser()?.id || ''],
       tasks: 0,
       completedTasks: 0,
+      projectTasks: [], // Initialize with empty array
       documents: [],
       tags: [],
       color: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)]
@@ -652,15 +744,24 @@ export const TeamWorkspace: React.FC = () => {
               <div className="space-y-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold dark:text-white">Projects</h2>
-                  {hasPermission('create') && (
+                  <div className="flex gap-2">
+                    {hasPermission('create') && (
+                      <button
+                        onClick={() => setShowProjectModal(true)}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center space-x-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>New Project</span>
+                      </button>
+                    )}
                     <button
-                      onClick={() => setShowProjectModal(true)}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center space-x-2"
+                      onClick={() => addSampleTodos()}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2"
                     >
                       <Plus className="w-4 h-4" />
-                      <span>New Project</span>
+                      <span>Add Sample Todos</span>
                     </button>
-                  )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -701,7 +802,103 @@ export const TeamWorkspace: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between text-sm">
+                      {/* Project Todos Section */}
+                      {project.projectTasks && project.projectTasks.length > 0 && (
+                        <div className="mt-4 border-t pt-4">
+                          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4" />
+                              Recent Todos ({project.projectTasks.length})
+                            </div>
+                            <div className="flex gap-1">
+                              <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                                {project.projectTasks.filter(t => t.status === 'pending').length} Pending
+                              </span>
+                              <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                                {project.projectTasks.filter(t => t.status === 'completed').length} Done
+                              </span>
+                            </div>
+                          </h4>
+                          <div className={`space-y-2 overflow-y-auto ${
+                            expandedProjects.has(project.id) ? 'max-h-96' : 'max-h-32'
+                          }`}>
+                            {project.projectTasks.slice(0, expandedProjects.has(project.id) ? undefined : 3).map((task) => (
+                              <div
+                                key={task.id}
+                                className={`flex items-center gap-2 p-2 rounded-lg text-sm ${
+                                  task.status === 'completed' 
+                                    ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
+                                    : task.status === 'in-progress'
+                                    ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                                    : task.status === 'blocked'
+                                    ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                                    : 'bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600'
+                                }`}
+                              >
+                                <div className={`w-2 h-2 rounded-full ${
+                                  task.priority === 'urgent' ? 'bg-red-500' :
+                                  task.priority === 'high' ? 'bg-orange-500' :
+                                  task.priority === 'medium' ? 'bg-yellow-500' :
+                                  'bg-green-500'
+                                }`} />
+                                <div className="flex-1 min-w-0">
+                                  <p className={`font-medium truncate ${
+                                    task.status === 'completed' 
+                                      ? 'line-through text-gray-500 dark:text-gray-400' 
+                                      : 'text-gray-900 dark:text-gray-100'
+                                  }`}>
+                                    {task.title}
+                                  </p>
+                                  {task.description && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                      {task.description}
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    Assigned to: {selectedTeam?.members[task.assignedTo]?.name || 'Unknown'}
+                                    {task.dueDate && (
+                                      <span className="ml-2">
+                                        • Due: {task.dueDate.toLocaleDateString()}
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-1 text-xs">
+                                  {task.status === 'completed' && (
+                                    <CheckCircle className="w-3 h-3 text-green-600 dark:text-green-400" />
+                                  )}
+                                  {task.status === 'in-progress' && (
+                                    <div className="w-3 h-3 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
+                                  )}
+                                  {task.status === 'blocked' && (
+                                    <AlertCircle className="w-3 h-3 text-red-600 dark:text-red-400" />
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                            {project.projectTasks.length > 3 && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 text-center py-1">
+                                +{project.projectTasks.length - 3} more todos
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* View All Todos Button */}
+                          {project.projectTasks.length > 3 && (
+                            <button
+                              onClick={() => toggleProjectExpansion(project.id)}
+                              className="w-full mt-3 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium py-1 px-2 rounded border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                            >
+                              {expandedProjects.has(project.id) 
+                                ? 'Show Less' 
+                                : `View All ${project.projectTasks.length} Todos`
+                              }
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between text-sm mt-4">
                         <div className="flex -space-x-2">
                           {project.members.slice(0, 3).map((memberId) => {
                             const member = selectedTeam.members[memberId];
