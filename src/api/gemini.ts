@@ -1,16 +1,40 @@
 export const callGeminiAPI = async (prompt: string) => {
   try {
-    const response = await fetch("/api/gemini", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ prompt }),
-    });
+    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+    if (!API_KEY) {
+      throw new Error("Gemini API key not configured");
+    }
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt,
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024,
+          },
+        }),
+      }
+    );
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Gemini API call failed");
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -23,4 +47,4 @@ export const callGeminiAPI = async (prompt: string) => {
   }
 };
 
-// SendGrid functionality removed - using EmailJS instead
+// Using EmailJS for emails (client-side)

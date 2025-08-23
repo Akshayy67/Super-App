@@ -1,7 +1,4 @@
 {
-  "functions": {
-    "api/*.js": "nodejs20.x"
-  },
   "rewrites": [
     {
       "source": "/(.*)",
