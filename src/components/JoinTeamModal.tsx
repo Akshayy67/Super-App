@@ -3,7 +3,7 @@ import { Users, Mail, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 import { realTimeAuth } from '../utils/realTimeAuth';
 import { emailService } from '../utils/emailService';
 import { db } from '../config/firebase';
-import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, serverTimestamp, getDoc } from 'firebase/firestore';
 
 interface JoinTeamModalProps {
   isOpen: boolean;

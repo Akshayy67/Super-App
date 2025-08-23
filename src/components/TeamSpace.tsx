@@ -53,6 +53,8 @@ import { emailService, TeamInvite } from '../utils/emailService';
 import { googleDriveService } from '../utils/googleDriveService';
 import { JoinTeamModal } from './JoinTeamModal';
 import { EmailTestPanel } from './EmailTestPanel';
+import { FileShareModal } from './FileShareModal';
+import { TeamRoleManager } from './TeamRoleManager';
 
 interface TeamMember {
   id: string;
@@ -139,6 +141,7 @@ export const TeamSpace: React.FC = () => {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [showJoinTeamModal, setShowJoinTeamModal] = useState(false);
   const [showEmailTest, setShowEmailTest] = useState(false);
+  const [showFileShareModal, setShowFileShareModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   const user = realTimeAuth.getCurrentUser();
@@ -874,41 +877,114 @@ export const TeamSpace: React.FC = () => {
             )}
 
             {activeTab === 'files' && (
-              <div className="p-6">
+              <div className="p-6 space-y-6">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                  <div className="p-4 border-b border-gray-200">
+                  <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                       <Folder className="w-5 h-5 text-blue-600" />
-                      Shared Resources
+                      Shared Files ({sharedResources.length})
                     </h2>
+                    <button
+                      onClick={() => setShowFileShareModal(true)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      Share File
+                    </button>
                   </div>
                   <div className="p-4">
                     {sharedResources.length > 0 ? (
-                      <div className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {sharedResources.map((resource) => (
                           <div
                             key={resource.id}
-                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                            className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
                           >
-                            <div className="flex items-center gap-3">
-                              <FileText className="w-5 h-5 text-gray-600" />
-                              <div>
-                                <p className="font-medium text-gray-900">{resource.title}</p>
-                                <p className="text-sm text-gray-600">
-                                  Shared by {resource.sharedBy} • {resource.sharedAt.toLocaleDateString()}
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0">
+                                {resource.type === 'file' && <FileText className="w-8 h-8 text-blue-500" />}
+                                {resource.type === 'note' && <FileText className="w-8 h-8 text-green-500" />}
+                                {resource.type === 'task' && <CheckCircle className="w-8 h-8 text-orange-500" />}
+                                {resource.type === 'flashcard' && <Star className="w-8 h-8 text-purple-500" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-medium text-gray-900 truncate">{resource.title}</h3>
+                                <p className="text-sm text-gray-600 mt-1">
+                                  Shared by {teamMembers.find(m => m.id === resource.sharedBy)?.name || 'Unknown'}
                                 </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {resource.sharedAt.toLocaleDateString()}
+                                </p>
+                                {resource.tags && resource.tags.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {resource.tags.slice(0, 2).map((tag) => (
+                                      <span
+                                        key={tag}
+                                        className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
+                                      >
+                                        <Hash className="w-3 h-3 mr-1" />
+                                        {tag}
+                                      </span>
+                                    ))}
+                                    {resource.tags.length > 2 && (
+                                      <span className="text-xs text-gray-500">+{resource.tags.length - 2} more</span>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              {resource.permissions === 'view' && <Eye className="w-4 h-4 text-gray-500" />}
-                              {resource.permissions === 'edit' && <Edit3 className="w-4 h-4 text-blue-500" />}
-                              {resource.permissions === 'admin' && <Shield className="w-4 h-4 text-green-500" />}
+                            <div className="flex items-center justify-between mt-4">
+                              <div className="flex items-center gap-1">
+                                {resource.permissions === 'view' && (
+                                  <span className="flex items-center gap-1 text-xs text-gray-500">
+                                    <Eye className="w-3 h-3" />
+                                    View
+                                  </span>
+                                )}
+                                {resource.permissions === 'edit' && (
+                                  <span className="flex items-center gap-1 text-xs text-blue-600">
+                                    <Edit3 className="w-3 h-3" />
+                                    Edit
+                                  </span>
+                                )}
+                                {resource.permissions === 'admin' && (
+                                  <span className="flex items-center gap-1 text-xs text-green-600">
+                                    <Shield className="w-3 h-3" />
+                                    Admin
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                                  title="View File"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                                <button
+                                  className="p-1 text-gray-400 hover:text-green-600 transition-colors"
+                                  title="Download"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-center text-gray-500 py-8">No shared resources yet</p>
+                      <div className="text-center py-12">
+                        <Folder className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No files shared yet</h3>
+                        <p className="text-gray-500 mb-4">Share files with your team to get started</p>
+                        <button
+                          onClick={() => setShowFileShareModal(true)}
+                          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
+                        >
+                          <Share2 className="w-5 h-5" />
+                          Share Your First File
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -966,52 +1042,38 @@ export const TeamSpace: React.FC = () => {
 
             {activeTab === 'members' && (
               <div className="p-6 space-y-6">
-                {/* Team Members */}
+                {/* Team Role Manager */}
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                   <div className="p-4 border-b border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                       <Users className="w-5 h-5 text-blue-600" />
-                      Team Members ({teamMembers.length})
+                      Team Members & Roles ({teamMembers.length})
                     </h2>
                   </div>
                   <div className="p-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {teamMembers.map((member) => (
-                        <div
-                          key={member.id}
-                          className="flex flex-col items-center p-3 bg-gray-50 rounded-lg w-full max-w-[200px]"
-                        >
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mb-2">
-                            <span className="text-sm font-medium text-blue-600">
-                              {member.name?.[0] || member.email[0].toUpperCase()}
-                            </span>
-                          </div>
-                          <div className="text-center w-full">
-                            <p className="font-medium text-gray-900 text-sm break-words leading-tight">{member.name || member.email}</p>
-                            <p className="text-xs text-gray-600 mt-1">{member.role}</p>
-                          </div>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span
-                              className={`w-2 h-2 rounded-full ${
-                                member.status === 'online'
-                                  ? 'bg-green-500'
-                                  : member.status === 'away'
-                                  ? 'bg-yellow-500'
-                                  : 'bg-gray-400'
-                              }`}
-                            />
-                            {member.id !== user?.id && member.role !== 'owner' && (
-                              <button
-                                onClick={() => removeMember(member.id)}
-                                className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <TeamRoleManager
+                      teamMembers={teamMembers}
+                      currentUserId={user?.id || ''}
+                      currentUserRole={teamMembers.find(m => m.id === user?.id)?.role || 'member'}
+                      onRoleChange={async (memberId, newRole) => {
+                        try {
+                          // Update member role in Firestore
+                          const memberRef = doc(db, 'users', memberId);
+                          await updateDoc(memberRef, { role: newRole });
+                          
+                          // Log activity
+                          await logActivity(selectedTeam!.id, `changed ${teamMembers.find(m => m.id === memberId)?.name || 'a member'}'s role to ${newRole}`);
+                          
+                          // Refresh team data
+                          loadTeamData(selectedTeam!.id);
+                        } catch (error) {
+                          console.error('Error updating member role:', error);
+                        }
+                      }}
+                      onRemoveMember={async (memberId) => {
+                        await removeMember(memberId);
+                      }}
+                    />
                   </div>
                 </div>
 
@@ -1072,7 +1134,8 @@ export const TeamSpace: React.FC = () => {
             )}
 
             {activeTab === 'settings' && (
-              <div className="p-6">
+              <div className="p-6 space-y-6">
+                {/* General Settings */}
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                   <div className="p-4 border-b border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -1080,49 +1143,196 @@ export const TeamSpace: React.FC = () => {
                       Team Settings
                     </h2>
                   </div>
-                  <div className="p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900">Public Team</p>
-                        <p className="text-sm text-gray-600">Allow anyone to join with invite code</p>
+                  <div className="p-4 space-y-6">
+                    {/* Team Information */}
+                    <div className="space-y-4">
+                      <h3 className="text-md font-medium text-gray-900">Team Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Team Name
+                          </label>
+                          <input
+                            type="text"
+                            value={selectedTeam.name}
+                            onChange={(e) => {
+                              // Only allow owner to change team name
+                              if (teamMembers.find(m => m.id === user?.id)?.role === 'owner') {
+                                updateTeamSettings({ name: e.target.value });
+                              }
+                            }}
+                            disabled={teamMembers.find(m => m.id === user?.id)?.role !== 'owner'}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Max Members
+                          </label>
+                          <select
+                            value={selectedTeam.settings.maxMembers}
+                            onChange={(e) => updateTeamSettings({ maxMembers: parseInt(e.target.value) })}
+                            disabled={teamMembers.find(m => m.id === user?.id)?.role !== 'owner'}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                          >
+                            <option value={10}>10 members</option>
+                            <option value={25}>25 members</option>
+                            <option value={50}>50 members</option>
+                            <option value={100}>100 members</option>
+                            <option value={250}>250 members</option>
+                          </select>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => updateTeamSettings({ isPublic: !selectedTeam.settings.isPublic })}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          selectedTeam.settings.isPublic ? 'bg-blue-600' : 'bg-gray-200'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            selectedTeam.settings.isPublic ? 'translate-x-6' : 'translate-x-1'
-                          }`}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Description
+                        </label>
+                        <textarea
+                          value={selectedTeam.description}
+                          onChange={(e) => {
+                            if (teamMembers.find(m => m.id === user?.id)?.role === 'owner') {
+                              updateTeamSettings({ description: e.target.value });
+                            }
+                          }}
+                          disabled={teamMembers.find(m => m.id === user?.id)?.role !== 'owner'}
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                          placeholder="Describe your team..."
                         />
-                      </button>
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900">Member Invites</p>
-                        <p className="text-sm text-gray-600">Allow members to invite others</p>
+                    {/* Privacy Settings */}
+                    <div className="space-y-4">
+                      <h3 className="text-md font-medium text-gray-900">Privacy & Access</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-gray-900">Public Team</p>
+                            <p className="text-sm text-gray-600">Allow anyone to join with invite code</p>
+                          </div>
+                          <button
+                            onClick={() => updateTeamSettings({ isPublic: !selectedTeam.settings.isPublic })}
+                            disabled={teamMembers.find(m => m.id === user?.id)?.role !== 'owner'}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
+                              selectedTeam.settings.isPublic ? 'bg-blue-600' : 'bg-gray-200'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                selectedTeam.settings.isPublic ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-gray-900">Member Invites</p>
+                            <p className="text-sm text-gray-600">Allow members to invite others</p>
+                          </div>
+                          <button
+                            onClick={() => updateTeamSettings({ allowMemberInvites: !selectedTeam.settings.allowMemberInvites })}
+                            disabled={!['owner', 'admin'].includes(teamMembers.find(m => m.id === user?.id)?.role || '')}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
+                              selectedTeam.settings.allowMemberInvites ? 'bg-blue-600' : 'bg-gray-200'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                selectedTeam.settings.allowMemberInvites ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => updateTeamSettings({ allowMemberInvites: !selectedTeam.settings.allowMemberInvites })}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          selectedTeam.settings.allowMemberInvites ? 'bg-blue-600' : 'bg-gray-200'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            selectedTeam.settings.allowMemberInvites ? 'translate-x-6' : 'translate-x-1'
-                          }`}
-                        />
-                      </button>
                     </div>
 
+                    {/* Feature Settings */}
+                    <div className="space-y-4">
+                      <h3 className="text-md font-medium text-gray-900">Team Features</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-gray-900">File Sharing</p>
+                            <p className="text-sm text-gray-600">Allow team members to share files</p>
+                          </div>
+                          <button
+                            onClick={() => updateTeamSettings({ allowFileSharing: !selectedTeam.settings.allowFileSharing })}
+                            disabled={!['owner', 'admin'].includes(teamMembers.find(m => m.id === user?.id)?.role || '')}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
+                              selectedTeam.settings.allowFileSharing ? 'bg-blue-600' : 'bg-gray-200'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                selectedTeam.settings.allowFileSharing ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-gray-900">Team Chat</p>
+                            <p className="text-sm text-gray-600">Enable team chat functionality</p>
+                          </div>
+                          <button
+                            onClick={() => updateTeamSettings({ allowChat: !selectedTeam.settings.allowChat })}
+                            disabled={!['owner', 'admin'].includes(teamMembers.find(m => m.id === user?.id)?.role || '')}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
+                              selectedTeam.settings.allowChat ? 'bg-blue-600' : 'bg-gray-200'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                selectedTeam.settings.allowChat ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-gray-900">Video Calls</p>
+                            <p className="text-sm text-gray-600">Enable video call functionality</p>
+                          </div>
+                          <button
+                            onClick={() => updateTeamSettings({ allowVideoCall: !selectedTeam.settings.allowVideoCall })}
+                            disabled={!['owner', 'admin'].includes(teamMembers.find(m => m.id === user?.id)?.role || '')}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
+                              selectedTeam.settings.allowVideoCall ? 'bg-blue-600' : 'bg-gray-200'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                selectedTeam.settings.allowVideoCall ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Invite Code */}
                     {selectedTeam.inviteCode && (
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-600 mb-2">Invite Code</p>
-                        <p className="font-mono text-lg font-bold text-blue-600">{selectedTeam.inviteCode}</p>
+                      <div className="space-y-4">
+                        <h3 className="text-md font-medium text-gray-900">Team Invite</h3>
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-sm text-gray-600">Invite Code</p>
+                            <button
+                              onClick={() => copyInviteLink(selectedTeam.inviteCode!)}
+                              className="text-sm text-blue-600 hover:text-blue-800"
+                            >
+                              Copy Link
+                            </button>
+                          </div>
+                          <p className="font-mono text-lg font-bold text-blue-600">{selectedTeam.inviteCode}</p>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Share this code with people you want to invite to your team
+                          </p>
+                        </div>
                       </div>
                     )}
 
@@ -1440,6 +1650,20 @@ export const TeamSpace: React.FC = () => {
       {/* Email Test Panel */}
       {showEmailTest && (
         <EmailTestPanel />
+      )}
+
+      {/* File Share Modal */}
+      {showFileShareModal && selectedTeam && (
+        <FileShareModal
+          isOpen={showFileShareModal}
+          onClose={() => setShowFileShareModal(false)}
+          teamId={selectedTeam.id}
+          teamMembers={teamMembers}
+          onFileShared={(file) => {
+            // Refresh shared resources
+            loadTeamData(selectedTeam.id);
+          }}
+        />
       )}
     </div>
   );
