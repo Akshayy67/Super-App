@@ -9,6 +9,7 @@ import {
   Upload,
   Clock,
   AlertTriangle,
+  Users,
 } from "lucide-react";
 import { storageUtils } from "../utils/storage"; // still used for short notes
 import { driveStorageUtils } from "../utils/driveStorage"; // for accurate file count (Drive or local fallback)
@@ -147,7 +148,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
   };
 
   return (
-    <div className="bg-gray-50 h-full overflow-auto scroll-area" data-component="dashboard">
+    <div
+      className="bg-gray-50 h-full overflow-auto scroll-area"
+      data-component="dashboard"
+    >
       {/* Header */}
       <div className="bg-white border-b border-gray-200 p-responsive">
         <div className="max-w-7xl mx-auto">
@@ -259,6 +263,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
                 >
                   <Brain className="w-5 h-5 mr-3 flex-shrink-0" />
                   <span className="truncate">Ask AI Assistant</span>
+                </button>
+                <button
+                  onClick={() => onViewChange("team")}
+                  className="w-full flex items-center px-3 sm:px-4 py-3 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors text-sm btn-touch"
+                >
+                  <Users className="w-5 h-5 mr-3 flex-shrink-0" />
+                  <span className="truncate">Team Space</span>
                 </button>
               </div>
             </div>
@@ -378,8 +389,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
               <div className="bg-blue-100 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-3">
                 <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
               </div>
-              <h3 className="font-medium text-gray-900 text-lg sm:text-xl">{stats.totalFiles}</h3>
-              <p className="text-xs sm:text-sm text-gray-600">Documents Uploaded</p>
+              <h3 className="font-medium text-gray-900 text-lg sm:text-xl">
+                {stats.totalFiles}
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-600">
+                Documents Uploaded
+              </p>
             </div>
             <div className="text-center">
               <div className="bg-green-100 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -391,14 +406,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ onViewChange }) => {
                   : 0}
                 %
               </h3>
-              <p className="text-xs sm:text-sm text-gray-600">Tasks Completed</p>
+              <p className="text-xs sm:text-sm text-gray-600">
+                Tasks Completed
+              </p>
             </div>
             <div className="text-center">
               <div className="bg-purple-100 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
               </div>
-              <h3 className="font-medium text-gray-900 text-lg sm:text-xl">{stats.totalShortNotes}</h3>
-              <p className="text-xs sm:text-sm text-gray-600">Short Notes Created</p>
+              <h3 className="font-medium text-gray-900 text-lg sm:text-xl">
+                {stats.totalShortNotes}
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-600">
+                Short Notes Created
+              </p>
             </div>
           </div>
         </div>

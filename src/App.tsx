@@ -9,6 +9,7 @@ import { AIChat } from "./components/AIChat";
 import { StudyTools } from "./components/StudyTools";
 import { FlashCards } from "./components/FlashCards";
 import { InterviewPrep } from "./components/InterviewPrep/InterviewPrep";
+import { TeamSpace } from "./components/TeamSpace";
 // Removed unused FilePreview import
 import ErrorBoundary from "./components/ErrorBoundary";
 import { realTimeAuth } from "./utils/realTimeAuth";
@@ -23,7 +24,7 @@ function App() {
   const [activeView, setActiveView] = useState("dashboard");
   // Removed unused previewFile state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+
   // Global copy listener for note creation
   const { copyEvent, isModalVisible, closeModal } = useGlobalCopyListener();
 
@@ -43,13 +44,14 @@ function App() {
   // Close mobile menu when screen size changes to desktop
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1024) { // lg breakpoint
+      if (window.innerWidth >= 1024) {
+        // lg breakpoint
         setIsMobileMenuOpen(false);
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const handleAuthSuccess = () => {
@@ -62,16 +64,15 @@ function App() {
       console.log("🔄 Starting logout process...");
       await realTimeAuth.logout();
       console.log("✅ Logout successful");
-      
+
       // Force update authentication state
       setIsAuthenticated(false);
-      
+
       // Reset view to dashboard for next login
       setActiveView("dashboard");
-      
+
       // Close mobile menu if open
       setIsMobileMenuOpen(false);
-      
     } catch (error) {
       console.error("❌ Logout failed:", error);
       // Even if logout fails, we should still redirect to auth
@@ -108,6 +109,8 @@ function App() {
         return <FlashCards />;
       case "interview":
         return <InterviewPrep />;
+      case "team":
+        return <TeamSpace />;
       default:
         return <Dashboard onViewChange={handleViewChange} />;
     }
@@ -134,7 +137,7 @@ function App() {
           sourceContext={copyEvent.sourceContext}
         />
       )}
-      
+
       <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row landscape-compact">
         {/* Mobile Header */}
         <div className="mobile-header lg:hidden bg-white shadow-sm border-b border-gray-200 p-3 sm:p-4 flex items-center justify-between relative z-30">
@@ -182,7 +185,11 @@ function App() {
           className={`
             ${isMobileMenuOpen ? "mobile-nav-panel" : "hidden"}
             lg:relative lg:block lg:w-64 xl:w-72 lg:flex-shrink-0
-            ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+            ${
+              isMobileMenuOpen
+                ? "translate-x-0"
+                : "-translate-x-full lg:translate-x-0"
+            }
           `}
         >
           <div className="h-full lg:h-auto">
@@ -199,9 +206,7 @@ function App() {
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden min-h-0 relative">
           <div className="flex-1 overflow-hidden scroll-area">
-            <div className="h-full">
-              {renderActiveView()}
-            </div>
+            <div className="h-full">{renderActiveView()}</div>
           </div>
         </div>
 

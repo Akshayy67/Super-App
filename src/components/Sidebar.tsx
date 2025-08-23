@@ -10,6 +10,7 @@ import {
   X,
   BookOpen,
   Briefcase,
+  Users,
 } from "lucide-react";
 import { realTimeAuth } from "../utils/realTimeAuth";
 
@@ -38,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: "tools", label: "Study Tools", icon: Brain },
     { id: "flashcards", label: "Flash Cards", icon: BookOpen },
     { id: "interview", label: "Interview Prep", icon: Briefcase },
+    { id: "team", label: "Team Space", icon: Users },
   ];
 
   return (
@@ -92,9 +94,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 e.currentTarget.style.display = "none";
               }}
             />
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Super Study</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+              Super Study
+            </h1>
           </div>
-          <p className="text-xs sm:text-sm text-gray-600 ml-11 sm:ml-13 truncate">AI Academic Assistant</p>
+          <p className="text-xs sm:text-sm text-gray-600 ml-11 sm:ml-13 truncate">
+            AI Academic Assistant
+          </p>
         </button>
       </div>
 
@@ -115,7 +121,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   }`}
                 >
                   <Icon className="w-5 h-5 mr-3 flex-shrink-0" />
-                  <span className="font-medium text-sm sm:text-base truncate">{item.label}</span>
+                  <span className="font-medium text-sm sm:text-base truncate">
+                    {item.label}
+                  </span>
                 </button>
               </li>
             );

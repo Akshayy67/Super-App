@@ -1,0 +1,101 @@
+// Firestore Security Rules for Team Space Feature
+// Add these rules to your Firebase Console > Firestore Database > Rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Teams collection rules
+    match /teams/{teamId} {
+      // Allow read if user is a member of the team
+      allow read: if request.auth != null && 
+        request.auth.uid in resource.data.members.keys();
+      
+      // Allow create if user is authenticated (for creating new teams)
+      allow create: if request.auth != null && 
+        request.auth.uid == resource.data.ownerId;
+      
+      // Allow update if user is owner or admin
+      allow update: if request.auth != null && 
+        (request.auth.uid == resource.data.ownerId || 
+         (resource.data.members[request.auth.uid].role in ['admin']));
+      
+      // Allow delete only if user is team owner
+      allow delete: if request.auth != null && 
+        request.auth.uid == resource.data.ownerId;
+    }
+    
+    // Projects collection rules
+    match /projects/{projectId} {
+      // Allow read if user is member of the project's team
+      allow read: if request.auth != null;
+      
+      // Allow create if user is authenticated and member of team
+      allow create: if request.auth != null;
+      
+      // Allow update if user is project member or team admin/owner
+      allow update: if request.auth != null;
+      
+      // Allow delete if user is team owner or admin
+      allow delete: if request.auth != null;
+    }
+    
+    // Activities collection rules
+    match /activities/{activityId} {
+      // Allow read if user is member of the activity's team
+      allow read: if request.auth != null;
+      
+      // Allow create if user is authenticated (for logging activities)
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+      
+      // No updates or deletes allowed for activities (immutable log)
+      allow update, delete: if false;
+    }
+    
+    // Team messages collection rules
+    match /teamMessages/{messageId} {
+      // Allow read if user is member of the message's team
+      allow read: if request.auth != null;
+      
+      // Allow create if user is authenticated
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+      
+      // Allow update only by message author (for editing)
+      allow update: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      
+      // Allow delete by message author or team admin/owner
+      allow delete: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+    }
+    
+    // Team invites collection rules
+    match /teamInvites/{inviteId} {
+      // Allow read if user is the invitee or team member
+      allow read: if request.auth != null;
+      
+      // Allow create if user is team admin or owner
+      allow create: if request.auth != null;
+      
+      // Allow update for accepting/declining invites
+      allow update: if request.auth != null;
+      
+      // Allow delete by invite creator or invitee
+      allow delete: if request.auth != null;
+    }
+    
+    // Helper function to check team membership
+    function isTeamMember(teamId) {
+      return request.auth != null && 
+        request.auth.uid in get(/databases/$(database)/documents/teams/$(teamId)).data.members.keys();
+    }
+    
+    // Helper function to check if user is team admin or owner
+    function isTeamAdminOrOwner(teamId) {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/teams/$(teamId)).data.members[request.auth.uid].role in ['owner', 'admin'];
+    }
+  }
+}
