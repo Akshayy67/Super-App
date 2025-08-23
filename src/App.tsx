@@ -24,6 +24,10 @@ function App() {
   const [activeView, setActiveView] = useState("dashboard");
   // Removed unused previewFile state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [invitationData, setInvitationData] = useState<{
+    inviteCode?: string;
+    teamId?: string;
+  } | null>(null);
 
   // Global copy listener for note creation
   const { copyEvent, isModalVisible, closeModal } = useGlobalCopyListener();
@@ -39,6 +43,63 @@ function App() {
 
     // Clean up listener on component unmount
     return unsubscribe;
+  }, []);
+
+  // Handle URL parameters for team invitations
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteCode = urlParams.get("invite") || urlParams.get("code");
+    const teamId = urlParams.get("team");
+
+    console.log("🔍 URL Parsing Debug:", {
+      fullURL: window.location.href,
+      searchParams: window.location.search,
+      allParams: Object.fromEntries(urlParams.entries()),
+      inviteCode,
+      teamId,
+      inviteCodeLength: inviteCode?.length,
+      inviteCodeChars: inviteCode?.split("").join(", "),
+    });
+
+    if (inviteCode || teamId) {
+      console.log("🎯 Team invitation detected:", { inviteCode, teamId });
+
+      // Store invitation data in sessionStorage to persist through login
+      const invitationData = {
+        inviteCode: inviteCode || undefined,
+        teamId: teamId || undefined,
+      };
+      sessionStorage.setItem(
+        "pendingTeamInvitation",
+        JSON.stringify(invitationData)
+      );
+
+      setInvitationData(invitationData);
+
+      // Automatically switch to team view for invitation
+      setActiveView("team");
+
+      // Clean up URL parameters
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete("invite");
+      newUrl.searchParams.delete("code");
+      newUrl.searchParams.delete("team");
+      window.history.replaceState({}, "", newUrl.toString());
+    } else {
+      // Check if there's a pending invitation from sessionStorage
+      const pendingInvitation = sessionStorage.getItem("pendingTeamInvitation");
+      if (pendingInvitation) {
+        console.log("🔄 Found pending team invitation from storage");
+        try {
+          const invitationData = JSON.parse(pendingInvitation);
+          setInvitationData(invitationData);
+          setActiveView("team");
+        } catch (error) {
+          console.error("❌ Error parsing pending invitation:", error);
+          sessionStorage.removeItem("pendingTeamInvitation");
+        }
+      }
+    }
   }, []);
 
   // Close mobile menu when screen size changes to desktop
@@ -110,7 +171,7 @@ function App() {
       case "interview":
         return <InterviewPrep />;
       case "team":
-        return <TeamSpace />;
+        return <TeamSpace invitationData={invitationData} />;
       default:
         return <Dashboard onViewChange={handleViewChange} />;
     }

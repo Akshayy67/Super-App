@@ -54,15 +54,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <img
               src="/SuperApp.png"
               alt="Super Study Logo"
-              className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0"
+              className="w-8 h-8 sm:w-10 sm:h-10 object-contain flex-shrink-0"
               onError={(e) => {
                 console.error("Sidebar logo failed to load:", e);
                 e.currentTarget.style.display = "none";
               }}
             />
-            <span className="text-responsive-lg font-bold text-gray-900 truncate">
-              Super Study
-            </span>
+            <div className="flex flex-col items-start min-w-0 flex-1">
+              <span className="text-responsive-lg font-bold text-gray-900 truncate">
+                Super Study
+              </span>
+              <span className="text-xs text-gray-600 truncate">
+                AI Powered Learning
+              </span>
+            </div>
           </button>
           <button
             onClick={onCloseMobile}
@@ -84,23 +89,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => onViewChange("dashboard")}
           className="text-left hover:opacity-80 transition-opacity w-full btn-touch"
         >
-          <div className="flex items-center space-x-3 mb-2">
+          <div className="flex items-center space-x-3 mb-1">
             <img
               src="/SuperApp.png"
               alt="Super Study Logo"
-              className="w-8 h-8 sm:w-10 sm:h-10 object-contain flex-shrink-0"
+              className="w-10 h-10 sm:w-12 sm:h-12 object-contain flex-shrink-0"
               onError={(e) => {
                 console.error("Desktop sidebar logo failed to load:", e);
                 e.currentTarget.style.display = "none";
               }}
             />
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
-              Super Study
-            </h1>
+            <div>
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
+                Super Study
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-500 font-medium">
+                AI Powered Learning
+              </p>
+            </div>
           </div>
-          <p className="text-xs sm:text-sm text-gray-600 ml-11 sm:ml-13 truncate">
-            AI Academic Assistant
-          </p>
         </button>
       </div>
 

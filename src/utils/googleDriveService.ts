@@ -452,6 +452,206 @@ class GoogleDriveService {
     }
   }
 
+  // Create a shared folder for a team with team details
+  async createTeamFolder(teamName: string, teamDescription: string, teamMembers?: string[]): Promise<{ folderId: string; folderUrl: string }> {
+    const accessToken = await this.getAccessToken();
+    if (!accessToken) {
+      throw new Error('No access token available');
+    }
+
+    try {
+      // Create team folder
+      const folderResponse = await fetch(`${this.DRIVE_API_BASE}/files`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: `Team: ${teamName}`,
+          mimeType: 'application/vnd.google-apps.folder',
+          description: teamDescription
+        })
+      });
+
+      if (!folderResponse.ok) {
+        throw new Error(`Failed to create team folder: ${folderResponse.statusText}`);
+      }
+
+      const folderData = await folderResponse.json();
+      const folderId = folderData.id;
+
+      // Create team info file with enhanced details
+      const teamInfoContent = `Team Name: ${teamName}
+Description: ${teamDescription}
+Created: ${new Date().toISOString()}
+Members: ${teamMembers?.length || 0}
+${teamMembers ? `Member List:\n${teamMembers.map(member => `- ${member}`).join('\n')}` : ''}
+
+This folder was automatically created by the Super Study App team collaboration system.
+All team files and resources should be stored here for easy access and backup.`;
+      
+      // Create team info file
+      const infoFileResponse = await fetch(`${this.UPLOAD_API_BASE}/files?uploadType=multipart`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'multipart/related; boundary="foo_bar_baz"'
+        },
+        body: [
+          '--foo_bar_baz',
+          'Content-Type: application/json',
+          '',
+          JSON.stringify({
+            name: 'Team Info.txt',
+            parents: [folderId],
+            description: 'Team information and details'
+          }),
+          '--foo_bar_baz',
+          'Content-Type: text/plain',
+          '',
+          teamInfoContent,
+          '--foo_bar_baz--'
+        ].join('\r\n')
+      });
+
+      // Create subfolders for organization
+      const subfolders = ['Shared Files', 'Team Documents', 'Resources', 'Archive'];
+      for (const subfolder of subfolders) {
+        await fetch(`${this.DRIVE_API_BASE}/files`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: subfolder,
+            mimeType: 'application/vnd.google-apps.folder',
+            parents: [folderId],
+            description: `${subfolder} for team ${teamName}`
+          })
+        });
+      }
+
+      const folderUrl = `https://drive.google.com/drive/folders/${folderId}`;
+      return { folderId, folderUrl };
+    } catch (error) {
+      console.error('Error creating team folder:', error);
+      throw error;
+    }
+  }
+
+  // Backup team data to Google Drive
+  async backupTeamData(teamId: string, teamData: any): Promise<{ fileId: string; fileUrl: string }> {
+    const accessToken = await this.getAccessToken();
+    if (!accessToken) {
+      throw new Error('No access token available');
+    }
+
+    try {
+      const backupData = {
+        teamId,
+        teamName: teamData.name,
+        description: teamData.description,
+        members: teamData.members,
+        settings: teamData.settings,
+        createdAt: teamData.createdAt,
+        updatedAt: teamData.updatedAt,
+        backupDate: new Date().toISOString(),
+        version: '1.0'
+      };
+
+      const fileName = `Team_${teamData.name}_Backup_${new Date().toISOString().split('T')[0]}.json`;
+      
+      const response = await fetch(`${this.UPLOAD_API_BASE}/files?uploadType=multipart`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'multipart/related; boundary="foo_bar_baz"'
+        },
+        body: [
+          '--foo_bar_baz',
+          'Content-Type: application/json',
+          '',
+          JSON.stringify({
+            name: fileName,
+            description: `Backup of team ${teamData.name} data`,
+            parents: teamData.driveFolder ? [teamData.driveFolder] : undefined
+          }),
+          '--foo_bar_baz',
+          'Content-Type: application/json',
+          '',
+          JSON.stringify(backupData, null, 2),
+          '--foo_bar_baz--'
+        ].join('\r\n')
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to backup team data: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      const fileId = result.id;
+      const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
+      
+      return { fileId, fileUrl };
+    } catch (error) {
+      console.error('Error backing up team data:', error);
+      throw error;
+    }
+  }
+
+  // Upload team file to Google Drive
+  async uploadTeamFile(
+    fileName: string, 
+    fileContent: string, 
+    mimeType: string, 
+    teamFolderId?: string
+  ): Promise<{ fileId: string; fileUrl: string }> {
+    const accessToken = await this.getAccessToken();
+    if (!accessToken) {
+      throw new Error('No access token available');
+    }
+
+    try {
+      const response = await fetch(`${this.UPLOAD_API_BASE}/files?uploadType=multipart`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'multipart/related; boundary="foo_bar_baz"'
+        },
+        body: [
+          '--foo_bar_baz',
+          'Content-Type: application/json',
+          '',
+          JSON.stringify({
+            name: fileName,
+            parents: teamFolderId ? [teamFolderId] : undefined,
+            description: 'Team file uploaded via Super Study App'
+          }),
+          '--foo_bar_baz',
+          `Content-Type: ${mimeType}`,
+          '',
+          fileContent,
+          '--foo_bar_baz--'
+        ].join('\r\n')
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to upload team file: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      const fileId = result.id;
+      const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
+      
+      return { fileId, fileUrl };
+    } catch (error) {
+      console.error('Error uploading team file:', error);
+      throw error;
+    }
+  }
+
   // Upload file to Google Drive
   async uploadFile(
     file: File,

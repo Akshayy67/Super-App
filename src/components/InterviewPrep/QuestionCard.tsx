@@ -47,7 +47,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   setShowPracticeModal,
 }) => {
   const [showCode, setShowCode] = useState(false);
-  const hasCodeImplementation = question.codeImplementation && question.codeImplementation.length > 0;
+  const hasCodeImplementation =
+    question.codeImplementation && question.codeImplementation.length > 0;
   return (
     <div
       className={`bg-white rounded-2xl border transition-all duration-300 ${
@@ -152,7 +153,15 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         {/* Action Buttons */}
         <div className="flex items-center space-x-3 mt-5 mb-4 flex-wrap gap-y-2">
           <button
-            onClick={() => toggleAnswer(question.id)}
+            onClick={() => {
+              console.log(
+                "QuestionCard expand button clicked!",
+                question.id,
+                "Current expanded:",
+                isExpanded
+              );
+              toggleAnswer(question.id);
+            }}
             className="flex items-center space-x-2 px-4 py-2.5 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-all duration-300 text-sm font-medium border border-blue-200"
           >
             {isExpanded ? (

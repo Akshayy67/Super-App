@@ -14,6 +14,7 @@ export const enhancedHeapQuestions: Question[] = [
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 1: Quick Select (Optimal average case)
 // Time: O(n) average, O(n²) worst, Space: O(1)
 function findKthLargest(nums: number[], k: number): number {
@@ -53,6 +54,7 @@ function findKthLargest(nums: number[], k: number): number {
       },
       {
         language: "Java",
+        approach: "optimal",
         code: `// Approach 1: Quick Select (Optimal average case)
 // Time: O(n) average, O(n²) worst, Space: O(1)
 public int findKthLargest(int[] nums, int k) {
@@ -101,6 +103,7 @@ private void swap(int[] nums, int i, int j) {
       },
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 2: Min Heap
 // Time: O(n log k), Space: O(k)
 function findKthLargestHeap(nums: number[], k: number): number {
@@ -177,6 +180,7 @@ function findKthLargestHeap(nums: number[], k: number): number {
       },
       {
         language: "Java",
+        approach: "moderate",
         code: `// Approach 2: Min Heap
 // Time: O(n log k), Space: O(k)
 public int findKthLargestHeap(int[] nums, int k) {
@@ -200,6 +204,7 @@ public int findKthLargestHeap(int[] nums, int k) {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 3: Sorting
 // Time: O(n log n), Space: O(1)
 function findKthLargestSort(nums: number[], k: number): number {
@@ -211,6 +216,7 @@ function findKthLargestSort(nums: number[], k: number): number {
       },
       {
         language: "Java",
+        approach: "brute-force",
         code: `// Approach 3: Sorting
 // Time: O(n log n), Space: O(1)
 public int findKthLargestSort(int[] nums, int k) {
@@ -234,6 +240,68 @@ private void reverse(int[] nums) {
 }`,
         explanation:
           "Java implementation using sorting. Simple approach using built-in Arrays.sort and manual reversal.",
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Quick Select (Optimal average case)
+# Time: O(n) average, O(n²) worst, Space: O(1)
+def find_kth_largest(nums, k):
+    k = len(nums) - k  # Convert to kth smallest (0-indexed)
+    
+    def quick_select(left, right):
+        pivot = partition(left, right)
+        
+        if pivot == k:
+            return nums[pivot]
+        elif pivot < k:
+            return quick_select(pivot + 1, right)
+        else:
+            return quick_select(left, pivot - 1)
+    
+    def partition(left, right):
+        pivot_value = nums[right]
+        i = left
+        
+        for j in range(left, right):
+            if nums[j] <= pivot_value:
+                nums[i], nums[j] = nums[j], nums[i]
+                i += 1
+        
+        nums[i], nums[right] = nums[right], nums[i]
+        return i
+    
+    return quick_select(0, len(nums) - 1)`,
+        explanation: "Quick Select uses partitioning to find the kth element. Most efficient average case but can degrade to O(n²) in worst case."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Min Heap
+# Time: O(n log k), Space: O(k)
+import heapq
+
+def find_kth_largest_heap(nums, k):
+    # Use min heap to maintain k largest elements
+    min_heap = []
+    
+    for num in nums:
+        heapq.heappush(min_heap, num)
+        
+        # Keep heap size at k
+        if len(min_heap) > k:
+            heapq.heappop(min_heap)
+    
+    # Top of min heap is kth largest
+    return min_heap[0]`,
+        explanation: "Min Heap maintains k largest elements using Python's heapq module. Guaranteed O(n log k) time complexity."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Sorting
+# Time: O(n log n), Space: O(1)
+def find_kth_largest_sort(nums, k):
+    nums.sort(reverse=True)
+    return nums[k - 1]`,
+        explanation: "Simple sorting approach. Less efficient but easiest to implement and understand."
       },
     ],
     tips: [
@@ -260,6 +328,7 @@ private void reverse(int[] nums) {
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 1: Bucket Sort (Optimal)
 // Time: O(n), Space: O(n)
 function topKFrequent(nums: number[], k: number): number[] {
@@ -289,6 +358,7 @@ function topKFrequent(nums: number[], k: number): number[] {
       },
       {
         language: "Java",
+        approach: "optimal",
         code: `// Approach 1: Bucket Sort (Optimal)
 // Time: O(n), Space: O(n)
 public int[] topKFrequent(int[] nums, int k) {
@@ -330,6 +400,7 @@ public int[] topKFrequent(int[] nums, int k) {
       },
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 2: Min Heap
 // Time: O(n log k), Space: O(n + k)
 function topKFrequentHeap(nums: number[], k: number): number[] {
@@ -357,6 +428,7 @@ function topKFrequentHeap(nums: number[], k: number): number[] {
       },
       {
         language: "Java",
+        approach: "moderate",
         code: `// Approach 2: Min Heap
 // Time: O(n log k), Space: O(n + k)
 public int[] topKFrequentHeap(int[] nums, int k) {
@@ -394,6 +466,7 @@ public int[] topKFrequentHeap(int[] nums, int k) {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 3: Quick Select
 // Time: O(n) average, Space: O(n)
 function topKFrequentQuickSelect(nums: number[], k: number): number[] {
@@ -441,6 +514,7 @@ function topKFrequentQuickSelect(nums: number[], k: number): number[] {
       },
       {
         language: "Java",
+        approach: "brute-force",
         code: `// Approach 3: Quick Select
 // Time: O(n) average, Space: O(n)
 public int[] topKFrequentQuickSelect(int[] nums, int k) {
@@ -503,6 +577,98 @@ private void swap(int[] nums, int i, int j) {
         explanation:
           "Java implementation of quick select approach. Partitions based on frequencies to find k most frequent elements.",
       },
+      {
+        language: "Python",
+        code: `# Approach 1: Bucket Sort (Optimal)
+# Time: O(n), Space: O(n)
+def top_k_frequent(nums, k):
+    # Count frequencies
+    frequency_map = {}
+    for num in nums:
+        frequency_map[num] = frequency_map.get(num, 0) + 1
+    
+    # Create buckets for each frequency
+    buckets = [[] for _ in range(len(nums) + 1)]
+    
+    for num, freq in frequency_map.items():
+        buckets[freq].append(num)
+    
+    # Collect top k elements
+    result = []
+    for i in range(len(buckets) - 1, -1, -1):
+        if len(result) >= k:
+            break
+        result.extend(buckets[i])
+    
+    return result[:k]`,
+        explanation: "Bucket sort approach groups elements by frequency. Most efficient with O(n) time complexity."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Min Heap
+# Time: O(n log k), Space: O(n + k)
+import heapq
+
+def top_k_frequent_heap(nums, k):
+    # Count frequencies
+    frequency_map = {}
+    for num in nums:
+        frequency_map[num] = frequency_map.get(num, 0) + 1
+    
+    # Min heap to keep k most frequent elements
+    min_heap = []
+    
+    for num, freq in frequency_map.items():
+        heapq.heappush(min_heap, (freq, num))
+        
+        if len(min_heap) > k:
+            heapq.heappop(min_heap)
+    
+    # Extract results from heap
+    return [num for freq, num in min_heap]`,
+        explanation: "Min heap maintains k most frequent elements. Good for when k is much smaller than n."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Quick Select
+# Time: O(n) average, Space: O(n)
+def top_k_frequent_quickselect(nums, k):
+    # Count frequencies
+    frequency_map = {}
+    for num in nums:
+        frequency_map[num] = frequency_map.get(num, 0) + 1
+    
+    unique_nums = list(frequency_map.keys())
+    
+    def quick_select(left, right, k_smallest):
+        if left == right:
+            return
+        
+        pivot_index = partition(left, right)
+        
+        if k_smallest == pivot_index:
+            return
+        elif k_smallest < pivot_index:
+            quick_select(left, pivot_index - 1, k_smallest)
+        else:
+            quick_select(pivot_index + 1, right, k_smallest)
+    
+    def partition(left, right):
+        pivot_freq = frequency_map[unique_nums[right]]
+        i = left
+        
+        for j in range(left, right):
+            if frequency_map[unique_nums[j]] < pivot_freq:
+                unique_nums[i], unique_nums[j] = unique_nums[j], unique_nums[i]
+                i += 1
+        
+        unique_nums[i], unique_nums[right] = unique_nums[right], unique_nums[i]
+        return i
+    
+    quick_select(0, len(unique_nums) - 1, len(unique_nums) - k)
+    return unique_nums[len(unique_nums) - k:]`,
+        explanation: "Quick select approach finds kth most frequent element. Good average case performance."
+      },
     ],
     tips: [
       "Bucket sort achieves O(n) by using frequency as index",
@@ -528,6 +694,7 @@ private void swap(int[] nums, int i, int j) {
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 1: Min Heap (Optimal)
 // Time: O(n log k), Space: O(k) where n = total elements
 function mergeKSortedArrays(arrays: number[][]): number[] {
@@ -616,6 +783,7 @@ function mergeKSortedArrays(arrays: number[][]): number[] {
       },
       {
         language: "Java",
+        approach: "optimal",
         code: `// Approach 1: Min Heap (Optimal)
 // Time: O(n log k), Space: O(k) where n = total elements
 public List<Integer> mergeKSortedArrays(int[][] arrays) {
@@ -657,6 +825,7 @@ public List<Integer> mergeKSortedArrays(int[][] arrays) {
       },
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 2: Divide and Conquer
 // Time: O(n log k), Space: O(log k)
 function mergeKSortedArraysDC(arrays: number[][]): number[] {
@@ -700,6 +869,7 @@ function mergeKSortedArraysDC(arrays: number[][]): number[] {
       },
       {
         language: "Java",
+        approach: "moderate",
         code: `// Approach 2: Divide and Conquer
 // Time: O(n log k), Space: O(log k)
 public List<Integer> mergeKSortedArraysDC(int[][] arrays) {
@@ -756,6 +926,7 @@ private List<Integer> arrayToList(int[] arr) {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 3: Simple Merge
 // Time: O(nk), Space: O(n)
 function mergeKSortedArraysSimple(arrays: number[][]): number[] {
@@ -792,6 +963,7 @@ function mergeKSortedArraysSimple(arrays: number[][]): number[] {
       },
       {
         language: "Java",
+        approach: "brute-force",
         code: `// Approach 3: Simple Merge
 // Time: O(nk), Space: O(n)
 public List<Integer> mergeKSortedArraysSimple(int[][] arrays) {
@@ -834,6 +1006,103 @@ private List<Integer> arrayToList(int[] arr) {
         explanation:
           "Java implementation of the simple merge approach. Merges arrays sequentially one by one.",
       },
+      {
+        language: "Python",
+        code: `# Approach 1: Min Heap (Optimal)
+# Time: O(n log k), Space: O(k) where n = total elements
+import heapq
+
+def merge_k_sorted_arrays(arrays):
+    result = []
+    min_heap = []
+    
+    # Initialize heap with first element from each array
+    for i, array in enumerate(arrays):
+        if array:
+            heapq.heappush(min_heap, (array[0], i, 0))
+    
+    while min_heap:
+        value, array_index, element_index = heapq.heappop(min_heap)
+        result.append(value)
+        
+        # Add next element from same array
+        if element_index + 1 < len(arrays[array_index]):
+            next_val = arrays[array_index][element_index + 1]
+            heapq.heappush(min_heap, (next_val, array_index, element_index + 1))
+    
+    return result`,
+        explanation: "Min heap approach tracks smallest unprocessed element from each array. Most efficient with O(n log k) time complexity."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Divide and Conquer
+# Time: O(n log k), Space: O(log k)
+def merge_k_sorted_arrays_dc(arrays):
+    if not arrays:
+        return []
+    if len(arrays) == 1:
+        return arrays[0]
+    
+    def merge_two(arr1, arr2):
+        result = []
+        i = j = 0
+        
+        while i < len(arr1) and j < len(arr2):
+            if arr1[i] <= arr2[j]:
+                result.append(arr1[i])
+                i += 1
+            else:
+                result.append(arr2[j])
+                j += 1
+        
+        result.extend(arr1[i:])
+        result.extend(arr2[j:])
+        return result
+    
+    while len(arrays) > 1:
+        merged_arrays = []
+        
+        for i in range(0, len(arrays), 2):
+            arr1 = arrays[i]
+            arr2 = arrays[i + 1] if i + 1 < len(arrays) else []
+            merged_arrays.append(merge_two(arr1, arr2))
+        
+        arrays = merged_arrays
+    
+    return arrays[0]`,
+        explanation: "Divide and conquer approach merges arrays pairwise until one remains. Good space efficiency but more complex."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Simple Merge
+# Time: O(nk), Space: O(n)
+def merge_k_sorted_arrays_simple(arrays):
+    if not arrays:
+        return []
+    
+    def merge_two(arr1, arr2):
+        result = []
+        i = j = 0
+        
+        while i < len(arr1) and j < len(arr2):
+            if arr1[i] <= arr2[j]:
+                result.append(arr1[i])
+                i += 1
+            else:
+                result.append(arr2[j])
+                j += 1
+        
+        result.extend(arr1[i:])
+        result.extend(arr2[j:])
+        return result
+    
+    result = arrays[0][:]
+    for i in range(1, len(arrays)):
+        result = merge_two(result, arrays[i])
+    
+    return result`,
+        explanation: "Simple approach merges arrays sequentially. Less efficient but easier to implement and understand."
+      },
     ],
     tips: [
       "Min heap tracks smallest unprocessed element from each array",
@@ -859,6 +1128,7 @@ private List<Integer> arrayToList(int[] arr) {
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 1: Two Heaps (Optimal)
 // addNum: O(log n), findMedian: O(1), Space: O(n)
 class MedianFinder {
@@ -914,6 +1184,7 @@ class MedianFinder {
       },
       {
         language: "Java",
+        approach: "optimal",
         code: `// Approach 1: Two Heaps (Optimal)
 // addNum: O(log n), findMedian: O(1), Space: O(n)
 class MedianFinder {
@@ -958,6 +1229,7 @@ class MedianFinder {
       },
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 2: Optimized Heap Implementation
 // addNum: O(log n), findMedian: O(1), Space: O(n)
 class OptimizedMedianFinder {
@@ -994,6 +1266,7 @@ class OptimizedMedianFinder {
       },
       {
         language: "Java",
+        approach: "moderate",
         code: `// Approach 2: Optimized Heap Implementation
 // addNum: O(log n), findMedian: O(1), Space: O(n)
 class OptimizedMedianFinder {
@@ -1037,6 +1310,7 @@ class OptimizedMedianFinder {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 3: Balanced Tree Approach
 // addNum: O(log n), findMedian: O(1), Space: O(n)
 class BalancedTreeMedianFinder {
@@ -1078,6 +1352,7 @@ class BalancedTreeMedianFinder {
       },
       {
         language: "Java",
+        approach: "brute-force",
         code: `// Approach 3: Balanced Tree Approach
 // addNum: O(log n), findMedian: O(1), Space: O(n)
 class BalancedTreeMedianFinder {
@@ -1121,6 +1396,65 @@ class BalancedTreeMedianFinder {
         explanation:
           "Java implementation using ArrayList with binary search insertion. Maintains sorted order for O(log n) insertion and O(1) median retrieval.",
       },
+      {
+        language: "Python",
+        code: `# Approach 1: Two Heaps (Optimal)
+# addNum: O(log n), findMedian: O(1), Space: O(n)
+import heapq
+
+class MedianFinder:
+    def __init__(self):
+        # Max heap for the lower half (smaller elements)
+        # Python heapq is min heap, so negate values for max heap
+        self.max_heap = []
+        # Min heap for the upper half (larger elements)
+        self.min_heap = []
+    
+    def add_num(self, num):
+        # Add to appropriate heap
+        if not self.max_heap or num <= -self.max_heap[0]:
+            heapq.heappush(self.max_heap, -num)
+        else:
+            heapq.heappush(self.min_heap, num)
+        
+        # Balance heaps
+        if len(self.max_heap) > len(self.min_heap) + 1:
+            val = -heapq.heappop(self.max_heap)
+            heapq.heappush(self.min_heap, val)
+        elif len(self.min_heap) > len(self.max_heap) + 1:
+            val = heapq.heappop(self.min_heap)
+            heapq.heappush(self.max_heap, -val)
+    
+    def find_median(self):
+        if len(self.max_heap) == len(self.min_heap):
+            return (-self.max_heap[0] + self.min_heap[0]) / 2
+        elif len(self.max_heap) > len(self.min_heap):
+            return -self.max_heap[0]
+        else:
+            return self.min_heap[0]`,
+        explanation: "Two heaps approach maintains balanced left and right halves. Max heap stores smaller elements, min heap stores larger ones."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Sorted List (Alternative)
+# addNum: O(n), findMedian: O(1), Space: O(n)
+import bisect
+
+class MedianFinderSorted:
+    def __init__(self):
+        self.nums = []
+    
+    def add_num(self, num):
+        bisect.insort(self.nums, num)
+    
+    def find_median(self):
+        n = len(self.nums)
+        if n % 2 == 0:
+            return (self.nums[n // 2 - 1] + self.nums[n // 2]) / 2
+        else:
+            return self.nums[n // 2]`,
+        explanation: "Alternative approach using sorted list with binary search insertion. Simpler but less efficient for large datasets."
+      },
     ],
     tips: [
       "Use two heaps: max heap for left half, min heap for right half",
@@ -1146,6 +1480,7 @@ class BalancedTreeMedianFinder {
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 1: Max Heap with Cooldown Queue
 // Time: O(n), Space: O(1) - limited by 26 task types
 function leastInterval(tasks: string[], n: number): number {
@@ -1187,6 +1522,7 @@ function leastInterval(tasks: string[], n: number): number {
       },
       {
         language: "Java",
+        approach: "moderate",
         code: `// Approach 1: Max Heap with Cooldown Queue
 // Time: O(n), Space: O(1) - limited by 26 task types
 public int leastInterval(char[] tasks, int n) {
@@ -1228,6 +1564,7 @@ public int leastInterval(char[] tasks, int n) {
       },
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 2: Mathematical Approach (Most Efficient)
 // Time: O(n), Space: O(1)
 function leastIntervalMath(tasks: string[], n: number): number {
@@ -1253,6 +1590,7 @@ function leastIntervalMath(tasks: string[], n: number): number {
       },
       {
         language: "Java",
+        approach: "optimal",
         code: `// Approach 2: Mathematical Approach (Most Efficient)
 // Time: O(n), Space: O(1)
 public int leastIntervalMath(char[] tasks, int n) {
@@ -1286,6 +1624,7 @@ public int leastIntervalMath(char[] tasks, int n) {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 3: Greedy with Frequency Tracking
 // Time: O(n), Space: O(1)
 function leastIntervalGreedy(tasks: string[], n: number): number {
@@ -1313,6 +1652,7 @@ function leastIntervalGreedy(tasks: string[], n: number): number {
       },
       {
         language: "Java",
+        approach: "brute-force",
         code: `// Approach 3: Greedy with Frequency Tracking
 // Time: O(n), Space: O(1)
 public int leastIntervalGreedy(char[] tasks, int n) {
@@ -1340,6 +1680,97 @@ public int leastIntervalGreedy(char[] tasks, int n) {
 }`,
         explanation:
           "Java implementation of greedy approach. Calculates optimal schedule based on task frequencies and cooldown requirements.",
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Max Heap with Cooldown Queue
+# Time: O(n), Space: O(1) - limited by 26 task types
+import heapq
+from collections import deque, Counter
+
+def least_interval(tasks, n):
+    # Count task frequencies
+    task_count = Counter(tasks)
+    
+    # Max heap of frequencies (negate for max heap behavior)
+    max_heap = [-count for count in task_count.values()]
+    heapq.heapify(max_heap)
+    
+    cooldown_queue = deque()  # [(count, available_time)]
+    time = 0
+    
+    while max_heap or cooldown_queue:
+        time += 1
+        
+        # Move tasks from cooldown back to heap
+        if cooldown_queue and cooldown_queue[0][1] <= time:
+            count, _ = cooldown_queue.popleft()
+            heapq.heappush(max_heap, count)
+        
+        # Execute task if available
+        if max_heap:
+            count = heapq.heappop(max_heap)
+            count += 1  # Reduce frequency (was negative)
+            
+            if count < 0:  # Task still has remaining executions
+                cooldown_queue.append((count, time + n + 1))
+    
+    return time`,
+        explanation: "Max heap with cooldown queue simulates task execution. Tracks when tasks become available after cooldown."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Mathematical Approach (Optimal)
+# Time: O(n), Space: O(1)
+def least_interval_math(tasks, n):
+    # Count task frequencies
+    task_count = [0] * 26
+    for task in tasks:
+        task_count[ord(task) - ord('A')] += 1
+    
+    task_count.sort()
+    
+    # Find maximum frequency and count of tasks with max frequency
+    max_freq = task_count[25]
+    max_freq_count = 0
+    for i in range(25, -1, -1):
+        if task_count[i] == max_freq:
+            max_freq_count += 1
+        else:
+            break
+    
+    # Calculate minimum time needed
+    min_time = (max_freq - 1) * (n + 1) + max_freq_count
+    
+    return max(min_time, len(tasks))`,
+        explanation: "Mathematical approach calculates minimum time using frequency analysis. Most efficient solution."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Greedy with Frequency Tracking
+# Time: O(n), Space: O(1)
+def least_interval_greedy(tasks, n):
+    from collections import Counter
+    
+    # Count frequency of each task
+    task_count = Counter(tasks)
+    frequencies = sorted(task_count.values(), reverse=True)
+    
+    # Find how many tasks have maximum frequency
+    max_freq = frequencies[0]
+    max_freq_count = 0
+    for freq in frequencies:
+        if freq == max_freq:
+            max_freq_count += 1
+        else:
+            break
+    
+    # Calculate minimum time needed
+    # (max_freq-1) complete cycles of (n+1) slots + max_freq_count slots for final tasks
+    min_time = (max_freq - 1) * (n + 1) + max_freq_count
+    
+    return max(min_time, len(tasks))`,
+        explanation: "Greedy approach that calculates minimum time by analyzing task frequencies and finding tasks with maximum frequency."
       },
     ],
     tips: [

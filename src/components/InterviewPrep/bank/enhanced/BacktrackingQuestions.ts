@@ -14,6 +14,7 @@ export const enhancedBacktrackingQuestions: Question[] = [
     codeImplementation: [
       {
         language: "typescript",
+        approach: "optimal",
         explanation:
           "Backtracking (Recursive): This approach uses backtracking to build strings character by character. We track the count of open and closed parentheses and add them when valid conditions are met. Time: O(4^n / √n), Space: O(4^n / √n)",
         code: `function generateParenthesis(n: number): string[] {
@@ -40,6 +41,7 @@ export const enhancedBacktrackingQuestions: Question[] = [
       },
       {
         language: "Java",
+        approach: "optimal",
         explanation:
           "Backtracking (Recursive): Java implementation using the same backtracking approach. We use ArrayList to store results and StringBuilder for efficient string building. Time: O(4^n / √n), Space: O(4^n / √n)",
         code: `import java.util.*;
@@ -73,6 +75,7 @@ public class Solution {
       },
       {
         language: "typescript",
+        approach: "moderate",
         explanation:
           "Iterative with Queue: This approach uses a queue to simulate the recursive calls, tracking the same state information (current string, open count, close count). Time: O(4^n / √n), Space: O(4^n / √n)",
         code: `function generateParenthesisIterative(n: number): string[] {
@@ -101,6 +104,7 @@ public class Solution {
       },
       {
         language: "Java",
+        approach: "moderate",
         explanation:
           "Iterative with Queue: Java implementation using a queue to simulate recursive calls. We use a custom State class to track the current string and counts. Time: O(4^n / √n), Space: O(4^n / √n)",
         code: `import java.util.*;
@@ -145,6 +149,7 @@ public class Solution {
       },
       {
         language: "typescript",
+        approach: "optimal",
         explanation:
           "Dynamic Programming: This approach uses DP to build solutions using the Catalan number recurrence relation. For each position, we consider all possible combinations of valid substrings. Time: O(4^n / √n), Space: O(4^n / √n)",
         code: `function generateParenthesisDP(n: number): string[] {
@@ -166,6 +171,7 @@ public class Solution {
       },
       {
         language: "Java",
+        approach: "optimal",
         explanation:
           "Dynamic Programming: Java implementation using DP with Catalan number recurrence. We use ArrayList arrays to store solutions for each position. Time: O(4^n / √n), Space: O(4^n / √n)",
         code: `import java.util.*;
@@ -217,6 +223,7 @@ public class Solution {
     codeImplementation: [
       {
         language: "typescript",
+        approach: "optimal",
         explanation:
           "Backtracking with Used Array: This approach keeps track of used elements with a boolean array, building permutations one element at a time. Time: O(n! * n), Space: O(n)",
         code: `function permute(nums: number[]): number[][] {
@@ -248,6 +255,7 @@ public class Solution {
       },
       {
         language: "Java",
+        approach: "optimal",
         explanation:
           "Backtracking with Used Array: Java implementation using boolean array to track used elements. We use ArrayList for dynamic result collection and backtracking. Time: O(n! * n), Space: O(n)",
         code: `import java.util.*;
@@ -282,6 +290,7 @@ public class Solution {
       },
       {
         language: "typescript",
+        approach: "optimal",
         explanation:
           "Swap-based Backtracking (In-place): This approach performs swaps to generate permutations, avoiding the need for a used array by working directly on the input array. Time: O(n! * n), Space: O(n) recursion stack",
         code: `function permuteSwap(nums: number[]): number[][] {
@@ -306,6 +315,7 @@ public class Solution {
       },
       {
         language: "Java",
+        approach: "optimal",
         explanation:
           "Swap-based Backtracking (In-place): Java implementation using in-place swaps to generate permutations. This avoids extra space for tracking used elements. Time: O(n! * n), Space: O(n) recursion stack",
         code: `import java.util.*;
@@ -343,6 +353,7 @@ public class Solution {
       },
       {
         language: "typescript",
+        approach: "moderate",
         explanation:
           "Iterative Approach: This approach builds permutations by inserting each new number at every possible position in existing permutations. Time: O(n! * n), Space: O(n!)",
         code: `function permuteIterative(nums: number[]): number[][] {
@@ -366,6 +377,7 @@ public class Solution {
       },
       {
         language: "Java",
+        approach: "moderate",
         explanation:
           "Iterative Approach: Java implementation that builds permutations by inserting each new number at every possible position. We use ArrayList operations for insertion. Time: O(n! * n), Space: O(n!)",
         code: `import java.util.*;
@@ -395,6 +407,7 @@ public class Solution {
       },
       {
         language: "typescript",
+        approach: "optimal",
         explanation:
           "Handling Duplicates (Permutations II): This approach modifies the backtracking algorithm to handle duplicate values by sorting the array first and skipping duplicate choices. Time: O(n! * n), Space: O(n)",
         code: `function permuteUnique(nums: number[]): number[][] {
@@ -429,6 +442,7 @@ public class Solution {
       },
       {
         language: "Java",
+        approach: "optimal",
         explanation:
           "Handling Duplicates (Permutations II): Java implementation that handles duplicate values by sorting first and skipping duplicate branches. The key is to avoid using duplicate elements at the same recursion level. Time: O(n! * n), Space: O(n)",
         code: `import java.util.*;
@@ -490,6 +504,7 @@ public class Solution {
     codeImplementation: [
       {
         language: "typescript",
+        approach: "optimal",
         explanation:
           "Backtracking Approach: This is the standard backtracking solution that uses a start index to avoid duplicate combinations. Time: O(C(n,k) * k), Space: O(C(n,k) * k)",
         code: `function combine(n: number, k: number): number[][] {
@@ -514,6 +529,7 @@ public class Solution {
       },
       {
         language: "Java",
+        approach: "optimal",
         explanation:
           "Backtracking Approach: Java implementation using standard backtracking with start index to avoid duplicates. We use ArrayList for dynamic collection management. Time: O(C(n,k) * k), Space: O(C(n,k) * k)",
         code: `import java.util.*;
@@ -541,6 +557,7 @@ public class Solution {
       },
       {
         language: "typescript",
+        approach: "optimal",
         explanation:
           "Optimized with Early Pruning: This approach adds pruning checks to avoid exploring branches that can't lead to valid combinations, reducing computation time. Time: O(C(n,k) * k), Space: O(C(n,k) * k)",
         code: `function combineOptimized(n: number, k: number): number[][] {
@@ -570,6 +587,7 @@ public class Solution {
       },
       {
         language: "Java",
+        approach: "optimal",
         explanation:
           "Optimized with Early Pruning: Java implementation with pruning optimization to skip branches that cannot lead to valid combinations. This reduces unnecessary computation. Time: O(C(n,k) * k), Space: O(C(n,k) * k)",
         code: `import java.util.*;
@@ -602,6 +620,7 @@ public class Solution {
       },
       {
         language: "typescript",
+        approach: "moderate",
         explanation:
           "Iterative Approach: This approach uses an explicit stack to simulate the recursive calls, which can be more efficient in languages where recursion is expensive. Time: O(C(n,k) * k), Space: O(C(n,k) * k)",
         code: `function combineIterative(n: number, k: number): number[][] {
@@ -626,6 +645,7 @@ public class Solution {
       },
       {
         language: "Java",
+        approach: "moderate",
         explanation:
           "Iterative Approach: Java implementation using explicit stack to simulate recursive calls. We use a custom State class to track the start position and current combination. Time: O(C(n,k) * k), Space: O(C(n,k) * k)",
         code: `import java.util.*;
@@ -691,6 +711,7 @@ public class Solution {
     codeImplementation: [
       {
         language: "typescript",
+        approach: "optimal",
         explanation:
           "Backtracking with Conflict Detection: This approach uses sets to track occupied columns and diagonals. By placing queens row by row, we only need to check if the current position conflicts with any previously placed queen. Time: O(n!), Space: O(n)",
         code: `function solveNQueens(n: number): string[][] {
@@ -733,6 +754,7 @@ public class Solution {
       },
       {
         language: "Java",
+        approach: "optimal",
         explanation:
           "Backtracking with Conflict Detection: Java implementation using HashSet to track conflicts. We use char arrays for the board and convert to strings for the result. Time: O(n!), Space: O(n)",
         code: `import java.util.*;
@@ -790,6 +812,7 @@ public class Solution {
       },
       {
         language: "typescript",
+        approach: "optimal",
         explanation:
           "Count Solutions Only (N-Queens II): This variation focuses only on counting valid solutions rather than constructing the boards, which can be more efficient when only the count is needed. Time: O(n!), Space: O(n)",
         code: `function totalNQueens(n: number): number {
@@ -827,6 +850,7 @@ public class Solution {
       },
       {
         language: "Java",
+        approach: "optimal",
         explanation:
           "Count Solutions Only (N-Queens II): Java implementation that only counts solutions without constructing the boards. This is more memory efficient when only the count is needed. Time: O(n!), Space: O(n)",
         code: `import java.util.*;
@@ -869,6 +893,7 @@ public class Solution {
       },
       {
         language: "typescript",
+        approach: "optimal",
         explanation:
           "Bit Manipulation Optimization: This approach uses bitwise operations to track conflicts, which is significantly faster than using sets. The available positions are calculated using bit operations, and we find the least significant bit to place the queen. Time: O(n!), Space: O(n)",
         code: `function solveNQueensBit(n: number): string[][] {
@@ -992,6 +1017,7 @@ public class Solution {
     codeImplementation: [
       {
         language: "typescript",
+        approach: "optimal",
         explanation:
           "Backtracking with Constraint Propagation: This approach checks each cell for valid placements by explicitly checking row, column, and 3x3 box constraints for each candidate number. Time: O(9^(n*n)), Space: O(n*n)",
         code: `function solveSudoku(board: string[][]): void {
@@ -1048,6 +1074,7 @@ public class Solution {
       },
       {
         language: "Java",
+        approach: "optimal",
         explanation:
           "Backtracking with Constraint Propagation: Java implementation using char arrays for the board. We check row, column, and 3x3 box constraints before placing each number. Time: O(9^(n*n)), Space: O(n*n)",
         code: `public class Solution {
@@ -1104,6 +1131,7 @@ public class Solution {
       },
       {
         language: "typescript",
+        approach: "optimal",
         explanation:
           "Optimized with Bit Sets: This approach uses bit manipulation to efficiently track used digits in each row, column, and box, greatly reducing the time needed to check constraints. Time: O(9^(n*n)), Space: O(n)",
         code: `function solveSudokuOptimized(board: string[][]): void {
@@ -1164,6 +1192,7 @@ public class Solution {
       },
       {
         language: "Java",
+        approach: "optimal",
         explanation:
           "Optimized with Bit Sets: Java implementation using bit manipulation for ultra-fast constraint checking. We use bitmasks to track used digits in each row, column, and box. Time: O(9^(n*n)), Space: O(n)",
         code: `public class Solution {

@@ -86,6 +86,79 @@ function isValidCounters(s: string): boolean {
     return round === 0 && curly === 0 && square === 0;
 }`,
         explanation: "Counter-based approach using separate counters for each bracket type. Simpler but doesn't handle mixed bracket sequences correctly."
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Stack-based Solution (Optimal)
+# Time: O(n), Space: O(n)
+def is_valid(s):
+    stack = []
+    pairs = {
+        ')': '(',
+        '}': '{',
+        ']': '['
+    }
+    
+    for char in s:
+        if char in pairs:
+            # Closing bracket
+            if not stack or stack.pop() != pairs[char]:
+                return False
+        else:
+            # Opening bracket
+            stack.append(char)
+    
+    return len(stack) == 0`,
+        explanation: "Classic stack-based solution using dictionary for bracket pairs. Most intuitive and handles all bracket types."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Optimized with Early Termination
+# Time: O(n), Space: O(n)
+def is_valid_optimized(s):
+    if len(s) % 2 != 0:
+        return False
+    
+    stack = []
+    open_brackets = {'(', '{', '['}
+    bracket_pairs = {')': '(', '}': '{', ']': '['}
+    
+    for char in s:
+        if char in open_brackets:
+            stack.append(char)
+        else:
+            if not stack or stack.pop() != bracket_pairs[char]:
+                return False
+    
+    return len(stack) == 0`,
+        explanation: "Optimized version with early odd-length check and set for open brackets. Better performance for invalid cases."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Counter-based Approach (Simpler but Less Flexible)
+# Time: O(n), Space: O(1)
+def is_valid_counters(s):
+    round_count = curly_count = square_count = 0
+    
+    for char in s:
+        if char == '(':
+            round_count += 1
+        elif char == ')':
+            round_count -= 1
+        elif char == '{':
+            curly_count += 1
+        elif char == '}':
+            curly_count -= 1
+        elif char == '[':
+            square_count += 1
+        elif char == ']':
+            square_count -= 1
+        
+        if round_count < 0 or curly_count < 0 or square_count < 0:
+            return False
+    
+    return round_count == 0 and curly_count == 0 and square_count == 0`,
+        explanation: "Counter-based approach using separate counters for each bracket type. Simpler but doesn't handle mixed bracket sequences correctly."
       }
     ],
     tips: [
@@ -209,6 +282,94 @@ class MinStackDiff {
     }
 }`,
         explanation: "Difference encoding stores differences from current minimum. Most space-efficient but more complex implementation."
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Two Stacks (Optimal)
+# All operations: O(1), Space: O(n)
+class MinStack:
+    def __init__(self):
+        self.stack = []
+        self.min_stack = []
+    
+    def push(self, val):
+        self.stack.append(val)
+        
+        if not self.min_stack or val <= self.min_stack[-1]:
+            self.min_stack.append(val)
+    
+    def pop(self):
+        popped = self.stack.pop()
+        
+        if popped == self.min_stack[-1]:
+            self.min_stack.pop()
+    
+    def top(self):
+        return self.stack[-1]
+    
+    def get_min(self):
+        return self.min_stack[-1]`,
+        explanation: "Two stacks approach: main stack for values, min stack for minimum tracking. Most intuitive and efficient."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Single Stack with Pairs
+# All operations: O(1), Space: O(n)
+class MinStackPairs:
+    def __init__(self):
+        self.stack = []  # Store tuples of (value, current_min)
+    
+    def push(self, val):
+        if not self.stack:
+            current_min = val
+        else:
+            current_min = min(val, self.stack[-1][1])
+        self.stack.append((val, current_min))
+    
+    def pop(self):
+        self.stack.pop()
+    
+    def top(self):
+        return self.stack[-1][0]
+    
+    def get_min(self):
+        return self.stack[-1][1]`,
+        explanation: "Single stack stores each element with its current minimum. Simpler structure but uses more space per element."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Difference Encoding (Space Optimized)
+# All operations: O(1), Space: O(n)
+class MinStackDiff:
+    def __init__(self):
+        self.stack = []
+        self.min = 0
+    
+    def push(self, val):
+        if not self.stack:
+            self.stack.append(0)
+            self.min = val
+        else:
+            self.stack.append(val - self.min)
+            if val < self.min:
+                self.min = val
+    
+    def pop(self):
+        if not self.stack:
+            return
+        
+        diff = self.stack.pop()
+        
+        if diff < 0:
+            self.min = self.min - diff
+    
+    def top(self):
+        diff = self.stack[-1]
+        return self.min if diff < 0 else self.min + diff
+    
+    def get_min(self):
+        return self.min`,
+        explanation: "Difference encoding stores differences from current minimum. Most space-efficient but more complex implementation."
       }
     ],
     tips: [
@@ -325,6 +486,88 @@ function evalRPNRecursive(tokens: string[]): number {
     return evaluate();
 }`,
         explanation: "Recursive approach evaluates from right to left. Less practical due to call stack overhead but demonstrates alternative thinking."
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Stack-based Solution (Optimal)
+# Time: O(n), Space: O(n)
+def eval_rpn(tokens):
+    stack = []
+    operators = {'+', '-', '*', '/'}
+    
+    for token in tokens:
+        if token in operators:
+            b = stack.pop()
+            a = stack.pop()
+            
+            if token == '+':
+                stack.append(a + b)
+            elif token == '-':
+                stack.append(a - b)
+            elif token == '*':
+                stack.append(a * b)
+            elif token == '/':
+                # Truncate towards zero (same as Math.trunc in JS)
+                stack.append(int(a / b))
+        else:
+            stack.append(int(token))
+    
+    return stack[0]`,
+        explanation: "Classic stack-based solution using set for operators. Most intuitive and handles all operators efficiently."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Using Function Dictionary for Operations
+# Time: O(n), Space: O(n)
+def eval_rpn_map(tokens):
+    stack = []
+    
+    operations = {
+        '+': lambda a, b: a + b,
+        '-': lambda a, b: a - b,
+        '*': lambda a, b: a * b,
+        '/': lambda a, b: int(a / b)  # Truncate towards zero
+    }
+    
+    for token in tokens:
+        if token in operations:
+            b = stack.pop()
+            a = stack.pop()
+            stack.append(operations[token](a, b))
+        else:
+            stack.append(int(token))
+    
+    return stack[0]`,
+        explanation: "Function dictionary approach provides cleaner, more maintainable code. Easy to extend with new operators."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Recursive Approach (Less Practical)
+# Time: O(n), Space: O(n)
+def eval_rpn_recursive(tokens):
+    index = [len(tokens) - 1]  # Use list to maintain reference
+    
+    def evaluate():
+        token = tokens[index[0]]
+        index[0] -= 1
+        
+        if token == '+':
+            return evaluate() + evaluate()
+        elif token == '-':
+            b = evaluate()
+            a = evaluate()
+            return a - b
+        elif token == '*':
+            return evaluate() * evaluate()
+        elif token == '/':
+            b = evaluate()
+            a = evaluate()
+            return int(a / b)  # Truncate towards zero
+        else:
+            return int(token)
+    
+    return evaluate()`,
+        explanation: "Recursive approach evaluates from right to left. Less practical due to call stack overhead but demonstrates alternative thinking."
       }
     ],
     tips: [
@@ -413,6 +656,63 @@ function dailyTemperaturesOptimized(temperatures: number[]): number[] {
     
     return result;
 }`,
+        explanation: "Right-to-left processing with different stack logic. Alternative perspective on the same monotonic stack algorithm."
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Monotonic Stack (Optimal)
+# Time: O(n), Space: O(n)
+def daily_temperatures(temperatures):
+    result = [0] * len(temperatures)
+    stack = []  # Store indices
+    
+    for i in range(len(temperatures)):
+        # While current temperature is warmer than stack top
+        while stack and temperatures[i] > temperatures[stack[-1]]:
+            prev_index = stack.pop()
+            result[prev_index] = i - prev_index
+        
+        stack.append(i)
+    
+    return result`,
+        explanation: "Monotonic decreasing stack maintains indices of decreasing temperatures. Most efficient approach with O(n) time complexity."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Brute Force (for comparison)
+# Time: O(n²), Space: O(1)
+def daily_temperatures_brute(temperatures):
+    result = [0] * len(temperatures)
+    
+    for i in range(len(temperatures)):
+        for j in range(i + 1, len(temperatures)):
+            if temperatures[j] > temperatures[i]:
+                result[i] = j - i
+                break
+    
+    return result`,
+        explanation: "Brute force approach with nested loops. Simple to understand but inefficient for large arrays."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Optimized with Right-to-Left Processing
+# Time: O(n), Space: O(n)
+def daily_temperatures_optimized(temperatures):
+    result = [0] * len(temperatures)
+    stack = []
+    
+    for i in range(len(temperatures) - 1, -1, -1):
+        # Remove cooler temperatures from stack
+        while stack and temperatures[stack[-1]] <= temperatures[i]:
+            stack.pop()
+        
+        # If stack not empty, top element is next warmer day
+        if stack:
+            result[i] = stack[-1] - i
+        
+        stack.append(i)
+    
+    return result`,
         explanation: "Right-to-left processing with different stack logic. Alternative perspective on the same monotonic stack algorithm."
       }
     ],

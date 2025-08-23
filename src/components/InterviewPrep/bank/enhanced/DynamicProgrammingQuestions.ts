@@ -12,6 +12,7 @@ export const enhancedDPQuestions: Question[] = [
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 1: Bottom-up DP (Optimal)
 // Time: O(n), Space: O(1)
 function climbStairs(n: number): number {
@@ -32,6 +33,7 @@ function climbStairs(n: number): number {
       },
       {
         language: "Java",
+        approach: "optimal",
         code: `// Approach 1: Bottom-up DP (Optimal)
 // Time: O(n), Space: O(1)
 public class Solution {
@@ -54,6 +56,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 2: Top-down DP with Memoization
 // Time: O(n), Space: O(n)
 function climbStairsMemo(n: number): number {
@@ -74,6 +77,7 @@ function climbStairsMemo(n: number): number {
       },
       {
         language: "Java",
+        approach: "moderate",
         code: `// Approach 2: Top-down DP with Memoization
 // Time: O(n), Space: O(n)
 import java.util.*;
@@ -98,6 +102,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 3: Matrix Exponentiation (Advanced)
 // Time: O(log n), Space: O(1)
 function climbStairsMatrix(n: number): number {
@@ -134,6 +139,7 @@ function climbStairsMatrix(n: number): number {
       },
       {
         language: "Java",
+        approach: "brute-force",
         code: `// Approach 3: Matrix Exponentiation (Advanced)
 // Time: O(log n), Space: O(1)
 public class Solution {
@@ -193,6 +199,7 @@ public class Solution {
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 1: Space-optimized DP (Optimal)
 // Time: O(n), Space: O(1)
 function rob(nums: number[]): number {
@@ -214,6 +221,7 @@ function rob(nums: number[]): number {
       },
       {
         language: "java",
+        approach: "optimal",
         code: `// Approach 1: Space-optimized DP (Optimal)
 // Time: O(n), Space: O(1)
 public class Solution {
@@ -237,6 +245,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 2: Standard DP Array
 // Time: O(n), Space: O(n)
 function robDP(nums: number[]): number {
@@ -279,6 +288,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 3: Recursive with Memoization
 // Time: O(n), Space: O(n)
 function robMemo(nums: number[]): number {
@@ -303,6 +313,7 @@ function robMemo(nums: number[]): number {
       },
       {
         language: "java",
+        approach: "brute-force",
         code: `// Approach 3: Recursive with Memoization
 // Time: O(n), Space: O(n)
 import java.util.*;
@@ -354,6 +365,7 @@ public class Solution {
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 1: Space-optimized DP (Optimal)
 // Time: O(m * n), Space: O(min(m, n))
 function uniquePaths(m: number, n: number): number {
@@ -373,6 +385,7 @@ function uniquePaths(m: number, n: number): number {
       },
       {
         language: "java",
+        approach: "optimal",
         code: `// Approach 1: Space-optimized DP (Optimal)
 // Time: O(m * n), Space: O(min(m, n))
 public class Solution {
@@ -396,6 +409,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 2: 2D DP Array
 // Time: O(m * n), Space: O(m * n)
 function uniquePaths2D(m: number, n: number): number {
@@ -413,6 +427,7 @@ function uniquePaths2D(m: number, n: number): number {
       },
       {
         language: "java",
+        approach: "moderate",
         code: `// Approach 2: 2D DP Array
 // Time: O(m * n), Space: O(m * n)
 import java.util.Arrays;
@@ -440,6 +455,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 3: Mathematical (Combinatorics)
 // Time: O(min(m, n)), Space: O(1)
 function uniquePathsMath(m: number, n: number): number {
@@ -465,6 +481,7 @@ function uniquePathsMath(m: number, n: number): number {
       },
       {
         language: "java",
+        approach: "brute-force",
         code: `// Approach 3: Mathematical (Combinatorics)
 // Time: O(min(m, n)), Space: O(1)
 public class Solution {
@@ -489,6 +506,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 4: Recursive with Memoization
 // Time: O(m * n), Space: O(m * n)
 function uniquePathsRecursive(m: number, n: number): number {
@@ -512,6 +530,7 @@ function uniquePathsRecursive(m: number, n: number): number {
       },
       {
         language: "java",
+        approach: "brute-force",
         code: `// Approach 4: Recursive with Memoization
 // Time: O(m * n), Space: O(m * n)
 import java.util.*;
@@ -563,6 +582,7 @@ public class Solution {
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 1: Greedy (Optimal)
 // Time: O(n), Space: O(1)
 function canJump(nums: number[]): boolean {
@@ -582,6 +602,7 @@ function canJump(nums: number[]): boolean {
       },
       {
         language: "java",
+        approach: "optimal",
         code: `// Approach 1: Greedy (Optimal)
 // Time: O(n), Space: O(1)
 public class Solution {
@@ -603,6 +624,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 2: Dynamic Programming
 // Time: O(n²), Space: O(n)
 function canJumpDP(nums: number[]): boolean {
@@ -624,6 +646,7 @@ function canJumpDP(nums: number[]): boolean {
       },
       {
         language: "java",
+        approach: "moderate",
         code: `// Approach 2: Dynamic Programming
 // Time: O(n²), Space: O(n)
 import java.util.Arrays;
@@ -649,6 +672,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 3: Backtracking from End
 // Time: O(n), Space: O(1)
 function canJumpBacktrack(nums: number[]): boolean {
@@ -666,6 +690,7 @@ function canJumpBacktrack(nums: number[]): boolean {
       },
       {
         language: "java",
+        approach: "moderate",
         code: `// Approach 3: Backtracking from End
 // Time: O(n), Space: O(1)
 public class Solution {
@@ -685,6 +710,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 4: Jump Game II - Minimum Jumps
 // Time: O(n), Space: O(1)
 function jump(nums: number[]): number {
@@ -706,6 +732,7 @@ function jump(nums: number[]): number {
       },
       {
         language: "java",
+        approach: "optimal",
         code: `// Approach 4: Jump Game II - Minimum Jumps
 // Time: O(n), Space: O(1)
 public class Solution {
@@ -751,6 +778,7 @@ public class Solution {
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 1: 2D DP (Standard)
 // Time: O(m * n), Space: O(m * n)
 function minDistance(word1: string, word2: string): number {
@@ -784,6 +812,7 @@ function minDistance(word1: string, word2: string): number {
       },
       {
         language: "java",
+        approach: "moderate",
         code: `// Approach 1: 2D DP (Standard)
 // Time: O(m * n), Space: O(m * n)
 public class Solution {
@@ -818,6 +847,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 2: Space-optimized DP
 // Time: O(m * n), Space: O(min(m, n))
 function minDistanceOptimized(word1: string, word2: string): number {
@@ -846,6 +876,7 @@ function minDistanceOptimized(word1: string, word2: string): number {
       },
       {
         language: "java",
+        approach: "optimal",
         code: `// Approach 2: Space-optimized DP
 // Time: O(m * n), Space: O(min(m, n))
 public class Solution {
@@ -880,6 +911,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 3: Recursive with Memoization
 // Time: O(m * n), Space: O(m * n)
 function minDistanceRecursive(word1: string, word2: string): number {
@@ -914,6 +946,7 @@ function minDistanceRecursive(word1: string, word2: string): number {
       },
       {
         language: "java",
+        approach: "brute-force",
         code: `// Approach 3: Recursive with Memoization
 // Time: O(m * n), Space: O(m * n)
 import java.util.*;
@@ -975,6 +1008,7 @@ public class Solution {
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 1: Bottom-up DP (Optimal)
 // Time: O(amount * coins.length), Space: O(amount)
 function coinChange(coins: number[], amount: number): number {
@@ -995,6 +1029,7 @@ function coinChange(coins: number[], amount: number): number {
       },
       {
         language: "java",
+        approach: "optimal",
         code: `// Approach 1: Bottom-up DP (Optimal)
 // Time: O(amount * coins.length), Space: O(amount)
 import java.util.Arrays;
@@ -1020,6 +1055,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 2: Top-down DP with Memoization
 // Time: O(amount * coins.length), Space: O(amount)
 function coinChangeMemo(coins: number[], amount: number): number {
@@ -1050,6 +1086,7 @@ function coinChangeMemo(coins: number[], amount: number): number {
       },
       {
         language: "java",
+        approach: "moderate",
         code: `// Approach 2: Top-down DP with Memoization
 // Time: O(amount * coins.length), Space: O(amount)
 import java.util.*;
@@ -1086,6 +1123,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 3: BFS Approach
 // Time: O(amount * coins.length), Space: O(amount)
 function coinChangeBFS(coins: number[], amount: number): number {
@@ -1120,6 +1158,7 @@ function coinChangeBFS(coins: number[], amount: number): number {
       },
       {
         language: "java",
+        approach: "brute-force",
         code: `// Approach 3: BFS Approach
 // Time: O(amount * coins.length), Space: O(amount)
 import java.util.*;
@@ -1181,6 +1220,7 @@ public class Solution {
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 1: Binary Search with Patience Sorting (Optimal)
 // Time: O(n log n), Space: O(n)
 function lengthOfLIS(nums: number[]): number {
@@ -1215,6 +1255,7 @@ function lengthOfLIS(nums: number[]): number {
       },
       {
         language: "java",
+        approach: "optimal",
         code: `// Approach 1: Binary Search with Patience Sorting (Optimal)
 // Time: O(n log n), Space: O(n)
 import java.util.*;
@@ -1253,6 +1294,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 2: Dynamic Programming
 // Time: O(n²), Space: O(n)
 function lengthOfLISDP(nums: number[]): number {
@@ -1276,6 +1318,7 @@ function lengthOfLISDP(nums: number[]): number {
       },
       {
         language: "java",
+        approach: "moderate",
         code: `// Approach 2: Dynamic Programming
 // Time: O(n²), Space: O(n)
 import java.util.Arrays;
@@ -1304,6 +1347,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 3: LIS Reconstruction
 // Time: O(n²), Space: O(n)
 function findLIS(nums: number[]): number[] {
@@ -1364,6 +1408,7 @@ function findLIS(nums: number[]): number[] {
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 1: 2D DP Approach (Standard)
 // Time: O(n * W), Space: O(n * W)
 function knapsack(weights: number[], values: number[], capacity: number): number {
@@ -1389,6 +1434,7 @@ function knapsack(weights: number[], values: number[], capacity: number): number
       },
       {
         language: "java",
+        approach: "moderate",
         code: `// Approach 1: 2D DP Approach (Standard)
 // Time: O(n * W), Space: O(n * W)
 public class Solution {
@@ -1416,6 +1462,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 2: Space-optimized DP
 // Time: O(n * W), Space: O(W)
 function knapsackOptimized(weights: number[], values: number[], capacity: number): number {
@@ -1433,6 +1480,7 @@ function knapsackOptimized(weights: number[], values: number[], capacity: number
       },
       {
         language: "java",
+        approach: "optimal",
         code: `// Approach 2: Space-optimized DP
 // Time: O(n * W), Space: O(W)
 public class Solution {
@@ -1452,6 +1500,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 3: Knapsack with Item Selection
 // Time: O(n * W), Space: O(n * W)
 function knapsackWithItems(weights: number[], values: number[], capacity: number): {maxValue: number, items: number[]} {
@@ -1509,6 +1558,7 @@ function knapsackWithItems(weights: number[], values: number[], capacity: number
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 1: Backtracking with Palindrome Check
 // Time: O(n * 2^n), Space: O(n)
 function partition(s: string): string[][] {
@@ -1545,6 +1595,7 @@ function partition(s: string): string[][] {
       },
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 2: Optimized with Precomputed Palindromes
 // Time: O(n * 2^n), Space: O(n²)
 function partitionOptimized(s: string): string[][] {
@@ -1584,6 +1635,7 @@ function partitionOptimized(s: string): string[][] {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 3: Minimum Cuts Extension
 // Time: O(n²), Space: O(n²)
 function minCut(s: string): number {
@@ -1640,6 +1692,7 @@ function minCut(s: string): number {
     codeImplementation: [
       {
         language: "TypeScript",
+        approach: "optimal",
         code: `// Approach 1: Dynamic Programming (Optimal)
 // Time: O(n² * m), Space: O(n) where m = avg word length
 function wordBreak(s: string, wordDict: string[]): boolean {
@@ -1662,6 +1715,7 @@ function wordBreak(s: string, wordDict: string[]): boolean {
       },
       {
         language: "java",
+        approach: "optimal",
         code: `// Approach 1: Dynamic Programming (Optimal)
 // Time: O(n² * m), Space: O(n) where m = avg word length
 import java.util.*;
@@ -1688,6 +1742,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "moderate",
         code: `// Approach 2: BFS Approach
 // Time: O(n² * m), Space: O(n)
 function wordBreakBFS(s: string, wordDict: string[]): boolean {
@@ -1715,6 +1770,7 @@ function wordBreakBFS(s: string, wordDict: string[]): boolean {
       },
       {
         language: "java",
+        approach: "moderate",
         code: `// Approach 2: BFS Approach
 // Time: O(n² * m), Space: O(n)
 import java.util.*;
@@ -1749,6 +1805,7 @@ public class Solution {
       },
       {
         language: "TypeScript",
+        approach: "brute-force",
         code: `// Approach 3: Word Break II - All Possible Sentences
 // Time: O(n² * m), Space: O(n)
 function wordBreakII(s: string, wordDict: string[]): string[] {
@@ -1782,6 +1839,7 @@ function wordBreakII(s: string, wordDict: string[]): string[] {
       },
       {
         language: "java",
+        approach: "brute-force",
         code: `// Approach 3: Word Break II - All Possible Sentences
 // Time: O(n² * m), Space: O(n)
 import java.util.*;

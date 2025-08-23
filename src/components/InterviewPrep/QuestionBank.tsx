@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { BookOpen, Search } from "lucide-react";
 import { QuestionCard } from "./QuestionCard";
+import { EnhancedQuestionCard } from "./EnhancedQuestionCard";
 import { Question } from "./InterviewSubjects";
 import {
   allQuestions,
@@ -23,7 +24,7 @@ export const QuestionBank: React.FC = () => {
   console.log("allQuestions imported:", allQuestions.length);
   console.log("questionsBySubject imported:", Object.keys(questionsBySubject));
   console.log("Sample questions:", allQuestions.slice(0, 2));
-  
+
   // Log individual question counts by subject
   Object.entries(questionsBySubject).forEach(([subject, questions]) => {
     console.log(`${subject}: ${questions.length} questions`);
@@ -48,6 +49,14 @@ export const QuestionBank: React.FC = () => {
       console.error("No questions found in allQuestions array");
       setIsLoading(false);
     }
+  }, []);
+
+  // Reset to categories view when component mounts or tab is clicked
+  useEffect(() => {
+    setSelectedCategory("all");
+    setSearchQuery("");
+    setSelectedDifficulty("all");
+    setSelectedType("all");
   }, []);
 
   // Define questions based on selected category
@@ -80,7 +89,7 @@ export const QuestionBank: React.FC = () => {
       console.log(`Subject: ${subject}`);
       console.log(`Questions found: ${subjectQuestions.length}`);
       console.log("Sample questions:", subjectQuestions.slice(0, 2));
-      
+
       if (subjectQuestions.length === 0) {
         console.warn(`No questions found for subject: ${subject}`);
         console.log("Available subjects:", Object.keys(questionsBySubject));
@@ -196,8 +205,7 @@ export const QuestionBank: React.FC = () => {
       name: "Puzzles",
       icon: BookOpen,
       color: "pink",
-      description:
-        "Logical puzzles and brain teasers from GeeksforGeeks",
+      description: "Logical puzzles and brain teasers from GeeksforGeeks",
       questionCount: questionsBySubject["Puzzles"]?.length || 0,
     },
     {
@@ -205,8 +213,7 @@ export const QuestionBank: React.FC = () => {
       name: "Aptitude & Reasoning",
       icon: BookOpen,
       color: "rose",
-      description:
-        "Quantitative aptitude and logical reasoning questions",
+      description: "Quantitative aptitude and logical reasoning questions",
       questionCount: questionsBySubject["Aptitude & Reasoning"]?.length || 0,
     },
     {
@@ -214,17 +221,21 @@ export const QuestionBank: React.FC = () => {
       name: "Computer Networks",
       icon: BookOpen,
       color: "indigo",
-      description:
-        "Computer networking concepts, protocols, and architecture",
+      description: "Computer networking concepts, protocols, and architecture",
       questionCount: questionsBySubject["Computer Networks"]?.length || 0,
     },
   ];
 
   const toggleAnswer = (questionId: string) => {
-    setShowAnswers((prev) => ({
-      ...prev,
-      [questionId]: !prev[questionId],
-    }));
+    console.log("toggleAnswer called for:", questionId);
+    setShowAnswers((prev) => {
+      const newState = {
+        ...prev,
+        [questionId]: !prev[questionId],
+      };
+      console.log("New showAnswers state:", newState);
+      return newState;
+    });
   };
 
   const togglePracticed = (questionId: string) => {
@@ -485,73 +496,74 @@ export const QuestionBank: React.FC = () => {
   console.log(`Total questions before filtering: ${questions.length}`);
 
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
-      <div className="text-center">
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-500 via-purple-600 to-pink-500 rounded-full mb-6 shadow-lg">
-          <BookOpen className="w-10 h-10 text-white" />
+    <div className="space-y-6">
+      {/* Welcome Header - Only show when viewing categories */}
+      {selectedCategory === "all" && (
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Question Bank Hub</h2>
+              <p className="text-blue-100 mb-4">
+                Choose a category to start practicing with our comprehensive
+                collection of interview questions
+              </p>
+              <div className="flex items-center space-x-2">
+                <BookOpen className="w-5 h-5" />
+                <span className="text-sm">
+                  Select a category below to begin
+                </span>
+              </div>
+            </div>
+            <div className="hidden sm:block">
+              <BookOpen className="w-16 h-16 text-white/20" />
+            </div>
+          </div>
         </div>
-        <h1 className="text-4xl font-bold text-gray-900 mb-3">
-          Interview Question Bank
-        </h1>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-          Master your interview skills with our comprehensive collection of
-          questions
-        </p>
-
-      </div>
+      )}
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-        <div className="flex flex-col lg:flex-row gap-4">
+      <div className="bg-white rounded-xl p-6 border border-gray-200">
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Search */}
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search questions, tags, or keywords..."
+                placeholder="Search questions by keywords or tags..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-lg"
-            >
-              <option value="all">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name} ({cat.questionCount})
-                </option>
-              ))}
-            </select>
-
+          {/* Difficulty Filter */}
+          <div className="sm:w-32">
             <select
               value={selectedDifficulty}
               onChange={(e) => setSelectedDifficulty(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-lg"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="all">All Levels</option>
+              <option value="all">All Difficulties</option>
               <option value="easy">Easy</option>
               <option value="medium">Medium</option>
               <option value="hard">Hard</option>
             </select>
+          </div>
 
+          {/* Type Filter */}
+          <div className="sm:w-32">
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-lg"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">All Types</option>
-              <option value="general">General</option>
-              <option value="behavioral">Behavioral</option>
               <option value="technical">Technical</option>
+              <option value="behavioral">Behavioral</option>
               <option value="situational">Situational</option>
+              <option value="general">General</option>
             </select>
           </div>
         </div>
@@ -602,7 +614,7 @@ export const QuestionBank: React.FC = () => {
           {categories.map((category) => {
             const Icon = category.icon;
             const isMostImportantDSA = category.id === "enhanceddsa";
-            
+
             return (
               <button
                 key={category.id}
@@ -614,25 +626,35 @@ export const QuestionBank: React.FC = () => {
                 }`}
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className={`p-3 rounded-xl border ${
-                    isMostImportantDSA
-                      ? "bg-white/10 text-white border-white/20"
-                      : "bg-blue-100 text-blue-600 border-blue-200"
-                  }`}>
+                  <div
+                    className={`p-3 rounded-xl border ${
+                      isMostImportantDSA
+                        ? "bg-white/10 text-white border-white/20"
+                        : "bg-blue-100 text-blue-600 border-blue-200"
+                    }`}
+                  >
                     <Icon className="w-6 h-6" />
                   </div>
                   {isMostImportantDSA && (
                     <div className="flex items-center space-x-1">
                       <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></div>
-                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" style={{ animationDelay: '0.2s' }}></div>
-                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" style={{ animationDelay: '0.4s' }}></div>
+                      <div
+                        className="w-1.5 h-1.5 bg-emerald-400 rounded-full"
+                        style={{ animationDelay: "0.2s" }}
+                      ></div>
+                      <div
+                        className="w-1.5 h-1.5 bg-emerald-400 rounded-full"
+                        style={{ animationDelay: "0.4s" }}
+                      ></div>
                     </div>
                   )}
                 </div>
 
-                <h3 className={`text-xl font-semibold mb-2 ${
-                  isMostImportantDSA ? "text-white" : "text-gray-900"
-                }`}>
+                <h3
+                  className={`text-xl font-semibold mb-2 ${
+                    isMostImportantDSA ? "text-white" : "text-gray-900"
+                  }`}
+                >
                   {category.name}
                   {isMostImportantDSA && (
                     <span className="ml-2 text-xs bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-full border border-emerald-500/30">
@@ -640,22 +662,28 @@ export const QuestionBank: React.FC = () => {
                     </span>
                   )}
                 </h3>
-                <p className={`text-sm mb-4 leading-relaxed ${
-                  isMostImportantDSA ? "text-slate-300" : "text-gray-600"
-                }`}>
+                <p
+                  className={`text-sm mb-4 leading-relaxed ${
+                    isMostImportantDSA ? "text-slate-300" : "text-gray-600"
+                  }`}
+                >
                   {category.description}
                 </p>
 
                 <div className="flex items-center justify-between">
-                  <span className={`text-sm font-medium ${
-                    isMostImportantDSA ? "text-slate-300" : "text-gray-500"
-                  }`}>
+                  <span
+                    className={`text-sm font-medium ${
+                      isMostImportantDSA ? "text-slate-300" : "text-gray-500"
+                    }`}
+                  >
                     {category.questionCount} questions
                   </span>
                   {isMostImportantDSA && (
                     <div className="flex items-center space-x-1">
                       <div className="w-1 h-1 bg-emerald-400 rounded-full"></div>
-                      <span className="text-xs text-emerald-300 font-medium">Essential</span>
+                      <span className="text-xs text-emerald-300 font-medium">
+                        Essential
+                      </span>
                     </div>
                   )}
                 </div>
@@ -708,7 +736,16 @@ export const QuestionBank: React.FC = () => {
               const isPracticed = practicedQuestions.includes(question.id);
               const isFavorite = favoriteQuestions.includes(question.id);
 
-              return (
+              // Use EnhancedQuestionCard for enhanced DSA questions (ID starts with "enhanced-")
+              const isEnhancedQuestion = question.id.startsWith("enhanced-");
+
+              return isEnhancedQuestion ? (
+                <EnhancedQuestionCard
+                  key={question.id}
+                  question={question}
+                  onPractice={() => togglePracticed(question.id)}
+                />
+              ) : (
                 <QuestionCard
                   key={question.id}
                   question={question}
@@ -734,7 +771,8 @@ export const QuestionBank: React.FC = () => {
                 No questions found for this category
               </h3>
               <p className="text-gray-600 mb-4">
-                This category might not have questions yet, or they might not be loaded properly.
+                This category might not have questions yet, or they might not be
+                loaded properly.
               </p>
               <button
                 onClick={() => setSelectedCategory("all")}
@@ -746,7 +784,6 @@ export const QuestionBank: React.FC = () => {
           )}
         </div>
       )}
-
     </div>
   );
 };

@@ -6,17 +6,17 @@ import {
   getDocs,
   updateDoc,
   deleteDoc,
+  deleteField,
   query,
   where,
   orderBy,
   serverTimestamp,
-  Timestamp,
   arrayUnion,
-  arrayRemove,
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "../config/firebase";
 import { realTimeAuth } from "./realTimeAuth";
+import { emailService } from "./emailService";
 
 export interface TeamMember {
   id: string;
@@ -55,6 +55,7 @@ export interface Team {
   ownerId: string;
   members: { [key: string]: TeamMember };
   projects: string[];
+  exitRequests?: { [key: string]: ExitRequest };
   settings: {
     isPublic: boolean;
     allowInvites: boolean;
@@ -64,6 +65,16 @@ export interface Team {
   inviteCode?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface ExitRequest {
+  id: string;
+  memberId: string;
+  memberName: string;
+  memberEmail: string;
+  reason?: string;
+  requestedAt: Date;
+  status: "pending" | "approved" | "rejected";
 }
 
 export interface Project {
@@ -129,7 +140,7 @@ class TeamManagementService {
       name: teamData.name,
       description: teamData.description,
       size: teamData.size,
-      industry: teamData.industry,
+      ...(teamData.industry && { industry: teamData.industry }),
       ownerId: user.id,
       members: {
         [user.id]: {
@@ -174,25 +185,34 @@ class TeamManagementService {
     const user = realTimeAuth.getCurrentUser();
     if (!user) return [];
 
-    const teamsRef = collection(db, "teams");
-    const teamsSnapshot = await getDocs(teamsRef);
+    try {
+      // Get all teams and filter on client side to avoid complex queries
+      const teamsRef = collection(db, "teams");
+      const teamsSnapshot = await getDocs(teamsRef);
 
-    const userTeams: Team[] = [];
+      const userTeams: Team[] = [];
 
-    teamsSnapshot.forEach((doc) => {
-      const teamData = doc.data();
-      // Check if user is a member of this team
-      if (teamData.members && teamData.members[user.id]) {
-        userTeams.push({
-          id: doc.id,
-          ...teamData,
-          createdAt: teamData.createdAt?.toDate() || new Date(),
-          updatedAt: teamData.updatedAt?.toDate() || new Date(),
-        } as Team);
-      }
-    });
+      teamsSnapshot.forEach((doc) => {
+        const teamData = doc.data();
+        // Check if user is a member of this team
+        if (teamData.members && teamData.members[user.id]) {
+          userTeams.push({
+            id: doc.id,
+            ...teamData,
+            createdAt: teamData.createdAt?.toDate() || new Date(),
+            updatedAt: teamData.updatedAt?.toDate() || new Date(),
+          } as Team);
+        }
+      });
 
-    return userTeams;
+      // Sort by updatedAt in memory
+      return userTeams.sort(
+        (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
+      );
+    } catch (error) {
+      console.error("Error fetching user teams:", error);
+      return [];
+    }
   }
 
   async getTeam(teamId: string): Promise<Team | null> {
@@ -237,7 +257,7 @@ class TeamManagementService {
     );
 
     // Delete all related documents
-    const batch = [];
+    const batch: Promise<void>[] = [];
     projectsSnapshot.forEach((doc) => batch.push(deleteDoc(doc.ref)));
     activitiesSnapshot.forEach((doc) => batch.push(deleteDoc(doc.ref)));
     messagesSnapshot.forEach((doc) => batch.push(deleteDoc(doc.ref)));
@@ -267,22 +287,42 @@ class TeamManagementService {
       throw new Error("Insufficient permissions to invite members");
     }
 
-    // In a real app, you'd send an email invitation
-    // For now, create a pending invitation record
+    // Generate unique invite code
+    const inviteCode = emailService.generateInviteCode();
     const inviteId = `invite_${Date.now()}_${Math.random()
       .toString(36)
       .substr(2, 9)}`;
 
+    // Create invitation record in database
     await setDoc(doc(db, "teamInvites", inviteId), {
       id: inviteId,
       teamId,
+      teamName: team.name,
       email,
       role,
       invitedBy: user.id,
+      inviterName: currentMember.name,
       status: "pending",
+      inviteCode,
       createdAt: serverTimestamp(),
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
     });
+
+    // Send email invitation using the email service
+    const emailResult = await emailService.sendTeamInvite({
+      teamId,
+      teamName: team.name,
+      inviterName: currentMember.name,
+      inviteeEmail: email,
+      inviteCode,
+    });
+
+    if (emailResult.success) {
+      console.log(`✅ Team invitation sent successfully to ${email}`);
+    } else {
+      console.warn("Failed to send email invitation:", emailResult.error);
+      // Continue with the process even if email fails (for development)
+    }
 
     await this.logActivity(teamId, "invited member", email, "member");
   }
@@ -291,6 +331,8 @@ class TeamManagementService {
     const user = realTimeAuth.getCurrentUser();
     if (!user) throw new Error("User not authenticated");
 
+    console.log("🔍 Searching for team with invite code:", inviteCode);
+
     const teamsQuery = query(
       collection(db, "teams"),
       where("inviteCode", "==", inviteCode)
@@ -298,14 +340,29 @@ class TeamManagementService {
 
     const teamsSnapshot = await getDocs(teamsQuery);
 
+    console.log("🔍 Query results:", {
+      empty: teamsSnapshot.empty,
+      size: teamsSnapshot.size,
+      docs: teamsSnapshot.docs.length,
+    });
+
     if (teamsSnapshot.empty) {
+      console.log("❌ No teams found with invite code:", inviteCode);
       throw new Error("Invalid invite code");
     }
 
     const teamDoc = teamsSnapshot.docs[0];
     const team = teamDoc.data() as Team;
 
+    console.log("✅ Found team:", {
+      id: teamDoc.id,
+      name: team.name,
+      inviteCode: team.inviteCode,
+      memberCount: Object.keys(team.members).length,
+    });
+
     if (team.members[user.id]) {
+      console.log("ℹ️ User is already a member of this team");
       throw new Error("You are already a member of this team");
     }
 
@@ -368,7 +425,7 @@ class TeamManagementService {
     }
 
     await updateDoc(doc(db, "teams", teamId), {
-      [`members.${memberId}`]: deleteDoc as any,
+      [`members.${memberId}`]: deleteField(),
       updatedAt: serverTimestamp(),
     });
 
@@ -376,6 +433,144 @@ class TeamManagementService {
       teamId,
       "removed member",
       targetMember.name,
+      "member"
+    );
+  }
+
+  async requestExit(teamId: string, reason?: string): Promise<void> {
+    const user = realTimeAuth.getCurrentUser();
+    const team = await this.getTeam(teamId);
+
+    if (!user || !team) throw new Error("Team or user not found");
+
+    const member = team.members[user.id];
+    if (!member) throw new Error("You are not a member of this team");
+
+    if (member.role === "owner") {
+      throw new Error(
+        "Team owners cannot exit the team. Transfer ownership first."
+      );
+    }
+
+    // Check if there's already a pending exit request
+    const existingRequest = team.exitRequests?.[user.id];
+    if (existingRequest && existingRequest.status === "pending") {
+      throw new Error("You already have a pending exit request");
+    }
+
+    const exitRequest: ExitRequest = {
+      id: user.id,
+      memberId: user.id,
+      memberName: member.name,
+      memberEmail: member.email,
+      reason,
+      requestedAt: new Date(),
+      status: "pending",
+    };
+
+    await updateDoc(doc(db, "teams", teamId), {
+      [`exitRequests.${user.id}`]: exitRequest,
+      updatedAt: serverTimestamp(),
+    });
+
+    await this.logActivity(teamId, "requested to exit", member.name, "member");
+  }
+
+  async approveExitRequest(teamId: string, memberId: string): Promise<void> {
+    const user = realTimeAuth.getCurrentUser();
+    const team = await this.getTeam(teamId);
+
+    if (!user || !team) throw new Error("Team or user not found");
+
+    const currentMember = team.members[user.id];
+    if (
+      !currentMember ||
+      (currentMember.role !== "owner" && currentMember.role !== "admin")
+    ) {
+      throw new Error("Only team owners and admins can approve exit requests");
+    }
+
+    const exitRequest = team.exitRequests?.[memberId];
+    if (!exitRequest || exitRequest.status !== "pending") {
+      throw new Error("No pending exit request found for this member");
+    }
+
+    const targetMember = team.members[memberId];
+    if (!targetMember) throw new Error("Member not found");
+
+    // Remove the member and the exit request
+    await updateDoc(doc(db, "teams", teamId), {
+      [`members.${memberId}`]: deleteField(),
+      [`exitRequests.${memberId}`]: deleteField(),
+      updatedAt: serverTimestamp(),
+    });
+
+    await this.logActivity(
+      teamId,
+      "approved exit request",
+      targetMember.name,
+      "member"
+    );
+  }
+
+  async rejectExitRequest(
+    teamId: string,
+    memberId: string,
+    reason?: string
+  ): Promise<void> {
+    const user = realTimeAuth.getCurrentUser();
+    const team = await this.getTeam(teamId);
+
+    if (!user || !team) throw new Error("Team or user not found");
+
+    const currentMember = team.members[user.id];
+    if (
+      !currentMember ||
+      (currentMember.role !== "owner" && currentMember.role !== "admin")
+    ) {
+      throw new Error("Only team owners and admins can reject exit requests");
+    }
+
+    const exitRequest = team.exitRequests?.[memberId];
+    if (!exitRequest || exitRequest.status !== "pending") {
+      throw new Error("No pending exit request found for this member");
+    }
+
+    // Update the exit request status
+    await updateDoc(doc(db, "teams", teamId), {
+      [`exitRequests.${memberId}.status`]: "rejected",
+      [`exitRequests.${memberId}.rejectedReason`]: reason,
+      updatedAt: serverTimestamp(),
+    });
+
+    await this.logActivity(
+      teamId,
+      "rejected exit request",
+      exitRequest.memberName,
+      "member"
+    );
+  }
+
+  async cancelExitRequest(teamId: string): Promise<void> {
+    const user = realTimeAuth.getCurrentUser();
+    const team = await this.getTeam(teamId);
+
+    if (!user || !team) throw new Error("Team or user not found");
+
+    const exitRequest = team.exitRequests?.[user.id];
+    if (!exitRequest || exitRequest.status !== "pending") {
+      throw new Error("No pending exit request found");
+    }
+
+    await updateDoc(doc(db, "teams", teamId), {
+      [`exitRequests.${user.id}`]: deleteField(),
+      updatedAt: serverTimestamp(),
+    });
+
+    await this.logActivity(
+      teamId,
+      "cancelled exit request",
+      exitRequest.memberName,
       "member"
     );
   }
@@ -491,26 +686,64 @@ class TeamManagementService {
   }
 
   async getTeamProjects(teamId: string): Promise<Project[]> {
-    const projectsQuery = query(
-      collection(db, "projects"),
-      where("teamId", "==", teamId),
-      orderBy("startDate", "desc")
-    );
+    try {
+      // First try the optimized query
+      const projectsQuery = query(
+        collection(db, "projects"),
+        where("teamId", "==", teamId),
+        orderBy("startDate", "desc")
+      );
 
-    const projectsSnapshot = await getDocs(projectsQuery);
-    const projects: Project[] = [];
+      const projectsSnapshot = await getDocs(projectsQuery);
+      const projects: Project[] = [];
 
-    projectsSnapshot.forEach((doc) => {
-      const data = doc.data();
-      projects.push({
-        id: doc.id,
-        ...data,
-        startDate: data.startDate?.toDate() || new Date(),
-        endDate: data.endDate?.toDate() || new Date(),
-      } as Project);
-    });
+      projectsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        projects.push({
+          id: doc.id,
+          ...data,
+          startDate: data.startDate?.toDate() || new Date(),
+          endDate: data.endDate?.toDate() || new Date(),
+        } as Project);
+      });
 
-    return projects;
+      return projects;
+    } catch (error: any) {
+      // If index is missing, fall back to simple query and sort in memory
+      if (
+        error.code === "failed-precondition" ||
+        error.message?.includes("index")
+      ) {
+        console.warn(
+          "Firestore index missing for projects, using fallback query."
+        );
+
+        const simpleQuery = query(
+          collection(db, "projects"),
+          where("teamId", "==", teamId)
+        );
+
+        const snapshot = await getDocs(simpleQuery);
+        const projects: Project[] = [];
+
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          projects.push({
+            id: doc.id,
+            ...data,
+            startDate: data.startDate?.toDate() || new Date(),
+            endDate: data.endDate?.toDate() || new Date(),
+          } as Project);
+        });
+
+        // Sort in memory
+        return projects.sort(
+          (a, b) => b.startDate.getTime() - a.startDate.getTime()
+        );
+      }
+
+      throw error;
+    }
   }
 
   // Activity logging
@@ -540,25 +773,63 @@ class TeamManagementService {
   }
 
   async getTeamActivities(teamId: string, limit = 20): Promise<TeamActivity[]> {
-    const activitiesQuery = query(
-      collection(db, "activities"),
-      where("teamId", "==", teamId),
-      orderBy("timestamp", "desc")
-    );
+    try {
+      // First try the optimized query with orderBy
+      const activitiesQuery = query(
+        collection(db, "activities"),
+        where("teamId", "==", teamId),
+        orderBy("timestamp", "desc")
+      );
 
-    const activitiesSnapshot = await getDocs(activitiesQuery);
-    const activities: TeamActivity[] = [];
+      const activitiesSnapshot = await getDocs(activitiesQuery);
+      const activities: TeamActivity[] = [];
 
-    activitiesSnapshot.forEach((doc) => {
-      const data = doc.data();
-      activities.push({
-        id: doc.id,
-        ...data,
-        timestamp: data.timestamp?.toDate() || new Date(),
-      } as TeamActivity);
-    });
+      activitiesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        activities.push({
+          id: doc.id,
+          ...data,
+          timestamp: data.timestamp?.toDate() || new Date(),
+        } as TeamActivity);
+      });
 
-    return activities.slice(0, limit);
+      return activities.slice(0, limit);
+    } catch (error: any) {
+      // If index is missing, fall back to simple query and sort in memory
+      if (
+        error.code === "failed-precondition" ||
+        error.message?.includes("index")
+      ) {
+        console.warn(
+          "Firestore index missing, using fallback query. Consider creating the index for better performance."
+        );
+
+        const simpleQuery = query(
+          collection(db, "activities"),
+          where("teamId", "==", teamId)
+        );
+
+        const snapshot = await getDocs(simpleQuery);
+        const activities: TeamActivity[] = [];
+
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          activities.push({
+            id: doc.id,
+            ...data,
+            timestamp: data.timestamp?.toDate() || new Date(),
+          } as TeamActivity);
+        });
+
+        // Sort in memory and return limited results
+        return activities
+          .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+          .slice(0, limit);
+      }
+
+      // Re-throw other errors
+      throw error;
+    }
   }
 
   // Real-time subscriptions
@@ -643,14 +914,12 @@ class TeamManagementService {
 
   validateMemberRole(
     currentRole: string,
-    targetRole: string,
+    _targetRole: string,
     action: string
   ): boolean {
     const roleHierarchy = { owner: 3, admin: 2, member: 1, viewer: 0 };
     const currentLevel =
       roleHierarchy[currentRole as keyof typeof roleHierarchy] || 0;
-    const targetLevel =
-      roleHierarchy[targetRole as keyof typeof roleHierarchy] || 0;
 
     switch (action) {
       case "invite":

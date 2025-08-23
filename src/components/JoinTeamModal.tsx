@@ -1,121 +1,199 @@
-import React, { useState } from "react";
-import { X, Mail } from "lucide-react";
-import { motion } from "framer-motion";
+import React, { useState } from 'react';
+import { Users, Mail, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
+import { realTimeAuth } from '../utils/realTimeAuth';
+import { emailService } from '../utils/emailService';
+import { db } from '../config/firebase';
+import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 
 interface JoinTeamModalProps {
-  isVisible: boolean;
+  isOpen: boolean;
   onClose: () => void;
-  onJoin: (inviteCode: string) => Promise<void>;
+  inviteCode?: string;
+  onTeamJoined?: () => void;
 }
 
-export const JoinTeamModal: React.FC<JoinTeamModalProps> = ({
-  isVisible,
-  onClose,
-  onJoin,
+export const JoinTeamModal: React.FC<JoinTeamModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  inviteCode: initialInviteCode,
+  onTeamJoined
 }) => {
-  const [inviteCode, setInviteCode] = useState("");
+  const [inviteCode, setInviteCode] = useState(initialInviteCode || '');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [inviteDetails, setInviteDetails] = useState<any>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteCode.trim()) return;
+  const user = realTimeAuth.getCurrentUser();
+
+  const handleJoinTeam = async () => {
+    if (!user || !inviteCode.trim()) return;
 
     setLoading(true);
-    setError("");
+    setError(null);
+    setSuccess(null);
 
     try {
-      await onJoin(inviteCode.trim());
-      setInviteCode("");
-      onClose();
-    } catch (err) {
-      setError(
-        "Invalid invite code or you do not have permission to join this team."
-      );
+      // Get invite details
+      const invite = await emailService.getInviteByCode(inviteCode.trim());
+      
+      if (!invite) {
+        setError('Invalid or expired invite code');
+        return;
+      }
+
+      if (invite.status !== 'pending') {
+        setError('This invitation has already been used or expired');
+        return;
+      }
+
+      // Check if user is already a member
+      const teamDoc = await getDoc(doc(db, 'teams', invite.teamId));
+      if (!teamDoc.exists()) {
+        setError('Team not found');
+        return;
+      }
+
+      const teamData = teamDoc.data();
+      if (teamData?.members?.[user.id]) {
+        setError('You are already a member of this team');
+        return;
+      }
+
+      // Create new member object
+      const newMember = {
+        id: user.id,
+        name: user.username || user.email,
+        email: user.email,
+        role: 'member' as const,
+        joinedAt: new Date(),
+        lastActive: new Date(),
+        isOnline: true,
+        skills: [],
+        stats: {
+          tasksCompleted: 0,
+          projectsContributed: 0,
+          documentsCreated: 0,
+          hoursLogged: 0
+        }
+      };
+
+      // Add user to team using the team management service
+      await updateDoc(doc(db, 'teams', invite.teamId), {
+        [`members.${user.id}`]: newMember,
+        updatedAt: serverTimestamp()
+      });
+
+      // Mark invite as accepted
+      await emailService.acceptInvite(invite.id, user.id);
+
+      setSuccess(`Successfully joined team "${invite.teamName}"!`);
+      setInviteDetails(invite);
+
+      // Call the callback to refresh teams
+      onTeamJoined?.();
+
+      // Close modal after delay
+      setTimeout(() => {
+        onClose();
+        setInviteCode('');
+        setSuccess(null);
+        setInviteDetails(null);
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error joining team:', error);
+      setError('Failed to join team. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isVisible) return null;
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Join a Team
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          >
-            <X className="w-5 h-5" />
-          </button>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+        <div className="flex items-center gap-2 mb-4">
+          <Users className="w-6 h-6 text-blue-600" />
+          <h2 className="text-xl font-bold text-gray-900">Join Team</h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Team Invite Code
-            </label>
-            <input
-              type="text"
-              required
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value)}
-              placeholder="Enter your invite code"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Ask your team admin for the invite code
-            </p>
-          </div>
-
-          {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-            </div>
-          )}
-
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !inviteCode.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-            >
-              {loading && (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              )}
-              <span>Join Team</span>
-            </button>
-          </div>
-        </form>
-
-        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+        {success ? (
           <div className="text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              Don't have an invite code?
-            </p>
-            <div className="flex items-center justify-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-              <Mail className="w-4 h-4" />
-              <span>Request access from your team admin</span>
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{success}</h3>
+            {inviteDetails && (
+              <p className="text-sm text-gray-600 mb-4">
+                You can now access the team from your team list.
+              </p>
+            )}
           </div>
-        </div>
-      </motion.div>
+        ) : (
+          <>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Invite Code
+              </label>
+              <input
+                type="text"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                placeholder="Enter invite code (e.g., ABC123)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-center text-lg tracking-wider"
+                maxLength={8}
+              />
+            </div>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-2 text-red-800">
+                  <XCircle className="w-4 h-4" />
+                  <span className="text-sm">{error}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 text-blue-800 text-sm">
+                <Mail className="w-4 h-4" />
+                <span>
+                  Enter the invite code you received via email to join a team.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleJoinTeam}
+                disabled={loading || !inviteCode.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                    Joining...
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink className="w-4 h-4" />
+                    Join Team
+                  </>
+                )}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 };

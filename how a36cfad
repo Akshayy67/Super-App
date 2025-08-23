@@ -1,0 +1,19 @@
+[33mcommit a36cfad31d66ceb62bab9030cefb3ec22f6d0eff[m[33m ([m[1;31morigin/cursor/fix-dark-mode-across-all-tabs-75ca[m[33m)[m
+Author: Cursor Agent <cursoragent@cursor.com>
+Date:   Fri Aug 22 15:39:24 2025 +0000
+
+    Add dark mode support with theme switcher and context
+    
+    Co-authored-by: akshayjuluri6704 <akshayjuluri6704@gmail.com>
+
+src/App.tsx
+src/components/AuthForm.tsx
+src/components/Dashboard.tsx
+src/components/FileManager.tsx
+src/components/Sidebar.tsx
+src/components/TaskManager.tsx
+src/components/ThemeSwitcher.tsx
+src/contexts/ThemeContext.tsx
+src/index.css
+src/main.tsx
+tailwind.config.js

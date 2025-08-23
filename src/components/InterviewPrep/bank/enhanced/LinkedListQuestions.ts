@@ -41,6 +41,28 @@ function reverseList(head: ListNode | null): ListNode | null {
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Iterative Approach: We maintain three pointers - prev, current, and next. For each node, we save the next node, reverse the current node's pointer, update prev and current. Time complexity is O(n) for traversing the list once. Space complexity is O(1) as we use only a constant amount of extra space.",
+        code: `# ListNode Definition
+class ListNode:
+    def __init__(self, val=0, next=None):
+        self.val = val
+        self.next = next
+
+def reverseList(head):
+    prev = None
+    current = head
+    
+    while current:
+        next_node = current.next
+        current.next = prev
+        prev = current
+        current = next_node
+    
+    return prev`,
+      },
+      {
         language: "Java",
         explanation:
           "Iterative Approach: We maintain three pointers - prev, current, and next. For each node, we save the next node, reverse the current node's pointer, update prev and current. Time complexity is O(n) for traversing the list once. Space complexity is O(1) as we use only a constant amount of extra space.",
@@ -82,6 +104,20 @@ class Solution {
     
     return newHead;
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Recursive Approach: We recursively traverse to the end of the list, then fix the pointers while unwinding the recursion stack. For each node, we set its next node's next pointer to point to itself and its next pointer to null. Time complexity is O(n), but space complexity is O(n) due to the recursion stack.",
+        code: `def reverseListRecursive(head):
+    if not head or not head.next:
+        return head
+    
+    new_head = reverseListRecursive(head.next)
+    head.next.next = head
+    head.next = None
+    
+    return new_head`,
       },
       {
         language: "Java",
@@ -127,6 +163,33 @@ class Solution {
     current.next = null;
     return newHead;
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Stack-Based Approach: We first push all nodes onto a stack, then pop them off in reverse order to rebuild the list. This approach makes the reversal process more explicit. Time complexity is O(n) and space complexity is also O(n) for the stack.",
+        code: `def reverseListStack(head):
+    if not head:
+        return None
+    
+    stack = []
+    current = head
+    
+    # Push all nodes to stack
+    while current:
+        stack.append(current)
+        current = current.next
+    
+    # Pop and rebuild connections
+    new_head = stack.pop()
+    current = new_head
+    
+    while stack:
+        current.next = stack.pop()
+        current = current.next
+    
+    current.next = None
+    return new_head`,
       },
       {
         language: "Java",
@@ -206,26 +269,24 @@ class Solution {
 }`,
       },
       {
-        language: "Java",
+        language: "Python",
         explanation:
           "Floyd's Cycle Detection Algorithm: We use two pointers - a slow pointer that moves one step at a time and a fast pointer that moves two steps. If there's a cycle, the fast pointer will eventually meet the slow pointer. This approach uses O(1) space and O(n) time complexity.",
-        code: `class Solution {
-    public boolean hasCycle(ListNode head) {
-        if (head == null || head.next == null) return false;
+        code: `def hasCycle(head):
+    if not head or not head.next:
+        return False
+    
+    slow = head
+    fast = head
+    
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
         
-        ListNode slow = head;
-        ListNode fast = head;
-        
-        while (fast != null && fast.next != null) {
-            slow = slow.next;
-            fast = fast.next.next;
-            
-            if (slow == fast) return true;
-        }
-        
-        return false;
-    }
-}`,
+        if slow == fast:
+            return True
+    
+    return False`,
       },
       {
         language: "typescript",
@@ -245,24 +306,20 @@ class Solution {
 }`,
       },
       {
-        language: "Java",
+        language: "Python",
         explanation:
           "Hash Set Approach: We track all visited nodes in a Set. If we encounter a node that's already in the set, we've found a cycle. This approach is more intuitive but uses O(n) extra space with O(n) time complexity.",
-        code: `import java.util.*;
-class Solution {
-    public boolean hasCycleHashSet(ListNode head) {
-        Set<ListNode> visited = new HashSet<>();
-        ListNode current = head;
-        
-        while (current != null) {
-            if (visited.contains(current)) return true;
-            visited.add(current);
-            current = current.next;
-        }
-        
-        return false;
-    }
-}`,
+        code: `def hasCycleHashSet(head):
+    visited = set()
+    current = head
+    
+    while current:
+        if current in visited:
+            return True
+        visited.add(current)
+        current = current.next
+    
+    return False`,
       },
       {
         language: "typescript",
@@ -293,6 +350,36 @@ class Solution {
     
     return slow;
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Finding Cycle Start Position: This is a follow-up that extends Floyd's algorithm. After detecting a cycle, we reset the slow pointer to the head and move both pointers at the same speed. The point where they meet is the start of the cycle. The mathematical proof relies on the properties of modular arithmetic. Time complexity remains O(n) and space O(1).",
+        code: `def detectCycle(head):
+    if not head or not head.next:
+        return None
+    
+    slow = head
+    fast = head
+    
+    # Phase 1: Detect if cycle exists
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+        
+        if slow == fast:
+            break
+    
+    if not fast or not fast.next: # No cycle
+        return None
+    
+    # Phase 2: Find cycle start
+    slow = head
+    while slow != fast:
+        slow = slow.next
+        fast = fast.next
+    
+    return slow`,
       },
       {
         language: "Java",
@@ -377,6 +464,28 @@ class Solution {
 }`,
       },
       {
+        language: "Python",
+        explanation:
+          "Iterative Approach with Dummy Node: We use a dummy node to avoid edge cases for handling the head. We compare values from both lists and connect the smaller node to our result. Time complexity is O(m+n) where m and n are the lengths of the lists. Space complexity is O(1) as we only rearrange pointers without using extra space proportional to input size.",
+        code: `def mergeTwoLists(list1, list2):
+    dummy = ListNode(0)
+    current = dummy
+    
+    while list1 and list2:
+        if list1.val <= list2.val:
+            current.next = list1
+            list1 = list1.next
+        else:
+            current.next = list2
+            list2 = list2.next
+        current = current.next
+    
+    # Attach remaining nodes
+    current.next = list1 or list2
+    
+    return dummy.next`,
+      },
+      {
         language: "Java",
         explanation:
           "Iterative Approach with Dummy Node: We use a dummy node to avoid edge cases for handling the head. We compare values from both lists and connect the smaller node to our result. Time complexity is O(m+n) where m and n are the lengths of the lists. Space complexity is O(1) as we only rearrange pointers without using extra space proportional to input size.",
@@ -419,6 +528,23 @@ class Solution {
         return list2;
     }
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Recursive Approach: This elegant solution recursively merges the lists by choosing the smaller head node, then recursively attaching the result of merging the remaining lists. Time complexity is O(m+n), but space complexity is O(m+n) due to the recursion stack.",
+        code: `def mergeTwoListsRecursive(list1, list2):
+    if not list1:
+        return list2
+    if not list2:
+        return list1
+    
+    if list1.val <= list2.val:
+        list1.next = mergeTwoListsRecursive(list1.next, list2)
+        return list1
+    else:
+        list2.next = mergeTwoListsRecursive(list1, list2.next)
+        return list2`,
       },
       {
         language: "Java",
@@ -473,6 +599,39 @@ class Solution {
     current.next = list1 || list2;
     return head;
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "In-place Merge Approach: This approach avoids using a dummy node by directly handling the head edge case. It has the same time and space complexity as the iterative approach with dummy node (O(m+n) time, O(1) space) but might be slightly more complex to understand.",
+        code: `def mergeTwoListsInPlace(list1, list2):
+    if not list1:
+        return list2
+    if not list2:
+        return list1
+    
+    head = None
+    
+    if list1.val <= list2.val:
+        head = list1
+        list1 = list1.next
+    else:
+        head = list2
+        list2 = list2.next
+    
+    current = head
+    
+    while list1 and list2:
+        if list1.val <= list2.val:
+            current.next = list1
+            list1 = list1.next
+        else:
+            current.next = list2
+            list2 = list2.next
+        current = current.next
+    
+    current.next = list1 or list2
+    return head`,
       },
       {
         language: "Java",
@@ -565,34 +724,29 @@ class Solution {
 }`,
       },
       {
-        language: "Java",
+        language: "Python",
         explanation:
           "Two Pointers (One Pass) Approach: We use two pointers with a gap of n+1 between them. When the first pointer reaches the end, the second pointer will be at the node just before the one to be deleted. This allows us to remove the target node in a single pass. Time complexity is O(n) and space complexity is O(1).",
-        code: `class Solution {
-    public ListNode removeNthFromEnd(ListNode head, int n) {
-        ListNode dummy = new ListNode(0);
-        dummy.next = head;
-        
-        ListNode first = dummy;
-        ListNode second = dummy;
-        
-        // Move first pointer n+1 steps ahead
-        for (int i = 0; i <= n; i++) {
-            first = first.next;
-        }
-        
-        // Move both pointers until first reaches end
-        while (first != null) {
-            first = first.next;
-            second = second.next;
-        }
-        
-        // Remove the nth node from end
-        second.next = second.next.next;
-        
-        return dummy.next;
-    }
-}`,
+        code: `def removeNthFromEnd(head, n):
+    dummy = ListNode(0)
+    dummy.next = head
+    
+    first = dummy
+    second = dummy
+    
+    # Move first pointer n+1 steps ahead
+    for i in range(n + 1):
+        first = first.next
+    
+    # Move both pointers until first reaches end
+    while first:
+        first = first.next
+        second = second.next
+    
+    # Remove the nth node from end
+    second.next = second.next.next
+    
+    return dummy.next`,
       },
       {
         language: "typescript",
@@ -623,34 +777,28 @@ class Solution {
 }`,
       },
       {
-        language: "Java",
+        language: "Python",
         explanation:
           "Two Pass Approach: We first count the total number of nodes in the list, then calculate the position of the node to remove from the beginning. While less efficient than the one-pass solution, this approach might be more intuitive. Time complexity is O(n) with two passes, and space complexity is O(1).",
-        code: `class Solution {
-    public ListNode removeNthFromEndTwoPass(ListNode head, int n) {
-        // First pass: count total nodes
-        int length = 0;
-        ListNode current = head;
-        while (current != null) {
-            length++;
-            current = current.next;
-        }
-        
-        // Handle edge case: remove head
-        if (n == length) {
-            return head != null ? head.next : null;
-        }
-        
-        // Second pass: find node before target
-        current = head;
-        for (int i = 0; i < length - n - 1; i++) {
-            current = current.next;
-        }
-        
-        current.next = current.next.next;
-        return head;
-    }
-}`,
+        code: `def removeNthFromEndTwoPass(head, n):
+    # First pass: count total nodes
+    length = 0
+    current = head
+    while current:
+        length += 1
+        current = current.next
+    
+    # Handle edge case: remove head
+    if n == length:
+        return head.next if head else None
+    
+    # Second pass: find node before target
+    current = head
+    for i in range(length - n - 1):
+        current = current.next
+    
+    current.next = current.next.next
+    return head`,
       },
       {
         language: "typescript",
@@ -675,6 +823,27 @@ class Solution {
     
     return dummy.next;
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Recursive Approach: We use recursion to implicitly count from the end of the list. As we unwind the recursion stack, we track the position from the end and remove the target node when identified. Time complexity is O(n) and space complexity is O(n) due to the recursion stack.",
+        code: `def removeNthFromEndRecursive(head, n):
+    def helper(node):
+        if not node:
+            return 0
+        
+        index = helper(node.next) + 1
+        
+        if index == n + 1:
+            node.next = node.next.next
+        return index
+    
+    dummy = ListNode(0)
+    dummy.next = head
+    helper(dummy)
+    
+    return dummy.next`,
       },
       {
         language: "Java",
@@ -782,123 +951,116 @@ class Solution {
 }`,
       },
       {
-        language: "Java",
+        language: "Python",
         explanation:
           "Three-Step Approach: This optimal solution first finds the middle using the slow/fast pointer technique, then reverses the second half of the list, and finally merges the two halves alternately. Time complexity is O(n) with only one pass through each step, and space complexity is O(1) as we only rearrange pointers without using extra data structures.",
-        code: `class Solution {
-    public void reorderList(ListNode head) {
-        if (head == null || head.next == null) return;
+        code: `def reorderList(head):
+    if not head or not head.next:
+        return
+    
+    # Step 1: Find middle of the list
+    slow = head
+    fast = head
+    
+    while fast.next and fast.next.next:
+        slow = slow.next
+        fast = fast.next.next
+    
+    # Step 2: Reverse second half
+    second_half = slow.next
+    slow.next = None # Split the list
+    
+    def reverseList(head):
+        prev = None
+        current = head
         
-        // Step 1: Find middle of the list
-        ListNode slow = head;
-        ListNode fast = head;
+        while current:
+            next_node = current.next
+            current.next = prev
+            prev = current
+            current = next_node
         
-        while (fast.next != null && fast.next.next != null) {
-            slow = slow.next;
-            fast = fast.next.next;
-        }
+        return prev
+    
+    second_half = reverseList(second_half)
+    
+    # Step 3: Merge two halves alternately
+    first = head
+    second = second_half
+    
+    while second:
+        first_next = first.next
+        second_next = second.next
         
-        // Step 2: Reverse second half
-        ListNode secondHalf = slow.next;
-        slow.next = null; // Split the list
+        first.next = second
+        second.next = first_next
         
-        ListNode prev = null;
-        ListNode current = secondHalf;
-        
-        while (current != null) {
-            ListNode next = current.next;
-            current.next = prev;
-            prev = current;
-            current = next;
-        }
-        
-        secondHalf = prev;
-        
-        // Step 3: Merge two halves alternately
-        ListNode first = head;
-        ListNode second = secondHalf;
-        
-        while (second != null) {
-            ListNode firstNext = first.next;
-            ListNode secondNext = second.next;
-            
-            first.next = second;
-            second.next = firstNext;
-            
-            first = firstNext;
-            second = secondNext;
-        }
-    }
-}`,
+        first = first_next
+        second = second_next`,
       },
       {
         language: "typescript",
         explanation:
           "Array-Based Approach: This solution stores all nodes in an array first, then uses two pointers from both ends to reorder the list. While more intuitive, it uses O(n) extra space. Time complexity remains O(n).",
         code: `function reorderListArray(head: ListNode | null): void {
-    if (!head) return;
+    if not head:
+        return
     
-    // Convert to array
-    const nodes: ListNode[] = [];
-    let current = head;
+    # Convert to array
+    nodes = []
+    current = head
     
-    while (current) {
-        nodes.push(current);
-        current = current.next;
-    }
+    while current:
+        nodes.append(current)
+        current = current.next
     
-    // Reorder using two pointers
-    let left = 0;
-    let right = nodes.length - 1;
+    # Reorder using two pointers
+    left = 0
+    right = len(nodes) - 1
     
-    while (left < right) {
-        nodes[left].next = nodes[right];
-        left++;
+    while left < right:
+        nodes[left].next = nodes[right]
+        left += 1
         
-        if (left === right) break;
+        if left == right:
+            break
         
-        nodes[right].next = nodes[left];
-        right--;
-    }
+        nodes[right].next = nodes[left]
+        right -= 1
     
-    nodes[left].next = null;
-}`,
+    nodes[left].next = None`,
       },
       {
-        language: "Java",
+        language: "Python",
         explanation:
           "Array-Based Approach: This solution stores all nodes in an array first, then uses two pointers from both ends to reorder the list. While more intuitive, it uses O(n) extra space. Time complexity remains O(n).",
-        code: `class Solution {
-    public void reorderListArray(ListNode head) {
-        if (head == null) return;
+        code: `def reorderListArray(head):
+    if not head:
+        return
+    
+    # Convert to array
+    nodes = []
+    current = head
+    
+    while current:
+        nodes.append(current)
+        current = current.next
+    
+    # Reorder using two pointers
+    left = 0
+    right = len(nodes) - 1
+    
+    while left < right:
+        nodes[left].next = nodes[right]
+        left += 1
         
-        // Convert to array
-        ListNode[] nodes = new ListNode[10000]; // Assuming max 10000 nodes
-        int index = 0;
-        ListNode current = head;
+        if left == right:
+            break
         
-        while (current != null) {
-            nodes[index++] = current;
-            current = current.next;
-        }
-        
-        // Reorder using two pointers
-        int left = 0;
-        int right = index - 1;
-        
-        while (left < right) {
-            nodes[left].next = nodes[right];
-            left++;
-            
-            if (left == right) break;
-            
-            nodes[right].next = nodes[left];
-            right--;
-        }
-        
-        nodes[left].next = null;
-    }
-}`,
+        nodes[right].next = nodes[left]
+        right -= 1
+    
+    nodes[left].next = None`,
       },
       {
         language: "typescript",
@@ -907,25 +1069,50 @@ class Solution {
         code: `function reorderListRecursive(head: ListNode | null): void {
     if (!head || !head.next) return;
     
-    // Find tail and second-to-last
-    let prev: ListNode | null = null;
-    let tail = head;
+    # Find tail and second-to-last
+    prev = None
+    tail = head
     
-    while (tail.next) {
-        prev = tail;
-        tail = tail.next;
-    }
+    while tail.next:
+        prev = tail
+        tail = tail.next
     
-    // Disconnect tail
-    prev!.next = null;
+    # Disconnect tail
+    prev.next = None
     
-    // Insert tail after head
-    tail.next = head.next;
-    head.next = tail;
+    # Insert tail after head
+    tail.next = head.next
+    head.next = tail
     
-    // Recursively reorder remaining list
+    # Recursively reorder remaining list
     reorderListRecursive(tail.next);
 }`,
+      },
+      {
+        language: "Python",
+        explanation:
+          "Recursive Approach: This solution recursively finds the tail of the list, disconnects it, inserts it after the head, and repeats on the remaining list. While elegant in concept, it has poor performance with O(n²) time complexity since finding the tail is repeated for each recursion level.",
+        code: `def reorderListRecursive(head):
+    if not head or not head.next:
+        return
+    
+    # Find tail and second-to-last
+    prev = None
+    tail = head
+    
+    while tail.next:
+        prev = tail
+        tail = tail.next
+    
+    # Disconnect tail
+    prev.next = None
+    
+    # Insert tail after head
+    tail.next = head.next
+    head.next = tail
+    
+    # Recursively reorder remaining list
+    reorderListRecursive(tail.next)`,
       },
       {
         language: "Java",
@@ -1023,221 +1210,160 @@ class Solution {
 }`,
       },
       {
-        language: "Java",
+        language: "Python",
         explanation:
           "Divide and Conquer Approach: We recursively merge pairs of lists, reducing the total number of lists by half in each iteration until only one list remains. This approach has O(n log k) time complexity where n is the total number of nodes and k is the number of lists. The space complexity is O(log k) for the recursive call stack.",
-        code: `class Solution {
-    public ListNode mergeKLists(ListNode[] lists) {
-        if (lists == null || lists.length == 0) return null;
-        
-        while (lists.length > 1) {
-            ListNode[] mergedLists = new ListNode[lists.length / 2 + lists.length % 2];
-            
-            for (int i = 0; i < lists.length; i += 2) {
-                ListNode l1 = lists[i];
-                ListNode l2 = i + 1 < lists.length ? lists[i + 1] : null;
-                mergedLists[i / 2] = mergeTwoLists(l1, l2);
-            }
-            
-            lists = mergedLists;
-        }
-        
-        return lists[0];
-    }
+        code: `def mergeKLists(lists):
+    if not lists:
+        return None
     
-    private ListNode mergeTwoLists(ListNode l1, ListNode l2) {
-        ListNode dummy = new ListNode(0);
-        ListNode current = dummy;
+    def mergeTwoLists(l1, l2):
+        dummy = ListNode(0)
+        current = dummy
         
-        while (l1 != null && l2 != null) {
-            if (l1.val <= l2.val) {
-                current.next = l1;
-                l1 = l1.next;
-            } else {
-                current.next = l2;
-                l2 = l2.next;
-            }
-            current = current.next;
-        }
+        while l1 and l2:
+            if l1.val <= l2.val:
+                current.next = l1
+                l1 = l1.next
+            else:
+                current.next = l2
+                l2 = l2.next
+            current = current.next
         
-        current.next = l1 != null ? l1 : l2;
-        return dummy.next;
-    }
-}`,
+        current.next = l1 or l2
+        return dummy.next
+    
+    while len(lists) > 1:
+        merged_lists = []
+        
+        for i in range(0, len(lists), 2):
+            l1 = lists[i]
+            l2 = lists[i + 1] if i + 1 < len(lists) else None
+            merged_lists.append(mergeTwoLists(l1, l2))
+        
+        lists = merged_lists
+    
+    return lists[0] if lists else None`,
       },
       {
         language: "typescript",
         explanation:
           "Priority Queue Approach: We maintain a min heap of nodes from all lists, always extracting the minimum node and adding its next node to the heap. This approach also has O(n log k) time complexity, with O(k) space complexity for the heap. This implementation includes a simple min-heap implementation for clarity.",
         code: `function mergeKListsHeap(lists: (ListNode | null)[]): ListNode | null {
-    // Simple priority queue implementation
-    class MinHeap {
-        heap: ListNode[] = [];
+    # Simple priority queue implementation
+    class MinHeap:
+        def __init__(self):
+            self.heap = []
         
-        push(node: ListNode): void {
-            this.heap.push(node);
-            this.bubbleUp(this.heap.length - 1);
-        }
+        def push(self, node: ListNode):
+            self.heap.append(node)
+            self._bubbleUp(len(self.heap) - 1)
         
-        pop(): ListNode | null {
-            if (this.heap.length === 0) return null;
-            if (this.heap.length === 1) return this.heap.pop()!;
+        def pop(self) -> ListNode | None:
+            if not self.heap:
+                return None
+            if len(self.heap) == 1:
+                return self.heap.pop()
             
-            const min = this.heap[0];
-            this.heap[0] = this.heap.pop()!;
-            this.bubbleDown(0);
-            return min;
-        }
+            min_node = self.heap[0]
+            self.heap[0] = self.heap.pop()
+            self._bubbleDown(0)
+            return min_node
         
-        private bubbleUp(index: number): void {
-            while (index > 0) {
-                const parentIndex = Math.floor((index - 1) / 2);
-                if (this.heap[parentIndex].val <= this.heap[index].val) break;
+        def _bubbleUp(self, index: int):
+            while index > 0:
+                parent_index = (index - 1) // 2
+                if self.heap[parent_index].val <= self.heap[index].val:
+                    break
                 
-                [this.heap[parentIndex], this.heap[index]] = [this.heap[index], this.heap[parentIndex]];
-                index = parentIndex;
-            }
-        }
+                self.heap[parent_index], self.heap[index] = self.heap[index], self.heap[parent_index]
+                index = parent_index
         
-        private bubbleDown(index: number): void {
-            while (true) {
-                let minIndex = index;
-                const leftChild = 2 * index + 1;
-                const rightChild = 2 * index + 2;
+        def _bubbleDown(self, index: int):
+            while True:
+                min_index = index
+                left_child = 2 * index + 1
+                right_child = 2 * index + 2
                 
-                if (leftChild < this.heap.length && this.heap[leftChild].val < this.heap[minIndex].val) {
-                    minIndex = leftChild;
-                }
+                if left_child < len(self.heap) and self.heap[left_child].val < self.heap[min_index].val:
+                    min_index = left_child
                 
-                if (rightChild < this.heap.length && this.heap[rightChild].val < this.heap[minIndex].val) {
-                    minIndex = rightChild;
-                }
+                if right_child < len(self.heap) and self.heap[right_child].val < self.heap[min_index].val:
+                    min_index = right_child
                 
-                if (minIndex === index) break;
+                if min_index == index:
+                    break
                 
-                [this.heap[index], this.heap[minIndex]] = [this.heap[minIndex], this.heap[index]];
-                index = minIndex;
-            }
-        }
+                self.heap[index], self.heap[min_index] = self.heap[min_index], self.heap[index]
+                index = min_index
         
-        isEmpty(): boolean {
-            return this.heap.length === 0;
-        }
-    }
+        def isEmpty(self) -> bool:
+            return not self.heap
     
-    const heap = new MinHeap();
+    heap = MinHeap()
     
-    // Add first node from each list
-    for (const list of lists) {
-        if (list) heap.push(list);
-    }
+    # Add first node from each list
+    for lst in lists:
+        if lst:
+            heap.push(lst)
     
-    const dummy = new ListNode(0);
-    let current = dummy;
+    dummy = ListNode(0)
+    current = dummy
     
-    while (!heap.isEmpty()) {
-        const node = heap.pop()!;
-        current.next = node;
-        current = current.next;
+    while not heap.isEmpty():
+        node = heap.pop()
+        current.next = node
+        current = current.next
         
-        if (node.next) {
-            heap.push(node.next);
-        }
-    }
+        if node.next:
+            heap.push(node.next)
     
-    return dummy.next;
-}`,
+    return dummy.next`,
       },
       {
-        language: "Java",
+        language: "Python",
         explanation:
           "Priority Queue Approach: We maintain a min heap of nodes from all lists, always extracting the minimum node and adding its next node to the heap. This approach also has O(n log k) time complexity, with O(k) space complexity for the heap. This implementation includes a simple min-heap implementation for clarity.",
-        code: `import java.util.*;
-class Solution {
-    public ListNode mergeKListsHeap(ListNode[] lists) {
-        // Simple priority queue implementation
-        class MinHeap {
-            ListNode[] heap = new ListNode[1000]; // Assuming max 1000 nodes
-            int size = 0;
-            
-            public void push(ListNode node) {
-                heap[size++] = node;
-                bubbleUp(size - 1);
-            }
-            
-            public ListNode pop() {
-                if (size == 0) return null;
-                if (size == 1) return heap[--size];
-                
-                ListNode min = heap[0];
-                heap[0] = heap[--size];
-                bubbleDown(0);
-                return min;
-            }
-            
-            private void bubbleUp(int index) {
-                while (index > 0) {
-                    int parentIndex = (index - 1) / 2;
-                    if (heap[parentIndex].val <= heap[index].val) break;
-                    
-                    ListNode temp = heap[parentIndex];
-                    heap[parentIndex] = heap[index];
-                    heap[index] = temp;
-                    index = parentIndex;
-                }
-            }
-            
-            private void bubbleDown(int index) {
-                while (true) {
-                    int minIndex = index;
-                    int leftChild = 2 * index + 1;
-                    int rightChild = 2 * index + 2;
-                    
-                    if (leftChild < size && heap[leftChild].val < heap[minIndex].val) {
-                        minIndex = leftChild;
-                    }
-                    
-                    if (rightChild < size && heap[rightChild].val < heap[minIndex].val) {
-                        minIndex = rightChild;
-                    }
-                    
-                    if (minIndex == index) break;
-                    
-                    ListNode temp = heap[index];
-                    heap[index] = heap[minIndex];
-                    heap[minIndex] = temp;
-                    index = minIndex;
-                }
-            }
-            
-            public boolean isEmpty() {
-                return size == 0;
-            }
-        }
+        code: `import heapq
+
+class MinHeap:
+    def __init__(self):
+        self.heap = []
+    
+    def push(self, node: ListNode):
+        heapq.heappush(self.heap, node)
+    
+    def pop(self) -> ListNode | None:
+        if not self.heap:
+            return None
+        return heapq.heappop(self.heap)
+    
+    def isEmpty(self) -> bool:
+        return not self.heap
+
+def mergeKListsHeap(lists):
+    if not lists:
+        return None
+    
+    heap = MinHeap()
+    
+    # Add first node from each list
+    for lst in lists:
+        if lst:
+            heap.push(lst)
+    
+    dummy = ListNode(0)
+    current = dummy
+    
+    while not heap.isEmpty():
+        node = heap.pop()
+        current.next = node
+        current = current.next
         
-        MinHeap heap = new MinHeap();
-        
-        // Add first node from each list
-        for (ListNode list : lists) {
-            if (list != null) heap.push(list);
-        }
-        
-        ListNode dummy = new ListNode(0);
-        ListNode current = dummy;
-        
-        while (!heap.isEmpty()) {
-            ListNode node = heap.pop();
-            current.next = node;
-            current = current.next;
-            
-            if (node.next != null) {
-                heap.push(node.next);
-            }
-        }
-        
-        return dummy.next;
-    }
-}`,
+        if node.next:
+            heap.push(node.next)
+    
+    return dummy.next`,
       },
       {
         language: "typescript",
@@ -1275,41 +1401,35 @@ class Solution {
 }`,
       },
       {
-        language: "Java",
+        language: "Python",
         explanation:
           "Sequential Merging Approach: This is the most straightforward approach where we merge lists one by one. For each iteration, we merge the result so far with the next list. Time complexity is O(kn) which is less efficient than the other approaches, but the implementation is simpler and uses only O(1) extra space.",
-        code: `class Solution {
-    public ListNode mergeKListsSequential(ListNode[] lists) {
-        if (lists == null || lists.length == 0) return null;
-        
-        ListNode result = lists[0];
-        
-        for (int i = 1; i < lists.length; i++) {
-            result = mergeTwoLists(result, lists[i]);
-        }
-        
-        return result;
-    }
+        code: `def mergeKListsSequential(lists):
+    if not lists:
+        return None
     
-    private ListNode mergeTwoLists(ListNode l1, ListNode l2) {
-        ListNode dummy = new ListNode(0);
-        ListNode current = dummy;
+    def mergeTwoLists(l1, l2):
+        dummy = ListNode(0)
+        current = dummy
         
-        while (l1 != null && l2 != null) {
-            if (l1.val <= l2.val) {
-                current.next = l1;
-                l1 = l1.next;
-            } else {
-                current.next = l2;
-                l2 = l2.next;
-            }
-            current = current.next;
-        }
+        while l1 and l2:
+            if l1.val <= l2.val:
+                current.next = l1
+                l1 = l1.next
+            else:
+                current.next = l2
+                l2 = l2.next
+            current = current.next
         
-        current.next = l1 != null ? l1 : l2;
-        return dummy.next;
-    }
-}`,
+        current.next = l1 or l2
+        return dummy.next
+    
+    result = lists[0]
+    
+    for i in range(1, len(lists)):
+        result = mergeTwoLists(result, lists[i])
+    
+    return result`,
       },
     ],
     sampleAnswer:
@@ -1362,38 +1482,34 @@ class Solution {
 }`,
       },
       {
-        language: "Java",
+        language: "Python",
         explanation:
           "Single Pass with Carry: For the standard problem where digits are stored in reverse order, we can process both lists in a single pass. We add corresponding digits plus any carry from the previous addition, then create a new node with the result modulo 10 and carry the remainder to the next addition. Time complexity is O(max(m,n)) and space complexity is O(max(m,n)) for the result list.",
-        code: `class Solution {
-    public ListNode addTwoNumbers(ListNode l1, ListNode l2) {
-        ListNode dummy = new ListNode(0);
-        ListNode current = dummy;
-        int carry = 0;
+        code: `def addTwoNumbers(l1, l2):
+    dummy = ListNode(0)
+    current = dummy
+    carry = 0
+    
+    while l1 or l2 or carry:
+        val1 = l1.val if l1 else 0
+        val2 = l2.val if l2 else 0
+        sum = val1 + val2 + carry
         
-        while (l1 != null || l2 != null || carry > 0) {
-            int val1 = l1 != null ? l1.val : 0;
-            int val2 = l2 != null ? l2.val : 0;
-            int sum = val1 + val2 + carry;
-            
-            carry = sum / 10;
-            current.next = new ListNode(sum % 10);
-            current = current.next;
-            
-            l1 = l1 != null ? l1.next : null;
-            l2 = l2 != null ? l2.next : null;
-        }
+        carry = sum // 10
+        current.next = ListNode(sum % 10)
+        current = current.next
         
-        return dummy.next;
-    }
-}`,
+        l1 = l1.next if l1 else None
+        l2 = l2.next if l2 else None
+    
+    return dummy.next`,
       },
       {
         language: "typescript",
         explanation:
           "Forward Order Addition (Add Two Numbers II): When digits are stored in forward order (most significant digit first), we need to align the digits properly. One approach is to get the lengths of both lists, pad the shorter one with leading zeros, then use recursion to add from right to left. Time complexity remains O(max(m,n)) but with additional steps for length calculation and padding.",
         code: `function addTwoNumbersII(l1: ListNode | null, l2: ListNode | null): ListNode | null {
-    // Get lengths
+    # Get lengths
     function getLength(head: ListNode | null): number {
         let length = 0;
         while (head) {
@@ -1406,7 +1522,7 @@ class Solution {
     const len1 = getLength(l1);
     const len2 = getLength(l2);
     
-    // Pad shorter list with zeros
+    # Pad shorter list with zeros
     if (len1 < len2) {
         for (let i = 0; i < len2 - len1; i++) {
             const newNode = new ListNode(0);
@@ -1421,7 +1537,7 @@ class Solution {
         }
     }
     
-    // Recursive addition
+    # Recursive addition
     function addHelper(n1: ListNode | null, n2: ListNode | null): {node: ListNode | null, carry: number} {
         if (!n1 && !n2) return {node: null, carry: 0};
         
@@ -1446,156 +1562,124 @@ class Solution {
 }`,
       },
       {
-        language: "Java",
+        language: "Python",
         explanation:
           "Forward Order Addition (Add Two Numbers II): When digits are stored in forward order (most significant digit first), we need to align the digits properly. One approach is to get the lengths of both lists, pad the shorter one with leading zeros, then use recursion to add from right to left. Time complexity remains O(max(m,n)) but with additional steps for length calculation and padding.",
-        code: `class Solution {
-    public ListNode addTwoNumbersII(ListNode l1, ListNode l2) {
-        // Get lengths
-        int len1 = getLength(l1);
-        int len2 = getLength(l2);
-        
-        // Pad shorter list with zeros
-        if (len1 < len2) {
-            for (int i = 0; i < len2 - len1; i++) {
-                ListNode newNode = new ListNode(0);
-                newNode.next = l1;
-                l1 = newNode;
-            }
-        } else if (len2 < len1) {
-            for (int i = 0; i < len1 - len2; i++) {
-                ListNode newNode = new ListNode(0);
-                newNode.next = l2;
-                l2 = newNode;
-            }
-        }
-        
-        // Recursive addition
-        Result result = addHelper(l1, l2);
-        
-        if (result.carry > 0) {
-            ListNode carryNode = new ListNode(result.carry);
-            carryNode.next = result.node;
-            return carryNode;
-        }
-        
-        return result.node;
-    }
+        code: `def addTwoNumbersII(l1, l2):
+    # Get lengths
+    def getLength(head):
+        length = 0
+        while head:
+            length += 1
+            head = head.next
+        return length
     
-    private int getLength(ListNode head) {
-        int length = 0;
-        while (head != null) {
-            length++;
-            head = head.next;
-        }
-        return length;
-    }
+    len1 = getLength(l1)
+    len2 = getLength(l2)
     
-    private Result addHelper(ListNode n1, ListNode n2) {
-        if (n1 == null && n2 == null) {
-            return new Result(null, 0);
-        }
-        
-        Result nextResult = addHelper(n1.next, n2.next);
-        int sum = n1.val + n2.val + nextResult.carry;
-        
-        ListNode newNode = new ListNode(sum % 10);
-        newNode.next = nextResult.node;
-        
-        return new Result(newNode, sum / 10);
-    }
+    # Pad shorter list with zeros
+    if len1 < len2:
+        for i in range(len2 - len1):
+            newNode = ListNode(0)
+            newNode.next = l1
+            l1 = newNode
+    elif len2 < len1:
+        for i in range(len1 - len2):
+            newNode = ListNode(0)
+            newNode.next = l2
+            l2 = newNode
     
-    private static class Result {
-        ListNode node;
-        int carry;
+    # Recursive addition
+    def addHelper(n1, n2):
+        if not n1 and not n2:
+            return (None, 0)
         
-        Result(ListNode node, int carry) {
-            this.node = node;
-            this.carry = carry;
-        }
-    }
-}`,
+        (nextNode, nextCarry) = addHelper(n1.next if n1 else None, n2.next if n2 else None)
+        sum = (n1.val if n1 else 0) + (n2.val if n2 else 0) + nextCarry
+        
+        newNode = ListNode(sum % 10)
+        newNode.next = nextNode
+        
+        return (newNode, sum // 10)
+    
+    (node, carry) = addHelper(l1, l2)
+    
+    if carry > 0:
+        carryNode = ListNode(carry)
+        carryNode.next = node
+        return carryNode
+    
+    return node`,
       },
       {
         language: "typescript",
         explanation:
           "Alternative Approach (Using Stack): Another approach for forward-order addition is to convert both lists to stacks, which naturally processes elements in reverse order. Then pop from both stacks and add as in the standard problem. This avoids recursion but uses additional space for the stacks.",
         code: `function addTwoNumbersIIWithStack(l1: ListNode | null, l2: ListNode | null): ListNode | null {
-    // Convert lists to stacks
-    const stack1: number[] = [];
-    const stack2: number[] = [];
+    # Convert lists to stacks
+    stack1: number[] = []
+    stack2: number[] = []
     
-    while (l1) {
-        stack1.push(l1.val);
-        l1 = l1.next;
-    }
+    while l1:
+        stack1.append(l1.val)
+        l1 = l1.next
     
-    while (l2) {
-        stack2.push(l2.val);
-        l2 = l2.next;
-    }
+    while l2:
+        stack2.append(l2.val)
+        l2 = l2.next
     
-    let carry = 0;
-    let result: ListNode | null = null;
+    carry = 0
+    result: ListNode | None = None
     
-    // Process stacks from the end (least significant digit first)
-    while (stack1.length > 0 || stack2.length > 0 || carry > 0) {
-        const val1 = stack1.length > 0 ? stack1.pop()! : 0;
-        const val2 = stack2.length > 0 ? stack2.pop()! : 0;
-        const sum = val1 + val2 + carry;
+    # Process stacks from the end (least significant digit first)
+    while stack1 or stack2 or carry > 0:
+        val1 = stack1.pop() if stack1 else 0
+        val2 = stack2.pop() if stack2 else 0
+        sum = val1 + val2 + carry
         
-        // Create new node and insert at beginning of result list
-        const newNode = new ListNode(sum % 10);
-        newNode.next = result;
-        result = newNode;
+        # Create new node and insert at beginning of result list
+        newNode = ListNode(sum % 10)
+        newNode.next = result
+        result = newNode
         
-        carry = Math.floor(sum / 10);
-    }
+        carry = sum // 10
     
-    return result;
-}`,
+    return result`,
       },
       {
-        language: "Java",
+        language: "Python",
         explanation:
           "Alternative Approach (Using Stack): Another approach for forward-order addition is to convert both lists to stacks, which naturally processes elements in reverse order. Then pop from both stacks and add as in the standard problem. This avoids recursion but uses additional space for the stacks.",
-        code: `import java.util.*;
-class Solution {
-    public ListNode addTwoNumbersIIWithStack(ListNode l1, ListNode l2) {
-        // Convert lists to stacks
-        Stack<Integer> stack1 = new Stack<>();
-        Stack<Integer> stack2 = new Stack<>();
+        code: `def addTwoNumbersIIWithStack(l1, l2):
+    # Convert lists to stacks
+    stack1 = []
+    stack2 = []
+    
+    while l1:
+        stack1.append(l1.val)
+        l1 = l1.next
+    
+    while l2:
+        stack2.append(l2.val)
+        l2 = l2.next
+    
+    carry = 0
+    result = None
+    
+    # Process stacks from the end (least significant digit first)
+    while stack1 or stack2 or carry > 0:
+        val1 = stack1.pop() if stack1 else 0
+        val2 = stack2.pop() if stack2 else 0
+        sum = val1 + val2 + carry
         
-        while (l1 != null) {
-            stack1.push(l1.val);
-            l1 = l1.next;
-        }
+        # Create new node and insert at beginning of result list
+        newNode = ListNode(sum % 10)
+        newNode.next = result
+        result = newNode
         
-        while (l2 != null) {
-            stack2.push(l2.val);
-            l2 = l2.next;
-        }
-        
-        int carry = 0;
-        ListNode result = null;
-        
-        // Process stacks from the end (least significant digit first)
-        while (!stack1.isEmpty() || !stack2.isEmpty() || carry > 0) {
-            int val1 = stack1.isEmpty() ? 0 : stack1.pop();
-            int val2 = stack2.isEmpty() ? 0 : stack2.pop();
-            int sum = val1 + val2 + carry;
-            
-            // Create new node and insert at beginning of result list
-            ListNode newNode = new ListNode(sum % 10);
-            newNode.next = result;
-            result = newNode;
-            
-            carry = sum / 10;
-        }
-        
-        return result;
-    }
-}`,
+        carry = sum // 10
+    
+    return result`,
       },
     ],
     sampleAnswer:
@@ -1641,14 +1725,14 @@ function copyRandomList(head: RandomListNode | null): RandomListNode | null {
     
     const nodeMap = new Map<RandomListNode, RandomListNode>();
     
-    // First pass: create all nodes
+    # First pass: create all nodes
     let current = head;
     while (current) {
         nodeMap.set(current, new RandomListNode(current.val));
         current = current.next;
     }
     
-    // Second pass: set next and random pointers
+    # Second pass: set next and random pointers
     current = head;
     while (current) {
         const newNode = nodeMap.get(current)!;
@@ -1663,32 +1747,34 @@ function copyRandomList(head: RandomListNode | null): RandomListNode | null {
           "This hash map implementation stores the mapping between original nodes and their copies. In the first pass, we create all new nodes and store them in the map. In the second pass, we set both next and random pointers using the mappings from the map. This approach uses O(n) extra space for the hash map.",
       },
       {
-        language: "Java",
-        code: `class Solution {
-    public RandomListNode copyRandomList(RandomListNode head) {
-        if (head == null) return null;
-        
-        Map<RandomListNode, RandomListNode> nodeMap = new HashMap<>();
-        
-        // First pass: create all nodes
-        RandomListNode current = head;
-        while (current != null) {
-            nodeMap.put(current, new RandomListNode(current.val));
-            current = current.next;
-        }
-        
-        // Second pass: set next and random pointers
-        current = head;
-        while (current != null) {
-            RandomListNode newNode = nodeMap.get(current);
-            newNode.next = current.next != null ? nodeMap.get(current.next) : null;
-            newNode.random = current.random != null ? nodeMap.get(current.random) : null;
-            current = current.next;
-        }
-        
-        return nodeMap.get(head);
-    }
-}`,
+        language: "Python",
+        code: `class RandomListNode:
+    def __init__(self, val=0, next=None, random=None):
+        self.val = val
+        self.next = next
+        self.random = random
+
+def copyRandomList(head):
+    if not head:
+        return None
+    
+    nodeMap = {}
+    
+    # First pass: create all nodes
+    current = head
+    while current:
+        nodeMap[current] = RandomListNode(current.val)
+        current = current.next
+    
+    # Second pass: set next and random pointers
+    current = head
+    while current:
+        newNode = nodeMap[current]
+        newNode.next = nodeMap[current.next] if current.next else None
+        newNode.random = nodeMap[current.random] if current.random else None
+        current = current.next
+    
+    return nodeMap[head]`,
         explanation:
           "This hash map implementation stores the mapping between original nodes and their copies. In the first pass, we create all new nodes and store them in the map. In the second pass, we set both next and random pointers using the mappings from the map. This approach uses O(n) extra space for the hash map.",
       },
@@ -1697,7 +1783,7 @@ function copyRandomList(head: RandomListNode | null): RandomListNode | null {
         code: `function copyRandomListOptimized(head: RandomListNode | null): RandomListNode | null {
     if (!head) return null;
     
-    // Step 1: Create interweaved list A->A'->B->B'->C->C'
+    # Step 1: Create interweaved list A->A'->B->B'->C->C'
     let current = head;
     while (current) {
         const newNode = new RandomListNode(current.val);
@@ -1706,7 +1792,7 @@ function copyRandomList(head: RandomListNode | null): RandomListNode | null {
         current = newNode.next;
     }
     
-    // Step 2: Set random pointers for new nodes
+    # Step 2: Set random pointers for new nodes
     current = head;
     while (current) {
         if (current.random) {
@@ -1715,7 +1801,7 @@ function copyRandomList(head: RandomListNode | null): RandomListNode | null {
         current = current.next!.next;
     }
     
-    // Step 3: Separate the lists
+    # Step 3: Separate the lists
     const dummy = new RandomListNode(0);
     let newCurrent = dummy;
     current = head;
@@ -1732,45 +1818,39 @@ function copyRandomList(head: RandomListNode | null): RandomListNode | null {
 }`,
       },
       {
-        language: "Java",
-        code: `class Solution {
-    public RandomListNode copyRandomListOptimized(RandomListNode head) {
-        if (head == null) return null;
-        
-        // Step 1: Create interweaved list A->A'->B->B'->C->C'
-        RandomListNode current = head;
-        while (current != null) {
-            RandomListNode newNode = new RandomListNode(current.val);
-            newNode.next = current.next;
-            current.next = newNode;
-            current = newNode.next;
-        }
-        
-        // Step 2: Set random pointers for new nodes
-        current = head;
-        while (current != null) {
-            if (current.random != null) {
-                current.next.random = current.random.next;
-            }
-            current = current.next.next;
-        }
-        
-        // Step 3: Separate the lists
-        RandomListNode dummy = new RandomListNode(0);
-        RandomListNode newCurrent = dummy;
-        current = head;
-        
-        while (current != null) {
-            RandomListNode newNode = current.next;
-            current.next = newNode.next;
-            newCurrent.next = newNode;
-            newCurrent = newNode;
-            current = current.next;
-        }
-        
-        return dummy.next;
-    }
-}`,
+        language: "Python",
+        code: `def copyRandomListOptimized(head):
+    if not head:
+        return None
+    
+    # Step 1: Create interweaved list A->A'->B->B'->C->C'
+    current = head
+    while current:
+        newNode = RandomListNode(current.val)
+        newNode.next = current.next
+        current.next = newNode
+        current = newNode.next
+    
+    # Step 2: Set random pointers for new nodes
+    current = head
+    while current:
+        if current.random:
+            current.next.random = current.random.next
+        current = current.next.next
+    
+    # Step 3: Separate the lists
+    dummy = RandomListNode(0)
+    newCurrent = dummy
+    current = head
+    
+    while current:
+        newNode = current.next
+        current.next = newNode.next
+        newCurrent.next = newNode
+        newCurrent = newNode
+        current = current.next
+    
+    return dummy.next`,
       },
     ],
     sampleAnswer:

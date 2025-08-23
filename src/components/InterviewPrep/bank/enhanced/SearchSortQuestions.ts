@@ -153,6 +153,65 @@ class Solution {
     }
 }`,
         explanation: "Extension that finds insertion position for target. Uses left < right condition for bounds."
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Standard Binary Search (Optimal)
+# Time: O(log n), Space: O(1)
+def search(nums, target):
+    left, right = 0, len(nums) - 1
+    
+    while left <= right:
+        mid = (left + right) // 2
+        
+        if nums[mid] == target:
+            return mid
+        elif nums[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    
+    return -1`,
+        explanation: "Standard iterative binary search. Most space-efficient with O(1) space complexity."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Recursive Binary Search
+# Time: O(log n), Space: O(log n)
+def search_recursive(nums, target):
+    def binary_search(left, right):
+        if left > right:
+            return -1
+        
+        mid = (left + right) // 2
+        
+        if nums[mid] == target:
+            return mid
+        elif nums[mid] < target:
+            return binary_search(mid + 1, right)
+        else:
+            return binary_search(left, mid - 1)
+    
+    return binary_search(0, len(nums) - 1)`,
+        explanation: "Recursive binary search implementation. More intuitive but uses call stack space."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Find Insertion Position (Lower Bound)
+# Time: O(log n), Space: O(1)
+def search_insert(nums, target):
+    left, right = 0, len(nums)
+    
+    while left < right:
+        mid = (left + right) // 2
+        
+        if nums[mid] < target:
+            left = mid + 1
+        else:
+            right = mid
+    
+    return left`,
+        explanation: "Extension that finds insertion position for target. Uses left < right condition for bounds."
       }
     ],
     tips: [
@@ -369,6 +428,87 @@ class Solution {
         return nums[left];
     }
 }`,
+        explanation: "Binary search to find minimum element in rotated sorted array. Uses left < right condition."
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Modified Binary Search (Optimal)
+# Time: O(log n), Space: O(1)
+def search_rotated(nums, target):
+    left, right = 0, len(nums) - 1
+    
+    while left <= right:
+        mid = (left + right) // 2
+        
+        if nums[mid] == target:
+            return mid
+        
+        # Determine which half is sorted
+        if nums[left] <= nums[mid]:
+            # Left half is sorted
+            if nums[left] <= target < nums[mid]:
+                right = mid - 1
+            else:
+                left = mid + 1
+        else:
+            # Right half is sorted
+            if nums[mid] < target <= nums[right]:
+                left = mid + 1
+            else:
+                right = mid - 1
+    
+    return -1`,
+        explanation: "Modified binary search handles rotated sorted arrays by determining which half is sorted."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Handle Duplicates Version
+# Time: O(log n), Space: O(1)
+def search_rotated_with_duplicates(nums, target):
+    left, right = 0, len(nums) - 1
+    
+    while left <= right:
+        mid = (left + right) // 2
+        
+        if nums[mid] == target:
+            return True
+        
+        # Handle duplicates
+        if nums[left] == nums[mid] == nums[right]:
+            left += 1
+            right -= 1
+        elif nums[left] <= nums[mid]:
+            # Left half is sorted
+            if nums[left] <= target < nums[mid]:
+                right = mid - 1
+            else:
+                left = mid + 1
+        else:
+            # Right half is sorted
+            if nums[mid] < target <= nums[right]:
+                left = mid + 1
+            else:
+                right = mid - 1
+    
+    return False`,
+        explanation: "Extension that handles duplicate elements by incrementing/decrementing pointers when endpoints are equal."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Find Minimum in Rotated Array
+# Time: O(log n), Space: O(1)
+def find_min(nums):
+    left, right = 0, len(nums) - 1
+    
+    while left < right:
+        mid = (left + right) // 2
+        
+        if nums[mid] > nums[right]:
+            left = mid + 1
+        else:
+            right = mid
+    
+    return nums[left]`,
         explanation: "Binary search to find minimum element in rotated sorted array. Uses left < right condition."
       }
     ],
@@ -630,6 +770,129 @@ class Solution {
         while (j <= right) arr[k++] = temp[j++];
     }
 }`,
+        explanation: "Iterative bottom-up approach avoids recursion overhead. Better performance for large arrays."
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Standard Merge Sort (Classic)
+# Time: O(n log n), Space: O(n)
+def merge_sort(nums):
+    if len(nums) <= 1:
+        return nums
+    
+    mid = len(nums) // 2
+    left = merge_sort(nums[:mid])
+    right = merge_sort(nums[mid:])
+    
+    return merge(left, right)
+
+def merge(left, right):
+    result = []
+    i = j = 0
+    
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+    
+    # Add remaining elements
+    result.extend(left[i:])
+    result.extend(right[j:])
+    
+    return result`,
+        explanation: "Classic divide-and-conquer recursive implementation. Most intuitive and easy to understand."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: In-place Merge Sort (Space Efficient)
+# Time: O(n log n), Space: O(n)
+def merge_sort_in_place(nums):
+    def merge_sort_helper(arr, temp, left, right):
+        if left >= right:
+            return
+        
+        mid = (left + right) // 2
+        merge_sort_helper(arr, temp, left, mid)
+        merge_sort_helper(arr, temp, mid + 1, right)
+        merge_in_place(arr, temp, left, mid, right)
+    
+    def merge_in_place(arr, temp, left, mid, right):
+        # Copy to temp array
+        for i in range(left, right + 1):
+            temp[i] = arr[i]
+        
+        i, j, k = left, mid + 1, left
+        
+        while i <= mid and j <= right:
+            if temp[i] <= temp[j]:
+                arr[k] = temp[i]
+                i += 1
+            else:
+                arr[k] = temp[j]
+                j += 1
+            k += 1
+        
+        while i <= mid:
+            arr[k] = temp[i]
+            i += 1
+            k += 1
+        while j <= right:
+            arr[k] = temp[j]
+            j += 1
+            k += 1
+    
+    temp = [0] * len(nums)
+    merge_sort_helper(nums, temp, 0, len(nums) - 1)`,
+        explanation: "In-place version using temporary array. More space-efficient than creating new arrays."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Bottom-up Merge Sort (Iterative)
+# Time: O(n log n), Space: O(n)
+def merge_sort_bottom_up(nums):
+    n = len(nums)
+    result = nums[:]
+    temp = [0] * n
+    
+    size = 1
+    while size < n:
+        left = 0
+        while left < n - size:
+            mid = left + size - 1
+            right = min(left + 2 * size - 1, n - 1)
+            
+            merge_bottom_up(result, temp, left, mid, right)
+            left += 2 * size
+        size *= 2
+    
+    return result
+
+def merge_bottom_up(arr, temp, left, mid, right):
+    for i in range(left, right + 1):
+        temp[i] = arr[i]
+    
+    i, j, k = left, mid + 1, left
+    
+    while i <= mid and j <= right:
+        if temp[i] <= temp[j]:
+            arr[k] = temp[i]
+            i += 1
+        else:
+            arr[k] = temp[j]
+            j += 1
+        k += 1
+    
+    while i <= mid:
+        arr[k] = temp[i]
+        i += 1
+        k += 1
+    while j <= right:
+        arr[k] = temp[j]
+        j += 1
+        k += 1`,
         explanation: "Iterative bottom-up approach avoids recursion overhead. Better performance for large arrays."
       }
     ],
@@ -981,6 +1244,144 @@ class Solution {
     }
 }`,
         explanation: "3-way partitioning handles duplicate elements efficiently by creating three regions."
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Quick Sort with Lomuto Partition
+# Time: O(n log n) average, O(n²) worst, Space: O(log n) average
+def quick_sort(nums):
+    arr = nums[:]
+    
+    def quick_sort_helper(low, high):
+        if low < high:
+            pivot_index = partition(low, high)
+            quick_sort_helper(low, pivot_index - 1)
+            quick_sort_helper(pivot_index + 1, high)
+    
+    def partition(low, high):
+        pivot = arr[high]
+        i = low - 1
+        
+        for j in range(low, high):
+            if arr[j] <= pivot:
+                i += 1
+                arr[i], arr[j] = arr[j], arr[i]
+        
+        arr[i + 1], arr[high] = arr[high], arr[i + 1]
+        return i + 1
+    
+    quick_sort_helper(0, len(arr) - 1)
+    return arr`,
+        explanation: "Classic Lomuto partitioning scheme using last element as pivot. Simple to implement and understand."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Hoare Partition Scheme (More Efficient)
+# Time: O(n log n) average, O(n²) worst, Space: O(log n) average
+def quick_sort_hoare(nums):
+    arr = nums[:]
+    
+    def quick_sort_helper(low, high):
+        if low < high:
+            pivot_index = partition_hoare(low, high)
+            quick_sort_helper(low, pivot_index)
+            quick_sort_helper(pivot_index + 1, high)
+    
+    def partition_hoare(low, high):
+        pivot = arr[low]
+        i = low - 1
+        j = high + 1
+        
+        while True:
+            i += 1
+            while arr[i] < pivot:
+                i += 1
+            
+            j -= 1
+            while arr[j] > pivot:
+                j -= 1
+            
+            if i >= j:
+                return j
+            
+            arr[i], arr[j] = arr[j], arr[i]
+    
+    quick_sort_helper(0, len(arr) - 1)
+    return arr`,
+        explanation: "Hoare partitioning scheme is more efficient with better cache performance and fewer swaps."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Randomized Quick Sort (Better Average Case)
+# Time: O(n log n) average, O(n²) worst, Space: O(log n) average
+import random
+
+def quick_sort_randomized(nums):
+    arr = nums[:]
+    
+    def quick_sort_helper(low, high):
+        if low < high:
+            # Randomize pivot selection
+            random_index = random.randint(low, high)
+            arr[random_index], arr[high] = arr[high], arr[random_index]
+            
+            pivot_index = partition(low, high)
+            quick_sort_helper(low, pivot_index - 1)
+            quick_sort_helper(pivot_index + 1, high)
+    
+    def partition(low, high):
+        pivot = arr[high]
+        i = low - 1
+        
+        for j in range(low, high):
+            if arr[j] <= pivot:
+                i += 1
+                arr[i], arr[j] = arr[j], arr[i]
+        
+        arr[i + 1], arr[high] = arr[high], arr[i + 1]
+        return i + 1
+    
+    quick_sort_helper(0, len(arr) - 1)
+    return arr`,
+        explanation: "Randomized pivot selection prevents worst-case O(n²) performance on sorted arrays."
+      },
+      {
+        language: "Python",
+        code: `# Approach 4: 3-Way Quick Sort (Handles Duplicates Efficiently)
+# Time: O(n log n) average, O(n²) worst, Space: O(log n) average
+def quick_sort_3way(nums):
+    arr = nums[:]
+    
+    def quick_sort_3way_helper(low, high):
+        if low >= high:
+            return
+        
+        lt, gt = partition_3way(low, high)
+        quick_sort_3way_helper(low, lt - 1)
+        quick_sort_3way_helper(gt + 1, high)
+    
+    def partition_3way(low, high):
+        pivot = arr[low]
+        lt = low        # arr[low...lt-1] < pivot
+        i = low + 1     # arr[lt...i-1] = pivot
+        gt = high + 1   # arr[gt...high] > pivot
+        
+        while i < gt:
+            if arr[i] < pivot:
+                arr[lt], arr[i] = arr[i], arr[lt]
+                lt += 1
+                i += 1
+            elif arr[i] > pivot:
+                gt -= 1
+                arr[i], arr[gt] = arr[gt], arr[i]
+            else:
+                i += 1
+        
+        return lt, gt
+    
+    quick_sort_3way_helper(0, len(arr) - 1)
+    return arr`,
+        explanation: "3-way partitioning handles duplicate elements efficiently by creating three regions."
       }
     ],
     tips: [
@@ -1203,6 +1604,84 @@ class Solution {
         return new int[]{-1, -1};
     }
 }`,
+        explanation: "Advanced 2D peak finding using column-wise binary search. Demonstrates extension to higher dimensions."
+      },
+      {
+        language: "Python",
+        code: `# Approach 1: Binary Search Approach (Optimal)
+# Time: O(log n), Space: O(1)
+def find_peak_element(nums):
+    left, right = 0, len(nums) - 1
+    
+    while left < right:
+        mid = (left + right) // 2
+        
+        if nums[mid] < nums[mid + 1]:
+            # Peak is in right half
+            left = mid + 1
+        else:
+            # Peak is in left half (including mid)
+            right = mid
+    
+    return left`,
+        explanation: "Binary search eliminates half of array based on slope. Most efficient approach for finding a single peak."
+      },
+      {
+        language: "Python",
+        code: `# Approach 2: Linear Search (for comparison)
+# Time: O(n), Space: O(1)
+def find_peak_element_linear(nums):
+    for i in range(len(nums) - 1):
+        if nums[i] > nums[i + 1]:
+            return i
+    return len(nums) - 1`,
+        explanation: "Linear search finds first peak element. Simple but less efficient than binary search."
+      },
+      {
+        language: "Python",
+        code: `# Approach 3: Find All Peaks
+# Time: O(n), Space: O(1)
+def find_all_peaks(nums):
+    peaks = []
+    
+    for i in range(len(nums)):
+        left_ok = i == 0 or nums[i] > nums[i - 1]
+        right_ok = i == len(nums) - 1 or nums[i] > nums[i + 1]
+        
+        if left_ok and right_ok:
+            peaks.append(i)
+    
+    return peaks`,
+        explanation: "Extension that finds all peak elements in the array. Useful when multiple peaks are needed."
+      },
+      {
+        language: "Python",
+        code: `# Approach 4: 2D Peak Finding (Advanced)
+# Time: O(n log m), Space: O(1) where n = rows, m = columns
+def find_peak_grid(mat):
+    m, n = len(mat), len(mat[0])
+    left, right = 0, n - 1
+    
+    while left <= right:
+        mid = (left + right) // 2
+        
+        # Find max element in middle column
+        max_row = 0
+        for i in range(1, m):
+            if mat[i][mid] > mat[max_row][mid]:
+                max_row = i
+        
+        left_val = mat[max_row][mid - 1] if mid > 0 else -1
+        right_val = mat[max_row][mid + 1] if mid < n - 1 else -1
+        
+        if mat[max_row][mid] > left_val and mat[max_row][mid] > right_val:
+            return [max_row, mid]
+        elif mat[max_row][mid] < left_val:
+            right = mid - 1
+        else:
+            left = mid + 1
+    
+    return [-1, -1]`,
         explanation: "Advanced 2D peak finding using column-wise binary search. Demonstrates extension to higher dimensions."
       }
     ],
