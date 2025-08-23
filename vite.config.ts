@@ -9,15 +9,22 @@ export default defineConfig({
     target: "es2015",
     rollupOptions: {
       output: {
-        manualChunks: undefined, // Disable manual chunks to avoid issues
+        manualChunks: undefined,
       },
+      // Force JavaScript implementation
+      external: [],
     },
   },
   optimizeDeps: {
     exclude: ["lucide-react"],
+    force: true,
   },
   server: {
     port: 5173,
     host: true,
+  },
+  // Force environment variables to disable native rollup
+  define: {
+    "process.env.ROLLUP_NO_NATIVE": '"1"',
   },
 });
