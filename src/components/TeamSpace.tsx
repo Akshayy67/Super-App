@@ -93,7 +93,21 @@ export const TeamSpace: React.FC<{
   const [publicTeams, setPublicTeams] = useState<Team[]>([]);
   const [showDiscoverTeams, setShowDiscoverTeams] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
-  const [messages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
+  // Subscribe to team messages in real time when chat tab is active and a team is selected
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    if (activeTab === "chat" && selectedTeam) {
+      unsubscribe = teamManagementService.subscribeToTeamMessages(
+        selectedTeam.id,
+        setMessages
+      );
+    }
+    // Cleanup subscription on tab/team change
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [activeTab, selectedTeam]);
   const [newMessage, setNewMessage] = useState("");
   const [showExitRequestModal, setShowExitRequestModal] = useState(false);
   const [exitReason, setExitReason] = useState("");
