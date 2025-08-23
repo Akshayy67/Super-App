@@ -23,21 +23,21 @@ console.log("- NODE_OPTIONS:", process.env.NODE_OPTIONS);
 // Try different methods to run vite build
 try {
   console.log("Trying to run vite build using direct node path...");
-  
+
   const vitePath = path.resolve(__dirname, "node_modules/vite/bin/vite.js");
   if (fs.existsSync(vitePath)) {
     console.log(`Found vite at ${vitePath}, running directly...`);
-    execSync(`node "${vitePath}" build`, { 
+    execSync(`node "${vitePath}" build`, {
       stdio: "inherit",
-      env: { ...process.env }
+      env: { ...process.env },
     });
     console.log("Build completed successfully!");
     process.exit(0);
   } else {
     console.log("Vite not found in node_modules, trying npx...");
-    execSync("npx vite build", { 
+    execSync("npx vite build", {
       stdio: "inherit",
-      env: { ...process.env }
+      env: { ...process.env },
     });
     console.log("Build completed successfully!");
     process.exit(0);
@@ -45,5 +45,21 @@ try {
 } catch (err) {
   console.error("Build failed:", err.message);
   console.error("Error details:", err);
+  process.exit(1);
+}
+
+try {
+  console.log("Building with Vite...");
+  execSync("npx vite build", {
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      NODE_ENV: "production",
+      ROLLUP_NO_NATIVE: "true",
+    },
+  });
+  console.log("✅ Build completed successfully!");
+} catch (error) {
+  console.error("❌ Build failed:", error.message);
   process.exit(1);
 }
