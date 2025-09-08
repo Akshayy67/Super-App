@@ -39,14 +39,146 @@ export const aiService = {
     }
   },
 
+  async generateImage(prompt: string): Promise<AIResponse> {
+    if (!API_KEY) {
+      return {
+        success: false,
+        error:
+          "API key not configured. Please set VITE_GOOGLE_AI_API_KEY in your environment variables.",
+      };
+    }
+
+    try {
+      // Use Gemini's image generation capabilities
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: `Generate a detailed description for creating an image: ${prompt}. Provide a comprehensive visual description that could be used by an image generation AI.`,
+                  },
+                ],
+              },
+            ],
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `Image generation failed: ${
+            result.error?.message || response.statusText
+          }`,
+        };
+      }
+
+      if (
+        result.candidates &&
+        result.candidates[0] &&
+        result.candidates[0].content
+      ) {
+        // For now, return the description. In a full implementation,
+        // you would integrate with an actual image generation service
+        return {
+          success: true,
+          data: result.candidates[0].content.parts[0].text,
+        };
+      }
+
+      return { success: false, error: "No image description generated" };
+    } catch (error) {
+      return { success: false, error: "Image generation failed" };
+    }
+  },
+
+  async analyzeImageContent(
+    imageBase64: string,
+    prompt?: string
+  ): Promise<AIResponse> {
+    if (!API_KEY) {
+      return {
+        success: false,
+        error:
+          "API key not configured. Please set VITE_GOOGLE_AI_API_KEY in your environment variables.",
+      };
+    }
+
+    try {
+      const analysisPrompt =
+        prompt || "Analyze this image and describe what you see in detail.";
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: analysisPrompt,
+                  },
+                  {
+                    inline_data: {
+                      mime_type: "image/jpeg",
+                      data: imageBase64.includes(",")
+                        ? imageBase64.split(",")[1]
+                        : imageBase64,
+                    },
+                  },
+                ],
+              },
+            ],
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `Image analysis failed: ${
+            result.error?.message || response.statusText
+          }`,
+        };
+      }
+
+      if (
+        result.candidates &&
+        result.candidates[0] &&
+        result.candidates[0].content
+      ) {
+        return {
+          success: true,
+          data: result.candidates[0].content.parts[0].text,
+        };
+      }
+
+      return { success: false, error: "No analysis generated" };
+    } catch (error) {
+      return { success: false, error: "Image analysis failed" };
+    }
+  },
+
   async generateResponse(
     prompt: string,
     context?: string
   ): Promise<AIResponse> {
     if (!API_KEY) {
-      return { 
-        success: false, 
-        error: "API key not configured. Please set VITE_GOOGLE_AI_API_KEY in your environment variables." 
+      return {
+        success: false,
+        error:
+          "API key not configured. Please set VITE_GOOGLE_AI_API_KEY in your environment variables.",
       };
     }
 
@@ -56,7 +188,7 @@ export const aiService = {
         : prompt;
 
       const model = import.meta.env.VITE_GEMINI_MODEL || "gemini-2.0-flash";
-      
+
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`,
         {
@@ -80,16 +212,20 @@ export const aiService = {
 
       if (!response.ok) {
         // Check if it's an API key issue
-        if (response.status === 400 && result.error?.message?.includes('API key')) {
-          return { 
-            success: false, 
-            error: "Invalid API key. Please check your VITE_GOOGLE_AI_API_KEY configuration." 
+        if (
+          response.status === 400 &&
+          result.error?.message?.includes("API key")
+        ) {
+          return {
+            success: false,
+            error:
+              "Invalid API key. Please check your VITE_GOOGLE_AI_API_KEY configuration.",
           };
         }
-        
-        return { 
-          success: false, 
-          error: `API Error: ${result.error?.message || response.statusText}` 
+
+        return {
+          success: false,
+          error: `API Error: ${result.error?.message || response.statusText}`,
         };
       }
 

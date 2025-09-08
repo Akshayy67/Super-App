@@ -44,6 +44,17 @@ export const unifiedAIService = {
     return aiService.explainConcept(concept, context);
   },
 
+  async generateImage(prompt: string): Promise<AIResponse> {
+    return aiService.generateImage(prompt);
+  },
+
+  async analyzeImageContent(
+    imageBase64: string,
+    prompt?: string
+  ): Promise<AIResponse> {
+    return aiService.analyzeImageContent(imageBase64, prompt);
+  },
+
   // OCR: Use in-browser Tesseract first to avoid server dependency; no /api/vision call needed
   async extractTextFromImage(imageBase64: string): Promise<AIResponse> {
     // Load Tesseract from CDN at runtime to avoid bundler import errors
@@ -53,7 +64,8 @@ export const unifiedAIService = {
       }
       await new Promise<void>((resolve, reject) => {
         const script = document.createElement("script");
-        script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.0.3/dist/tesseract.min.js";
+        script.src =
+          "https://cdn.jsdelivr.net/npm/tesseract.js@5.0.3/dist/tesseract.min.js";
         script.async = true;
         script.onload = () => resolve();
         script.onerror = () => reject(new Error("Failed to load Tesseract.js"));
@@ -83,12 +95,12 @@ export const unifiedAIService = {
   // Check if AI is configured
   isConfigured(): boolean {
     const geminiKey = import.meta.env.VITE_GOOGLE_AI_API_KEY;
-    
+
     // If we have the key, we're configured
     if (geminiKey) {
       return true;
     }
-    
+
     // For production builds, we might be deployed with the key
     // Let's try to make a test call to see if the API works
     if (import.meta.env.PROD) {
@@ -96,7 +108,7 @@ export const unifiedAIService = {
       // The actual API call will fail gracefully if the key is invalid
       return true;
     }
-    
+
     return false;
   },
 };
