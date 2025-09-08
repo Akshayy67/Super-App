@@ -73,7 +73,7 @@ export const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition-shadow">
       {/* Header */}
       <div
         className={`p-6 cursor-pointer ${
@@ -84,7 +84,7 @@ export const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
             <div className="flex items-center mb-2">
-              <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-2">
                 {question.question.split(" - ")[0]}
               </h3>
               {isPracticed && (
@@ -93,7 +93,7 @@ export const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
                 </span>
               )}
             </div>
-            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2">
               {question.question.includes(" - ")
                 ? question.question.split(" - ").slice(1).join(" - ")
                 : ""}
@@ -110,7 +110,7 @@ export const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
             </span>
 
             {question.estimatedTime && (
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
                 ~{question.estimatedTime} min
               </span>
             )}
@@ -123,13 +123,13 @@ export const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
             {question.tags.slice(0, 4).map((tag, index) => (
               <span
                 key={index}
-                className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-md"
+                className="px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-xs rounded-md"
               >
                 {tag}
               </span>
             ))}
             {question.tags.length > 4 && (
-              <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-md">
+              <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 text-xs rounded-md">
                 +{question.tags.length - 4} more
               </span>
             )}
@@ -138,11 +138,11 @@ export const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
 
         {/* Expand/Collapse indicator */}
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
             Click to {isExpanded ? "collapse" : "expand"}
           </div>
           <svg
-            className={`w-5 h-5 text-gray-400 transition-transform ${
+            className={`w-5 h-5 text-gray-400 dark:text-gray-500 transition-transform ${
               isExpanded ? "rotate-180" : ""
             }`}
             fill="none"
@@ -161,26 +161,30 @@ export const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="border-t border-gray-200">
+        <div className="border-t border-gray-200 dark:border-slate-700">
           {/* Full Question */}
-          <div className="p-6 border-b border-gray-100">
-            <h4 className="font-semibold text-gray-900 mb-2">
+          <div className="p-6 border-b border-gray-100 dark:border-slate-700">
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Problem Statement
             </h4>
-            <p className="text-gray-700 whitespace-pre-wrap">
+            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
               {question.question}
             </p>
           </div>
 
           {/* Tips */}
           {question.tips && question.tips.length > 0 && (
-            <div className="p-6 border-b border-gray-100">
-              <h4 className="font-semibold text-gray-900 mb-3">💡 Key Tips</h4>
+            <div className="p-6 border-b border-gray-100 dark:border-slate-700">
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                💡 Key Tips
+              </h4>
               <ul className="space-y-2">
                 {question.tips.map((tip, index) => (
                   <li key={index} className="flex items-start">
                     <span className="text-blue-500 mr-2">•</span>
-                    <span className="text-gray-700 text-sm">{tip}</span>
+                    <span className="text-gray-700 dark:text-gray-300 text-sm">
+                      {tip}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -188,8 +192,8 @@ export const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
           )}
 
           {/* Practice Links */}
-          <div className="p-6 border-b border-gray-100">
-            <h4 className="font-semibold text-gray-900 mb-3">
+          <div className="p-6 border-b border-gray-100 dark:border-slate-700">
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
               ⚡ Practice Now
             </h4>
 
@@ -245,7 +249,7 @@ export const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
                 </a>
               )}
               {!practiceLinks?.leetcode && !practiceLinks?.geeksforgeeks && (
-                <div className="text-gray-500 text-sm">
+                <div className="text-gray-500 dark:text-gray-400 text-sm">
                   No practice links available for this question.
                 </div>
               )}
@@ -255,7 +259,7 @@ export const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
           {/* Solution */}
           <div className="p-6">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="font-semibold text-gray-900">
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100">
                 💻 Solution & Implementation
               </h4>
               <button
@@ -280,11 +284,11 @@ export const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
                 </pre>
               </div>
             ) : showCode ? (
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
                 No code implementation available for this question.
               </p>
             ) : (
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
                 Click "Show Code" to view detailed implementation with multiple
                 approaches and complexity analysis.
               </p>
@@ -294,12 +298,14 @@ export const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
           {/* All Tags */}
           {question.tags && question.tags.length > 0 && (
             <div className="p-6 pt-0">
-              <h4 className="font-semibold text-gray-900 mb-3">🏷️ All Tags</h4>
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                🏷️ All Tags
+              </h4>
               <div className="flex flex-wrap gap-2">
                 {question.tags.map((tag, index) => (
                   <span
                     key={index}
-                    className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-md hover:bg-gray-200 transition-colors cursor-pointer"
+                    className="px-3 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-sm rounded-md hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
                       // Could implement tag-based filtering here

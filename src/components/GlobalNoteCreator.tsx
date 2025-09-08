@@ -15,7 +15,7 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
   isVisible,
   onClose,
   copiedText,
-  sourceContext = "Copied Text"
+  sourceContext = "Copied Text",
 }) => {
   const [noteForm, setNoteForm] = useState({
     title: "",
@@ -65,15 +65,18 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
 
       // Store to localStorage
       storageUtils.storeShortNote(newNote);
-      
+
       // Also try to store to Google Drive
       try {
         await storageUtils.storeShortNoteToDrive(newNote);
       } catch (error) {
-        console.log("Google Drive storage failed, but note saved locally:", error);
+        console.log(
+          "Google Drive storage failed, but note saved locally:",
+          error
+        );
       }
       setSaveSuccess(true);
-      
+
       // Show success state briefly before closing
       setTimeout(() => {
         onClose();
@@ -109,19 +112,19 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center space-x-2">
             <FileText className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Create Note from Copied Text
             </h2>
           </div>
           <button
             onClick={handleClose}
             disabled={isSaving}
-            className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
           >
             <X className="w-5 h-5" />
           </button>
@@ -130,9 +133,9 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
         {/* Content */}
         <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
           {/* Source Context */}
-          <div className="bg-gray-50 rounded-lg p-3">
+          <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Source: {sourceContext}
               </span>
               <button
@@ -156,42 +159,48 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
 
           {/* Title Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Note Title
             </label>
             <input
               type="text"
               value={noteForm.title}
-              onChange={(e) => setNoteForm({ ...noteForm, title: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) =>
+                setNoteForm({ ...noteForm, title: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
               placeholder="Enter note title..."
             />
           </div>
 
           {/* Content Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Note Content
             </label>
             <textarea
               value={noteForm.content}
-              onChange={(e) => setNoteForm({ ...noteForm, content: e.target.value })}
+              onChange={(e) =>
+                setNoteForm({ ...noteForm, content: e.target.value })
+              }
               rows={8}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
               placeholder="Note content..."
             />
           </div>
 
           {/* Tags Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Tags (comma-separated)
             </label>
             <input
               type="text"
               value={noteForm.tags}
-              onChange={(e) => setNoteForm({ ...noteForm, tags: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) =>
+                setNoteForm({ ...noteForm, tags: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
               placeholder="e.g., study, important, reference"
             />
           </div>
@@ -202,7 +211,7 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
           <button
             onClick={handleClose}
             disabled={isSaving}
-            className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-md transition-colors disabled:opacity-50"
           >
             Cancel
           </button>

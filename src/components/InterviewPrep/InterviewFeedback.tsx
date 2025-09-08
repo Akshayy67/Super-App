@@ -1,13 +1,13 @@
 import React, { useState } from "react";
-import { 
-  MessageSquare, 
-  TrendingUp, 
-  AlertTriangle, 
-  Lightbulb, 
+import {
+  MessageSquare,
+  TrendingUp,
+  AlertTriangle,
+  Lightbulb,
   Star,
   Loader2,
   Download,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
 import { aiService } from "../../utils/aiService";
 
@@ -22,7 +22,7 @@ interface FeedbackSection {
 }
 
 interface InterviewFeedbackProps {
-  messages: Array<{ role: 'user' | 'system' | 'assistant'; content: string }>;
+  messages: Array<{ role: "user" | "system" | "assistant"; content: string }>;
   interviewType: string;
   difficulty: string;
   role: string;
@@ -34,105 +34,122 @@ export const InterviewFeedback: React.FC<InterviewFeedbackProps> = ({
   interviewType,
   difficulty,
   role,
-  onClose
+  onClose,
 }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [feedbackSections, setFeedbackSections] = useState<FeedbackSection[]>([]);
+  const [feedbackSections, setFeedbackSections] = useState<FeedbackSection[]>(
+    []
+  );
   const [overallScore, setOverallScore] = useState<number>(0);
   const [analysisComplete, setAnalysisComplete] = useState(false);
 
   const analyzeInterview = async () => {
     setIsAnalyzing(true);
     setFeedbackSections([]);
-    
+
     try {
       // Prepare conversation context
       const conversationText = messages
-        .filter(msg => msg.role !== 'system') // Filter out system messages
-        .map(msg => `${msg.role === 'user' ? 'Candidate' : 'Interviewer'}: ${msg.content}`)
-        .join('\n\n');
+        .filter((msg) => msg.role !== "system") // Filter out system messages
+        .map(
+          (msg) =>
+            `${msg.role === "user" ? "Candidate" : "Interviewer"}: ${
+              msg.content
+            }`
+        )
+        .join("\n\n");
 
       // Analyze different aspects with separate API calls
       const [
         communicationAnalysis,
         technicalAnalysis,
         behavioralAnalysis,
-        overallAnalysis
+        overallAnalysis,
       ] = await Promise.all([
         analyzeCommunication(conversationText, role, difficulty),
         analyzeTechnicalSkills(conversationText, role, difficulty),
         analyzeBehavioralAspects(conversationText, role, difficulty),
-        analyzeOverallPerformance(conversationText, role, difficulty, interviewType)
+        analyzeOverallPerformance(
+          conversationText,
+          role,
+          difficulty,
+          interviewType
+        ),
       ]);
 
       // Create feedback sections
       const sections: FeedbackSection[] = [
         {
-          id: 'communication',
-          title: 'Communication Skills',
+          id: "communication",
+          title: "Communication Skills",
           icon: <MessageSquare className="w-6 h-6" />,
-          color: 'text-blue-600',
+          color: "text-blue-600",
           content: communicationAnalysis.content,
           score: communicationAnalysis.score,
-          suggestions: communicationAnalysis.suggestions
+          suggestions: communicationAnalysis.suggestions,
         },
         {
-          id: 'technical',
-          title: 'Technical Knowledge',
+          id: "technical",
+          title: "Technical Knowledge",
           icon: <TrendingUp className="w-6 h-6" />,
-          color: 'text-green-600',
+          color: "text-green-600",
           content: technicalAnalysis.content,
           score: technicalAnalysis.score,
-          suggestions: technicalAnalysis.suggestions
+          suggestions: technicalAnalysis.suggestions,
         },
         {
-          id: 'behavioral',
-          title: 'Behavioral Responses',
+          id: "behavioral",
+          title: "Behavioral Responses",
           icon: <Star className="w-6 h-6" />,
-          color: 'text-purple-600',
+          color: "text-purple-600",
           content: behavioralAnalysis.content,
           score: behavioralAnalysis.score,
-          suggestions: behavioralAnalysis.suggestions
+          suggestions: behavioralAnalysis.suggestions,
         },
         {
-          id: 'improvements',
-          title: 'Areas for Improvement',
+          id: "improvements",
+          title: "Areas for Improvement",
           icon: <AlertTriangle className="w-6 h-6" />,
-          color: 'text-orange-600',
+          color: "text-orange-600",
           content: overallAnalysis.improvements,
-          suggestions: overallAnalysis.improvementSuggestions
+          suggestions: overallAnalysis.improvementSuggestions,
         },
         {
-          id: 'strengths',
-          title: 'Key Strengths',
+          id: "strengths",
+          title: "Key Strengths",
           icon: <Lightbulb className="w-6 h-6" />,
-          color: 'text-yellow-600',
+          color: "text-yellow-600",
           content: overallAnalysis.strengths,
-          suggestions: overallAnalysis.strengthSuggestions
-        }
+          suggestions: overallAnalysis.strengthSuggestions,
+        },
       ];
 
       setFeedbackSections(sections);
       setOverallScore(overallAnalysis.overallScore);
       setAnalysisComplete(true);
     } catch (error) {
-      console.error('Error analyzing interview:', error);
+      console.error("Error analyzing interview:", error);
       // Fallback feedback
       setFeedbackSections([
         {
-          id: 'error',
-          title: 'Analysis Error',
+          id: "error",
+          title: "Analysis Error",
           icon: <AlertTriangle className="w-6 h-6" />,
-          color: 'text-red-600',
-          content: 'Unable to analyze the interview. Please try again or check your AI configuration.'
-        }
+          color: "text-red-600",
+          content:
+            "Unable to analyze the interview. Please try again or check your AI configuration.",
+        },
       ]);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const analyzeCommunication = async (conversation: string, role: string, difficulty: string) => {
+  const analyzeCommunication = async (
+    conversation: string,
+    role: string,
+    difficulty: string
+  ) => {
     const prompt = `Analyze the communication skills demonstrated in this interview conversation for a ${difficulty} level ${role} position.
 
 Conversation:
@@ -165,18 +182,27 @@ Format as JSON:
           return JSON.parse(jsonMatch[0]);
         }
       } catch (e) {
-        console.error('Failed to parse communication analysis:', e);
+        console.error("Failed to parse communication analysis:", e);
       }
     }
-    
+
     return {
       score: 7,
-      content: "Communication analysis could not be completed. Please check your AI configuration.",
-      suggestions: ["Ensure clear articulation", "Practice professional language", "Structure responses better"]
+      content:
+        "Communication analysis could not be completed. Please check your AI configuration.",
+      suggestions: [
+        "Ensure clear articulation",
+        "Practice professional language",
+        "Structure responses better",
+      ],
     };
   };
 
-  const analyzeTechnicalSkills = async (conversation: string, role: string, difficulty: string) => {
+  const analyzeTechnicalSkills = async (
+    conversation: string,
+    role: string,
+    difficulty: string
+  ) => {
     const prompt = `Analyze the technical knowledge and skills demonstrated in this interview conversation for a ${difficulty} level ${role} position.
 
 Conversation:
@@ -209,18 +235,27 @@ Format as JSON:
           return JSON.parse(jsonMatch[0]);
         }
       } catch (e) {
-        console.error('Failed to parse technical analysis:', e);
+        console.error("Failed to parse technical analysis:", e);
       }
     }
-    
+
     return {
       score: 7,
-      content: "Technical skills analysis could not be completed. Please check your AI configuration.",
-      suggestions: ["Deepen technical knowledge", "Practice problem-solving", "Demonstrate more experience"]
+      content:
+        "Technical skills analysis could not be completed. Please check your AI configuration.",
+      suggestions: [
+        "Deepen technical knowledge",
+        "Practice problem-solving",
+        "Demonstrate more experience",
+      ],
     };
   };
 
-  const analyzeBehavioralAspects = async (conversation: string, role: string, difficulty: string) => {
+  const analyzeBehavioralAspects = async (
+    conversation: string,
+    role: string,
+    difficulty: string
+  ) => {
     const prompt = `Analyze the behavioral responses and soft skills demonstrated in this interview conversation for a ${difficulty} level ${role} position.
 
 Conversation:
@@ -253,18 +288,28 @@ Format as JSON:
           return JSON.parse(jsonMatch[0]);
         }
       } catch (e) {
-        console.error('Failed to parse behavioral analysis:', e);
+        console.error("Failed to parse behavioral analysis:", e);
       }
     }
-    
+
     return {
       score: 7,
-      content: "Behavioral analysis could not be completed. Please check your AI configuration.",
-      suggestions: ["Use STAR method", "Provide specific examples", "Show problem-solving process"]
+      content:
+        "Behavioral analysis could not be completed. Please check your AI configuration.",
+      suggestions: [
+        "Use STAR method",
+        "Provide specific examples",
+        "Show problem-solving process",
+      ],
     };
   };
 
-  const analyzeOverallPerformance = async (conversation: string, role: string, difficulty: string, interviewType: string) => {
+  const analyzeOverallPerformance = async (
+    conversation: string,
+    role: string,
+    difficulty: string,
+    interviewType: string
+  ) => {
     const prompt = `Provide a comprehensive overall analysis of this interview performance for a ${difficulty} level ${role} position.
 
 Interview Type: ${interviewType}
@@ -295,16 +340,24 @@ Format as JSON:
           return JSON.parse(jsonMatch[0]);
         }
       } catch (e) {
-        console.error('Failed to parse overall analysis:', e);
+        console.error("Failed to parse overall analysis:", e);
       }
     }
-    
+
     return {
       overallScore: 7,
-      strengths: "Overall analysis could not be completed. Please check your AI configuration.",
+      strengths:
+        "Overall analysis could not be completed. Please check your AI configuration.",
       improvements: "Unable to provide specific improvement areas.",
-      strengthSuggestions: ["Focus on your strengths", "Build on positive aspects"],
-      improvementSuggestions: ["Practice regularly", "Seek feedback", "Work on identified areas"]
+      strengthSuggestions: [
+        "Focus on your strengths",
+        "Build on positive aspects",
+      ],
+      improvementSuggestions: [
+        "Practice regularly",
+        "Seek feedback",
+        "Work on identified areas",
+      ],
     };
   };
 
@@ -318,26 +371,35 @@ Type: ${interviewType}
 Difficulty: ${difficulty}
 Overall Score: ${overallScore}/10
 
-${feedbackSections.map(section => `
+${feedbackSections
+  .map(
+    (section) => `
 ${section.title}
-${'='.repeat(section.title.length)}
+${"=".repeat(section.title.length)}
 ${section.content}
 
-${section.suggestions && section.suggestions.length > 0 ? 
-  `Suggestions:
-${section.suggestions.map(s => `- ${s}`).join('\n')}` : ''}
+${
+  section.suggestions && section.suggestions.length > 0
+    ? `Suggestions:
+${section.suggestions.map((s) => `- ${s}`).join("\n")}`
+    : ""
+}
 
-Score: ${section.score ? `${section.score}/10` : 'N/A'}
-`).join('\n')}
+Score: ${section.score ? `${section.score}/10` : "N/A"}
+`
+  )
+  .join("\n")}
 
 Generated on: ${new Date().toLocaleDateString()}
     `;
 
-    const blob = new Blob([feedbackText], { type: 'text/plain' });
+    const blob = new Blob([feedbackText], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `interview-feedback-${role}-${new Date().toISOString().split('T')[0]}.txt`;
+    a.download = `interview-feedback-${role}-${
+      new Date().toISOString().split("T")[0]
+    }.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -345,25 +407,27 @@ Generated on: ${new Date().toLocaleDateString()}
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 8) return 'text-green-600';
-    if (score >= 6) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 8) return "text-green-600";
+    if (score >= 6) return "text-yellow-600";
+    return "text-red-600";
   };
 
   const getScoreBackground = (score: number) => {
-    if (score >= 8) return 'bg-green-100';
-    if (score >= 6) return 'bg-yellow-100';
-    return 'bg-red-100';
+    if (score >= 8) return "bg-green-100";
+    if (score >= 6) return "bg-yellow-100";
+    return "bg-red-100";
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold">Interview Feedback Analysis</h2>
+              <h2 className="text-2xl font-bold">
+                Interview Feedback Analysis
+              </h2>
               <p className="text-blue-100 mt-1">
                 {role} • {interviewType} • {difficulty} level
               </p>
@@ -408,7 +472,8 @@ Generated on: ${new Date().toLocaleDateString()}
                 Ready to Analyze Your Interview?
               </h3>
               <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                Get comprehensive feedback on your communication, technical skills, behavioral responses, and areas for improvement.
+                Get comprehensive feedback on your communication, technical
+                skills, behavioral responses, and areas for improvement.
               </p>
               <button
                 onClick={analyzeInterview}
@@ -428,7 +493,8 @@ Generated on: ${new Date().toLocaleDateString()}
                 Analyzing Your Interview...
               </h3>
               <p className="text-gray-600">
-                Our AI is carefully reviewing your responses across multiple dimensions.
+                Our AI is carefully reviewing your responses across multiple
+                dimensions.
               </p>
             </div>
           )}
@@ -436,18 +502,30 @@ Generated on: ${new Date().toLocaleDateString()}
           {analysisComplete && (
             <div className="space-y-6">
               {/* Overall Score */}
-              <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-200">
+              <div className="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-slate-700 dark:to-slate-600 rounded-2xl p-6 border border-gray-200 dark:border-slate-600">
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Overall Performance Score</h3>
-                  <div className={`inline-flex items-center justify-center w-24 h-24 ${getScoreBackground(overallScore)} rounded-full mb-4`}>
-                    <span className={`text-3xl font-bold ${getScoreColor(overallScore)}`}>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Overall Performance Score
+                  </h3>
+                  <div
+                    className={`inline-flex items-center justify-center w-24 h-24 ${getScoreBackground(
+                      overallScore
+                    )} rounded-full mb-4`}
+                  >
+                    <span
+                      className={`text-3xl font-bold ${getScoreColor(
+                        overallScore
+                      )}`}
+                    >
                       {overallScore}/10
                     </span>
                   </div>
                   <p className="text-gray-600">
-                    {overallScore >= 8 ? 'Excellent performance!' : 
-                     overallScore >= 6 ? 'Good performance with room for improvement' : 
-                     'Performance needs improvement'}
+                    {overallScore >= 8
+                      ? "Excellent performance!"
+                      : overallScore >= 6
+                      ? "Good performance with room for improvement"
+                      : "Performance needs improvement"}
                   </p>
                 </div>
               </div>
@@ -455,39 +533,60 @@ Generated on: ${new Date().toLocaleDateString()}
               {/* Feedback Sections */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {feedbackSections.map((section) => (
-                  <div key={section.id} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-lg">
+                  <div
+                    key={section.id}
+                    className="bg-white dark:bg-slate-700 rounded-2xl p-6 border border-gray-200 dark:border-slate-600 shadow-lg"
+                  >
                     <div className="flex items-center space-x-3 mb-4">
-                      <div className={`w-10 h-10 ${section.color} bg-gray-100 rounded-xl flex items-center justify-center`}>
+                      <div
+                        className={`w-10 h-10 ${section.color} bg-gray-100 rounded-xl flex items-center justify-center`}
+                      >
                         {section.icon}
                       </div>
-                      <h4 className="text-lg font-semibold text-gray-900">{section.title}</h4>
+                      <h4 className="text-lg font-semibold text-gray-900">
+                        {section.title}
+                      </h4>
                     </div>
-                    
+
                     <div className="space-y-4">
-                      <p className="text-gray-700 leading-relaxed">{section.content}</p>
-                      
+                      <p className="text-gray-700 leading-relaxed">
+                        {section.content}
+                      </p>
+
                       {section.score && (
                         <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium text-gray-600">Score:</span>
-                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getScoreBackground(section.score)} ${getScoreColor(section.score)}`}>
+                          <span className="text-sm font-medium text-gray-600">
+                            Score:
+                          </span>
+                          <span
+                            className={`px-3 py-1 rounded-full text-sm font-semibold ${getScoreBackground(
+                              section.score
+                            )} ${getScoreColor(section.score)}`}
+                          >
                             {section.score}/10
                           </span>
                         </div>
                       )}
-                      
-                      {section.suggestions && section.suggestions.length > 0 && (
-                        <div>
-                          <h5 className="font-medium text-gray-900 mb-2">Suggestions:</h5>
-                          <ul className="space-y-1">
-                            {section.suggestions.map((suggestion, index) => (
-                              <li key={index} className="flex items-start space-x-2 text-sm text-gray-700">
-                                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                                <span>{suggestion}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+
+                      {section.suggestions &&
+                        section.suggestions.length > 0 && (
+                          <div>
+                            <h5 className="font-medium text-gray-900 mb-2">
+                              Suggestions:
+                            </h5>
+                            <ul className="space-y-1">
+                              {section.suggestions.map((suggestion, index) => (
+                                <li
+                                  key={index}
+                                  className="flex items-start space-x-2 text-sm text-gray-700"
+                                >
+                                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                                  <span>{suggestion}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                     </div>
                   </div>
                 ))}
@@ -495,10 +594,14 @@ Generated on: ${new Date().toLocaleDateString()}
 
               {/* Action Items */}
               <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-6 border border-green-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Next Steps</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Next Steps
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-white rounded-xl p-4 border border-green-200">
-                    <h4 className="font-medium text-gray-900 mb-2">Immediate Actions</h4>
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      Immediate Actions
+                    </h4>
                     <ul className="space-y-1 text-sm text-gray-700">
                       <li>• Review the feedback thoroughly</li>
                       <li>• Practice identified weak areas</li>
@@ -506,7 +609,9 @@ Generated on: ${new Date().toLocaleDateString()}
                     </ul>
                   </div>
                   <div className="bg-white rounded-xl p-4 border border-green-200">
-                    <h4 className="font-medium text-gray-900 mb-2">Long-term Development</h4>
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      Long-term Development
+                    </h4>
                     <ul className="space-y-1 text-sm text-gray-700">
                       <li>• Schedule regular practice sessions</li>
                       <li>• Seek feedback from mentors</li>

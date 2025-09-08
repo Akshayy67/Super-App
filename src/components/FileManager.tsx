@@ -15,6 +15,7 @@ import {
   X,
   ZoomIn,
   ZoomOut,
+  Share2,
 } from "lucide-react";
 import { FileItem } from "../types";
 import { driveStorageUtils } from "../utils/driveStorage";
@@ -22,6 +23,7 @@ import { realTimeAuth } from "../utils/realTimeAuth";
 import { unifiedAIService } from "../utils/aiConfig";
 import { extractTextFromPdfDataUrl } from "../utils/pdfText";
 import { FilePreviewModal } from "./FileManager/FilePreviewModal";
+import { ShareMenu } from "./ShareMenu";
 
 interface FileManagerProps {
   // File manager handles preview internally now
@@ -51,14 +53,25 @@ export const FileManager: React.FC<FileManagerProps> = () => {
     error?: string;
   }>({ type: "localStorage", hasAccess: false });
   const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
-  const [sessionExpiredMessage, setSessionExpiredMessage] = useState('');
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState("");
+
+  // Share menu state
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [shareMenuPosition, setShareMenuPosition] = useState({ x: 0, y: 0 });
+  const [selectedFileForShare, setSelectedFileForShare] =
+    useState<FileItem | null>(null);
 
   const user = realTimeAuth.getCurrentUser();
 
   // Handle session expired errors
   const handleSessionExpired = (error: any) => {
-    if (error.message && error.message.includes('Google Drive access expired')) {
-      setSessionExpiredMessage('Your Google Drive session has expired. You can continue using files with local storage, or sign in again to sync with Google Drive.');
+    if (
+      error.message &&
+      error.message.includes("Google Drive access expired")
+    ) {
+      setSessionExpiredMessage(
+        "Your Google Drive session has expired. You can continue using files with local storage, or sign in again to sync with Google Drive."
+      );
       setShowSessionExpiredModal(true);
       return true; // Indicates session expired was handled
     }
@@ -69,27 +82,33 @@ export const FileManager: React.FC<FileManagerProps> = () => {
   const handleRelogin = async () => {
     try {
       setShowSessionExpiredModal(false);
-      setSessionExpiredMessage('');
-      
+      setSessionExpiredMessage("");
+
       // Sign out first
       await realTimeAuth.logout();
-      
+
       // Show a message that user should sign in again
-      alert('Please sign in again to refresh your Google Drive access. You will be redirected to the sign-in page.');
-      
+      alert(
+        "Please sign in again to refresh your Google Drive access. You will be redirected to the sign-in page."
+      );
+
       // Redirect to sign-in (this will be handled by the auth system)
       // The user will need to manually navigate to sign-in or refresh the page
     } catch (error) {
-      console.error('Error during relogin:', error);
-      alert('Error during relogin. Please try signing out and signing in again manually.');
+      console.error("Error during relogin:", error);
+      alert(
+        "Error during relogin. Please try signing out and signing in again manually."
+      );
     }
   };
 
   // Continue with local storage only
   const continueWithLocalStorage = () => {
     setShowSessionExpiredModal(false);
-    setSessionExpiredMessage('');
-    alert('You can continue using files with local storage. Your data will be saved locally and can be synced to Google Drive later when you sign in again.');
+    setSessionExpiredMessage("");
+    alert(
+      "You can continue using files with local storage. Your data will be saved locally and can be synced to Google Drive later when you sign in again."
+    );
   };
 
   useEffect(() => {
@@ -477,7 +496,13 @@ export const FileManager: React.FC<FileManagerProps> = () => {
           setPreviewContent(decodedContent);
           // Print decoded text content to console once when previewed
           try {
-            console.log("\n===== Preview Text: " + (file.name || "Untitled") + " =====\n" + decodedContent + "\n===== End Preview Text =====\n");
+            console.log(
+              "\n===== Preview Text: " +
+                (file.name || "Untitled") +
+                " =====\n" +
+                decodedContent +
+                "\n===== End Preview Text =====\n"
+            );
           } catch {}
         } catch (e) {
           console.error("Error decoding text content:", e);
@@ -500,14 +525,17 @@ export const FileManager: React.FC<FileManagerProps> = () => {
               const text = await extractTextFromPdfDataUrl(content);
               if (text) {
                 console.log(
-                  "\n===== Preview PDF Text: " + (file.name || "Untitled") +
+                  "\n===== Preview PDF Text: " +
+                    (file.name || "Untitled") +
                     " =====\n" +
                     text +
                     "\n===== End Preview PDF Text =====\n"
                 );
               }
             } catch (e) {
-              console.warn("Could not extract text from PDF for console output.");
+              console.warn(
+                "Could not extract text from PDF for console output."
+              );
             }
           })();
         } else {
@@ -524,14 +552,17 @@ export const FileManager: React.FC<FileManagerProps> = () => {
                 const text = await extractTextFromPdfDataUrl(pdfDataUrl);
                 if (text) {
                   console.log(
-                    "\n===== Preview PDF Text: " + (file.name || "Untitled") +
+                    "\n===== Preview PDF Text: " +
+                      (file.name || "Untitled") +
                       " =====\n" +
                       text +
                       "\n===== End Preview PDF Text =====\n"
                   );
                 }
               } catch (e) {
-                console.warn("Could not extract text from PDF for console output.");
+                console.warn(
+                  "Could not extract text from PDF for console output."
+                );
               }
             })();
           } catch (error) {
@@ -613,17 +644,31 @@ export const FileManager: React.FC<FileManagerProps> = () => {
     return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + " " + sizes[i];
   };
 
+  const handleShareFile = (file: FileItem, event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setShareMenuPosition({
+      x: rect.left,
+      y: rect.bottom + 5,
+    });
+    setSelectedFileForShare(file);
+    setShowShareMenu(true);
+    setSelectedFile(null);
+  };
+
   return (
-    <div className="bg-white h-full flex flex-col scroll-area" data-component="file-manager">
+    <div
+      className="bg-white dark:bg-slate-900 h-full flex flex-col scroll-area transition-colors duration-300"
+      data-component="file-manager"
+    >
       {/* Header */}
-      <div className="border-b border-gray-200 p-responsive">
+      <div className="border-b border-gray-200 dark:border-slate-700 p-responsive">
         {/* Error Banner */}
         {storageStatus.error && (
           <div
             className={`mb-4 p-3 rounded-lg ${
               storageStatus.needsReauth
-                ? "bg-red-50 border border-red-200"
-                : "bg-yellow-50 border border-yellow-200"
+                ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                : "bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800"
             }`}
           >
             <div className="flex items-center justify-between">
@@ -631,8 +676,8 @@ export const FileManager: React.FC<FileManagerProps> = () => {
                 <svg
                   className={`w-5 h-5 mr-2 ${
                     storageStatus.needsReauth
-                      ? "text-red-600"
-                      : "text-yellow-600"
+                      ? "text-red-600 dark:text-red-400"
+                      : "text-yellow-600 dark:text-yellow-400"
                   }`}
                   fill="currentColor"
                   viewBox="0 0 20 20"
@@ -646,8 +691,8 @@ export const FileManager: React.FC<FileManagerProps> = () => {
                 <span
                   className={`text-sm font-medium ${
                     storageStatus.needsReauth
-                      ? "text-red-800"
-                      : "text-yellow-800"
+                      ? "text-red-800 dark:text-red-200"
+                      : "text-yellow-800 dark:text-yellow-200"
                   }`}
                 >
                   {storageStatus.error}
@@ -669,38 +714,46 @@ export const FileManager: React.FC<FileManagerProps> = () => {
         )}
 
         {/* Google Drive Access Warning */}
-        {user && !realTimeAuth.hasGoogleDriveAccess() && realTimeAuth.shouldHaveGoogleDriveAccess() && (
-          <div className="bg-orange-50 border-l-4 border-orange-400 p-4 mx-6 mt-4 rounded-r-lg">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-5 h-5 bg-orange-400 rounded-full"></div>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-orange-800">
-                  <strong>Google Drive Access Expired:</strong> Your session has expired. 
-                  <button
-                    onClick={handleRelogin}
-                    className="ml-2 underline hover:no-underline font-medium"
-                  >
-                    Sign in again
-                  </button>
-                  to sync your files with Google Drive, or continue using local storage.
-                </p>
+        {user &&
+          !realTimeAuth.hasGoogleDriveAccess() &&
+          realTimeAuth.shouldHaveGoogleDriveAccess() && (
+            <div className="bg-orange-50 border-l-4 border-orange-400 p-4 mx-6 mt-4 rounded-r-lg">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <div className="w-5 h-5 bg-orange-400 rounded-full"></div>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-orange-800">
+                    <strong>Google Drive Access Expired:</strong> Your session
+                    has expired.
+                    <button
+                      onClick={handleRelogin}
+                      className="ml-2 underline hover:no-underline font-medium"
+                    >
+                      Sign in again
+                    </button>
+                    to sync your files with Google Drive, or continue using
+                    local storage.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
         <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
           <div className="flex-1 min-w-0">
-            <h2 className="text-responsive-xl font-bold text-gray-900 mb-2">File Manager</h2>
+            <h2 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              File Manager
+            </h2>
             <div className="flex items-center space-x-2">
-              <span className="text-responsive-sm text-gray-600">Storage:</span>
+              <span className="text-responsive-sm text-gray-600 dark:text-gray-400">
+                Storage:
+              </span>
               <div
                 className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                   storageStatus.type === "googleDrive"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-yellow-100 text-yellow-800"
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400"
+                    : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400"
                 }`}
               >
                 {storageStatus.type === "googleDrive" ? (
@@ -732,7 +785,7 @@ export const FileManager: React.FC<FileManagerProps> = () => {
           <div className="flex items-center space-x-2 sm:space-x-3 overflow-x-auto">
             <button
               onClick={() => setShowNewFolder(true)}
-              className="btn-touch flex items-center px-3 sm:px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors text-sm touch-manipulation"
+              className="btn-touch flex items-center px-3 sm:px-4 py-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm touch-manipulation"
             >
               <FolderPlus className="w-4 h-4 mr-1 sm:mr-2" />
               <span className="hidden xs:inline">New Folder</span>
@@ -757,7 +810,11 @@ export const FileManager: React.FC<FileManagerProps> = () => {
         <div className="flex items-center space-x-2 mb-4 overflow-x-auto scrollbar-hide">
           {getCurrentPath().map((pathItem, index) => (
             <React.Fragment key={index}>
-              {index > 0 && <span className="text-gray-400 flex-shrink-0">/</span>}
+              {index > 0 && (
+                <span className="text-gray-400 dark:text-gray-500 flex-shrink-0">
+                  /
+                </span>
+              )}
               <button
                 onClick={() => {
                   console.log(
@@ -778,13 +835,13 @@ export const FileManager: React.FC<FileManagerProps> = () => {
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500" />
           <input
             type="text"
             placeholder="Search files and folders..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+            className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
           />
         </div>
       </div>
@@ -794,7 +851,7 @@ export const FileManager: React.FC<FileManagerProps> = () => {
         <div className="border-b border-gray-200 p-4">
           {Object.entries(uploadProgress).map(([fileId, progress]) => (
             <div key={fileId} className="mb-2">
-              <div className="flex justify-between text-sm text-gray-600 mb-1">
+              <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
                 <span>Uploading...</span>
                 <span>{progress}%</span>
               </div>
@@ -812,14 +869,16 @@ export const FileManager: React.FC<FileManagerProps> = () => {
       {/* New Folder Modal */}
       {showNewFolder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Create New Folder</h3>
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              Create New Folder
+            </h3>
             <input
               type="text"
               placeholder="Folder name"
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
               onKeyDown={(e) => e.key === "Enter" && createFolder()}
               autoFocus
             />
@@ -829,7 +888,7 @@ export const FileManager: React.FC<FileManagerProps> = () => {
                   setShowNewFolder(false);
                   setNewFolderName("");
                 }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
               >
                 Cancel
               </button>
@@ -862,11 +921,11 @@ export const FileManager: React.FC<FileManagerProps> = () => {
 
         {getFilteredFiles().length === 0 ? (
           <div className="text-center py-12">
-            <FolderOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <FolderOpen className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
               {searchQuery ? "No files found" : "No files yet"}
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               {searchQuery
                 ? "Try adjusting your search terms"
                 : "Upload your first document to get started with AI-powered study assistance"}
@@ -914,17 +973,17 @@ export const FileManager: React.FC<FileManagerProps> = () => {
                     {file.type === "folder" ? (
                       <Folder className="w-8 h-8 text-blue-500 flex-shrink-0" />
                     ) : (
-                      <File className="w-8 h-8 text-gray-500 flex-shrink-0" />
+                      <File className="w-8 h-8 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
                       <h3
-                        className="font-medium text-gray-900 truncate text-sm"
+                        className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm"
                         title={file.name}
                       >
                         {file.name}
                       </h3>
                       {file.type === "file" && (
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           {formatFileSize(file.size)}
                         </p>
                       )}
@@ -940,7 +999,7 @@ export const FileManager: React.FC<FileManagerProps> = () => {
                       }
                       className="p-1 hover:bg-gray-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <MoreVertical className="w-4 h-4 text-gray-400" />
+                      <MoreVertical className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                     </button>
 
                     {selectedFile === file.id && (
@@ -951,7 +1010,7 @@ export const FileManager: React.FC<FileManagerProps> = () => {
                               setCurrentFolderId(file.id);
                               setSelectedFile(null);
                             }}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center"
                           >
                             <FolderOpen className="w-4 h-4 mr-2" />
                             Open
@@ -963,7 +1022,7 @@ export const FileManager: React.FC<FileManagerProps> = () => {
                                 handlePreviewFile(file);
                                 setSelectedFile(null);
                               }}
-                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center"
                             >
                               <Eye className="w-4 h-4 mr-2" />
                               Preview
@@ -973,10 +1032,17 @@ export const FileManager: React.FC<FileManagerProps> = () => {
                                 analyzeWithAI(file);
                                 setSelectedFile(null);
                               }}
-                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center"
                             >
                               <Brain className="w-4 h-4 mr-2" />
                               Analyze with AI
+                            </button>
+                            <button
+                              onClick={(e) => handleShareFile(file, e)}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center"
+                            >
+                              <Share2 className="w-4 h-4 mr-2" />
+                              Share
                             </button>
                           </>
                         )}
@@ -1000,13 +1066,13 @@ export const FileManager: React.FC<FileManagerProps> = () => {
                     onClick={() => setCurrentFolderId(file.id)}
                     className="w-full text-left"
                   >
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       {files.filter((f) => f.parentId === file.id).length} items
                     </p>
                   </button>
                 ) : (
                   <div className="space-y-2">
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       {new Date(file.uploadedAt).toLocaleDateString()}
                     </p>
                     <div className="flex space-x-2">
@@ -1039,12 +1105,14 @@ export const FileManager: React.FC<FileManagerProps> = () => {
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <div className="w-8 h-8 bg-red-500 rounded-full"></div>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Session Expired</h3>
-              <p className="text-gray-600 text-sm leading-relaxed">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                Session Expired
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
                 {sessionExpiredMessage}
               </p>
             </div>
-            
+
             <div className="space-y-3">
               <button
                 onClick={handleRelogin}
@@ -1054,7 +1122,7 @@ export const FileManager: React.FC<FileManagerProps> = () => {
               </button>
               <button
                 onClick={continueWithLocalStorage}
-                className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200 font-medium"
+                className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-all duration-200 font-medium"
               >
                 Continue with Local Storage
               </button>
@@ -1076,6 +1144,22 @@ export const FileManager: React.FC<FileManagerProps> = () => {
           formatFileSize={formatFileSize}
           showAIChat={showAIChat}
           setShowAIChat={setShowAIChat}
+        />
+      )}
+
+      {/* Share Menu */}
+      {selectedFileForShare && (
+        <ShareMenu
+          isOpen={showShareMenu}
+          onClose={() => {
+            setShowShareMenu(false);
+            setSelectedFileForShare(null);
+          }}
+          fileName={selectedFileForShare.name}
+          fileUrl={
+            selectedFileForShare.webViewLink || selectedFileForShare.content
+          }
+          position={shareMenuPosition}
         />
       )}
     </div>

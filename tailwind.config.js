@@ -1,8 +1,71 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  darkMode: "class", // Enable class-based dark mode
   theme: {
     extend: {
+      // Custom theme colors using CSS variables
+      colors: {
+        // Primary theme colors
+        primary: {
+          50: "rgb(var(--color-primary-light) / <alpha-value>)",
+          500: "rgb(var(--color-primary) / <alpha-value>)",
+          600: "rgb(var(--color-primary-hover) / <alpha-value>)",
+          700: "rgb(var(--color-primary-dark) / <alpha-value>)",
+        },
+        // Secondary theme colors
+        secondary: {
+          500: "rgb(var(--color-secondary) / <alpha-value>)",
+          600: "rgb(var(--color-secondary-hover) / <alpha-value>)",
+        },
+        // Accent colors
+        accent: {
+          500: "rgb(var(--color-accent) / <alpha-value>)",
+          600: "rgb(var(--color-accent-hover) / <alpha-value>)",
+        },
+        // Background colors
+        bg: {
+          primary: "rgb(var(--color-bg-primary) / <alpha-value>)",
+          secondary: "rgb(var(--color-bg-secondary) / <alpha-value>)",
+          tertiary: "rgb(var(--color-bg-tertiary) / <alpha-value>)",
+          quaternary: "rgb(var(--color-bg-quaternary) / <alpha-value>)",
+        },
+        // Surface colors
+        surface: {
+          DEFAULT: "rgb(var(--color-surface) / <alpha-value>)",
+          hover: "rgb(var(--color-surface-hover) / <alpha-value>)",
+          active: "rgb(var(--color-surface-active) / <alpha-value>)",
+        },
+        // Text colors
+        text: {
+          primary: "rgb(var(--color-text-primary) / <alpha-value>)",
+          secondary: "rgb(var(--color-text-secondary) / <alpha-value>)",
+          tertiary: "rgb(var(--color-text-tertiary) / <alpha-value>)",
+          quaternary: "rgb(var(--color-text-quaternary) / <alpha-value>)",
+          inverse: "rgb(var(--color-text-inverse) / <alpha-value>)",
+          muted: "rgb(var(--color-text-muted) / <alpha-value>)",
+        },
+        // Border colors
+        border: {
+          primary: "rgb(var(--color-border-primary) / <alpha-value>)",
+          secondary: "rgb(var(--color-border-secondary) / <alpha-value>)",
+          focus: "rgb(var(--color-border-focus) / <alpha-value>)",
+          error: "rgb(var(--color-border-error) / <alpha-value>)",
+        },
+      },
+      // Custom gradients
+      backgroundImage: {
+        "gradient-primary": "var(--gradient-primary)",
+        "gradient-accent": "var(--gradient-accent)",
+        "gradient-surface": "var(--gradient-surface)",
+      },
+      // Custom shadows
+      boxShadow: {
+        "theme-sm": "var(--shadow-sm)",
+        "theme-md": "var(--shadow-md)",
+        "theme-lg": "var(--shadow-lg)",
+        "theme-xl": "var(--shadow-xl)",
+      },
       screens: {
         xs: "475px", // Extra small devices (large phones)
         sm: "640px", // Small devices (tablets)
@@ -26,7 +89,8 @@ export default {
         "safe-right": "env(safe-area-inset-right)",
       },
       minHeight: {
-        "screen-safe": "calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))",
+        "screen-safe":
+          "calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))",
       },
       maxWidth: {
         "8xl": "88rem",

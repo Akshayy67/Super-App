@@ -34,6 +34,84 @@ function twoSum(nums: number[], target: number): number[] {
           "Hash map stores each number with its index. For each element, we check if its complement exists in the map.",
       },
       {
+        language: "Python",
+        approach: "optimal",
+        code: `# Approach 1: Hash Map (Optimal)
+# Time: O(n), Space: O(n)
+def two_sum(nums, target):
+    """
+    Find two numbers in array that add up to target.
+
+    Args:
+        nums: List of integers
+        target: Target sum
+
+    Returns:
+        List of two indices that sum to target
+    """
+    num_map = {}
+
+    for i, num in enumerate(nums):
+        complement = target - num
+        if complement in num_map:
+            return [num_map[complement], i]
+        num_map[num] = i
+
+    return []
+
+# Test cases
+def test_two_sum():
+    assert two_sum([2, 7, 11, 15], 9) == [0, 1]
+    assert two_sum([3, 2, 4], 6) == [1, 2]
+    assert two_sum([3, 3], 6) == [0, 1]`,
+        timeComplexity: "O(n)",
+        spaceComplexity: "O(n)",
+        explanation:
+          "Python implementation using dictionary for O(1) lookup. Enumerate provides both index and value.",
+      },
+      {
+        language: "Java",
+        approach: "optimal",
+        code: `// Approach 1: Hash Map (Optimal)
+// Time: O(n), Space: O(n)
+import java.util.*;
+
+public class Solution {
+    public int[] twoSum(int[] nums, int target) {
+        Map<Integer, Integer> map = new HashMap<>();
+
+        for (int i = 0; i < nums.length; i++) {
+            int complement = target - nums[i];
+            if (map.containsKey(complement)) {
+                return new int[]{map.get(complement), i};
+            }
+            map.put(nums[i], i);
+        }
+
+        return new int[]{};
+    }
+
+    // Test method
+    public static void main(String[] args) {
+        Solution solution = new Solution();
+
+        // Test case 1
+        int[] nums1 = {2, 7, 11, 15};
+        int[] result1 = solution.twoSum(nums1, 9);
+        System.out.println(Arrays.toString(result1)); // [0, 1]
+
+        // Test case 2
+        int[] nums2 = {3, 2, 4};
+        int[] result2 = solution.twoSum(nums2, 6);
+        System.out.println(Arrays.toString(result2)); // [1, 2]
+    }
+}`,
+        timeComplexity: "O(n)",
+        spaceComplexity: "O(n)",
+        explanation:
+          "Java implementation using HashMap for efficient lookups. Returns array of indices.",
+      },
+      {
         language: "TypeScript",
         approach: "brute-force",
         code: `// Approach 2: Brute Force
@@ -104,7 +182,8 @@ def two_sum(nums, target):
         num_map[num] = i
     
     return []`,
-        explanation: "Hash map stores each number with its index. For each element, we check if its complement exists in the map."
+        explanation:
+          "Hash map stores each number with its index. For each element, we check if its complement exists in the map.",
       },
       {
         language: "Python",
@@ -116,7 +195,8 @@ def two_sum_brute_force(nums, target):
             if nums[i] + nums[j] == target:
                 return [i, j]
     return []`,
-        explanation: "Brute force checks every possible pair. Simple but inefficient for large arrays."
+        explanation:
+          "Brute force checks every possible pair. Simple but inefficient for large arrays.",
       },
     ],
     tips: [
@@ -185,6 +265,93 @@ function maxProfitDP(prices: number[]): number {
           "DP approach maintains states for buying and selling. Buy represents max profit after buying, sell represents max profit after selling.",
       },
       {
+        language: "Python",
+        approach: "optimal",
+        code: `# Single Pass Solution (Optimal)
+# Time: O(n), Space: O(1)
+def max_profit(prices):
+    """
+    Find maximum profit from buying and selling stock once.
+
+    Args:
+        prices: List of stock prices by day
+
+    Returns:
+        Maximum profit possible
+    """
+    if not prices or len(prices) < 2:
+        return 0
+
+    min_price = float('inf')
+    max_profit = 0
+
+    for price in prices:
+        if price < min_price:
+            min_price = price
+        elif price - min_price > max_profit:
+            max_profit = price - min_price
+
+    return max_profit
+
+# Test cases
+def test_max_profit():
+    assert max_profit([7, 1, 5, 3, 6, 4]) == 5  # Buy at 1, sell at 6
+    assert max_profit([7, 6, 4, 3, 1]) == 0     # No profit possible
+    assert max_profit([1, 2, 3, 4, 5]) == 4     # Buy at 1, sell at 5`,
+        timeComplexity: "O(n)",
+        spaceComplexity: "O(1)",
+        explanation:
+          "Python implementation using float('inf') for initial min_price. Clean and readable solution.",
+      },
+      {
+        language: "Python",
+        approach: "moderate",
+        code: `# Dynamic Programming approach
+# Time: O(n), Space: O(1)
+def max_profit_dp(prices):
+    """
+    DP approach maintaining buy/sell states.
+
+    Args:
+        prices: List of stock prices
+
+    Returns:
+        Maximum profit
+    """
+    if len(prices) <= 1:
+        return 0
+
+    # buy: max profit after buying (negative because we spent money)
+    # sell: max profit after selling
+    buy = -prices[0]
+    sell = 0
+
+    for i in range(1, len(prices)):
+        buy = max(buy, -prices[i])
+        sell = max(sell, buy + prices[i])
+
+    return sell
+
+# Alternative one-liner using reduce
+from functools import reduce
+
+def max_profit_functional(prices):
+    """Functional approach using reduce."""
+    if len(prices) <= 1:
+        return 0
+
+    def update_states(state, price):
+        buy, sell = state
+        return (max(buy, -price), max(sell, buy + price))
+
+    _, final_sell = reduce(update_states, prices[1:], (-prices[0], 0))
+    return final_sell`,
+        timeComplexity: "O(n)",
+        spaceComplexity: "O(1)",
+        explanation:
+          "DP approach with Python-specific features. Includes functional programming alternative using reduce.",
+      },
+      {
         language: "Java",
         approach: "optimal",
         code: `// Single Pass Solution (Optimal)
@@ -245,7 +412,8 @@ def max_profit(prices):
             max_profit = price - min_price
     
     return max_profit`,
-        explanation: "Track minimum price and calculate profit at each step. Greedy approach ensures we buy at the lowest price before selling."
+        explanation:
+          "Track minimum price and calculate profit at each step. Greedy approach ensures we buy at the lowest price before selling.",
       },
       {
         language: "Python",
@@ -263,7 +431,8 @@ def max_profit_dp(prices):
         sell = max(sell, buy + prices[i])
     
     return sell`,
-        explanation: "DP approach maintains states for buying and selling. Buy represents max profit after buying, sell represents max profit after selling."
+        explanation:
+          "DP approach maintains states for buying and selling. Buy represents max profit after buying, sell represents max profit after selling.",
       },
     ],
     tips: [
@@ -405,7 +574,8 @@ def contains_duplicate(nums):
         seen.add(num)
     
     return False`,
-        explanation: "Use a set to track seen numbers. Return True immediately when we find a duplicate."
+        explanation:
+          "Use a set to track seen numbers. Return True immediately when we find a duplicate.",
       },
       {
         language: "Python",
@@ -419,7 +589,8 @@ def contains_duplicate_sort(nums):
             return True
     
     return False`,
-        explanation: "Sort the array first, then check adjacent elements for duplicates. Uses less space but slower due to sorting."
+        explanation:
+          "Sort the array first, then check adjacent elements for duplicates. Uses less space but slower due to sorting.",
       },
       {
         language: "Python",
@@ -427,7 +598,8 @@ def contains_duplicate_sort(nums):
 # Time: O(n), Space: O(n)
 def contains_duplicate_concise(nums):
     return len(set(nums)) != len(nums)`,
-        explanation: "Create a set from the array. If the set size is different from array length, there are duplicates."
+        explanation:
+          "Create a set from the array. If the set size is different from array length, there are duplicates.",
       },
     ],
     tips: [
@@ -894,7 +1066,8 @@ def max_sub_array(nums):
         max_so_far = max(max_so_far, max_ending_here)
     
     return max_so_far`,
-        explanation: "Kadane's algorithm tracks maximum sum ending at each position and global maximum. Optimal O(n) solution."
+        explanation:
+          "Kadane's algorithm tracks maximum sum ending at each position and global maximum. Optimal O(n) solution.",
       },
       {
         language: "Python",
@@ -920,7 +1093,8 @@ def max_sub_array_with_indices(nums):
             end = i
     
     return {'sum': max_so_far, 'start': start, 'end': end}`,
-        explanation: "Extended Kadane's algorithm that returns the start and end indices of the maximum subarray."
+        explanation:
+          "Extended Kadane's algorithm that returns the start and end indices of the maximum subarray.",
       },
       {
         language: "Python",
@@ -956,7 +1130,8 @@ def max_sub_array_dc(nums):
         return max(left_max, right_max, cross_max)
     
     return max_sub_array_rec(nums, 0, len(nums) - 1)`,
-        explanation: "Divide and conquer approach splits array and finds maximum of left, right, and crossing subarrays."
+        explanation:
+          "Divide and conquer approach splits array and finds maximum of left, right, and crossing subarrays.",
       },
     ],
     tips: [
@@ -1142,7 +1317,8 @@ def merge(intervals):
             merged.append(current)
     
     return merged`,
-        explanation: "Sort intervals by start time first, then merge overlapping ones. Most intuitive approach."
+        explanation:
+          "Sort intervals by start time first, then merge overlapping ones. Most intuitive approach.",
       },
       {
         language: "Python",
@@ -1162,7 +1338,8 @@ def merge_functional(intervals):
             result[-1][1] = max(result[-1][1], current[1])
     
     return result`,
-        explanation: "Functional approach using list operations. Same logic but more Pythonic style."
+        explanation:
+          "Functional approach using list operations. Same logic but more Pythonic style.",
       },
       {
         language: "Python",
@@ -1186,7 +1363,8 @@ def merge_in_place(intervals):
             intervals[write_index] = intervals[i]
     
     return intervals[:write_index + 1]`,
-        explanation: "In-place merging modifies the original array. More space efficient but modifies input."
+        explanation:
+          "In-place merging modifies the original array. More space efficient but modifies input.",
       },
     ],
     tips: [
@@ -1378,7 +1556,8 @@ def rotate(nums, k):
     reverse(0, k - 1)
     # Reverse remaining elements
     reverse(k, n - 1)`,
-        explanation: "Reverse method: reverse all, then reverse first k and remaining elements. Most elegant approach."
+        explanation:
+          "Reverse method: reverse all, then reverse first k and remaining elements. Most elegant approach.",
       },
       {
         language: "Python",
@@ -1397,7 +1576,8 @@ def rotate_extra_array(nums, k):
     
     for i in range(n):
         nums[i] = result[i]`,
-        explanation: "Uses temporary array to store rotated elements. Simple to understand but uses extra space."
+        explanation:
+          "Uses temporary array to store rotated elements. Simple to understand but uses extra space.",
       },
       {
         language: "Python",
@@ -1426,7 +1606,8 @@ def rotate_cyclic(nums, k):
             
             if start == current:
                 break`,
-        explanation: "Moves elements in cycles. Handles cases where gcd(n, k) > 1. In-place but more complex."
+        explanation:
+          "Moves elements in cycles. Handles cases where gcd(n, k) > 1. In-place but more complex.",
       },
     ],
     tips: [
@@ -1688,7 +1869,8 @@ def three_sum(nums):
                 right -= 1
     
     return result`,
-        explanation: "Sort array first, then use two pointers technique. Most efficient approach for 3Sum problem."
+        explanation:
+          "Sort array first, then use two pointers technique. Most efficient approach for 3Sum problem.",
       },
       {
         language: "Python",
@@ -1712,7 +1894,8 @@ def three_sum_hash_set(nums):
             seen.add(nums[j])
     
     return result`,
-        explanation: "Uses hash set to find complement. Less efficient due to duplicate checking and list operations."
+        explanation:
+          "Uses hash set to find complement. Less efficient due to duplicate checking and list operations.",
       },
       {
         language: "Python",
@@ -1731,7 +1914,8 @@ def three_sum_brute_force(nums):
                         result.append(triplet)
     
     return result`,
-        explanation: "Brute force checks all possible triplets. Simple but very inefficient for large arrays."
+        explanation:
+          "Brute force checks all possible triplets. Simple but very inefficient for large arrays.",
       },
     ],
     tips: [
@@ -1930,7 +2114,8 @@ def max_area(height):
             right -= 1
     
     return max_water`,
-        explanation: "Two pointers start at both ends and move inward. Always move the pointer with smaller height."
+        explanation:
+          "Two pointers start at both ends and move inward. Always move the pointer with smaller height.",
       },
       {
         language: "Python",
@@ -1950,7 +2135,8 @@ def max_area_brute_force(height):
             max_water = max(max_water, area)
     
     return max_water`,
-        explanation: "Checks all possible pairs of lines. Simple to understand but inefficient for large arrays."
+        explanation:
+          "Checks all possible pairs of lines. Simple to understand but inefficient for large arrays.",
       },
       {
         language: "Python",
@@ -1969,7 +2155,8 @@ def max_area_dp(height):
             dp[i] = max(dp[i], area)
     
     return max(dp)`,
-        explanation: "Dynamic programming approach that tracks maximum area ending at each position."
+        explanation:
+          "Dynamic programming approach that tracks maximum area ending at each position.",
       },
     ],
     tips: [
@@ -2144,7 +2331,8 @@ def find_min(nums):
             right = mid
     
     return nums[left]`,
-        explanation: "Binary search approach compares mid element with right element to determine rotation point."
+        explanation:
+          "Binary search approach compares mid element with right element to determine rotation point.",
       },
       {
         language: "Python",
@@ -2169,7 +2357,8 @@ def find_min_with_duplicates(nums):
             right -= 1
     
     return nums[left]`,
-        explanation: "Modified binary search that handles arrays with duplicate elements by decrementing right pointer."
+        explanation:
+          "Modified binary search that handles arrays with duplicate elements by decrementing right pointer.",
       },
       {
         language: "Python",
@@ -2180,7 +2369,8 @@ def find_min_linear(nums):
         return None
     
     return min(nums)`,
-        explanation: "Simple linear scan approach. Used as fallback when binary search complexity is not needed."
+        explanation:
+          "Simple linear scan approach. Used as fallback when binary search complexity is not needed.",
       },
     ],
     tips: [
@@ -2496,7 +2686,8 @@ def four_sum(nums, target):
                     right -= 1
     
     return result`,
-        explanation: "Extension of 3Sum with additional nested loop. Uses two pointers for innermost pair."
+        explanation:
+          "Extension of 3Sum with additional nested loop. Uses two pointers for innermost pair.",
       },
       {
         language: "Python",
@@ -2535,7 +2726,8 @@ def four_sum_hash(nums, target):
                 seen.add(nums[k])
     
     return result`,
-        explanation: "Uses hash set to find complement of three numbers. Alternative approach to two pointers."
+        explanation:
+          "Uses hash set to find complement of three numbers. Alternative approach to two pointers.",
       },
       {
         language: "Python",
@@ -2569,7 +2761,8 @@ def four_sum_brute_force(nums, target):
                         result.append([nums[i], nums[j], nums[k], nums[l]])
     
     return result`,
-        explanation: "Brute force checks all possible quadruplets. Simple but very inefficient for large arrays. Added duplicate skipping for efficiency."
+        explanation:
+          "Brute force checks all possible quadruplets. Simple but very inefficient for large arrays. Added duplicate skipping for efficiency.",
       },
     ],
     tips: [
@@ -2813,7 +3006,8 @@ def trap(height):
             right -= 1
     
     return water`,
-        explanation: "Two pointers approach tracks left and right maximum heights. Most space efficient solution."
+        explanation:
+          "Two pointers approach tracks left and right maximum heights. Most space efficient solution.",
       },
       {
         language: "Python",
@@ -2840,7 +3034,8 @@ def trap_dp(height):
         water += min(left_max[i], right_max[i]) - height[i]
     
     return water`,
-        explanation: "DP approach pre-computes left and right maximum heights for each position."
+        explanation:
+          "DP approach pre-computes left and right maximum heights for each position.",
       },
       {
         language: "Python",
@@ -2867,7 +3062,8 @@ def trap_stack(height):
         stack.append(i)
     
     return water`,
-        explanation: "Stack approach processes water layer by layer. More complex but shows different perspective."
+        explanation:
+          "Stack approach processes water layer by layer. More complex but shows different perspective.",
       },
     ],
     tips: [

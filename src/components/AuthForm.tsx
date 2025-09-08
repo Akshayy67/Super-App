@@ -105,7 +105,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
   // Show centered loading state while page is loading
   if (pageLoading) {
     return (
-      <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-white">
+      <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-white dark:bg-slate-900 transition-colors duration-300">
         {/* Background Particle Effect */}
         <div className="absolute inset-0 z-0 opacity-60">
           <ParticleField
@@ -126,23 +126,23 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
         <div className="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-100/60 to-indigo-100/60 rounded-full blur-3xl animate-pulse-slow"></div>
         <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-50/70 to-cyan-50/70 rounded-full blur-3xl animate-pulse-slow animation-delay-2000"></div>
 
-                 {/* Centered Loading Content */}
-         <div className="z-10 relative text-center flex flex-col items-center">
-           {/* Large Loading Globe */}
-           <div className="mb-8 flex justify-center">
-             <LoadingGlobe size={120} color="rgb(15, 23, 42)" />
-           </div>
-           
-           {/* Loading Text */}
-           <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 bg-clip-text text-transparent mb-4">
-             Loading Super App
-           </h2>
-          
+        {/* Centered Loading Content */}
+        <div className="z-10 relative text-center flex flex-col items-center">
+          {/* Large Loading Globe */}
+          <div className="mb-8 flex justify-center">
+            <LoadingGlobe size={120} color="rgb(15, 23, 42)" />
+          </div>
+
+          {/* Loading Text */}
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 bg-clip-text text-transparent mb-4">
+            Loading Super App
+          </h2>
+
           {/* Loading Subtitle */}
-          <p className="text-gray-600 text-lg font-medium max-w-xs mx-auto">
+          <p className="text-gray-600 dark:text-gray-400 text-lg font-medium max-w-xs mx-auto">
             Preparing your productivity suite...
           </p>
-          
+
           {/* Loading Dots */}
           <div className="flex justify-center space-x-2 mt-6">
             <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
@@ -157,7 +157,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
   // Show centered loading state during sign-in process
   if (loading) {
     return (
-      <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-white">
+      <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-white dark:bg-slate-900 transition-colors duration-300">
         {/* Background Particle Effect */}
         <div className="absolute inset-0 z-0 opacity-60">
           <ParticleField
@@ -178,23 +178,23 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
         <div className="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-100/60 to-indigo-100/60 rounded-full blur-3xl animate-pulse-slow"></div>
         <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-50/70 to-cyan-50/70 rounded-full blur-3xl animate-pulse-slow animation-delay-2000"></div>
 
-                 {/* Centered Sign-In Loading Content */}
-         <div className="z-10 relative text-center flex flex-col items-center">
-           {/* Large Loading Globe */}
-           <div className="mb-8 flex justify-center">
-             <LoadingGlobe size={120} color="rgb(15, 23, 42)" />
-           </div>
-           
-           {/* Loading Text */}
-           <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 bg-clip-text text-transparent mb-4">
-             Signing In
-           </h2>
-          
+        {/* Centered Sign-In Loading Content */}
+        <div className="z-10 relative text-center flex flex-col items-center">
+          {/* Large Loading Globe */}
+          <div className="mb-8 flex justify-center">
+            <LoadingGlobe size={120} color="rgb(15, 23, 42)" />
+          </div>
+
+          {/* Loading Text */}
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 bg-clip-text text-transparent mb-4">
+            Signing In
+          </h2>
+
           {/* Loading Subtitle */}
-          <p className="text-gray-600 text-lg font-medium max-w-xs mx-auto">
+          <p className="text-gray-600 dark:text-gray-400 text-lg font-medium max-w-xs mx-auto">
             Connecting to Google...
           </p>
-          
+
           {/* Loading Dots */}
           <div className="flex justify-center space-x-2 mt-6">
             <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
@@ -207,7 +207,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
   }
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center container-safe overflow-hidden bg-white">
+    <div className="min-h-screen relative flex items-center justify-center container-safe overflow-hidden bg-white dark:bg-slate-900 transition-colors duration-300">
       {/* Background Particle Effect */}
       <div className="absolute inset-0 z-0 opacity-40 sm:opacity-60">
         <ParticleField
@@ -239,14 +239,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
           {/* Enhanced Card Glow */}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50/40 to-indigo-50/40 rounded-3xl blur-xl -z-10"></div>
           <div className="absolute inset-0 bg-gradient-to-br from-blue-100/20 to-purple-100/20 rounded-3xl blur-2xl -z-20 animate-pulse-slow"></div>
-          
+
           {/* App Logo with Enhanced Effects */}
           <div className="flex flex-col items-center mb-8 sm:mb-12">
             <div className="relative group">
               {/* Multiple glow layers for depth */}
               <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full blur-lg opacity-20 animate-pulse-slow"></div>
               <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full blur-xl opacity-15 animate-pulse-slow animation-delay-2000"></div>
-              
+
               {/* Logo container with hover effects */}
               <div className="relative z-10 p-3 sm:p-4 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100/30 group-hover:border-blue-200/50 transition-all duration-500 group-hover:shadow-lg">
                 <img
@@ -258,7 +258,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
                 />
               </div>
             </div>
-            
+
             {/* Enhanced Title */}
             <h1
               className={`text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 bg-clip-text text-transparent tracking-tight animate-reveal animation-delay-500 text-center ${
@@ -267,7 +267,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
             >
               Super App
             </h1>
-            
+
             {/* Enhanced Divider */}
             <div className="relative mt-6 mb-6">
               <div
@@ -277,7 +277,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
               ></div>
               <div className="absolute inset-0 h-1 w-24 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 rounded-full blur-sm opacity-50"></div>
             </div>
-            
+
             {/* Enhanced Subtitle */}
             <p
               className={`text-gray-700 text-lg font-medium animate-reveal animation-delay-500 text-center max-w-xs leading-relaxed ${
@@ -286,11 +286,13 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
             >
               Your all-in-one productivity suite
             </p>
-            
+
             {/* Feature Highlights */}
-            <div className={`mt-6 flex items-center space-x-6 text-sm text-gray-500 animate-reveal animation-delay-500 ${
-              mounted ? "opacity-100" : "opacity-0"
-            }`}>
+            <div
+              className={`mt-6 flex items-center space-x-6 text-sm text-gray-500 animate-reveal animation-delay-500 ${
+                mounted ? "opacity-100" : "opacity-0"
+              }`}
+            >
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                 <span>Smart</span>
@@ -316,7 +318,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
             <div className="relative group">
               {/* Button Glow Effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl blur-lg opacity-75 group-hover:opacity-100 transition-all duration-500 -z-10"></div>
-              
+
               <button
                 onClick={handleGoogleSignIn}
                 disabled={loading}
@@ -324,17 +326,17 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
               >
                 {/* Enhanced Hover Overlay */}
                 <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-white/20 to-white/10 opacity-0 group-hover:opacity-100 transition-all duration-500 rounded-2xl"></span>
-                
+
                 {/* Animated Background Pattern */}
                 <div className="absolute inset-0 opacity-10">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                 </div>
-                
-                                 {loading ? (
-                   <div className="relative z-10 flex items-center space-x-3">
-                     <span className="text-lg font-semibold">Signing in...</span>
-                   </div>
-                 ) : (
+
+                {loading ? (
+                  <div className="relative z-10 flex items-center space-x-3">
+                    <span className="text-lg font-semibold">Signing in...</span>
+                  </div>
+                ) : (
                   <>
                     {/* Enhanced Google Icon */}
                     <div className="relative z-10 p-2 bg-white/20 rounded-lg backdrop-blur-sm">
@@ -357,16 +359,20 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
                         />
                       </svg>
                     </div>
-                    <span className="relative z-10 text-xl font-semibold tracking-wide">Continue with Google</span>
+                    <span className="relative z-10 text-xl font-semibold tracking-wide">
+                      Continue with Google
+                    </span>
                   </>
                 )}
               </button>
             </div>
-            
+
             {/* Enhanced Trust Indicators */}
-            <div className={`text-center space-y-3 animate-reveal animation-delay-500 ${
-              mounted ? "opacity-100" : "opacity-0"
-            }`}>
+            <div
+              className={`text-center space-y-3 animate-reveal animation-delay-500 ${
+                mounted ? "opacity-100" : "opacity-0"
+              }`}
+            >
               <div className="flex items-center justify-center space-x-6 text-xs text-gray-500">
                 <div className="flex items-center space-x-2">
                   <div className="w-2 h-2 bg-green-400 rounded-full"></div>
@@ -404,7 +410,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
           <div className="absolute bottom-8 left-8 w-3 h-3 bg-gradient-to-r from-indigo-400 to-purple-500 rounded-full opacity-70 animate-pulse-slow animation-delay-500 shadow-lg"></div>
           <div className="absolute top-1/2 left-6 w-2 h-2 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full opacity-60 animate-pulse-slow animation-delay-1000"></div>
           <div className="absolute top-1/2 right-6 w-2 h-2 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full opacity-60 animate-pulse-slow animation-delay-1500"></div>
-          
+
           {/* Floating Elements */}
           <div className="absolute top-20 right-20 w-1 h-1 bg-blue-300 rounded-full opacity-40 animate-float"></div>
           <div className="absolute bottom-20 left-20 w-1 h-1 bg-indigo-300 rounded-full opacity-40 animate-float animation-delay-1000"></div>

@@ -1,0 +1,240 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-01-07T18:43:00Z",
+  "metadata": {
+    "title": "Interview Preparation Question Bank",
+    "description": "Comprehensive collection of interview questions across multiple categories and difficulty levels",
+    "totalQuestions": 500,
+    "totalModules": 15,
+    "supportedLanguages": ["Python", "TypeScript", "Java"],
+    "questionTypes": ["MCQ", "Coding", "Debugging", "Theory", "Behavioral", "Case Study"],
+    "difficultyLevels": ["easy", "medium", "hard"]
+  },
+  "modules": [
+    {
+      "id": "algorithms",
+      "name": "Algorithms & Data Structures",
+      "description": "Core algorithmic concepts and data structure implementations",
+      "category": "technical",
+      "questionCount": 30,
+      "codeQuestions": 25,
+      "difficultyDistribution": {
+        "easy": 8,
+        "medium": 15,
+        "hard": 7
+      },
+      "tags": ["algorithms", "data-structures", "complexity", "optimization"],
+      "estimatedTime": 120,
+      "prerequisites": ["basic-programming", "mathematics"],
+      "filePath": "src/components/InterviewPrep/bank/AlgorithmQuestions.ts",
+      "lastUpdated": "2025-01-07T15:30:00Z"
+    },
+    {
+      "id": "javascript",
+      "name": "JavaScript Fundamentals",
+      "description": "Core JavaScript concepts, ES6+ features, and best practices",
+      "category": "technical",
+      "questionCount": 14,
+      "codeQuestions": 8,
+      "difficultyDistribution": {
+        "easy": 5,
+        "medium": 6,
+        "hard": 3
+      },
+      "tags": ["javascript", "es6", "closures", "promises", "async"],
+      "estimatedTime": 60,
+      "prerequisites": ["basic-programming"],
+      "filePath": "src/components/InterviewPrep/bank/JavaScriptQuestions.ts",
+      "lastUpdated": "2025-01-07T18:40:00Z"
+    },
+    {
+      "id": "react",
+      "name": "React Development",
+      "description": "React concepts, hooks, state management, and best practices",
+      "category": "technical",
+      "questionCount": 25,
+      "codeQuestions": 15,
+      "difficultyDistribution": {
+        "easy": 8,
+        "medium": 12,
+        "hard": 5
+      },
+      "tags": ["react", "hooks", "jsx", "state-management", "components"],
+      "estimatedTime": 90,
+      "prerequisites": ["javascript", "html", "css"],
+      "filePath": "src/components/InterviewPrep/bank/ReactQuestions.ts",
+      "lastUpdated": "2025-01-07T12:00:00Z"
+    },
+    {
+      "id": "behavioral",
+      "name": "Behavioral Questions",
+      "description": "Behavioral interview questions using STAR method",
+      "category": "behavioral",
+      "questionCount": 15,
+      "codeQuestions": 0,
+      "difficultyDistribution": {
+        "easy": 5,
+        "medium": 7,
+        "hard": 3
+      },
+      "tags": ["behavioral", "star-method", "leadership", "teamwork"],
+      "estimatedTime": 75,
+      "prerequisites": [],
+      "filePath": "src/components/InterviewPrep/bank/BehavioralQuestions.ts",
+      "lastUpdated": "2025-01-07T18:35:00Z"
+    },
+    {
+      "id": "system-design",
+      "name": "System Design",
+      "description": "System design concepts and architectural patterns",
+      "category": "technical",
+      "questionCount": 5,
+      "codeQuestions": 0,
+      "difficultyDistribution": {
+        "easy": 1,
+        "medium": 2,
+        "hard": 2
+      },
+      "tags": ["system-design", "architecture", "scalability", "databases"],
+      "estimatedTime": 45,
+      "prerequisites": ["algorithms", "databases"],
+      "filePath": "src/components/InterviewPrep/bank/SystemDesignQuestions.ts",
+      "lastUpdated": "2025-01-07T10:00:00Z"
+    },
+    {
+      "id": "frontend",
+      "name": "Frontend Development",
+      "description": "HTML, CSS, and frontend best practices",
+      "category": "technical",
+      "questionCount": 20,
+      "codeQuestions": 12,
+      "difficultyDistribution": {
+        "easy": 8,
+        "medium": 8,
+        "hard": 4
+      },
+      "tags": ["html", "css", "responsive", "accessibility", "performance"],
+      "estimatedTime": 80,
+      "prerequisites": ["html", "css"],
+      "filePath": "src/components/InterviewPrep/bank/FrontendQuestions.ts",
+      "lastUpdated": "2025-01-07T09:00:00Z"
+    },
+    {
+      "id": "databases",
+      "name": "Database Design",
+      "description": "SQL, NoSQL, and database design principles",
+      "category": "technical",
+      "questionCount": 18,
+      "codeQuestions": 10,
+      "difficultyDistribution": {
+        "easy": 6,
+        "medium": 8,
+        "hard": 4
+      },
+      "tags": ["sql", "nosql", "database-design", "optimization"],
+      "estimatedTime": 70,
+      "prerequisites": ["basic-programming"],
+      "filePath": "src/components/InterviewPrep/bank/DatabaseQuestions.ts",
+      "lastUpdated": "2025-01-07T08:00:00Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": "technical",
+      "name": "Technical",
+      "description": "Programming, algorithms, and technical concepts",
+      "moduleCount": 6,
+      "questionCount": 132
+    },
+    {
+      "id": "behavioral",
+      "name": "Behavioral",
+      "description": "Soft skills and behavioral scenarios",
+      "moduleCount": 1,
+      "questionCount": 15
+    }
+  ],
+  "questionTypes": [
+    {
+      "id": "mcq",
+      "name": "Multiple Choice",
+      "description": "Questions with predefined answer options",
+      "count": 45
+    },
+    {
+      "id": "coding",
+      "name": "Coding Problems",
+      "description": "Programming challenges requiring code implementation",
+      "count": 70
+    },
+    {
+      "id": "debugging",
+      "name": "Debugging",
+      "description": "Find and fix issues in provided code",
+      "count": 25
+    },
+    {
+      "id": "theory",
+      "name": "Theory",
+      "description": "Conceptual questions requiring detailed explanations",
+      "count": 180
+    },
+    {
+      "id": "behavioral",
+      "name": "Behavioral",
+      "description": "Situational questions using STAR method",
+      "count": 15
+    },
+    {
+      "id": "case-study",
+      "name": "Case Study",
+      "description": "Complex scenarios requiring comprehensive analysis",
+      "count": 12
+    }
+  ],
+  "codeImplementations": {
+    "totalSolutions": 85,
+    "languages": {
+      "Python": {
+        "count": 30,
+        "coverage": "35%"
+      },
+      "TypeScript": {
+        "count": 85,
+        "coverage": "100%"
+      },
+      "Java": {
+        "count": 25,
+        "coverage": "29%"
+      }
+    },
+    "approaches": {
+      "brute-force": 25,
+      "optimal": 85,
+      "moderate": 15
+    }
+  },
+  "statistics": {
+    "averageTimePerQuestion": 4.2,
+    "totalEstimatedTime": 540,
+    "completionRate": 0,
+    "lastPracticeSession": null,
+    "popularCategories": ["algorithms", "javascript", "react"],
+    "difficultyPreference": "medium"
+  },
+  "configuration": {
+    "defaultLanguage": "TypeScript",
+    "showComplexity": true,
+    "enableTesting": true,
+    "autoSave": true,
+    "practiceMode": "guided",
+    "feedbackEnabled": true
+  },
+  "validation": {
+    "schemaVersion": "1.0",
+    "checksumAlgorithm": "SHA-256",
+    "checksum": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+    "lastValidated": "2025-01-07T18:43:00Z",
+    "validationStatus": "passed"
+  }
+}

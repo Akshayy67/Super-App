@@ -51,10 +51,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     question.codeImplementation && question.codeImplementation.length > 0;
   return (
     <div
-      className={`bg-white rounded-2xl border transition-all duration-300 ${
+      className={`bg-white dark:bg-slate-800 rounded-2xl border transition-all duration-300 ${
         isPracticed
-          ? "border-green-200 bg-green-50 shadow-sm"
-          : "border-gray-200 shadow-sm hover:shadow-md"
+          ? "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 shadow-sm"
+          : "border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md"
       }`}
     >
       <div className="p-6">
@@ -62,7 +62,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center space-x-3 mb-3">
-              <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-slate-700 px-3 py-1 rounded-full">
                 Question #{index + 1}
               </span>
               <span
@@ -80,13 +80,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 {question.type}
               </span>
               {question.estimatedTime && (
-                <span className="text-xs px-3 py-1 rounded-full border bg-gray-100 text-gray-600">
+                <span className="text-xs px-3 py-1 rounded-full border bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300">
                   {question.estimatedTime} min
                 </span>
               )}
             </div>
 
-            <h3 className="text-xl font-semibold text-gray-900 mb-3 leading-relaxed">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3 leading-relaxed">
               {question.question}
             </h3>
 
@@ -106,7 +106,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                         document.dispatchEvent(event);
                       }
                     }}
-                    className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded-full border border-gray-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors"
+                    className="text-xs px-3 py-1 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 rounded-full border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-600 transition-colors"
                   >
                     #{tag}
                   </button>
@@ -121,7 +121,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               className={`p-3 rounded-xl transition-all duration-300 ${
                 isFavorite
                   ? "bg-yellow-100 text-yellow-600 border border-yellow-200"
-                  : "bg-gray-100 text-gray-400 hover:text-gray-600 border border-gray-200"
+                  : "bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 border border-gray-200 dark:border-slate-600"
               }`}
             >
               <Star
@@ -135,7 +135,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               className={`p-3 rounded-xl transition-all duration-300 ${
                 isPracticed
                   ? "bg-green-100 text-green-600 border border-green-200"
-                  : "bg-gray-100 text-gray-400 hover:text-gray-600 border border-gray-200"
+                  : "bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 border border-gray-200 dark:border-slate-600"
               }`}
             >
               <CheckCircle className="w-5 h-5" />
@@ -143,7 +143,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
             <button
               onClick={() => copyQuestion(question.question)}
-              className="p-3 bg-gray-100 text-gray-400 rounded-xl hover:text-gray-600 transition-all duration-300 border border-gray-200"
+              className="p-3 bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 rounded-xl hover:text-gray-600 dark:hover:text-gray-400 transition-all duration-300 border border-gray-200 dark:border-slate-600"
             >
               <Copy className="w-5 h-5" />
             </button>
@@ -162,7 +162,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               );
               toggleAnswer(question.id);
             }}
-            className="flex items-center space-x-2 px-4 py-2.5 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-all duration-300 text-sm font-medium border border-blue-200"
+            className="flex items-center space-x-2 px-4 py-2.5 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-xl hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-all duration-300 text-sm font-medium border border-blue-200 dark:border-blue-800"
           >
             {isExpanded ? (
               <>
@@ -180,7 +180,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           {hasCodeImplementation && (
             <button
               onClick={() => setShowCode(!showCode)}
-              className="flex items-center space-x-2 px-4 py-2.5 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition-all duration-300 text-sm font-medium border border-green-200"
+              className="flex items-center space-x-2 px-4 py-2.5 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-xl hover:bg-green-200 dark:hover:bg-green-900/30 transition-all duration-300 text-sm font-medium border border-green-200 dark:border-green-800"
             >
               {showCode ? (
                 <>
@@ -196,7 +196,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             </button>
           )}
 
-          <button className="flex items-center space-x-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all duration-300 text-sm font-medium border border-gray-200">
+          <button className="flex items-center space-x-2 px-4 py-2.5 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-all duration-300 text-sm font-medium border border-gray-200 dark:border-slate-600">
             <Volume2 className="w-4 h-4" />
             <span>Practice Aloud</span>
           </button>
@@ -220,12 +220,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           <div className="mt-6 space-y-4">
             {/* Approach Section */}
             {question.approach && (
-              <div className="p-5 bg-blue-50 rounded-xl border border-blue-200">
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+              <div className="p-5 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800">
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
                   <Lightbulb className="w-5 h-5 mr-2 text-blue-600" />
                   Approach & Strategy
                 </h4>
-                <p className="text-gray-700 leading-relaxed">
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                   {question.approach}
                 </p>
               </div>
@@ -233,12 +233,12 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
             {/* Fallback to Sample Answer if no approach is provided */}
             {!question.approach && question.sampleAnswer && (
-              <div className="p-5 bg-blue-50 rounded-xl border border-blue-200">
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+              <div className="p-5 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800">
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
                   <Lightbulb className="w-5 h-5 mr-2 text-blue-600" />
                   Sample Answer
                 </h4>
-                <p className="text-gray-700 leading-relaxed">
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                   {question.sampleAnswer}
                 </p>
               </div>
@@ -246,8 +246,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
             {/* Tips */}
             {question.tips && (
-              <div className="p-5 bg-yellow-50 rounded-xl border border-yellow-200">
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+              <div className="p-5 bg-yellow-50 dark:bg-yellow-900/10 rounded-xl border border-yellow-200 dark:border-yellow-800">
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
                   <Zap className="w-5 h-5 mr-2 text-yellow-600" />
                   Tips for Answering
                 </h4>
@@ -255,7 +255,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   {question.tips.map((tip, idx) => (
                     <div
                       key={idx}
-                      className="text-gray-700 flex items-start bg-white p-3 rounded-lg border border-yellow-100"
+                      className="text-gray-700 dark:text-gray-300 flex items-start bg-white dark:bg-slate-700 p-3 rounded-lg border border-yellow-100 dark:border-yellow-800"
                     >
                       <CheckCircle className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
                       <span className="text-sm">{tip}</span>
@@ -268,7 +268,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             {/* Follow-up Questions */}
             {question.followUps && (
               <div className="p-5 bg-purple-50 rounded-xl border border-purple-200">
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
                   <TrendingUp className="w-5 h-5 mr-2 text-purple-600" />
                   Potential Follow-ups
                 </h4>
@@ -276,7 +276,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   {question.followUps.map((followUp, idx) => (
                     <div
                       key={idx}
-                      className="text-gray-700 bg-white p-3 rounded-lg border border-purple-100"
+                      className="text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 p-3 rounded-lg border border-purple-100 dark:border-purple-800"
                     >
                       <span className="text-sm">• {followUp}</span>
                     </div>

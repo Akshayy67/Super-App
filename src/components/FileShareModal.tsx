@@ -1,22 +1,22 @@
-import React, { useState, useRef } from 'react';
-import { 
-  Upload, 
-  File, 
-  Image, 
-  FileText, 
-  Video, 
+import React, { useState, useRef } from "react";
+import {
+  Upload,
+  File,
+  Image,
+  FileText,
+  Video,
   Music,
-  X, 
-  Users, 
-  Eye, 
-  Edit3, 
+  X,
+  Users,
+  Eye,
+  Edit3,
   Shield,
   CheckCircle,
   XCircle,
-  Tag
-} from 'lucide-react';
-import { fileShareService } from '../utils/fileShareService';
-import { realTimeAuth } from '../utils/realTimeAuth';
+  Tag,
+} from "lucide-react";
+import { fileShareService } from "../utils/fileShareService";
+import { realTimeAuth } from "../utils/realTimeAuth";
 
 interface FileShareModalProps {
   isOpen: boolean;
@@ -37,23 +37,23 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
   onClose,
   teamId,
   teamMembers,
-  onFileShared
+  onFileShared,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileName, setFileName] = useState('');
-  const [description, setDescription] = useState('');
+  const [fileName, setFileName] = useState("");
+  const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
+  const [tagInput, setTagInput] = useState("");
   const [permissions, setPermissions] = useState<FilePermissions>({
     view: [],
     edit: [],
-    admin: []
+    admin: [],
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [shareType, setShareType] = useState<'upload' | 'url'>('upload');
-  const [fileUrl, setFileUrl] = useState('');
+  const [shareType, setShareType] = useState<"upload" | "url">("upload");
+  const [fileUrl, setFileUrl] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -69,61 +69,71 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
   const addTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
       setTags([...tags, tagInput.trim()]);
-      setTagInput('');
+      setTagInput("");
     }
   };
 
   const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
+    setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
-  const toggleMemberPermission = (memberId: string, permission: keyof FilePermissions) => {
-    setPermissions(prev => {
+  const toggleMemberPermission = (
+    memberId: string,
+    permission: keyof FilePermissions
+  ) => {
+    setPermissions((prev) => {
       const newPermissions = { ...prev };
-      
+
       // Remove from all permission levels first
-      Object.keys(newPermissions).forEach(key => {
-        newPermissions[key as keyof FilePermissions] = newPermissions[key as keyof FilePermissions]
-          .filter(id => id !== memberId);
+      Object.keys(newPermissions).forEach((key) => {
+        newPermissions[key as keyof FilePermissions] = newPermissions[
+          key as keyof FilePermissions
+        ].filter((id) => id !== memberId);
       });
-      
+
       // Add to selected permission level
       if (!newPermissions[permission].includes(memberId)) {
         newPermissions[permission].push(memberId);
       }
-      
+
       return newPermissions;
     });
   };
 
-  const getMemberPermission = (memberId: string): keyof FilePermissions | null => {
-    if (permissions.admin.includes(memberId)) return 'admin';
-    if (permissions.edit.includes(memberId)) return 'edit';
-    if (permissions.view.includes(memberId)) return 'view';
+  const getMemberPermission = (
+    memberId: string
+  ): keyof FilePermissions | null => {
+    if (permissions.admin.includes(memberId)) return "admin";
+    if (permissions.edit.includes(memberId)) return "edit";
+    if (permissions.view.includes(memberId)) return "view";
     return null;
   };
 
   const getFileIcon = (fileType: string) => {
-    if (fileType.startsWith('image/')) return <Image className="w-8 h-8 text-blue-500" />;
-    if (fileType.startsWith('video/')) return <Video className="w-8 h-8 text-purple-500" />;
-    if (fileType.startsWith('audio/')) return <Music className="w-8 h-8 text-green-500" />;
-    if (fileType.includes('text') || fileType.includes('document')) return <FileText className="w-8 h-8 text-orange-500" />;
+    if (fileType.startsWith("image/"))
+      return <Image className="w-8 h-8 text-blue-500" />;
+    if (fileType.startsWith("video/"))
+      return <Video className="w-8 h-8 text-purple-500" />;
+    if (fileType.startsWith("audio/"))
+      return <Music className="w-8 h-8 text-green-500" />;
+    if (fileType.includes("text") || fileType.includes("document"))
+      return <FileText className="w-8 h-8 text-orange-500" />;
     return <File className="w-8 h-8 text-gray-500" />;
   };
 
   const handleShare = async () => {
-    if (shareType === 'upload' && !selectedFile) {
-      setError('Please select a file to share');
+    if (shareType === "upload" && !selectedFile) {
+      setError("Please select a file to share");
       return;
     }
-    
-    if (shareType === 'url' && !fileUrl.trim()) {
-      setError('Please enter a file URL');
+
+    if (shareType === "url" && !fileUrl.trim()) {
+      setError("Please enter a file URL");
       return;
     }
 
     if (!fileName.trim()) {
-      setError('Please enter a file name');
+      setError("Please enter a file name");
       return;
     }
 
@@ -131,16 +141,17 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
     setError(null);
 
     try {
-      let fileContent = '';
+      let fileContent = "";
       let fileSize = 0;
-      let fileType = '';
+      let fileType = "";
 
-      if (shareType === 'upload' && selectedFile) {
+      if (shareType === "upload" && selectedFile) {
         fileSize = selectedFile.size;
         fileType = selectedFile.type;
 
         // Convert file to base64 for storage
-        if (selectedFile.size < 5 * 1024 * 1024) { // 5MB limit
+        if (selectedFile.size < 5 * 1024 * 1024) {
+          // 5MB limit
           const reader = new FileReader();
           fileContent = await new Promise<string>((resolve, reject) => {
             reader.onload = () => resolve(reader.result as string);
@@ -148,14 +159,14 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
             reader.readAsDataURL(selectedFile);
           });
         }
-      } else if (shareType === 'url') {
-        fileType = 'url';
+      } else if (shareType === "url") {
+        fileType = "url";
         fileContent = fileUrl;
       }
 
       const user = realTimeAuth.getCurrentUser();
       if (!user) {
-        throw new Error('User not authenticated');
+        throw new Error("User not authenticated");
       }
 
       const fileData = {
@@ -163,19 +174,31 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
         fileName: fileName.trim(),
         fileType,
         fileSize,
-        content: shareType === 'upload' && !selectedFile ? fileContent : undefined,
-        file: shareType === 'upload' ? selectedFile || undefined : undefined,
-        url: shareType === 'url' ? fileUrl : undefined,
+        content:
+          shareType === "upload" && selectedFile && fileContent
+            ? fileContent
+            : undefined,
+        file: shareType === "upload" ? selectedFile || undefined : undefined,
+        url: shareType === "url" ? fileUrl : undefined,
         sharedBy: user.id,
         permissions,
         tags,
-        description: description.trim()
+        description: description.trim(),
       };
+
+      console.log("📤 Sharing file with data:", {
+        fileName: fileData.fileName,
+        fileType: fileData.fileType,
+        hasContent: !!fileData.content,
+        contentLength: fileData.content?.length || 0,
+        hasFile: !!fileData.file,
+        shareType,
+      });
 
       // Use file share service instead of API
       const result = await fileShareService.shareFile(fileData);
-      
-      setSuccess('File shared successfully!');
+
+      setSuccess("File shared successfully!");
       onFileShared(result);
 
       // Reset form
@@ -183,10 +206,9 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
         onClose();
         resetForm();
       }, 2000);
-
     } catch (error) {
-      console.error('Error sharing file:', error);
-      setError(error instanceof Error ? error.message : 'Failed to share file');
+      console.error("Error sharing file:", error);
+      setError(error instanceof Error ? error.message : "Failed to share file");
     } finally {
       setLoading(false);
     }
@@ -194,16 +216,16 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
 
   const resetForm = () => {
     setSelectedFile(null);
-    setFileName('');
-    setDescription('');
+    setFileName("");
+    setDescription("");
     setTags([]);
-    setTagInput('');
+    setTagInput("");
     setPermissions({ view: [], edit: [], admin: [] });
     setSuccess(null);
     setError(null);
-    setFileUrl('');
+    setFileUrl("");
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -251,21 +273,21 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
           <div className="mb-6">
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
-                onClick={() => setShareType('upload')}
+                onClick={() => setShareType("upload")}
                 className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                  shareType === 'upload'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                  shareType === "upload"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
                 }`}
               >
                 Upload File
               </button>
               <button
-                onClick={() => setShareType('url')}
+                onClick={() => setShareType("url")}
                 className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                  shareType === 'url'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                  shareType === "url"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
                 }`}
               >
                 Share URL
@@ -274,7 +296,7 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
           </div>
 
           {/* File Selection */}
-          {shareType === 'upload' ? (
+          {shareType === "upload" ? (
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select File
@@ -287,7 +309,9 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
                   <div className="flex items-center justify-center gap-3">
                     {getFileIcon(selectedFile.type)}
                     <div>
-                      <p className="font-medium text-gray-900">{selectedFile.name}</p>
+                      <p className="font-medium text-gray-900">
+                        {selectedFile.name}
+                      </p>
                       <p className="text-sm text-gray-500">
                         {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                       </p>
@@ -379,7 +403,7 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
                 type="text"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addTag()}
+                onKeyPress={(e) => e.key === "Enter" && addTag()}
                 placeholder="Add a tag"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -399,7 +423,10 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
             </label>
             <div className="space-y-2">
               {teamMembers.map((member) => (
-                <div key={member.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                       <span className="text-sm font-medium text-blue-600">
@@ -413,33 +440,33 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
                   </div>
                   <div className="flex gap-1">
                     <button
-                      onClick={() => toggleMemberPermission(member.id, 'view')}
+                      onClick={() => toggleMemberPermission(member.id, "view")}
                       className={`p-2 rounded-lg transition-colors ${
-                        getMemberPermission(member.id) === 'view'
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-gray-100 text-gray-400 hover:text-gray-600'
+                        getMemberPermission(member.id) === "view"
+                          ? "bg-green-100 text-green-600"
+                          : "bg-gray-100 text-gray-400 hover:text-gray-600"
                       }`}
                       title="View"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => toggleMemberPermission(member.id, 'edit')}
+                      onClick={() => toggleMemberPermission(member.id, "edit")}
                       className={`p-2 rounded-lg transition-colors ${
-                        getMemberPermission(member.id) === 'edit'
-                          ? 'bg-blue-100 text-blue-600'
-                          : 'bg-gray-100 text-gray-400 hover:text-gray-600'
+                        getMemberPermission(member.id) === "edit"
+                          ? "bg-blue-100 text-blue-600"
+                          : "bg-gray-100 text-gray-400 hover:text-gray-600"
                       }`}
                       title="Edit"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => toggleMemberPermission(member.id, 'admin')}
+                      onClick={() => toggleMemberPermission(member.id, "admin")}
                       className={`p-2 rounded-lg transition-colors ${
-                        getMemberPermission(member.id) === 'admin'
-                          ? 'bg-purple-100 text-purple-600'
-                          : 'bg-gray-100 text-gray-400 hover:text-gray-600'
+                        getMemberPermission(member.id) === "admin"
+                          ? "bg-purple-100 text-purple-600"
+                          : "bg-gray-100 text-gray-400 hover:text-gray-600"
                       }`}
                       title="Admin"
                     >
@@ -481,7 +508,12 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
             </button>
             <button
               onClick={handleShare}
-              disabled={loading || (shareType === 'upload' && !selectedFile) || (shareType === 'url' && !fileUrl.trim()) || !fileName.trim()}
+              disabled={
+                loading ||
+                (shareType === "upload" && !selectedFile) ||
+                (shareType === "url" && !fileUrl.trim()) ||
+                !fileName.trim()
+              }
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {loading ? (

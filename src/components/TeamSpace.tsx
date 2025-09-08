@@ -39,6 +39,10 @@ import { fileShareService } from "../utils/fileShareService";
 import { CreateProjectModal } from "./CreateProjectModal";
 import { AddProjectTaskModal } from "./AddProjectTaskModal";
 import { TeamProject, projectService } from "../utils/projectService";
+import { FilePreviewModal } from "./FileManager/FilePreviewModal";
+import { FileItem } from "../types";
+import { ShareMenu } from "./ShareMenu";
+import { extractTextFromPdfDataUrl } from "../utils/pdfText";
 
 interface SharedResource {
   id: string;
@@ -113,6 +117,17 @@ export const TeamSpace: React.FC<{
   const [exitReason, setExitReason] = useState("");
   const [showExitRequestsPanel, setShowExitRequestsPanel] = useState(false);
   const [pendingExitRequests, setPendingExitRequests] = useState<any[]>([]);
+
+  // File preview state
+  const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
+  const [previewContent, setPreviewContent] = useState("");
+  const [previewZoom, setPreviewZoom] = useState(100);
+  const [showAIChat, setShowAIChat] = useState(false);
+
+  // Share menu state
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [shareMenuPosition, setShareMenuPosition] = useState({ x: 0, y: 0 });
+  const [selectedFileForShare, setSelectedFileForShare] = useState<any>(null);
 
   const user = realTimeAuth.getCurrentUser();
 
@@ -635,6 +650,46 @@ export const TeamSpace: React.FC<{
         selectedTeam.id,
         user.id
       );
+      console.log("📁 Loaded shared files:", files.length, files);
+
+      // Add a test PDF file for debugging if no files exist
+      if (files.length === 0) {
+        console.log("🧪 Adding test PDF file for debugging...");
+        const testPdfContent =
+          "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKPD4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovTWVkaWFCb3ggWzAgMCA2MTIgNzkyXQovUmVzb3VyY2VzIDw8Ci9Gb250IDw8Ci9GMSA0IDAgUgo+Pgo+PgovQ29udGVudHMgNSAwIFIKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCj4+CmVuZG9iago1IDAgb2JqCjw8Ci9MZW5ndGggNDQKPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgo1MCA3MDAgVGQKKFRlc3QgUERGIERvY3VtZW50KSBUagpFVApzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI0NSAwMDAwMCBuIAowMDAwMDAwMzIyIDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNgovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNDE0CiUlRU9G";
+
+        const testFile = {
+          id: "test-pdf-1",
+          teamId: selectedTeam.id,
+          fileName: "Test Document.pdf",
+          fileType: "application/pdf",
+          fileSize: 1024,
+          content: testPdfContent,
+          url: "",
+          sharedBy: user?.id || "",
+          sharedAt: new Date(),
+          permissions: {
+            view: [user?.id || ""],
+            edit: [],
+            admin: [user?.id || ""],
+          },
+          tags: ["test"],
+          description: "Test PDF for debugging preview functionality",
+          version: 1,
+          lastModified: new Date(),
+          lastModifiedBy: user?.id || "",
+          storageType: "firestore" as const,
+          userPermissions: {
+            canView: true,
+            canEdit: false,
+            canManage: false,
+          },
+        };
+
+        files.push(testFile);
+        console.log("🧪 Added test PDF file:", testFile);
+      }
+
       setSharedFiles(files);
     } catch (error) {
       console.error("Error loading shared files:", error);
@@ -671,6 +726,236 @@ export const TeamSpace: React.FC<{
     setShowCreateProjectModal(true);
   };
 
+  // File preview functions
+  const handlePreviewFile = async (file: any) => {
+    console.log("🔍 Preview file called with:", {
+      id: file.id,
+      fileName: file.fileName,
+      fileType: file.fileType,
+      storageType: file.storageType,
+      hasContent: !!file.content,
+      contentLength: file.content?.length || 0,
+      hasUrl: !!file.url,
+      url: file.url,
+    });
+
+    // Convert shared file to FileItem format
+    const fileItem: FileItem = {
+      id: file.id,
+      name: file.fileName,
+      type: "file",
+      size: file.fileSize,
+      mimeType: file.fileType,
+      content: file.content,
+      uploadedAt: file.sharedAt?.toISOString() || new Date().toISOString(),
+      userId: file.sharedBy,
+      webViewLink: file.url, // Add this for external links
+    };
+
+    setPreviewFile(fileItem);
+    setPreviewZoom(100);
+    setShowAIChat(false);
+
+    // Always try to fetch content if not available, regardless of URL
+    if (!file.content) {
+      console.log("📥 No content available, fetching from service...");
+      setPreviewContent("Loading file content...");
+      try {
+        if (file.storageType === "url" && file.url) {
+          console.log("🔗 Using URL storage type");
+          setPreviewContent(file.url);
+        } else if (file.storageType === "drive" && file.driveFileId) {
+          console.log("☁️ Using Google Drive storage");
+          // For Google Drive files, use the webViewLink
+          setPreviewContent(file.url);
+        } else {
+          console.log("📦 Fetching from fileShareService...");
+          // Try to fetch content from fileShareService
+          const content = await fileShareService.downloadFile(
+            file.id,
+            user?.id || ""
+          );
+          console.log(
+            "📥 Downloaded content:",
+            typeof content,
+            content?.toString().substring(0, 100)
+          );
+          if (typeof content === "string") {
+            // Handle PDF files properly
+            if (
+              file.fileType?.includes("pdf") ||
+              file.fileName.endsWith(".pdf")
+            ) {
+              if (
+                content.startsWith("data:application/pdf") ||
+                content.startsWith("data:application/x-pdf")
+              ) {
+                setPreviewContent(content);
+                // Extract text for AI analysis
+                try {
+                  const text = await extractTextFromPdfDataUrl(content);
+                  if (text) {
+                    console.log(
+                      `PDF text extracted for ${file.fileName}:`,
+                      text.substring(0, 200) + "..."
+                    );
+                  }
+                } catch (e) {
+                  console.warn(
+                    "Could not extract text from PDF for AI analysis."
+                  );
+                }
+              } else {
+                // Convert to proper PDF data URL
+                const pdfDataUrl = content.startsWith("data:")
+                  ? content
+                  : `data:application/pdf;base64,${content}`;
+                setPreviewContent(pdfDataUrl);
+                try {
+                  const text = await extractTextFromPdfDataUrl(pdfDataUrl);
+                  if (text) {
+                    console.log(
+                      `PDF text extracted for ${file.fileName}:`,
+                      text.substring(0, 200) + "..."
+                    );
+                  }
+                } catch (e) {
+                  console.warn(
+                    "Could not extract text from PDF for AI analysis."
+                  );
+                }
+              }
+            } else {
+              setPreviewContent(content);
+            }
+          } else {
+            setPreviewContent("Preview not available for this file type.");
+          }
+        }
+      } catch (error) {
+        console.error("Error loading file content:", error);
+        setPreviewContent(
+          "Error loading file preview. Please try downloading the file."
+        );
+      }
+    } else if (file.content) {
+      console.log(
+        "📄 Using existing file content:",
+        file.content.substring(0, 100)
+      );
+      // Handle existing content
+      if (file.fileType?.includes("pdf") || file.fileName.endsWith(".pdf")) {
+        console.log("📕 Processing PDF with existing content");
+        if (
+          file.content.startsWith("data:application/pdf") ||
+          file.content.startsWith("data:application/x-pdf")
+        ) {
+          setPreviewContent(file.content);
+        } else {
+          // Convert to proper PDF data URL
+          const pdfDataUrl = file.content.startsWith("data:")
+            ? file.content
+            : `data:application/pdf;base64,${file.content}`;
+          setPreviewContent(pdfDataUrl);
+        }
+        // Extract text for AI analysis
+        try {
+          const text = await extractTextFromPdfDataUrl(
+            file.content.startsWith("data:")
+              ? file.content
+              : `data:application/pdf;base64,${file.content}`
+          );
+          if (text) {
+            console.log(
+              `PDF text extracted for ${file.fileName}:`,
+              text.substring(0, 200) + "..."
+            );
+          }
+        } catch (e) {
+          console.warn("Could not extract text from PDF for AI analysis.");
+        }
+      } else {
+        setPreviewContent(file.content);
+      }
+    } else {
+      console.log("❌ No content or URL available for file");
+      setPreviewContent("No preview available for this file.");
+    }
+  };
+
+  const closePreview = () => {
+    setPreviewFile(null);
+    setPreviewContent("");
+    setPreviewZoom(100);
+    setShowAIChat(false);
+  };
+
+  const downloadFile = async (file: FileItem) => {
+    try {
+      let content: string | undefined = file.content;
+
+      // If no content, try to fetch it
+      if (!content && file.webViewLink) {
+        // For shared files, try to get content from fileShareService
+        const sharedFile = sharedFiles.find((f) => f.id === file.id);
+        if (sharedFile) {
+          const fetchedContent = await fileShareService.downloadFile(
+            file.id,
+            user?.id || ""
+          );
+          if (typeof fetchedContent === "string") {
+            content = fetchedContent;
+          }
+        }
+      }
+
+      if (!content) {
+        alert("Unable to download file - content not available");
+        return;
+      }
+
+      // Create download link
+      let downloadUrl: string;
+      let filename = file.name;
+
+      if (content.startsWith("data:")) {
+        downloadUrl = content;
+      } else {
+        // Assume base64 content
+        const mimeType = file.mimeType || "application/octet-stream";
+        downloadUrl = `data:${mimeType};base64,${content}`;
+      }
+
+      // Create temporary link and trigger download
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      alert("Error downloading file. Please try again.");
+    }
+  };
+
+  const formatFileSize = (bytes?: number): string => {
+    if (!bytes) return "Unknown size";
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + " " + sizes[i];
+  };
+
+  const handleShareFile = (file: any, event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setShareMenuPosition({
+      x: rect.left,
+      y: rect.bottom + 5,
+    });
+    setSelectedFileForShare(file);
+    setShowShareMenu(true);
+  };
+
   const handleAddTaskToProject = (project: TeamProject) => {
     setSelectedProjectForTask(project);
     setShowAddTaskModal(true);
@@ -683,17 +968,21 @@ export const TeamSpace: React.FC<{
   if (!user) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-gray-500">Please log in to access team space</p>
+        <p className="text-gray-500 dark:text-gray-400">
+          Please log in to access team space
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-50 h-full flex">
+    <div className="bg-gray-50 dark:bg-slate-900 h-full flex transition-colors duration-300">
       {/* Sidebar */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Teams</h2>
+      <div className="w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col">
+        <div className="p-4 border-b border-gray-200 dark:border-slate-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Teams
+          </h2>
           <div className="mt-3 space-y-2">
             <button
               onClick={() => setShowCreateTeam(true)}
@@ -728,10 +1017,10 @@ export const TeamSpace: React.FC<{
                   <Users className="w-5 h-5 text-blue-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 truncate">
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">
                     {team.name}
                   </h3>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     {Object.keys(team.members).length} members
                   </p>
                 </div>
@@ -745,13 +1034,15 @@ export const TeamSpace: React.FC<{
       {selectedTeam ? (
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <div className="bg-white border-b border-gray-200 p-6">
+          <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {selectedTeam.name}
                 </h1>
-                <p className="text-gray-600">{selectedTeam.description}</p>
+                <p className="text-gray-600 dark:text-gray-400">
+                  {selectedTeam.description}
+                </p>
               </div>
               <div className="flex items-center space-x-3">
                 <button
@@ -770,7 +1061,7 @@ export const TeamSpace: React.FC<{
                 </button>
                 <button
                   onClick={() => setActiveTab("settings")}
-                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 >
                   <Settings className="w-5 h-5" />
                 </button>
@@ -804,7 +1095,7 @@ export const TeamSpace: React.FC<{
                   className={`pb-3 px-1 capitalize transition-colors flex items-center gap-2 ${
                     activeTab === tab
                       ? "border-b-2 border-blue-600 text-blue-600"
-                      : "text-gray-600 hover:text-gray-900"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                   }`}
                 >
                   {tab === "overview" && <Activity className="w-4 h-4" />}
@@ -824,43 +1115,51 @@ export const TeamSpace: React.FC<{
               <div className="space-y-6">
                 {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-slate-700">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-600">Team Members</p>
-                        <p className="text-2xl font-bold text-gray-900">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Team Members
+                        </p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {getTeamMembers().length}
                         </p>
                       </div>
-                      <Users className="w-8 h-8 text-blue-600" />
+                      <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-slate-700">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-600">Shared Files</p>
-                        <p className="text-2xl font-bold text-gray-900">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Shared Files
+                        </p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {sharedResources.length}
                         </p>
                       </div>
-                      <FileText className="w-8 h-8 text-green-600" />
+                      <FileText className="w-8 h-8 text-green-600 dark:text-green-400" />
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-slate-700">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-600">Messages</p>
-                        <p className="text-2xl font-bold text-gray-900">0</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Messages
+                        </p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                          0
+                        </p>
                       </div>
-                      <MessageSquare className="w-8 h-8 text-purple-600" />
+                      <MessageSquare className="w-8 h-8 text-purple-600 dark:text-purple-400" />
                     </div>
                   </div>
                 </div>
 
                 {/* Recent Activity */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
                   <div className="p-4 border-b border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-900 flex items-center">
                       <Activity className="w-5 h-5 mr-2 text-orange-500" />
@@ -908,7 +1207,7 @@ export const TeamSpace: React.FC<{
                   {getTeamMembers().map((member) => (
                     <div
                       key={member.id}
-                      className="bg-white rounded-lg shadow-sm p-6 border border-gray-200"
+                      className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-slate-700"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
@@ -1067,7 +1366,7 @@ export const TeamSpace: React.FC<{
 
             {activeTab === "files" && (
               <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
                   <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                       <Folder className="w-5 h-5 text-blue-600" />
@@ -1177,15 +1476,18 @@ export const TeamSpace: React.FC<{
                               </div>
                               <div className="flex items-center gap-1">
                                 <button
-                                  onClick={() => {
-                                    if (file.url) {
-                                      window.open(file.url, "_blank");
-                                    }
-                                  }}
+                                  onClick={() => handlePreviewFile(file)}
                                   className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                                  title="View File"
+                                  title="Preview File"
                                 >
                                   <Eye className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={(e) => handleShareFile(file, e)}
+                                  className="p-1 text-gray-400 hover:text-green-600 transition-colors"
+                                  title="Share File"
+                                >
+                                  <Share2 className="w-4 h-4" />
                                 </button>
                                 {file.userPermissions?.canManage && (
                                   <button
@@ -1238,7 +1540,7 @@ export const TeamSpace: React.FC<{
 
             {activeTab === "projects" && (
               <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
                   <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                       <Folder className="w-5 h-5 text-green-600" />
@@ -1558,7 +1860,7 @@ export const TeamSpace: React.FC<{
             )}
 
             {activeTab === "chat" && (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-full flex flex-col">
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 h-full flex flex-col">
                 <div className="p-4 border-b border-gray-200">
                   <h2 className="text-lg font-semibold text-gray-900">
                     Team Chat
@@ -1622,7 +1924,7 @@ export const TeamSpace: React.FC<{
 
             {activeTab === "settings" && selectedTeam && (
               <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
                   <div className="p-4 border-b border-gray-200">
                     <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                       <Settings className="w-5 h-5 text-gray-600" />
@@ -1794,8 +2096,8 @@ export const TeamSpace: React.FC<{
       {/* Create Team Modal */}
       {showCreateTeam && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Create New Team
             </h2>
             <form
@@ -1870,8 +2172,8 @@ export const TeamSpace: React.FC<{
       {/* Invite Member Modal */}
       {showInviteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Invite Team Member
             </h2>
             {inviteSuccess && (
@@ -1963,8 +2265,10 @@ export const TeamSpace: React.FC<{
       {/* Join Team Modal */}
       {showJoinTeamModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Join Team</h2>
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Join Team
+            </h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2387,6 +2691,36 @@ export const TeamSpace: React.FC<{
             </div>
           </div>
         </div>
+      )}
+
+      {/* File Preview Modal */}
+      {previewFile && (
+        <FilePreviewModal
+          previewFile={previewFile}
+          previewContent={previewContent}
+          previewZoom={previewZoom}
+          onClose={closePreview}
+          onZoomChange={setPreviewZoom}
+          onDownload={downloadFile}
+          onAnalyze={() => setShowAIChat((prev) => !prev)}
+          formatFileSize={formatFileSize}
+          showAIChat={showAIChat}
+          setShowAIChat={setShowAIChat}
+        />
+      )}
+
+      {/* Share Menu */}
+      {selectedFileForShare && (
+        <ShareMenu
+          isOpen={showShareMenu}
+          onClose={() => {
+            setShowShareMenu(false);
+            setSelectedFileForShare(null);
+          }}
+          fileName={selectedFileForShare.fileName}
+          fileUrl={selectedFileForShare.url}
+          position={shareMenuPosition}
+        />
       )}
     </div>
   );

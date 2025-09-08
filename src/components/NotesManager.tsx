@@ -37,10 +37,12 @@ export const NotesManager: React.FC = () => {
 
   const loadNotes = async () => {
     if (!user) return;
-    
+
     try {
       // Try to load from Google Drive first
-      const driveNotes = await driveStorageUtils.loadShortNotesFromDrive(user.id);
+      const driveNotes = await driveStorageUtils.loadShortNotesFromDrive(
+        user.id
+      );
       if (driveNotes.length > 0) {
         console.log("📱 Loaded notes from Google Drive:", driveNotes.length);
         setNotes(
@@ -67,9 +69,12 @@ export const NotesManager: React.FC = () => {
 
   const syncNotesToDrive = async () => {
     if (!user) return;
-    
+
     try {
-      const success = await driveStorageUtils.saveShortNotesToDrive(notes, user.id);
+      const success = await driveStorageUtils.saveShortNotesToDrive(
+        notes,
+        user.id
+      );
       if (success) {
         console.log("✅ Notes synced to Google Drive successfully");
       } else {
@@ -129,10 +134,10 @@ export const NotesManager: React.FC = () => {
           tags,
         };
         storageUtils.updateShortNote(editingNote.id, updates);
-        
+
         // Update the notes state
-        setNotes(prevNotes =>
-          prevNotes.map(note =>
+        setNotes((prevNotes) =>
+          prevNotes.map((note) =>
             note.id === editingNote.id
               ? { ...note, ...updates, updatedAt: new Date().toISOString() }
               : note
@@ -150,14 +155,14 @@ export const NotesManager: React.FC = () => {
           updatedAt: new Date().toISOString(),
         };
         storageUtils.storeShortNote(newNote);
-        
+
         // Add to notes state
-        setNotes(prevNotes => [newNote, ...prevNotes]);
+        setNotes((prevNotes) => [newNote, ...prevNotes]);
       }
 
       // Sync to Google Drive
       await syncNotesToDrive();
-      
+
       resetForm();
       setShowEditor(false);
       setEditingNote(null);
@@ -179,13 +184,13 @@ export const NotesManager: React.FC = () => {
 
   const deleteShortNote = async (noteId: string) => {
     if (!user) return;
-    
+
     if (confirm("Are you sure you want to delete this note?")) {
       storageUtils.deleteShortNote(noteId);
-      
+
       // Remove from notes state
-      setNotes(prevNotes => prevNotes.filter(note => note.id !== noteId));
-      
+      setNotes((prevNotes) => prevNotes.filter((note) => note.id !== noteId));
+
       // Sync to Google Drive
       await syncNotesToDrive();
     }
@@ -197,12 +202,17 @@ export const NotesManager: React.FC = () => {
   };
 
   return (
-    <div className="bg-white h-full flex flex-col scroll-area" data-component="notes">
+    <div
+      className="bg-white dark:bg-slate-900 h-full flex flex-col scroll-area transition-colors duration-300"
+      data-component="notes"
+    >
       {/* Header */}
-      <div className="border-b border-gray-200 p-responsive">
+      <div className="border-b border-gray-200 dark:border-slate-700 p-responsive">
         <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between mb-4">
           <div className="flex-1 min-w-0">
-            <h2 className="text-responsive-xl font-bold text-gray-900">Short Notes</h2>
+            <h2 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100">
+              Short Notes
+            </h2>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-3 overflow-x-auto">
             <button
@@ -226,39 +236,39 @@ export const NotesManager: React.FC = () => {
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500" />
           <input
             type="text"
             placeholder="Search short notes by title, content, or tags..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
           />
         </div>
       </div>
 
-                  {/* Short Notes Grid */}
+      {/* Short Notes Grid */}
       <div className="flex-1 overflow-auto p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {getFilteredNotes().map((note) => (
             <div
               key={note.id}
-              className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow group"
+              className="border border-gray-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow group bg-white dark:bg-slate-800"
             >
               <div className="flex items-start justify-between mb-3">
-                <h3 className="font-medium text-gray-900 flex-1 pr-2 line-clamp-2">
+                <h3 className="font-medium text-gray-900 dark:text-gray-100 flex-1 pr-2 line-clamp-2">
                   {note.title}
                 </h3>
                 <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => startEditing(note)}
-                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => deleteShortNote(note.id)}
-                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -266,7 +276,7 @@ export const NotesManager: React.FC = () => {
               </div>
 
               <div className="mb-4">
-                <p className="text-sm text-gray-600 leading-relaxed">
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                   {truncateContent(note.content)}
                 </p>
               </div>
@@ -283,14 +293,14 @@ export const NotesManager: React.FC = () => {
                     </span>
                   ))}
                   {note.tags.length > 3 && (
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
                       +{note.tags.length - 3} more
                     </span>
                   )}
                 </div>
               )}
 
-              <div className="flex items-center justify-between text-xs text-gray-500">
+              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                 <div className="flex items-center">
                   <Clock className="w-3 h-3 mr-1" />
                   {format(new Date(note.updatedAt), "MMM dd, yyyy")}
@@ -308,11 +318,11 @@ export const NotesManager: React.FC = () => {
 
         {getFilteredNotes().length === 0 && (
           <div className="text-center py-12">
-            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <FileText className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
               {searchQuery ? "No short notes found" : "No short notes yet"}
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               {searchQuery
                 ? "Try adjusting your search terms"
                 : "Create your first short note to organize your study thoughts and insights"}
@@ -333,7 +343,7 @@ export const NotesManager: React.FC = () => {
       {/* Note Editor Modal */}
       {showEditor && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-4xl h-5/6 flex flex-col">
+          <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-4xl h-5/6 flex flex-col">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold">
                 {editingNote ? "Edit Short Note" : "Create New Short Note"}
@@ -342,7 +352,7 @@ export const NotesManager: React.FC = () => {
 
             <div className="flex-1 p-6 space-y-4 overflow-auto">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Title *
                 </label>
                 <input
@@ -351,13 +361,13 @@ export const NotesManager: React.FC = () => {
                   onChange={(e) =>
                     setNoteForm({ ...noteForm, title: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                   placeholder="Enter short note title"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Tags
                 </label>
                 <input
@@ -366,13 +376,13 @@ export const NotesManager: React.FC = () => {
                   onChange={(e) =>
                     setNoteForm({ ...noteForm, tags: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                   placeholder="Enter tags separated by commas (e.g., math, calculus, derivatives)"
                 />
               </div>
 
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Content *
                 </label>
                 <textarea
@@ -381,7 +391,7 @@ export const NotesManager: React.FC = () => {
                     setNoteForm({ ...noteForm, content: e.target.value })
                   }
                   rows={12}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                   placeholder="Write your short note content here..."
                 />
               </div>
@@ -394,7 +404,7 @@ export const NotesManager: React.FC = () => {
                   setEditingNote(null);
                   resetForm();
                 }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
               >
                 Cancel
               </button>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { BookOpen, Search } from "lucide-react";
 import { QuestionCard } from "./QuestionCard";
 import { EnhancedQuestionCard } from "./EnhancedQuestionCard";
@@ -19,6 +20,8 @@ interface QuestionCategory {
 }
 
 export const QuestionBank: React.FC = () => {
+  const [searchParams] = useSearchParams();
+
   // Debug logging for imports
   console.log("QuestionBank component rendered");
   console.log("allQuestions imported:", allQuestions.length);
@@ -30,9 +33,17 @@ export const QuestionBank: React.FC = () => {
     console.log(`${subject}: ${questions.length} questions`);
   });
 
+  // Get initial values from URL parameters
+  const initialCategory = searchParams.get("category") || "all";
+  const initialDifficulty = searchParams.get("difficulty") || "all";
+
+  console.log("URL Parameters:", { initialCategory, initialDifficulty });
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] =
+    useState<string>(initialCategory);
+  const [selectedDifficulty, setSelectedDifficulty] =
+    useState<string>(initialDifficulty);
   const [selectedType, setSelectedType] = useState<string>("all");
   const [showAnswers, setShowAnswers] = useState<Record<string, boolean>>({});
   const [practicedQuestions, setPracticedQuestions] = useState<string[]>([]);
@@ -51,13 +62,26 @@ export const QuestionBank: React.FC = () => {
     }
   }, []);
 
-  // Reset to categories view when component mounts or tab is clicked
+  // Update state when URL parameters change
   useEffect(() => {
-    setSelectedCategory("all");
+    const urlCategory = searchParams.get("category");
+    const urlDifficulty = searchParams.get("difficulty");
+
+    if (urlCategory) {
+      setSelectedCategory(urlCategory);
+    } else if (!urlCategory && !urlDifficulty) {
+      setSelectedCategory("all");
+    }
+
+    if (urlDifficulty) {
+      setSelectedDifficulty(urlDifficulty);
+    } else if (!urlCategory && !urlDifficulty) {
+      setSelectedDifficulty("all");
+    }
+
     setSearchQuery("");
-    setSelectedDifficulty("all");
     setSelectedType("all");
-  }, []);
+  }, [searchParams]);
 
   // Define questions based on selected category
   const questions = useMemo(() => {
@@ -67,11 +91,13 @@ export const QuestionBank: React.FC = () => {
         database: "Databases",
         algorithms: "Algorithms & Data Structures",
         systemdesign: "System Design",
+        "system-design": "System Design", // Handle hyphenated version
         cloud: "Cloud & DevOps",
         react: "React",
         frontend: "Frontend Development",
         javascript: "JavaScript",
         behavioral: "Behavioral",
+        technical: "Algorithms & Data Structures", // Map technical to algorithms
         os: "Operating Systems",
         puzzles: "Puzzles",
         aptitude: "Aptitude & Reasoning",
@@ -322,7 +348,33 @@ export const QuestionBank: React.FC = () => {
           "complexity",
           "big o",
         ],
+        technical: [
+          "algorithms",
+          "data structures",
+          "algorithm",
+          "array",
+          "list",
+          "tree",
+          "graph",
+          "sorting",
+          "searching",
+          "complexity",
+          "big o",
+          "technical",
+          "coding",
+          "programming",
+        ],
         systemdesign: [
+          "system design",
+          "architecture",
+          "scalability",
+          "distributed",
+          "microservices",
+          "load balancing",
+          "caching",
+          "database design",
+        ],
+        "system-design": [
           "system design",
           "architecture",
           "scalability",
@@ -399,6 +451,27 @@ export const QuestionBank: React.FC = () => {
           "logical",
           "numerical",
           "verbal",
+          "percentage",
+          "time-and-work",
+          "ratio-proportion",
+          "average",
+          "profit-loss",
+          "interest",
+          "data-interpretation",
+          "number-series",
+          "calendar",
+          "age-problems",
+          "geometry",
+          "mensuration",
+          "partnership",
+          "hcf-lcm",
+          "coding-decoding",
+          "blood-relations",
+          "direction-distance",
+          "statistics",
+          "algebra",
+          "mixture",
+          "permutation-combination",
         ],
         networks: [
           "networking",
@@ -522,18 +595,18 @@ export const QuestionBank: React.FC = () => {
       )}
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-xl p-6 border border-gray-200">
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Search questions by keywords or tags..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
               />
             </div>
           </div>
@@ -543,7 +616,7 @@ export const QuestionBank: React.FC = () => {
             <select
               value={selectedDifficulty}
               onChange={(e) => setSelectedDifficulty(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
             >
               <option value="all">All Difficulties</option>
               <option value="easy">Easy</option>
@@ -557,7 +630,7 @@ export const QuestionBank: React.FC = () => {
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
             >
               <option value="all">All Types</option>
               <option value="technical">Technical</option>
@@ -571,39 +644,47 @@ export const QuestionBank: React.FC = () => {
 
       {/* Stats Bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {questions.length}
             </div>
-            <div className="text-sm text-gray-600">Total Questions</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Total Questions
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {practicedQuestions.length}
             </div>
-            <div className="text-sm text-gray-600">Practiced</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Practiced
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {favoriteQuestions.length}
             </div>
-            <div className="text-sm text-gray-600">Favorites</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Favorites
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {filteredQuestions.length}
             </div>
-            <div className="text-sm text-gray-600">Filtered</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Filtered
+            </div>
           </div>
         </div>
       </div>
@@ -622,7 +703,7 @@ export const QuestionBank: React.FC = () => {
                 className={`rounded-2xl p-6 border transition-all duration-300 text-left group hover:shadow-lg ${
                   isMostImportantDSA
                     ? "bg-gradient-to-r from-slate-900 to-slate-800 text-white border-slate-700 hover:shadow-xl hover:scale-[1.02] transform hover:border-slate-600"
-                    : "bg-white border-gray-200 hover:shadow-lg text-left group hover:border-blue-200"
+                    : "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:shadow-lg text-left group hover:border-blue-200 dark:hover:border-blue-600"
                 }`}
               >
                 <div className="flex items-start justify-between mb-4">
@@ -652,7 +733,9 @@ export const QuestionBank: React.FC = () => {
 
                 <h3
                   className={`text-xl font-semibold mb-2 ${
-                    isMostImportantDSA ? "text-white" : "text-gray-900"
+                    isMostImportantDSA
+                      ? "text-white"
+                      : "text-gray-900 dark:text-gray-100"
                   }`}
                 >
                   {category.name}
@@ -664,7 +747,9 @@ export const QuestionBank: React.FC = () => {
                 </h3>
                 <p
                   className={`text-sm mb-4 leading-relaxed ${
-                    isMostImportantDSA ? "text-slate-300" : "text-gray-600"
+                    isMostImportantDSA
+                      ? "text-slate-300"
+                      : "text-gray-600 dark:text-gray-400"
                   }`}
                 >
                   {category.description}
@@ -673,7 +758,9 @@ export const QuestionBank: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span
                     className={`text-sm font-medium ${
-                      isMostImportantDSA ? "text-slate-300" : "text-gray-500"
+                      isMostImportantDSA
+                        ? "text-slate-300"
+                        : "text-gray-500 dark:text-gray-400"
                     }`}
                   >
                     {category.questionCount} questions
@@ -695,12 +782,12 @@ export const QuestionBank: React.FC = () => {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="bg-white rounded-2xl p-12 text-center border border-gray-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 text-center border border-gray-200 dark:border-slate-700 shadow-sm">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             Loading Questions...
           </h3>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             Please wait while we load the interview question bank.
           </p>
         </div>
@@ -765,12 +852,12 @@ export const QuestionBank: React.FC = () => {
               );
             })
           ) : (
-            <div className="bg-white rounded-2xl p-12 text-center border border-gray-200 shadow-sm">
-              <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 text-center border border-gray-200 dark:border-slate-700 shadow-sm">
+              <BookOpen className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 No questions found for this category
               </h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
                 This category might not have questions yet, or they might not be
                 loaded properly.
               </p>

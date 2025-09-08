@@ -1,0 +1,229 @@
+{
+  "module": {
+    "id": "javascript",
+    "name": "JavaScript Fundamentals",
+    "version": "1.2.0",
+    "lastUpdated": "2025-01-07T18:40:00Z",
+    "description": "Core JavaScript concepts, ES6+ features, and best practices",
+    "category": "technical",
+    "totalQuestions": 14,
+    "estimatedTime": 60,
+    "prerequisites": ["basic-programming"],
+    "tags": ["javascript", "es6", "closures", "promises", "async"]
+  },
+  "questions": [
+    {
+      "id": "js-1",
+      "question": "What is hoisting in JavaScript? Explain with examples.",
+      "category": "javascript",
+      "difficulty": "medium",
+      "type": "theory",
+      "estimatedTime": 4,
+      "tags": ["javascript", "hoisting", "fundamentals"],
+      "sampleAnswer": "Hoisting is JavaScript's behavior of moving variable and function declarations to the top of their scope during compilation. Variables declared with 'var' are hoisted and initialized with 'undefined', while 'let' and 'const' are hoisted but not initialized (temporal dead zone).",
+      "codeImplementation": [
+        {
+          "language": "JavaScript",
+          "approach": "general",
+          "code": "// Variable hoisting with var\nconsole.log(x); // undefined (not ReferenceError)\nvar x = 5;\n\n// Function hoisting\nsayHello(); // \"Hello!\" - works because function is hoisted\nfunction sayHello() {\n  console.log(\"Hello!\");\n}\n\n// let/const hoisting (temporal dead zone)\nconsole.log(y); // ReferenceError: Cannot access 'y' before initialization\nlet y = 10;",
+          "timeComplexity": "O(1)",
+          "spaceComplexity": "O(1)",
+          "explanation": "Demonstrates different hoisting behaviors for var, let, const, and functions"
+        }
+      ],
+      "tips": [
+        "Explain the difference between declaration and initialization",
+        "Show temporal dead zone with let/const",
+        "Mention function expressions vs declarations"
+      ],
+      "followUps": [
+        "What happens with function expressions?",
+        "How does hoisting work in different scopes?",
+        "What are best practices to avoid hoisting issues?"
+      ],
+      "industry": ["tech"],
+      "practiceCount": 0,
+      "successRate": 0,
+      "lastPracticed": null
+    },
+    {
+      "id": "js-6",
+      "question": "What is the difference between `let`, `const`, and `var` in JavaScript?",
+      "category": "javascript",
+      "difficulty": "easy",
+      "type": "mcq",
+      "estimatedTime": 2,
+      "tags": ["javascript", "variables", "scope", "hoisting"],
+      "sampleAnswer": "A) `==` checks for value equality with type coercion, while `===` checks for strict equality without type coercion. For example: `'5' == 5` is true, but `'5' === 5` is false.",
+      "codeImplementation": [
+        {
+          "language": "JavaScript",
+          "approach": "general",
+          "code": "// var - function scoped, hoisted\nfunction varExample() {\n  console.log(x); // undefined (hoisted but not initialized)\n  var x = 1;\n  if (true) {\n    var x = 2; // same variable\n  }\n  console.log(x); // 2\n}\n\n// let - block scoped\nfunction letExample() {\n  let y = 1;\n  if (true) {\n    let y = 2; // different variable\n    console.log(y); // 2\n  }\n  console.log(y); // 1\n}\n\n// const - block scoped, immutable binding\nfunction constExample() {\n  const z = 1;\n  // z = 2; // TypeError: Assignment to constant variable\n  \n  const obj = { a: 1 };\n  obj.a = 2; // OK - object mutation allowed\n  console.log(obj); // { a: 2 }\n}",
+          "timeComplexity": "O(1)",
+          "spaceComplexity": "O(1)",
+          "explanation": "Shows scoping and hoisting differences between var, let, and const"
+        }
+      ],
+      "tips": [
+        "Explain hoisting behavior differences",
+        "Demonstrate temporal dead zone with let/const",
+        "Show practical examples of scope differences"
+      ],
+      "followUps": [
+        "When should you use each declaration type?",
+        "What is the temporal dead zone?",
+        "How does block scoping affect performance?"
+      ],
+      "industry": ["tech"],
+      "practiceCount": 0,
+      "successRate": 0,
+      "lastPracticed": null
+    },
+    {
+      "id": "js-12",
+      "question": "Debug this code: Why does this function not work as expected?",
+      "category": "javascript",
+      "difficulty": "medium",
+      "type": "debugging",
+      "estimatedTime": 4,
+      "tags": ["javascript", "debugging", "closures", "hoisting"],
+      "sampleAnswer": "The issue is with variable hoisting and closure. The `var i` is function-scoped, so all setTimeout callbacks reference the same variable `i`, which has value 3 after the loop ends. Solutions: use `let` instead of `var`, or create a closure with IIFE.",
+      "codeImplementation": [
+        {
+          "language": "JavaScript",
+          "approach": "brute-force",
+          "code": "// Buggy code\nfunction createTimers() {\n  for (var i = 0; i < 3; i++) {\n    setTimeout(function() {\n      console.log(i); // Prints 3, 3, 3 instead of 0, 1, 2\n    }, 100);\n  }\n}",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "explanation": "Demonstrates the closure and hoisting issue"
+        },
+        {
+          "language": "JavaScript",
+          "approach": "optimal",
+          "code": "// Solution 1: Use let\nfunction createTimersFixed1() {\n  for (let i = 0; i < 3; i++) {\n    setTimeout(function() {\n      console.log(i); // Prints 0, 1, 2\n    }, 100);\n  }\n}\n\n// Solution 2: IIFE closure\nfunction createTimersFixed2() {\n  for (var i = 0; i < 3; i++) {\n    (function(index) {\n      setTimeout(function() {\n        console.log(index); // Prints 0, 1, 2\n      }, 100);\n    })(i);\n  }\n}",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "explanation": "Shows multiple solutions to fix the closure issue"
+        }
+      ],
+      "tips": [
+        "Explain the difference between var and let scoping",
+        "Show how closures capture variables",
+        "Demonstrate multiple solutions"
+      ],
+      "followUps": [
+        "What other ways can you solve this?",
+        "How does the event loop affect this behavior?",
+        "What would happen with async/await?"
+      ],
+      "industry": ["tech"],
+      "practiceCount": 0,
+      "successRate": 0,
+      "lastPracticed": null
+    },
+    {
+      "id": "js-14",
+      "question": "Implement a function to reverse a string. Provide multiple approaches and analyze their complexity.",
+      "category": "javascript",
+      "difficulty": "easy",
+      "type": "coding",
+      "estimatedTime": 6,
+      "tags": ["javascript", "python", "java", "strings", "algorithms", "coding"],
+      "sampleAnswer": "There are several approaches: 1) Built-in methods (split, reverse, join), 2) Two-pointer technique, 3) Recursion, 4) For loop with string concatenation. The built-in method is most readable, two-pointer is most efficient for arrays, recursion is elegant but uses stack space.",
+      "codeImplementation": [
+        {
+          "language": "JavaScript",
+          "approach": "optimal",
+          "code": "// Approach 1: Built-in methods (Most readable)\nfunction reverseString1(str) {\n    return str.split('').reverse().join('');\n}\n\n// Approach 2: Two-pointer technique\nfunction reverseString2(str) {\n    const arr = str.split('');\n    let left = 0, right = arr.length - 1;\n    \n    while (left < right) {\n        [arr[left], arr[right]] = [arr[right], arr[left]];\n        left++; right--;\n    }\n    \n    return arr.join('');\n}",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "explanation": "Multiple JavaScript approaches showcasing different programming paradigms"
+        },
+        {
+          "language": "Python",
+          "approach": "optimal",
+          "code": "# Approach 1: Slicing (Most Pythonic)\ndef reverse_string_slice(s):\n    return s[::-1]\n\n# Approach 2: Built-in reversed() function\ndef reverse_string_builtin(s):\n    return ''.join(reversed(s))\n\n# Approach 3: Two-pointer technique\ndef reverse_string_two_pointer(s):\n    chars = list(s)\n    left, right = 0, len(chars) - 1\n    \n    while left < right:\n        chars[left], chars[right] = chars[right], chars[left]\n        left += 1\n        right -= 1\n    \n    return ''.join(chars)",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "explanation": "Python implementations showcasing Pythonic approaches"
+        },
+        {
+          "language": "Java",
+          "approach": "optimal",
+          "code": "// Approach 1: StringBuilder (Most efficient)\npublic static String reverseStringBuilder(String str) {\n    return new StringBuilder(str).reverse().toString();\n}\n\n// Approach 2: Character array (Manual reversal)\npublic static String reverseCharArray(String str) {\n    char[] chars = str.toCharArray();\n    int left = 0, right = chars.length - 1;\n    \n    while (left < right) {\n        char temp = chars[left];\n        chars[left] = chars[right];\n        chars[right] = temp;\n        left++; right--;\n    }\n    \n    return new String(chars);\n}",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "explanation": "Java implementations showcasing StringBuilder and character arrays"
+        }
+      ],
+      "tips": [
+        "Discuss trade-offs between readability and performance",
+        "Explain why strings are immutable in Java and JavaScript",
+        "Show how different approaches scale with input size"
+      ],
+      "followUps": [
+        "How would you reverse a string in-place if it were mutable?",
+        "What's the space complexity difference between approaches?",
+        "How would you handle Unicode characters?"
+      ],
+      "industry": ["tech"],
+      "practiceCount": 0,
+      "successRate": 0,
+      "lastPracticed": null
+    }
+  ],
+  "statistics": {
+    "difficultyDistribution": {
+      "easy": 5,
+      "medium": 6,
+      "hard": 3
+    },
+    "typeDistribution": {
+      "theory": 6,
+      "mcq": 3,
+      "coding": 3,
+      "debugging": 2
+    },
+    "averageTime": 4.3,
+    "totalEstimatedTime": 60,
+    "codeQuestions": 8,
+    "questionsWithMultipleLanguages": 1
+  },
+  "codeImplementations": {
+    "totalSolutions": 14,
+    "languageDistribution": {
+      "JavaScript": 14,
+      "Python": 1,
+      "Java": 1
+    },
+    "approachDistribution": {
+      "optimal": 10,
+      "brute-force": 2,
+      "general": 2
+    }
+  },
+  "metadata": {
+    "createdBy": "Interview Prep Team",
+    "reviewedBy": "Senior Developer",
+    "approvalStatus": "approved",
+    "nextReview": "2025-04-07T00:00:00Z",
+    "changeLog": [
+      {
+        "version": "1.2.0",
+        "date": "2025-01-07T18:40:00Z",
+        "changes": ["Added multi-language string reversal question", "Enhanced debugging examples"]
+      },
+      {
+        "version": "1.1.0",
+        "date": "2025-01-07T15:00:00Z",
+        "changes": ["Added closure and hoisting questions", "Improved code examples"]
+      },
+      {
+        "version": "1.0.0",
+        "date": "2025-01-07T10:00:00Z",
+        "changes": ["Initial release with 5 basic questions"]
+      }
+    ]
+  }
+}

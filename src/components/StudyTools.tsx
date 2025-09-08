@@ -106,7 +106,10 @@ export const StudyTools: React.FC = () => {
       // If we already have inline content (localStorage fallback)
       if (typeof file.content === "string" && file.content.length > 0) {
         const mime = file.mimeType || "";
-        if (mime.startsWith("image/") || file.content.startsWith("data:image")) {
+        if (
+          mime.startsWith("image/") ||
+          file.content.startsWith("data:image")
+        ) {
           const ocr = await unifiedAIService.extractTextFromImage(file.content);
           return ocr.success && ocr.data ? ocr.data : "";
         }
@@ -156,14 +159,18 @@ export const StudyTools: React.FC = () => {
             }
             return "";
           }
-          if (mime.startsWith("image/") || downloaded.startsWith("data:image")) {
+          if (
+            mime.startsWith("image/") ||
+            downloaded.startsWith("data:image")
+          ) {
             const ocr = await unifiedAIService.extractTextFromImage(downloaded);
             return ocr.success && ocr.data ? ocr.data : "";
           }
           if (
             mime === "text/plain" ||
             mime.startsWith("text/") ||
-            (file.name && file.name.match(/\.(txt|md|json|js|ts|html|css|csv)$/i))
+            (file.name &&
+              file.name.match(/\.(txt|md|json|js|ts|html|css|csv)$/i))
           ) {
             return decodeTextFromDataUrl(downloaded);
           }
@@ -242,7 +249,11 @@ export const StudyTools: React.FC = () => {
 
   const formatResult = (result: ToolResult) => {
     if (result.type === "flashcards") {
-      type ParsedCard = { question: string; answer: string; reasoning?: string };
+      type ParsedCard = {
+        question: string;
+        answer: string;
+        reasoning?: string;
+      };
       const lines = result.content
         .split("\n")
         .map((l) => l.trim())
@@ -261,7 +272,10 @@ export const StudyTools: React.FC = () => {
         };
       });
 
-      const Flashcard: React.FC<{ card: ParsedCard; idx: number }> = ({ card, idx }) => {
+      const Flashcard: React.FC<{ card: ParsedCard; idx: number }> = ({
+        card,
+        idx,
+      }) => {
         const [flipped, setFlipped] = React.useState(false);
         const toggle = () => setFlipped((f) => !f);
         return (
@@ -275,33 +289,46 @@ export const StudyTools: React.FC = () => {
               }}
             >
               <div
-                className="absolute inset-0 border border-gray-200 rounded-xl bg-white p-4 flex flex-col justify-between"
+                className="absolute inset-0 border border-gray-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 p-4 flex flex-col justify-between"
                 style={{ backfaceVisibility: "hidden" }}
               >
-                <div className="text-xs text-gray-500">Card {idx + 1}</div>
-                <div className="font-medium text-gray-900 line-clamp-4">{card.question}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Card {idx + 1}
+                </div>
+                <div className="font-medium text-gray-900 dark:text-gray-100 line-clamp-4">
+                  {card.question}
+                </div>
                 <div className="flex items-center justify-end">
                   <button
                     onClick={toggle}
-                    className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 hover:border-gray-300 text-gray-700"
+                    className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500 text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700"
                   >
                     Flip
                   </button>
                 </div>
               </div>
               <div
-                className="absolute inset-0 border border-gray-200 rounded-xl bg-white p-4"
-                style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+                className="absolute inset-0 border border-gray-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 p-4"
+                style={{
+                  backfaceVisibility: "hidden",
+                  transform: "rotateY(180deg)",
+                }}
               >
-                <div className="text-xs text-gray-500 mb-1">Answer</div>
-                <div className="font-medium text-gray-900 mb-2">{card.answer}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Answer
+                </div>
+                <div className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+                  {card.answer}
+                </div>
                 {card.reasoning ? (
-                  <div className="text-sm text-gray-600">{card.reasoning}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {card.reasoning}
+                  </div>
                 ) : null}
                 <div className="absolute bottom-4 right-4">
                   <button
                     onClick={toggle}
-                    className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 hover:border-gray-300 text-gray-700"
+                    className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500 text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700"
                   >
                     Flip back
                   </button>
@@ -322,7 +349,9 @@ export const StudyTools: React.FC = () => {
     }
 
     return (
-      <p className="whitespace-pre-wrap text-gray-700">{result.content}</p>
+      <p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+        {result.content}
+      </p>
     );
   };
 
@@ -337,16 +366,21 @@ export const StudyTools: React.FC = () => {
   };
 
   return (
-    <div className="bg-white h-full flex flex-col" data-component="study-tools">
+    <div
+      className="bg-white dark:bg-slate-900 h-full flex flex-col transition-colors duration-300"
+      data-component="study-tools"
+    >
       {/* Header */}
-      <div className="border-b border-gray-200 p-6">
+      <div className="border-b border-gray-200 dark:border-slate-700 p-6">
         <div className="flex items-center mb-4">
-          <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mr-4">
-            <Zap className="w-6 h-6 text-purple-600" />
+          <div className="bg-purple-100 dark:bg-purple-900/30 w-12 h-12 rounded-full flex items-center justify-center mr-4">
+            <Zap className="w-6 h-6 text-purple-600 dark:text-purple-400" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Study Tools</h2>
-            <p className="text-gray-600">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Study Tools
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
               AI-powered tools to enhance your learning
             </p>
           </div>
@@ -370,19 +404,21 @@ export const StudyTools: React.FC = () => {
               >
                 <Icon
                   className={`w-6 h-6 mb-3 ${
-                    isSelected ? "" : "text-gray-400"
+                    isSelected ? "" : "text-gray-400 dark:text-gray-500"
                   }`}
                 />
                 <h3
                   className={`font-medium mb-2 ${
-                    isSelected ? "" : "text-gray-900"
+                    isSelected ? "" : "text-gray-900 dark:text-gray-100"
                   }`}
                 >
                   {tool.name}
                 </h3>
                 <p
                   className={`text-sm ${
-                    isSelected ? "opacity-80" : "text-gray-600"
+                    isSelected
+                      ? "opacity-80"
+                      : "text-gray-600 dark:text-gray-400"
                   }`}
                 >
                   {tool.description}
@@ -404,13 +440,13 @@ export const StudyTools: React.FC = () => {
             {/* Document Selection */}
             {availableDocuments.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Select Document (Optional)
                 </label>
                 <select
                   value={selectedDocument}
                   onChange={(e) => setSelectedDocument(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
                 >
                   <option value="">Choose a document...</option>
                   {availableDocuments.map((doc) => (
@@ -424,7 +460,7 @@ export const StudyTools: React.FC = () => {
 
             {/* Text Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {selectedTool === "explanation"
                   ? "Concept to Explain"
                   : "Text to Analyze"}
@@ -433,7 +469,7 @@ export const StudyTools: React.FC = () => {
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 placeholder={
                   selectedTool === "explanation"
                     ? "Enter a concept you want explained..."
@@ -469,11 +505,11 @@ export const StudyTools: React.FC = () => {
       <div className="flex-1 overflow-auto p-6">
         {results.length === 0 ? (
           <div className="text-center py-12">
-            <Brain className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <Brain className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
               {selectedTool ? "Ready to analyze" : "Select a study tool"}
             </h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               {selectedTool
                 ? "Provide some text or select a document to get started"
                 : "Choose from our AI-powered study tools to enhance your learning experience"}
@@ -484,13 +520,13 @@ export const StudyTools: React.FC = () => {
             {results.map((result, index) => (
               <div
                 key={index}
-                className="border border-gray-200 rounded-lg p-6"
+                className="border border-gray-200 dark:border-slate-700 rounded-lg p-6 bg-white dark:bg-slate-800"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                     {getResultTitle(result.type)}
                   </h3>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
                     {new Date(result.timestamp).toLocaleString()}
                   </span>
                 </div>

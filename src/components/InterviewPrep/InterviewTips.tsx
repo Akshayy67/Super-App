@@ -735,16 +735,23 @@ export const InterviewTips: React.FC = () => {
 
   const getCategoryColor = (color: string) => {
     const colors: Record<string, string> = {
-      purple: "bg-purple-100 text-purple-600 border-purple-200",
-      blue: "bg-blue-100 text-blue-600 border-blue-200",
-      green: "bg-green-100 text-green-600 border-green-200",
-      orange: "bg-orange-100 text-orange-600 border-orange-200",
-      red: "bg-red-100 text-red-600 border-red-200",
-      teal: "bg-teal-100 text-teal-600 border-teal-200",
-      pink: "bg-pink-100 text-pink-600 border-pink-200",
-      indigo: "bg-indigo-100 text-indigo-600 border-indigo-200",
+      purple:
+        "bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800",
+      blue: "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800",
+      green:
+        "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800",
+      orange:
+        "bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800",
+      red: "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800",
+      teal: "bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-800",
+      pink: "bg-pink-50 dark:bg-pink-900/20 text-pink-700 dark:text-pink-400 border-pink-200 dark:border-pink-800",
+      indigo:
+        "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800",
     };
-    return colors[color] || "bg-gray-100 text-gray-600 border-gray-200";
+    return (
+      colors[color] ||
+      "bg-gray-50 dark:bg-gray-900/20 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-800"
+    );
   };
 
   const completionPercentage = Math.round(
@@ -757,7 +764,7 @@ export const InterviewTips: React.FC = () => {
     <div className="space-y-8">
       {isPracticeModeActive && currentPracticeTip ? (
         // Practice Mode View
-        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-md">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-md">
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
@@ -780,14 +787,16 @@ export const InterviewTips: React.FC = () => {
               </button>
             </div>
 
-            <div className="bg-blue-50 p-4 rounded-xl mb-4">
-              <h4 className="font-semibold text-gray-900 mb-2">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl mb-4 border border-blue-100 dark:border-blue-800">
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 {currentPracticeTip.title}
               </h4>
-              <p className="text-gray-700 mb-3">{currentPracticeTip.content}</p>
+              <p className="text-gray-700 dark:text-gray-300 mb-3">
+                {currentPracticeTip.content}
+              </p>
 
-              <div className="bg-white p-4 rounded-lg border border-blue-100">
-                <h5 className="font-medium text-blue-700 mb-2">
+              <div className="bg-white dark:bg-slate-700 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+                <h5 className="font-medium text-blue-700 dark:text-blue-400 mb-2">
                   Practice Task:
                 </h5>
                 <p className="text-gray-700">
@@ -807,7 +816,7 @@ export const InterviewTips: React.FC = () => {
             <div className="mt-4 flex justify-between">
               <button
                 onClick={() => setPracticeResponse("")}
-                className="px-4 py-2 text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-100"
+                className="px-4 py-2 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700"
               >
                 Clear Response
               </button>
@@ -820,17 +829,21 @@ export const InterviewTips: React.FC = () => {
             </div>
 
             {practiceFeedback && (
-              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <h5 className="font-medium text-green-700 mb-2">Feedback:</h5>
-                <p className="text-gray-700">{practiceFeedback}</p>
+              <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <h5 className="font-medium text-green-700 dark:text-green-400 mb-2">
+                  Feedback:
+                </h5>
+                <p className="text-gray-700 dark:text-gray-300">
+                  {practiceFeedback}
+                </p>
               </div>
             )}
           </div>
 
-          <div className="border-t border-gray-200 pt-4 mt-4">
+          <div className="border-t border-gray-200 dark:border-slate-700 pt-4 mt-4">
             <button
               onClick={() => setIsPracticeModeActive(false)}
-              className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center justify-center space-x-2"
+              className="w-full py-3 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg flex items-center justify-center space-x-2"
             >
               <CheckCircle className="w-5 h-5" />
               <span>Complete Practice & Return</span>
@@ -855,17 +868,17 @@ export const InterviewTips: React.FC = () => {
           </div>
 
           {/* Search Bar */}
-          <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-200 dark:border-slate-700 shadow-sm">
             <div className="flex items-center justify-between">
               {/* Search */}
               <div className="relative w-full max-w-md">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="w-5 h-5 text-gray-400" />
+                  <Search className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                 </div>
                 <input
                   type="text"
                   placeholder="Search tips..."
-                  className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -873,90 +886,8 @@ export const InterviewTips: React.FC = () => {
             </div>
           </div>
 
-          {/* Interview Timeline */}
-          {interviewDate && prepTimeline.length > 0 && (
-            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <Calendar className="w-6 h-6 text-blue-600" />
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Your Interview Prep Timeline
-                  </h3>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-500">Interview Date:</span>
-                  <input
-                    type="date"
-                    value={interviewDate.toISOString().split("T")[0]}
-                    onChange={(e) => setInterviewDate(new Date(e.target.value))}
-                    className="text-sm border border-gray-300 rounded-md px-2 py-1"
-                  />
-                </div>
-              </div>
-
-              <div className="relative">
-                {prepTimeline.map((step, index) => (
-                  <div key={index} className="mb-4 last:mb-0">
-                    <div className="flex items-start">
-                      <div className="relative flex-shrink-0">
-                        <div
-                          className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-                            step.completed
-                              ? "bg-green-100 border-green-500"
-                              : "bg-blue-100 border-blue-500"
-                          }`}
-                        >
-                          <span className="text-sm font-medium">
-                            {step.day}
-                          </span>
-                        </div>
-                        {index < prepTimeline.length - 1 && (
-                          <div className="absolute h-full top-10 left-1/2 border-l-2 border-gray-200 -translate-x-1/2"></div>
-                        )}
-                      </div>
-
-                      <div className="ml-4 flex-1">
-                        <div
-                          className={`bg-white p-4 rounded-lg border ${
-                            step.completed
-                              ? "border-green-200"
-                              : "border-blue-200"
-                          }`}
-                        >
-                          <h4 className="text-lg font-semibold text-gray-900 mb-1">
-                            {step.title}
-                          </h4>
-                          <p className="text-gray-600 text-sm mb-3">
-                            {step.description}
-                          </p>
-
-                          <div className="flex flex-wrap gap-2">
-                            {step.tipIds.map((tipId) => {
-                              const tip = tipCategories
-                                .flatMap((cat) => cat.tips)
-                                .find((t) => t.id === tipId);
-
-                              return tip ? (
-                                <span
-                                  key={tipId}
-                                  className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-full"
-                                >
-                                  {tip.title}
-                                </span>
-                              ) : null;
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Progress Bar */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <TrendingUp className="w-6 h-6 text-blue-600" />
@@ -1073,7 +1004,7 @@ export const InterviewTips: React.FC = () => {
 
                   {/* Category Content */}
                   {isExpanded && (
-                    <div className="bg-gradient-to-b from-gray-50 to-white border-t-0 border border-gray-100 rounded-b-2xl shadow-inner">
+                    <div className="bg-gradient-to-b from-gray-50 to-white dark:from-slate-800 dark:to-slate-800 border-t-0 border border-gray-100 dark:border-slate-700 rounded-b-2xl shadow-inner">
                       <div className="grid grid-cols-1 gap-6 p-6">
                         {category.tips.map((tip) => {
                           const isCompleted = completedTips.includes(tip.id);
@@ -1083,19 +1014,19 @@ export const InterviewTips: React.FC = () => {
                           switch (tip.importance) {
                             case "high":
                               accentStyles =
-                                "border-l-red-500 bg-gradient-to-r from-red-50 via-red-50/20 to-white";
+                                "border-l-red-500 bg-gradient-to-r from-red-50/50 via-red-50/10 to-white dark:from-red-900/20 dark:via-red-900/5 dark:to-slate-800";
                               break;
                             case "medium":
                               accentStyles =
-                                "border-l-amber-500 bg-gradient-to-r from-amber-50 via-amber-50/20 to-white";
+                                "border-l-amber-500 bg-gradient-to-r from-amber-50/50 via-amber-50/10 to-white dark:from-amber-900/20 dark:via-amber-900/5 dark:to-slate-800";
                               break;
                             case "low":
                               accentStyles =
-                                "border-l-green-500 bg-gradient-to-r from-green-50 via-green-50/20 to-white";
+                                "border-l-green-500 bg-gradient-to-r from-green-50/50 via-green-50/10 to-white dark:from-green-900/20 dark:via-green-900/5 dark:to-slate-800";
                               break;
                             default:
                               accentStyles =
-                                "border-l-blue-400 bg-gradient-to-r from-blue-50 via-blue-50/20 to-white";
+                                "border-l-blue-400 bg-gradient-to-r from-blue-50/50 via-blue-50/10 to-white dark:from-blue-900/20 dark:via-blue-900/5 dark:to-slate-800";
                           }
 
                           return (
@@ -1128,15 +1059,15 @@ export const InterviewTips: React.FC = () => {
                                     }}
                                     className={`ml-3 p-2.5 rounded-full transition-all duration-300 ${
                                       isCompleted
-                                        ? "bg-green-100 text-green-600 hover:bg-green-200 shadow-sm"
-                                        : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                                        ? "bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30 shadow-sm border border-green-200 dark:border-green-800"
+                                        : "bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-slate-600 border border-gray-200 dark:border-slate-600"
                                     }`}
                                   >
                                     <CheckCircle className="w-5 h-5" />
                                   </button>
                                 </div>
 
-                                <p className="text-gray-700 mb-5 leading-relaxed text-base border-l-2 pl-4 border-gray-200 ml-1 py-1.5">
+                                <p className="text-gray-700 dark:text-gray-300 mb-5 leading-relaxed text-base border-l-2 pl-4 border-gray-200 dark:border-slate-600 ml-1 py-1.5">
                                   {tip.content}
                                 </p>
 
@@ -1145,7 +1076,7 @@ export const InterviewTips: React.FC = () => {
                                   <div className="mt-4 border-t border-gray-100 pt-4">
                                     <div className="flex flex-wrap gap-2 mb-3">
                                       {tip.examples && (
-                                        <div className="flex items-center space-x-1 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-medium">
+                                        <div className="flex items-center space-x-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full text-xs font-medium border border-emerald-200 dark:border-emerald-800">
                                           <CheckCircle className="w-3 h-3" />
                                           <span>
                                             {tip.examples.length} Examples
@@ -1154,7 +1085,7 @@ export const InterviewTips: React.FC = () => {
                                       )}
 
                                       {tip.doNot && (
-                                        <div className="flex items-center space-x-1 bg-red-50 text-red-700 px-3 py-1 rounded-full text-xs font-medium">
+                                        <div className="flex items-center space-x-1 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-3 py-1 rounded-full text-xs font-medium border border-red-200 dark:border-red-800">
                                           <AlertCircle className="w-3 h-3" />
                                           <span>
                                             {tip.doNot.length} Things to Avoid
@@ -1163,7 +1094,7 @@ export const InterviewTips: React.FC = () => {
                                       )}
 
                                       {tip.practicePrompt && (
-                                        <div className="flex items-center space-x-1 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
+                                        <div className="flex items-center space-x-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-medium border border-blue-200 dark:border-blue-800">
                                           <Play className="w-3 h-3" />
                                           <span>Practice Available</span>
                                         </div>
@@ -1175,7 +1106,7 @@ export const InterviewTips: React.FC = () => {
                                         {tip.examples.map((example, idx) => (
                                           <div
                                             key={idx}
-                                            className="flex items-start text-sm text-gray-700 bg-emerald-50 px-3 py-2 rounded-lg"
+                                            className="flex items-start text-sm text-gray-700 dark:text-gray-300 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800"
                                           >
                                             <CheckCircle className="w-3.5 h-3.5 text-emerald-500 mt-0.5 mr-2 flex-shrink-0" />
                                             <span>{example}</span>
@@ -1189,7 +1120,7 @@ export const InterviewTips: React.FC = () => {
                                         {tip.doNot.map((dont, idx) => (
                                           <div
                                             key={idx}
-                                            className="flex items-start text-sm text-gray-700 bg-red-50 px-3 py-2 rounded-lg"
+                                            className="flex items-start text-sm text-gray-700 dark:text-gray-300 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg border border-red-200 dark:border-red-800"
                                           >
                                             <AlertCircle className="w-3.5 h-3.5 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
                                             <span>{dont}</span>
@@ -1208,7 +1139,7 @@ export const InterviewTips: React.FC = () => {
                                       {tip.industry.map((ind, idx) => (
                                         <span
                                           key={idx}
-                                          className="text-xs bg-gray-100/80 text-gray-700 font-medium px-3 py-1 rounded-full border border-gray-200/50 shadow-sm"
+                                          className="text-xs bg-gray-100/80 dark:bg-slate-700/80 text-gray-700 dark:text-gray-300 font-medium px-3 py-1 rounded-full border border-gray-200/50 dark:border-slate-600/50 shadow-sm"
                                         >
                                           {ind.charAt(0).toUpperCase() +
                                             ind.slice(1)}

@@ -21,10 +21,10 @@ interface JAMSessionProps {
 }
 
 enum SessionState {
-  TOPIC_DISPLAY = 'TOPIC_DISPLAY',
-  PREPARATION = 'PREPARATION',
-  SPEAKING = 'SPEAKING',
-  COMPLETED = 'COMPLETED',
+  TOPIC_DISPLAY = "TOPIC_DISPLAY",
+  PREPARATION = "PREPARATION",
+  SPEAKING = "SPEAKING",
+  COMPLETED = "COMPLETED",
 }
 
 interface JAMFeedback {
@@ -38,7 +38,9 @@ interface JAMFeedback {
 }
 
 export const JAMSession: React.FC<JAMSessionProps> = ({ onBack }) => {
-  const [sessionState, setSessionState] = useState<SessionState>(SessionState.TOPIC_DISPLAY);
+  const [sessionState, setSessionState] = useState<SessionState>(
+    SessionState.TOPIC_DISPLAY
+  );
   const [currentTopic, setCurrentTopic] = useState<string>("");
   const [preparationTime, setPreparationTime] = useState(30);
   const [speakingTime, setSpeakingTime] = useState(60);
@@ -57,34 +59,36 @@ export const JAMSession: React.FC<JAMSessionProps> = ({ onBack }) => {
 
   // Initialize speech recognition
   useEffect(() => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+      const SpeechRecognition =
+        (window as any).webkitSpeechRecognition ||
+        (window as any).SpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = true;
       recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
+      recognitionRef.current.lang = "en-US";
 
       recognitionRef.current.onresult = (event: any) => {
-        let finalTranscript = '';
-        let interimTranscript = '';
-        
+        let finalTranscript = "";
+        let interimTranscript = "";
+
         for (let i = event.resultIndex; i < event.results.length; i++) {
           if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript + ' ';
+            finalTranscript += event.results[i][0].transcript + " ";
           } else {
             interimTranscript += event.results[i][0].transcript;
           }
         }
-        
+
         if (finalTranscript) {
-          setTranscript(prev => prev + finalTranscript);
+          setTranscript((prev) => prev + finalTranscript);
         }
-        
+
         setInterimTranscript(interimTranscript);
       };
 
       recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
+        console.error("Speech recognition error:", event.error);
       };
     }
 
@@ -92,8 +96,10 @@ export const JAMSession: React.FC<JAMSessionProps> = ({ onBack }) => {
     setCurrentTopic(getRandomJAMTopic());
 
     return () => {
-      if (preparationIntervalRef.current) clearInterval(preparationIntervalRef.current);
-      if (speakingIntervalRef.current) clearInterval(speakingIntervalRef.current);
+      if (preparationIntervalRef.current)
+        clearInterval(preparationIntervalRef.current);
+      if (speakingIntervalRef.current)
+        clearInterval(speakingIntervalRef.current);
       if (recognitionRef.current) recognitionRef.current.stop();
     };
   }, []);
@@ -101,9 +107,9 @@ export const JAMSession: React.FC<JAMSessionProps> = ({ onBack }) => {
   const startPreparation = () => {
     setSessionState(SessionState.PREPARATION);
     setPreparationTime(30);
-    
+
     preparationIntervalRef.current = setInterval(() => {
-      setPreparationTime(prev => {
+      setPreparationTime((prev) => {
         if (prev <= 1) {
           clearInterval(preparationIntervalRef.current!);
           startSpeaking();
@@ -125,7 +131,7 @@ export const JAMSession: React.FC<JAMSessionProps> = ({ onBack }) => {
       // Start audio recording
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
-      
+
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
@@ -133,9 +139,11 @@ export const JAMSession: React.FC<JAMSessionProps> = ({ onBack }) => {
       };
 
       mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/wav",
+        });
         setAudioBlob(audioBlob);
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       };
 
       mediaRecorderRef.current.start();
@@ -148,7 +156,7 @@ export const JAMSession: React.FC<JAMSessionProps> = ({ onBack }) => {
 
       // Start speaking timer
       speakingIntervalRef.current = setInterval(() => {
-        setSpeakingTime(prev => {
+        setSpeakingTime((prev) => {
           if (prev <= 1) {
             clearInterval(speakingIntervalRef.current!);
             stopSpeaking();
@@ -157,24 +165,26 @@ export const JAMSession: React.FC<JAMSessionProps> = ({ onBack }) => {
           return prev - 1;
         });
       }, 1000);
-
     } catch (error) {
-      console.error('Error starting recording:', error);
-      alert('Could not access microphone. Please check permissions.');
+      console.error("Error starting recording:", error);
+      alert("Could not access microphone. Please check permissions.");
     }
   };
 
   const stopSpeaking = () => {
     setIsRecording(false);
-    
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state === "recording"
+    ) {
       mediaRecorderRef.current.stop();
     }
-    
+
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
-    
+
     if (speakingIntervalRef.current) {
       clearInterval(speakingIntervalRef.current);
     }
@@ -184,12 +194,12 @@ export const JAMSession: React.FC<JAMSessionProps> = ({ onBack }) => {
 
   const generateFeedback = async () => {
     if (!transcript.trim()) {
-      alert('No speech detected. Please try again.');
+      alert("No speech detected. Please try again.");
       return;
     }
 
     setIsGeneratingFeedback(true);
-    
+
     try {
       const prompt = `Analyze this JAM (Just A Minute) session performance and provide detailed feedback.
 
@@ -216,7 +226,7 @@ Evaluate based on:
 Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident delivery, and engaging content within the time limit.`;
 
       const response = await aiService.generateResponse(prompt);
-      
+
       if (response.success && response.data) {
         try {
           // Try to extract JSON from the response
@@ -232,12 +242,15 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
               content: 75,
               confidence: 75,
               strengths: ["Completed the session", "Stayed on topic"],
-              improvements: ["Practice more for better fluency", "Add more specific examples"],
-              detailedFeedback: response.data
+              improvements: [
+                "Practice more for better fluency",
+                "Add more specific examples",
+              ],
+              detailedFeedback: response.data,
             });
           }
         } catch (parseError) {
-          console.error('Failed to parse feedback JSON:', parseError);
+          console.error("Failed to parse feedback JSON:", parseError);
           setFeedback({
             overallScore: 70,
             fluency: 70,
@@ -245,15 +258,16 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
             confidence: 70,
             strengths: ["Participated in the session"],
             improvements: ["Continue practicing JAM sessions"],
-            detailedFeedback: "Feedback generated successfully. Keep practicing to improve your JAM skills!"
+            detailedFeedback:
+              "Feedback generated successfully. Keep practicing to improve your JAM skills!",
           });
         }
       } else {
-        throw new Error(response.error || 'Failed to generate feedback');
+        throw new Error(response.error || "Failed to generate feedback");
       }
     } catch (error) {
-      console.error('Error generating feedback:', error);
-      alert('Failed to generate feedback. Please try again.');
+      console.error("Error generating feedback:", error);
+      alert("Failed to generate feedback. Please try again.");
     } finally {
       setIsGeneratingFeedback(false);
     }
@@ -269,8 +283,9 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
     setTranscript("");
     setInterimTranscript("");
     setFeedback(null);
-    
-    if (preparationIntervalRef.current) clearInterval(preparationIntervalRef.current);
+
+    if (preparationIntervalRef.current)
+      clearInterval(preparationIntervalRef.current);
     if (speakingIntervalRef.current) clearInterval(speakingIntervalRef.current);
   };
 
@@ -289,7 +304,7 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
@@ -303,12 +318,14 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
                 <MessageSquare className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">JAM Session</h2>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  JAM Session
+                </h2>
                 <p className="text-sm text-gray-500">Just A Minute Practice</p>
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             {sessionState === SessionState.PREPARATION && (
               <div className="flex items-center space-x-2 bg-yellow-100 px-3 py-2 rounded-lg">
@@ -318,7 +335,7 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
                 </span>
               </div>
             )}
-            
+
             {sessionState === SessionState.SPEAKING && (
               <div className="flex items-center space-x-2 bg-red-100 px-3 py-2 rounded-lg">
                 <Clock className="w-4 h-4 text-red-600" />
@@ -327,11 +344,13 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
                 </span>
               </div>
             )}
-            
+
             {isRecording && (
               <div className="flex items-center space-x-2 bg-red-500 px-3 py-2 rounded-lg animate-pulse">
                 <div className="w-2 h-2 bg-white rounded-full" />
-                <span className="text-sm font-medium text-white">Recording</span>
+                <span className="text-sm font-medium text-white">
+                  Recording
+                </span>
               </div>
             )}
           </div>
@@ -346,33 +365,39 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
               <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <MessageSquare className="w-10 h-10 text-white" />
               </div>
-              
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Your JAM Topic</h3>
-              
-              <div className="bg-white rounded-2xl p-6 border border-purple-100 shadow-lg mb-6">
+
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                Your JAM Topic
+              </h3>
+
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-purple-100 dark:border-purple-800 shadow-lg mb-6">
                 <p className="text-xl font-semibold text-purple-900 leading-relaxed">
                   "{currentTopic}"
                 </p>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-white/50 rounded-xl p-4 border border-purple-100">
                   <div className="flex items-center justify-center space-x-2 mb-2">
                     <Clock className="w-5 h-5 text-purple-600" />
-                    <span className="font-semibold text-purple-900">Preparation</span>
+                    <span className="font-semibold text-purple-900">
+                      Preparation
+                    </span>
                   </div>
                   <p className="text-2xl font-bold text-purple-700">30 sec</p>
                 </div>
-                
+
                 <div className="bg-white/50 rounded-xl p-4 border border-purple-100">
                   <div className="flex items-center justify-center space-x-2 mb-2">
                     <Mic className="w-5 h-5 text-purple-600" />
-                    <span className="font-semibold text-purple-900">Speaking</span>
+                    <span className="font-semibold text-purple-900">
+                      Speaking
+                    </span>
                   </div>
                   <p className="text-2xl font-bold text-purple-700">1 min</p>
                 </div>
               </div>
-              
+
               <div className="space-y-4">
                 <button
                   onClick={startPreparation}
@@ -380,7 +405,7 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
                 >
                   Start JAM Session
                 </button>
-                
+
                 <button
                   onClick={() => setCurrentTopic(getRandomJAMTopic())}
                   className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
@@ -389,10 +414,12 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
                 </button>
               </div>
             </div>
-            
+
             {/* Instructions */}
             <div className="bg-blue-50 rounded-2xl p-6 border border-blue-200">
-              <h4 className="text-lg font-semibold text-blue-900 mb-4">JAM Rules & Tips</h4>
+              <h4 className="text-lg font-semibold text-blue-900 mb-4">
+                JAM Rules & Tips
+              </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
                 <ul className="space-y-2">
                   <li className="flex items-start space-x-2">
@@ -431,19 +458,26 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
           <div className="max-w-xl mx-auto text-center space-y-8">
             <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-3xl p-8 border border-yellow-200">
               <div className="w-24 h-24 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span className="text-3xl font-bold text-white">{preparationTime}</span>
+                <span className="text-3xl font-bold text-white">
+                  {preparationTime}
+                </span>
               </div>
-              
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Preparation Time</h3>
-              
-              <div className="bg-white rounded-2xl p-6 border border-yellow-100 shadow-lg mb-6">
-                <p className="text-lg font-semibold text-yellow-900 mb-2">Your Topic:</p>
+
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                Preparation Time
+              </h3>
+
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-yellow-100 dark:border-yellow-800 shadow-lg mb-6">
+                <p className="text-lg font-semibold text-yellow-900 mb-2">
+                  Your Topic:
+                </p>
                 <p className="text-xl text-gray-800">"{currentTopic}"</p>
               </div>
-              
+
               <div className="bg-yellow-100 rounded-xl p-4 border border-yellow-200">
                 <p className="text-sm text-yellow-800">
-                  Use this time to organize your thoughts, think of examples, and structure your response.
+                  Use this time to organize your thoughts, think of examples,
+                  and structure your response.
                 </p>
               </div>
             </div>
@@ -454,22 +488,28 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
           <div className="max-w-xl mx-auto text-center space-y-8">
             <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-3xl p-8 border border-red-200">
               <div className="w-24 h-24 bg-gradient-to-br from-red-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span className="text-3xl font-bold text-white">{speakingTime}</span>
+                <span className="text-3xl font-bold text-white">
+                  {speakingTime}
+                </span>
               </div>
-              
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Speaking Time</h3>
-              
-              <div className="bg-white rounded-2xl p-6 border border-red-100 shadow-lg mb-6">
-                <p className="text-lg font-semibold text-red-900 mb-2">Your Topic:</p>
+
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                Speaking Time
+              </h3>
+
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-red-100 dark:border-red-800 shadow-lg mb-6">
+                <p className="text-lg font-semibold text-red-900 mb-2">
+                  Your Topic:
+                </p>
                 <p className="text-xl text-gray-800">"{currentTopic}"</p>
               </div>
-              
+
               <div className="flex items-center justify-center space-x-4 mb-6">
                 <div className="flex items-center space-x-2 bg-red-500 px-4 py-2 rounded-full text-white">
                   <Mic className="w-5 h-5" />
                   <span className="font-medium">Recording...</span>
                 </div>
-                
+
                 {recognitionRef.current && (
                   <div className="flex items-center space-x-2 bg-blue-500 px-4 py-2 rounded-full text-white">
                     <Headphones className="w-5 h-5" />
@@ -477,7 +517,7 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
                   </div>
                 )}
               </div>
-              
+
               <button
                 onClick={stopSpeaking}
                 className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
@@ -485,38 +525,50 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
                 Stop Early
               </button>
             </div>
-            
-                         {/* Live transcript - Always visible during speaking */}
-             <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
-               <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                 <Headphones className="w-5 h-5 mr-2 text-blue-600" />
-                 Live Transcript
-                 {!transcript && <span className="ml-2 text-sm text-gray-500">(Start speaking...)</span>}
-               </h4>
-               <div className="bg-white rounded-lg p-4 border border-gray-100 min-h-32 max-h-48 overflow-y-auto">
-                 {transcript || interimTranscript ? (
-                   <div className="text-base leading-relaxed">
-                     <span className="text-gray-800">{transcript}</span>
-                     <span className="text-blue-600 opacity-75">{interimTranscript}</span>
-                     <span className="inline-block w-0.5 h-5 bg-blue-500 animate-pulse ml-1"></span>
-                   </div>
-                 ) : (
-                   <p className="text-gray-400 italic text-center py-4">
-                     Your words will appear here as you speak...
-                   </p>
-                 )}
-               </div>
-               {(transcript || interimTranscript) && (
-                 <div className="mt-2 flex justify-between text-xs text-gray-500">
-                   <span>
-                     Word count: {(transcript + interimTranscript).trim().split(/\s+/).filter(word => word.length > 0).length}
-                   </span>
-                   <span className="text-blue-600">
-                     {interimTranscript && "● Live transcription"}
-                   </span>
-                 </div>
-               )}
-             </div>
+
+            {/* Live transcript - Always visible during speaking */}
+            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+              <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                <Headphones className="w-5 h-5 mr-2 text-blue-600" />
+                Live Transcript
+                {!transcript && (
+                  <span className="ml-2 text-sm text-gray-500">
+                    (Start speaking...)
+                  </span>
+                )}
+              </h4>
+              <div className="bg-white rounded-lg p-4 border border-gray-100 min-h-32 max-h-48 overflow-y-auto">
+                {transcript || interimTranscript ? (
+                  <div className="text-base leading-relaxed">
+                    <span className="text-gray-800">{transcript}</span>
+                    <span className="text-blue-600 opacity-75">
+                      {interimTranscript}
+                    </span>
+                    <span className="inline-block w-0.5 h-5 bg-blue-500 animate-pulse ml-1"></span>
+                  </div>
+                ) : (
+                  <p className="text-gray-400 italic text-center py-4">
+                    Your words will appear here as you speak...
+                  </p>
+                )}
+              </div>
+              {(transcript || interimTranscript) && (
+                <div className="mt-2 flex justify-between text-xs text-gray-500">
+                  <span>
+                    Word count:{" "}
+                    {
+                      (transcript + interimTranscript)
+                        .trim()
+                        .split(/\s+/)
+                        .filter((word) => word.length > 0).length
+                    }
+                  </span>
+                  <span className="text-blue-600">
+                    {interimTranscript && "● Live transcription"}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -526,56 +578,80 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
               <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <CheckCircle className="w-10 h-10 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Session Complete!</h3>
-              <p className="text-gray-600">Great job completing your JAM session on "{currentTopic}"</p>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                Session Complete!
+              </h3>
+              <p className="text-gray-600">
+                Great job completing your JAM session on "{currentTopic}"
+              </p>
             </div>
-            
+
             {/* Transcript */}
             {transcript && (
               <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Your Speech Transcript</h4>
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                  Your Speech Transcript
+                </h4>
                 <div className="bg-white rounded-lg p-4 border border-gray-100">
                   <p className="text-gray-700 leading-relaxed">{transcript}</p>
                 </div>
               </div>
             )}
-            
+
             {/* Feedback Section */}
             {feedback ? (
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl p-8 border border-blue-200">
                 <div className="flex items-center space-x-3 mb-6">
                   <BarChart className="w-8 h-8 text-blue-600" />
-                  <h4 className="text-2xl font-bold text-blue-900">AI Feedback Analysis</h4>
+                  <h4 className="text-2xl font-bold text-blue-900">
+                    AI Feedback Analysis
+                  </h4>
                 </div>
-                
+
                 {/* Scores */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="bg-white rounded-xl p-4 border border-blue-100 text-center">
                     <p className="text-sm text-gray-600 mb-1">Overall</p>
-                    <p className={`text-2xl font-bold px-2 py-1 rounded ${getScoreColor(feedback.overallScore)}`}>
+                    <p
+                      className={`text-2xl font-bold px-2 py-1 rounded ${getScoreColor(
+                        feedback.overallScore
+                      )}`}
+                    >
                       {feedback.overallScore}
                     </p>
                   </div>
                   <div className="bg-white rounded-xl p-4 border border-blue-100 text-center">
                     <p className="text-sm text-gray-600 mb-1">Fluency</p>
-                    <p className={`text-2xl font-bold px-2 py-1 rounded ${getScoreColor(feedback.fluency)}`}>
+                    <p
+                      className={`text-2xl font-bold px-2 py-1 rounded ${getScoreColor(
+                        feedback.fluency
+                      )}`}
+                    >
                       {feedback.fluency}
                     </p>
                   </div>
                   <div className="bg-white rounded-xl p-4 border border-blue-100 text-center">
                     <p className="text-sm text-gray-600 mb-1">Content</p>
-                    <p className={`text-2xl font-bold px-2 py-1 rounded ${getScoreColor(feedback.content)}`}>
+                    <p
+                      className={`text-2xl font-bold px-2 py-1 rounded ${getScoreColor(
+                        feedback.content
+                      )}`}
+                    >
                       {feedback.content}
                     </p>
                   </div>
                   <div className="bg-white rounded-xl p-4 border border-blue-100 text-center">
                     <p className="text-sm text-gray-600 mb-1">Confidence</p>
-                    <p className={`text-2xl font-bold px-2 py-1 rounded ${getScoreColor(feedback.confidence)}`}>
+                    <p
+                      className={`text-2xl font-bold px-2 py-1 rounded ${getScoreColor(
+                        feedback.confidence
+                      )}`}
+                    >
                       {feedback.confidence}
                     </p>
                   </div>
                 </div>
-                
+
                 {/* Detailed Feedback */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div className="bg-white rounded-xl p-6 border border-green-100">
@@ -592,7 +668,7 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
                       ))}
                     </ul>
                   </div>
-                  
+
                   <div className="bg-white rounded-xl p-6 border border-orange-100">
                     <h5 className="text-lg font-semibold text-orange-800 mb-3 flex items-center">
                       <AlertCircle className="w-5 h-5 mr-2" />
@@ -608,10 +684,14 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
                     </ul>
                   </div>
                 </div>
-                
+
                 <div className="bg-white rounded-xl p-6 border border-blue-100">
-                  <h5 className="text-lg font-semibold text-blue-800 mb-3">Detailed Analysis</h5>
-                  <p className="text-gray-700 leading-relaxed">{feedback.detailedFeedback}</p>
+                  <h5 className="text-lg font-semibold text-blue-800 mb-3">
+                    Detailed Analysis
+                  </h5>
+                  <p className="text-gray-700 leading-relaxed">
+                    {feedback.detailedFeedback}
+                  </p>
                 </div>
               </div>
             ) : (
@@ -621,8 +701,8 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
                   disabled={isGeneratingFeedback || !transcript.trim()}
                   className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 ${
                     isGeneratingFeedback || !transcript.trim()
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl'
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl"
                   }`}
                 >
                   {isGeneratingFeedback ? (
@@ -639,7 +719,7 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
                 </button>
               </div>
             )}
-            
+
             {/* Action Buttons */}
             <div className="flex justify-center space-x-4">
               <button
@@ -649,7 +729,7 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
                 <RotateCcw className="w-5 h-5" />
                 <span>New Session</span>
               </button>
-              
+
               <button
                 onClick={onBack}
                 className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"

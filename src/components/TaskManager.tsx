@@ -263,19 +263,19 @@ export const TaskManager: React.FC = () => {
     try {
       // Completed tasks are never overdue
       if (task.status === "completed") return false;
-      
+
       // Check if dueDate is valid
       if (!task.dueDate || isNaN(new Date(task.dueDate).getTime())) {
         return false;
       }
-      
+
       const taskDate = new Date(task.dueDate);
       const today = new Date();
-      
+
       // Compare dates at start of day for accurate comparison
       const taskStartOfDay = startOfDay(taskDate);
       const todayStartOfDay = startOfDay(today);
-      
+
       // Task is overdue if today is after the due date
       return isAfter(todayStartOfDay, taskStartOfDay);
     } catch (error) {
@@ -308,7 +308,8 @@ export const TaskManager: React.FC = () => {
               // If both completed keep most recently created first (fallback behaviour)
               if (a.status === "completed" && b.status === "completed") {
                 return (
-                  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                  new Date(b.createdAt).getTime() -
+                  new Date(a.createdAt).getTime()
                 );
               }
 
@@ -371,12 +372,12 @@ export const TaskManager: React.FC = () => {
             try {
               const aDate = new Date(a.dueDate);
               const bDate = new Date(b.dueDate);
-              
+
               // Handle invalid dates
               if (isNaN(aDate.getTime()) && isNaN(bDate.getTime())) return 0;
               if (isNaN(aDate.getTime())) return 1; // Invalid dates at the end
               if (isNaN(bDate.getTime())) return -1;
-              
+
               return aDate.getTime() - bDate.getTime();
             } catch (error) {
               console.error("Error in dueDate sort:", error, { a, b });
@@ -391,15 +392,15 @@ export const TaskManager: React.FC = () => {
               const priorityDiff =
                 priorityOrder[b.priority] - priorityOrder[a.priority];
               if (priorityDiff !== 0) return priorityDiff;
-              
+
               // Secondary sort by due date
               const aDate = new Date(a.dueDate);
               const bDate = new Date(b.dueDate);
-              
+
               if (isNaN(aDate.getTime()) && isNaN(bDate.getTime())) return 0;
               if (isNaN(aDate.getTime())) return 1;
               if (isNaN(bDate.getTime())) return -1;
-              
+
               return aDate.getTime() - bDate.getTime();
             } catch (error) {
               console.error("Error in priority sort:", error, { a, b });
@@ -412,11 +413,11 @@ export const TaskManager: React.FC = () => {
             try {
               const aDate = new Date(a.createdAt);
               const bDate = new Date(b.createdAt);
-              
+
               if (isNaN(aDate.getTime()) && isNaN(bDate.getTime())) return 0;
               if (isNaN(aDate.getTime())) return 1;
               if (isNaN(bDate.getTime())) return -1;
-              
+
               return bDate.getTime() - aDate.getTime();
             } catch (error) {
               console.error("Error in created sort:", error, { a, b });
@@ -449,24 +450,25 @@ export const TaskManager: React.FC = () => {
       let filteredTasks: Task[] = [...tasks];
 
       // Apply advanced filters
-      
+
       // Subject filter (multiple selection)
       if (selectedSubjects.length > 0) {
-        filteredTasks = filteredTasks.filter((task) => 
-          task.subject && selectedSubjects.includes(task.subject.trim())
+        filteredTasks = filteredTasks.filter(
+          (task) =>
+            task.subject && selectedSubjects.includes(task.subject.trim())
         );
       }
 
       // Priority filter (multiple selection)
       if (selectedPriorities.length > 0) {
-        filteredTasks = filteredTasks.filter((task) => 
+        filteredTasks = filteredTasks.filter((task) =>
           selectedPriorities.includes(task.priority)
         );
       }
 
       // Status filter (multiple selection)
       if (selectedStatuses.length > 0) {
-        filteredTasks = filteredTasks.filter((task) => 
+        filteredTasks = filteredTasks.filter((task) =>
           selectedStatuses.includes(task.status)
         );
       }
@@ -476,10 +478,14 @@ export const TaskManager: React.FC = () => {
         filteredTasks = filteredTasks.filter((task) => {
           const taskDate = new Date(task.dueDate);
           if (isNaN(taskDate.getTime())) return false;
-          
-          const startDate = dateRange.startDate ? new Date(dateRange.startDate) : null;
-          const endDate = dateRange.endDate ? new Date(dateRange.endDate) : null;
-          
+
+          const startDate = dateRange.startDate
+            ? new Date(dateRange.startDate)
+            : null;
+          const endDate = dateRange.endDate
+            ? new Date(dateRange.endDate)
+            : null;
+
           if (startDate && endDate) {
             return taskDate >= startDate && taskDate <= endDate;
           } else if (startDate) {
@@ -487,7 +493,7 @@ export const TaskManager: React.FC = () => {
           } else if (endDate) {
             return taskDate <= endDate;
           }
-          
+
           return true;
         });
       }
@@ -497,12 +503,20 @@ export const TaskManager: React.FC = () => {
         const query = searchQuery.toLowerCase().trim();
         filteredTasks = filteredTasks.filter((task) => {
           const titleMatch = task.title.toLowerCase().includes(query);
-          const descriptionMatch = task.description.toLowerCase().includes(query);
+          const descriptionMatch = task.description
+            .toLowerCase()
+            .includes(query);
           const subjectMatch = task.subject.toLowerCase().includes(query);
           const priorityMatch = task.priority.toLowerCase().includes(query);
           const statusMatch = task.status.toLowerCase().includes(query);
-          
-          return titleMatch || descriptionMatch || subjectMatch || priorityMatch || statusMatch;
+
+          return (
+            titleMatch ||
+            descriptionMatch ||
+            subjectMatch ||
+            priorityMatch ||
+            statusMatch
+          );
         });
       }
 
@@ -563,7 +577,7 @@ export const TaskManager: React.FC = () => {
   // Dynamic filter options
   const getAvailableSubjects = () => {
     const subjects = new Set<string>();
-    tasks.forEach(task => {
+    tasks.forEach((task) => {
       if (task.subject && task.subject.trim()) {
         subjects.add(task.subject.trim());
       }
@@ -573,20 +587,23 @@ export const TaskManager: React.FC = () => {
 
   const getAvailablePriorities = () => {
     const priorities = new Set<string>();
-    tasks.forEach(task => {
+    tasks.forEach((task) => {
       if (task.priority) {
         priorities.add(task.priority);
       }
     });
     return Array.from(priorities).sort((a, b) => {
       const priorityOrder = { high: 3, medium: 2, low: 1 };
-      return priorityOrder[b as keyof typeof priorityOrder] - priorityOrder[a as keyof typeof priorityOrder];
+      return (
+        priorityOrder[b as keyof typeof priorityOrder] -
+        priorityOrder[a as keyof typeof priorityOrder]
+      );
     });
   };
 
   const getAvailableStatuses = () => {
     const statuses = new Set<string>();
-    tasks.forEach(task => {
+    tasks.forEach((task) => {
       if (task.status) {
         statuses.add(task.status);
       }
@@ -595,25 +612,25 @@ export const TaskManager: React.FC = () => {
   };
 
   const toggleSubjectFilter = (subject: string) => {
-    setSelectedSubjects(prev => 
-      prev.includes(subject) 
-        ? prev.filter(s => s !== subject)
+    setSelectedSubjects((prev) =>
+      prev.includes(subject)
+        ? prev.filter((s) => s !== subject)
         : [...prev, subject]
     );
   };
 
   const togglePriorityFilter = (priority: string) => {
-    setSelectedPriorities(prev => 
-      prev.includes(priority) 
-        ? prev.filter(p => p !== priority)
+    setSelectedPriorities((prev) =>
+      prev.includes(priority)
+        ? prev.filter((p) => p !== priority)
         : [...prev, priority]
     );
   };
 
   const toggleStatusFilter = (status: string) => {
-    setSelectedStatuses(prev => 
-      prev.includes(status) 
-        ? prev.filter(s => s !== status)
+    setSelectedStatuses((prev) =>
+      prev.includes(status)
+        ? prev.filter((s) => s !== status)
         : [...prev, status]
     );
   };
@@ -626,12 +643,15 @@ export const TaskManager: React.FC = () => {
   };
 
   return (
-    <div className="bg-white h-full flex flex-col scroll-area" data-component="tasks">
+    <div
+      className="bg-white dark:bg-slate-900 h-full flex flex-col scroll-area transition-colors duration-300"
+      data-component="tasks"
+    >
       {/* Header */}
-      <div className="border-b border-gray-200 p-responsive">
+      <div className="border-b border-gray-200 dark:border-slate-700 p-responsive">
         <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
           <div className="flex-1 min-w-0">
-            <h2 className="text-responsive-xl font-bold text-gray-900 mb-2">
+            <h2 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               To-Do List
             </h2>
             <div className="overflow-x-auto scrollbar-hide">
@@ -764,7 +784,9 @@ export const TaskManager: React.FC = () => {
             <button
               onClick={clearAllFilters}
               className="px-3 py-2 text-sm border border-red-200 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center space-x-1"
-              title={`Clear ${getActiveFiltersCount()} active filter${getActiveFiltersCount() > 1 ? 's' : ''}`}
+              title={`Clear ${getActiveFiltersCount()} active filter${
+                getActiveFiltersCount() > 1 ? "s" : ""
+              }`}
             >
               <X className="w-4 h-4" />
               <span>Clear All</span>
@@ -774,16 +796,19 @@ export const TaskManager: React.FC = () => {
 
         {/* Advanced Filters Panel */}
         {showAdvancedFilters && (
-          <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          <div className="mb-4 p-4 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Subject Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Subjects ({selectedSubjects.length} selected)
                 </label>
                 <div className="max-h-32 overflow-y-auto space-y-1">
                   {getAvailableSubjects().map((subject) => (
-                    <label key={subject} className="flex items-center space-x-2 cursor-pointer">
+                    <label
+                      key={subject}
+                      className="flex items-center space-x-2 cursor-pointer"
+                    >
                       <input
                         type="checkbox"
                         checked={selectedSubjects.includes(subject)}
@@ -794,7 +819,9 @@ export const TaskManager: React.FC = () => {
                     </label>
                   ))}
                   {getAvailableSubjects().length === 0 && (
-                    <span className="text-sm text-gray-500">No subjects available</span>
+                    <span className="text-sm text-gray-500">
+                      No subjects available
+                    </span>
                   )}
                 </div>
               </div>
@@ -806,14 +833,21 @@ export const TaskManager: React.FC = () => {
                 </label>
                 <div className="space-y-1">
                   {getAvailablePriorities().map((priority) => (
-                    <label key={priority} className="flex items-center space-x-2 cursor-pointer">
+                    <label
+                      key={priority}
+                      className="flex items-center space-x-2 cursor-pointer"
+                    >
                       <input
                         type="checkbox"
                         checked={selectedPriorities.includes(priority)}
                         onChange={() => togglePriorityFilter(priority)}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <span className={`text-sm capitalize ${getPriorityColor(priority)}`}>
+                      <span
+                        className={`text-sm capitalize ${getPriorityColor(
+                          priority
+                        )}`}
+                      >
                         {priority}
                       </span>
                     </label>
@@ -828,16 +862,23 @@ export const TaskManager: React.FC = () => {
                 </label>
                 <div className="space-y-1">
                   {getAvailableStatuses().map((status) => (
-                    <label key={status} className="flex items-center space-x-2 cursor-pointer">
+                    <label
+                      key={status}
+                      className="flex items-center space-x-2 cursor-pointer"
+                    >
                       <input
                         type="checkbox"
                         checked={selectedStatuses.includes(status)}
                         onChange={() => toggleStatusFilter(status)}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <span className={`text-sm capitalize ${
-                        status === 'completed' ? 'text-green-600' : 'text-orange-600'
-                      }`}>
+                      <span
+                        className={`text-sm capitalize ${
+                          status === "completed"
+                            ? "text-green-600"
+                            : "text-orange-600"
+                        }`}
+                      >
                         {status}
                       </span>
                     </label>
@@ -854,27 +895,38 @@ export const TaskManager: React.FC = () => {
                   <input
                     type="date"
                     value={dateRange.startDate}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                    onChange={(e) =>
+                      setDateRange((prev) => ({
+                        ...prev,
+                        startDate: e.target.value,
+                      }))
+                    }
                     className="w-full px-2 py-1 text-sm border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Start Date"
                   />
                   <input
                     type="date"
                     value={dateRange.endDate}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                    onChange={(e) =>
+                      setDateRange((prev) => ({
+                        ...prev,
+                        endDate: e.target.value,
+                      }))
+                    }
                     className="w-full px-2 py-1 text-sm border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="End Date"
                   />
                 </div>
               </div>
             </div>
-            
+
             {/* Advanced Filters Actions */}
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
               <div className="text-sm text-gray-600">
                 {getActiveFiltersCount() > 0 && (
                   <span>
-                    {getActiveFiltersCount()} active filter{getActiveFiltersCount() > 1 ? 's' : ''}
+                    {getActiveFiltersCount()} active filter
+                    {getActiveFiltersCount() > 1 ? "s" : ""}
                   </span>
                 )}
               </div>
@@ -899,10 +951,27 @@ export const TaskManager: React.FC = () => {
         {/* Quick Stats */}
         <div className="flex space-x-1 bg-gray-100 p-3 rounded-lg">
           <div className="flex items-center space-x-4 text-sm text-gray-600">
-            <span>Total: <strong className="text-gray-900">{tasks.length}</strong></span>
-            <span>Pending: <strong className="text-orange-600">{tasks.filter(t => t.status === 'pending').length}</strong></span>
-            <span>Completed: <strong className="text-green-600">{tasks.filter(t => t.status === 'completed').length}</strong></span>
-            <span>Overdue: <strong className="text-red-600">{tasks.filter(t => isOverdue(t)).length}</strong></span>
+            <span>
+              Total: <strong className="text-gray-900">{tasks.length}</strong>
+            </span>
+            <span>
+              Pending:{" "}
+              <strong className="text-orange-600">
+                {tasks.filter((t) => t.status === "pending").length}
+              </strong>
+            </span>
+            <span>
+              Completed:{" "}
+              <strong className="text-green-600">
+                {tasks.filter((t) => t.status === "completed").length}
+              </strong>
+            </span>
+            <span>
+              Overdue:{" "}
+              <strong className="text-red-600">
+                {tasks.filter((t) => isOverdue(t)).length}
+              </strong>
+            </span>
           </div>
         </div>
       </div>
@@ -923,7 +992,7 @@ export const TaskManager: React.FC = () => {
                 {getFilteredTasks().length} of {tasks.length} tasks
               </div>
             </div>
-            
+
             {/* Active Filters Display */}
             <div className="flex flex-wrap gap-2 mb-2">
               {searchQuery.trim() && (
@@ -931,28 +1000,38 @@ export const TaskManager: React.FC = () => {
                   🔍 "{searchQuery}"
                 </span>
               )}
-              {selectedSubjects.map(subject => (
-                <span key={subject} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+              {selectedSubjects.map((subject) => (
+                <span
+                  key={subject}
+                  className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800"
+                >
                   📚 {subject}
                 </span>
               ))}
-              {selectedPriorities.map(priority => (
-                <span key={priority} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
+              {selectedPriorities.map((priority) => (
+                <span
+                  key={priority}
+                  className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800"
+                >
                   ⚡ {priority}
                 </span>
               ))}
-              {selectedStatuses.map(status => (
-                <span key={status} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+              {selectedStatuses.map((status) => (
+                <span
+                  key={status}
+                  className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800"
+                >
                   📋 {status}
                 </span>
               ))}
               {(dateRange.startDate || dateRange.endDate) && (
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
-                  📅 {dateRange.startDate || 'Any'} - {dateRange.endDate || 'Any'}
+                  📅 {dateRange.startDate || "Any"} -{" "}
+                  {dateRange.endDate || "Any"}
                 </span>
               )}
             </div>
-            
+
             {getFilteredTasks().length === 0 && (
               <p className="text-xs text-blue-600">
                 Try adjusting your search terms or filters
@@ -993,8 +1072,8 @@ export const TaskManager: React.FC = () => {
           <div className="text-center py-8 sm:py-12 px-4">
             <CheckCircle2 className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
             <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
-              {tasks.length === 0 
-                ? "No tasks yet" 
+              {tasks.length === 0
+                ? "No tasks yet"
                 : "No tasks match your current filters"}
             </h3>
             <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 max-w-sm mx-auto">
@@ -1018,16 +1097,16 @@ export const TaskManager: React.FC = () => {
       {/* Add/Edit Task Modal */}
       {(showAddTask || editingTask) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-6">
-          <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto scroll-area">
-            <div className="p-4 sm:p-6 border-b border-gray-200">
-              <h3 className="text-base sm:text-lg font-semibold">
+          <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto scroll-area">
+            <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-slate-700">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {editingTask ? "Edit Task" : "Add New Task"}
               </h3>
             </div>
 
             <div className="p-4 sm:p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Title *
                 </label>
                 <input
@@ -1036,13 +1115,13 @@ export const TaskManager: React.FC = () => {
                   onChange={(e) =>
                     setTaskForm({ ...taskForm, title: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                   placeholder="Enter task title"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Description
                 </label>
                 <textarea

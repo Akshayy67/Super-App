@@ -1,49 +1,27 @@
 import { useState, useEffect } from "react";
+import { BrowserRouter as Router, useNavigate } from "react-router-dom";
 import { AuthForm } from "./components/AuthForm";
 import { Sidebar } from "./components/Sidebar";
-import { Dashboard } from "./components/Dashboard";
-import { FileManager } from "./components/FileManager";
-import { TaskManager } from "./components/TaskManager";
-import { NotesManager } from "./components/NotesManager";
-import { AIChat } from "./components/AIChat";
-import { StudyTools } from "./components/StudyTools";
-import { FlashCards } from "./components/FlashCards";
-import { InterviewPrep } from "./components/InterviewPrep/InterviewPrep";
-import { TeamSpace } from "./components/TeamSpace";
-// Removed unused FilePreview import
+import { AppRouter } from "./components/AppRouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { realTimeAuth } from "./utils/realTimeAuth";
-// Removed unused FileItem and User imports
 import { Menu, X } from "lucide-react";
 import { GlobalNoteCreator } from "./components/GlobalNoteCreator";
 import { useGlobalCopyListener } from "./hooks/useGlobalCopyListener";
+import { ThemeToggle } from "./components/ThemeToggle";
+import { ThemeProvider } from "./components/ThemeProvider";
 
-function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  // Removed unused currentUser state
-  const [activeView, setActiveView] = useState("dashboard");
-  // Removed unused previewFile state
+// Component to handle authenticated app content
+const AuthenticatedApp: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [invitationData, setInvitationData] = useState<{
     inviteCode?: string;
     teamId?: string;
   } | null>(null);
+  const navigate = useNavigate();
 
   // Global copy listener for note creation
   const { copyEvent, isModalVisible, closeModal } = useGlobalCopyListener();
-
-  useEffect(() => {
-    // Set up real-time auth state listener
-    console.log("🔐 Setting up auth state listener...");
-    const unsubscribe = realTimeAuth.onAuthStateChange((user) => {
-      console.log("👤 Auth state changed:", { user: !!user, userId: user?.id });
-      setIsAuthenticated(!!user);
-      // Removed unused setCurrentUser
-    });
-
-    // Clean up listener on component unmount
-    return unsubscribe;
-  }, []);
 
   // Handle URL parameters for team invitations
   useEffect(() => {
@@ -77,7 +55,7 @@ function App() {
       setInvitationData(invitationData);
 
       // Automatically switch to team view for invitation
-      setActiveView("team");
+      navigate("/team");
 
       // Clean up URL parameters
       const newUrl = new URL(window.location.href);
@@ -93,14 +71,14 @@ function App() {
         try {
           const invitationData = JSON.parse(pendingInvitation);
           setInvitationData(invitationData);
-          setActiveView("team");
+          navigate("/team");
         } catch (error) {
           console.error("❌ Error parsing pending invitation:", error);
           sessionStorage.removeItem("pendingTeamInvitation");
         }
       }
     }
-  }, []);
+  }, [navigate]);
 
   // Close mobile menu when screen size changes to desktop
   useEffect(() => {
@@ -115,77 +93,25 @@ function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const handleAuthSuccess = () => {
-    console.log("🎉 Auth success handler called, setting view to dashboard");
-    setActiveView("dashboard");
-  };
-
   const handleLogout = async () => {
     try {
       console.log("🔄 Starting logout process...");
       await realTimeAuth.logout();
       console.log("✅ Logout successful");
 
-      // Force update authentication state
-      setIsAuthenticated(false);
-
-      // Reset view to dashboard for next login
-      setActiveView("dashboard");
-
       // Close mobile menu if open
       setIsMobileMenuOpen(false);
+
+      // Navigate to dashboard after logout
+      navigate("/dashboard");
     } catch (error) {
       console.error("❌ Logout failed:", error);
-      // Even if logout fails, we should still redirect to auth
-      setIsAuthenticated(false);
     }
-  };
-
-  const handleViewChange = (view: string) => {
-    setActiveView(view);
-    setIsMobileMenuOpen(false); // Close mobile menu when view changes
   };
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
-
-  // Removed unused handlePreviewFile
-
-  const renderActiveView = () => {
-    switch (activeView) {
-      case "dashboard":
-        return <Dashboard onViewChange={handleViewChange} />;
-      case "files":
-        return <FileManager />;
-      case "tasks":
-        return <TaskManager />;
-      case "notes":
-        return <NotesManager />;
-      case "chat":
-        return <AIChat />;
-      case "tools":
-        return <StudyTools />;
-      case "flashcards":
-        return <FlashCards />;
-      case "interview":
-        return <InterviewPrep />;
-      case "team":
-        return <TeamSpace invitationData={invitationData} />;
-      default:
-        return <Dashboard onViewChange={handleViewChange} />;
-    }
-  };
-
-  if (!isAuthenticated) {
-    return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50">
-          <AuthForm onAuthSuccess={handleAuthSuccess} />
-        </div>
-      </ErrorBoundary>
-    );
-  }
 
   return (
     <ErrorBoundary>
@@ -199,11 +125,11 @@ function App() {
         />
       )}
 
-      <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row landscape-compact">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col lg:flex-row landscape-compact transition-colors duration-300">
         {/* Mobile Header */}
-        <div className="mobile-header lg:hidden bg-white shadow-sm border-b border-gray-200 p-3 sm:p-4 flex items-center justify-between relative z-30">
+        <div className="mobile-header lg:hidden bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 p-3 sm:p-4 flex items-center justify-between relative z-30">
           <button
-            onClick={() => handleViewChange("dashboard")}
+            onClick={() => navigate("/dashboard")}
             className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity min-w-0 flex-1 btn-touch"
           >
             <img
@@ -215,21 +141,25 @@ function App() {
                 e.currentTarget.style.display = "none";
               }}
             />
-            <span className="text-responsive-lg font-bold text-gray-900 truncate">
+            <span className="text-responsive-lg font-bold text-gray-900 dark:text-gray-100 truncate">
               Super Study
             </span>
           </button>
-          <button
-            onClick={toggleMobileMenu}
-            className="btn-touch p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 flex-shrink-0 touch-manipulation"
-            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-          >
-            {isMobileMenuOpen ? (
-              <X className="w-5 h-5 sm:w-6 sm:h-6" />
-            ) : (
-              <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
-            )}
-          </button>
+
+          <div className="flex items-center gap-2">
+            <ThemeToggle variant="compact" />
+            <button
+              onClick={toggleMobileMenu}
+              className="btn-touch p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 flex-shrink-0 touch-manipulation"
+              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
+              ) : (
+                <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu Overlay */}
@@ -255,8 +185,6 @@ function App() {
         >
           <div className="h-full lg:h-auto">
             <Sidebar
-              activeView={activeView}
-              onViewChange={handleViewChange}
               onLogout={handleLogout}
               isMobile={isMobileMenuOpen}
               onCloseMobile={() => setIsMobileMenuOpen(false)}
@@ -267,14 +195,55 @@ function App() {
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden min-h-0 relative">
           <div className="flex-1 overflow-hidden scroll-area">
-            <div className="h-full">{renderActiveView()}</div>
+            <div className="h-full">
+              <AppRouter invitationData={invitationData} />
+            </div>
           </div>
         </div>
-
-        {/* File Preview Modal */}
-        {/* Removed FilePreview usage since previewFile and setPreviewFile are removed */}
       </div>
     </ErrorBoundary>
+  );
+};
+
+// Main App component with authentication and routing
+function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Set up real-time auth state listener
+    console.log("🔐 Setting up auth state listener...");
+    const unsubscribe = realTimeAuth.onAuthStateChange((user) => {
+      console.log("👤 Auth state changed:", { user: !!user, userId: user?.id });
+      setIsAuthenticated(!!user);
+    });
+
+    // Clean up listener on component unmount
+    return unsubscribe;
+  }, []);
+
+  const handleAuthSuccess = () => {
+    console.log("🎉 Auth success handler called");
+    setIsAuthenticated(true);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <ThemeProvider>
+        <ErrorBoundary>
+          <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
+            <AuthForm onAuthSuccess={handleAuthSuccess} />
+          </div>
+        </ErrorBoundary>
+      </ThemeProvider>
+    );
+  }
+
+  return (
+    <ThemeProvider>
+      <Router>
+        <AuthenticatedApp />
+      </Router>
+    </ThemeProvider>
   );
 }
 

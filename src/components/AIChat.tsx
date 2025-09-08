@@ -18,7 +18,11 @@ interface AIChatProps {
   fileContent?: string;
   initialPrompt?: string;
 }
-export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt }) => {
+export const AIChat: React.FC<AIChatProps> = ({
+  file,
+  fileContent,
+  initialPrompt,
+}) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
@@ -31,13 +35,11 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   // Removed cross-document access banner; no need to track other documents
-  
+
   const [aiConfigured, setAiConfigured] = useState<boolean>(false);
   const [fileContextText, setFileContextText] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasSentInitialPromptRef = useRef<boolean>(false);
-
-  
 
   useEffect(() => {
     // Check AI configuration status
@@ -45,24 +47,24 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
       const configured = unifiedAIService.isConfigured();
       setAiConfigured(configured);
     };
-    
+
     checkAIConfig();
-    
+
     // Check again after a short delay to ensure environment variables are loaded
     const timer = setTimeout(checkAIConfig, 1000);
-    
+
     // Also check when the component becomes visible (for production builds)
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         checkAIConfig();
       }
     };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       clearTimeout(timer);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
@@ -124,7 +126,9 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
         // Fall back to file.content (may be data URL)
         if (file?.content && typeof file.content === "string") {
           if (file?.mimeType?.startsWith("image/")) {
-            const ocr = await unifiedAIService.extractTextFromImage(file.content);
+            const ocr = await unifiedAIService.extractTextFromImage(
+              file.content
+            );
             setFileContextText(ocr.success && ocr.data ? ocr.data : "");
           } else if (
             file?.mimeType === "text/plain" ||
@@ -154,10 +158,13 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
 
         // As a last resort, try fetching from Drive if we have an ID
         if (file?.driveFileId) {
-          const downloaded = await driveStorageUtils.downloadFileContent(file.driveFileId);
+          const downloaded = await driveStorageUtils.downloadFileContent(
+            file.driveFileId
+          );
           if (downloaded && typeof downloaded === "string") {
             if (
-              (file?.mimeType?.includes("pdf") || file?.name?.endsWith(".pdf")) &&
+              (file?.mimeType?.includes("pdf") ||
+                file?.name?.endsWith(".pdf")) &&
               downloaded.startsWith("data:")
             ) {
               try {
@@ -312,9 +319,8 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
     try {
       const built = await ensureCurrentFileContext();
       const context = built ? built.toString().slice(0, 8000) : "";
-      const wantsSummary = /\b(summarize|summary|summarise|summarization)\b/i.test(
-        text
-      );
+      const wantsSummary =
+        /\b(summarize|summary|summarise|summarization)\b/i.test(text);
       if (wantsSummary && context) {
         const result = await unifiedAIService.summarizeText(
           context.slice(0, 12000)
@@ -376,9 +382,8 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
       const context = built ? built.toString().slice(0, 8000) : "";
 
       // If the user asks for a summary and we have context, call summarize API for higher quality
-      const wantsSummary = /\b(summarize|summary|summarise|summarization)\b/i.test(
-        userMessage
-      );
+      const wantsSummary =
+        /\b(summarize|summary|summarise|summarization)\b/i.test(userMessage);
       if (wantsSummary && context) {
         const result = await unifiedAIService.summarizeText(
           context.slice(0, 12000)
@@ -451,8 +456,8 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
 
   // Show file context if provided
   const fileContext = file ? (
-    <div className="mb-4 p-2 bg-gray-50 rounded-lg text-sm text-gray-700 flex items-center">
-      <FileText className="w-4 h-4 mr-2 text-blue-600" />
+    <div className="mb-4 p-2 bg-gray-50 dark:bg-slate-800 rounded-lg text-sm text-gray-700 dark:text-gray-300 flex items-center">
+      <FileText className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400" />
       <span>
         Analyzing file: <span className="font-semibold">{file.name}</span>
       </span>
@@ -460,17 +465,22 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
   ) : null;
 
   return (
-    <div className="bg-white h-full flex flex-col scroll-area" data-component="ai-chat">
+    <div
+      className="bg-white dark:bg-slate-900 h-full flex flex-col scroll-area transition-colors duration-300"
+      data-component="ai-chat"
+    >
       {/* Header */}
-      <div className="border-b border-gray-200 p-responsive">
+      <div className="border-b border-gray-200 dark:border-slate-700 p-responsive">
         <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center min-w-0 flex-1">
-            <div className="bg-purple-100 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0">
-              <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
+            <div className="bg-purple-100 dark:bg-purple-900/30 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0">
+              <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-responsive-xl font-bold text-gray-900">AI Assistant</h2>
-              <p className="text-responsive-sm text-gray-600 truncate">
+              <h2 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100">
+                AI Assistant
+              </h2>
+              <p className="text-responsive-sm text-gray-600 dark:text-gray-400 truncate">
                 Ask questions about your study materials
               </p>
             </div>
@@ -483,8 +493,9 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
         {/* Removed cross-document access banner */}
         {!aiConfigured && (
           <div className="mt-4 p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm">
-            <strong className="font-semibold">Demo mode:</strong> Super AI not configured.
-            Add VITE_GOOGLE_AI_API_KEY in .env and restart for full answers.
+            <strong className="font-semibold">Demo mode:</strong> Super AI not
+            configured. Add VITE_GOOGLE_AI_API_KEY in .env and restart for full
+            answers.
           </div>
         )}
       </div>
@@ -521,7 +532,7 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
                 className={`rounded-lg p-4 ${
                   message.type === "user"
                     ? "bg-blue-600 text-white"
-                    : "bg-gray-100 text-gray-900"
+                    : "bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-gray-100"
                 }`}
                 data-message-type={message.type}
               >
@@ -531,10 +542,14 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
                     {message.context}
                   </div>
                 )}
-                <p className="whitespace-pre-wrap" data-content="ai-message">{message.content}</p>
+                <p className="whitespace-pre-wrap" data-content="ai-message">
+                  {message.content}
+                </p>
                 <div
                   className={`text-xs mt-2 opacity-75 ${
-                    message.type === "user" ? "text-blue-100" : "text-gray-500"
+                    message.type === "user"
+                      ? "text-blue-100"
+                      : "text-gray-500 dark:text-gray-400"
                   }`}
                 >
                   {formatTimestamp(message.timestamp)}
@@ -550,7 +565,7 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
               <div className="w-8 h-8 rounded-full flex items-center justify-center bg-purple-100 text-purple-600 mr-3">
                 <Bot className="w-4 h-4" />
               </div>
-              <div className="bg-gray-100 text-gray-900 rounded-lg p-4">
+              <div className="bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-gray-100 rounded-lg p-4">
                 <div className="flex items-center">
                   <Loader className="w-4 h-4 animate-spin mr-2" />
                   Thinking...
@@ -566,13 +581,15 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
       {/* Suggested Questions */}
       {messages.length === 1 && (
         <div className="border-t border-gray-200 p-responsive">
-          <p className="text-responsive-sm text-gray-600 mb-3">Try asking:</p>
+          <p className="text-responsive-sm text-gray-600 dark:text-gray-400 mb-3">
+            Try asking:
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
             {suggestedQuestions.map((question, index) => (
               <button
                 key={index}
                 onClick={() => setInputMessage(question)}
-                className="btn-touch text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm transition-colors touch-manipulation"
+                className="btn-touch text-left p-3 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 rounded-lg text-sm transition-colors touch-manipulation text-gray-900 dark:text-gray-100"
               >
                 "{question}"
               </button>
@@ -591,7 +608,7 @@ export const AIChat: React.FC<AIChatProps> = ({ file, fileContent, initialPrompt
               onKeyDown={handleKeyPress}
               placeholder="Ask me anything about your study materials..."
               rows={1}
-              className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm sm:text-base"
+              className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm sm:text-base bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
               style={{ minHeight: "44px", maxHeight: "120px" }}
             />
           </div>
