@@ -7,6 +7,7 @@ import {
   Mic,
   Home,
   Lightbulb,
+  BarChart3,
 } from "lucide-react";
 
 interface InterviewPrepLayoutProps {
@@ -53,6 +54,12 @@ export const InterviewPrepLayout: React.FC<InterviewPrepLayoutProps> = ({
       label: "Mock Interview",
       icon: Mic,
       path: "/interview/mock-interview",
+    },
+    {
+      id: "analytics",
+      label: "Analytics",
+      icon: BarChart3,
+      path: "/interview/analytics",
     },
     {
       id: "interview-tips",

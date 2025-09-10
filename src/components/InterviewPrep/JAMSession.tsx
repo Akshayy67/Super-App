@@ -235,29 +235,19 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
             const feedbackData = JSON.parse(jsonMatch[0]);
             setFeedback(feedbackData);
           } else {
-            // Fallback if JSON parsing fails
+            // Enhanced fallback analysis based on actual speech content
+            const contentAnalysis = analyzeTranscriptContent(transcript);
             setFeedback({
-              overallScore: 75,
-              fluency: 75,
-              content: 75,
-              confidence: 75,
-              strengths: ["Completed the session", "Stayed on topic"],
-              improvements: [
-                "Practice more for better fluency",
-                "Add more specific examples",
-              ],
+              ...contentAnalysis,
               detailedFeedback: response.data,
             });
           }
         } catch (parseError) {
           console.error("Failed to parse feedback JSON:", parseError);
+          // Use transcript-based analysis as fallback
+          const contentAnalysis = analyzeTranscriptContent(transcript);
           setFeedback({
-            overallScore: 70,
-            fluency: 70,
-            content: 70,
-            confidence: 70,
-            strengths: ["Participated in the session"],
-            improvements: ["Continue practicing JAM sessions"],
+            ...contentAnalysis,
             detailedFeedback:
               "Feedback generated successfully. Keep practicing to improve your JAM skills!",
           });
@@ -271,6 +261,58 @@ Focus on JAM-specific criteria: staying on topic, avoiding repetition, confident
     } finally {
       setIsGeneratingFeedback(false);
     }
+  };
+
+  const analyzeTranscriptContent = (transcript: string) => {
+    const words = transcript
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((word) => word.length > 0);
+    const wordCount = words.length;
+    const uniqueWords = new Set(words).size;
+    const averageWordLength =
+      words.reduce((sum, word) => sum + word.length, 0) / wordCount;
+
+    // Calculate scores based on actual content
+    const contentScore = Math.min(100, Math.max(30, (wordCount / 100) * 100)); // Based on word count
+    const fluencyScore = Math.min(
+      100,
+      Math.max(40, (uniqueWords / wordCount) * 200)
+    ); // Vocabulary diversity
+    const confidenceScore = Math.min(100, Math.max(50, averageWordLength * 15)); // Word complexity
+    const overallScore = Math.round(
+      (contentScore + fluencyScore + confidenceScore) / 3
+    );
+
+    // Generate insights based on analysis
+    const strengths = [];
+    const improvements = [];
+
+    if (wordCount > 80) strengths.push("Good content length and elaboration");
+    if (uniqueWords / wordCount > 0.6) strengths.push("Rich vocabulary usage");
+    if (averageWordLength > 4.5)
+      strengths.push("Use of sophisticated language");
+
+    if (wordCount < 50) improvements.push("Provide more detailed explanations");
+    if (uniqueWords / wordCount < 0.4)
+      improvements.push("Use more varied vocabulary");
+    if (averageWordLength < 3.5)
+      improvements.push("Include more specific terminology");
+
+    // Ensure we have at least some feedback
+    if (strengths.length === 0)
+      strengths.push("Completed the speaking session");
+    if (improvements.length === 0)
+      improvements.push("Continue practicing to build confidence");
+
+    return {
+      overallScore,
+      fluency: fluencyScore,
+      content: contentScore,
+      confidence: confidenceScore,
+      strengths,
+      improvements,
+    };
   };
 
   const resetSession = () => {

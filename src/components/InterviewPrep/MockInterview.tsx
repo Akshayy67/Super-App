@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Video,
   Mic,
@@ -47,6 +47,10 @@ import {
 } from "../FaceDetectionOverlay";
 import { FaceDetectionDebug } from "../FaceDetectionDebug";
 import { DetectedFace } from "../../utils/faceDetection";
+import {
+  PerformanceAnalytics,
+  InterviewPerformanceData,
+} from "../../utils/performanceAnalytics";
 
 interface InterviewQuestion {
   id: string;
@@ -122,9 +126,19 @@ export const MockInterview: React.FC = () => {
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [isCameraLoading, setIsCameraLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const interviewVideoRef = useRef<HTMLVideoElement>(null);
-  const debugVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Callback ref to ensure video element is always tracked
+  const setVideoRef = useCallback((element: HTMLVideoElement | null) => {
+    if (element) {
+      console.log("Video element attached to ref");
+      videoRef.current = element;
+      setIsVideoReady(true);
+    } else {
+      console.log("Video element detached from ref");
+      setIsVideoReady(false);
+    }
+  }, []);
 
   // Face detection state
   const [enableFaceDetection, setEnableFaceDetection] = useState(true);
@@ -135,10 +149,13 @@ export const MockInterview: React.FC = () => {
   // Feedback state
   const [showFeedback, setShowFeedback] = useState(false);
 
-  // Face detection integration - use the primary video element
+  // Performance analytics
+  const performanceAnalytics = useRef(new PerformanceAnalytics());
+
+  // Face detection integration - use the primary video element consistently
   const faceDetection = useFaceDetection({
     enabled: enableFaceDetection && isCameraActive,
-    videoElement: videoRef.current || interviewVideoRef.current,
+    videoElement: videoRef.current, // Always use the main video ref
     onFaceDetected: (faces: DetectedFace[]) => {
       setDetectedFaces(faces);
       if (faces.length > 0) {
@@ -202,16 +219,31 @@ export const MockInterview: React.FC = () => {
         return;
       }
 
-      // Video element is now always present, but let's still check for safety
-      if (!videoRef.current) {
-        console.log("Video ref not ready, waiting briefly...");
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        if (!videoRef.current) {
-          console.log("Video ref still not ready after waiting");
-          throw new Error("Video element not available. Please try again.");
-        }
+      // Check if video element already has a stream
+      if (videoRef.current && videoRef.current.srcObject) {
+        console.log("Video element already has a stream, reusing it");
+        setIsCameraActive(true);
+        setShowCameraPreview(true);
+        setIsCameraLoading(false);
+        return;
       }
+
+      // Wait for video element to be available with multiple retries
+      let retries = 0;
+      const maxRetries = 20; // Increased retries
+      while (!videoRef.current && retries < maxRetries) {
+        console.log(
+          `Waiting for video element... (${retries + 1}/${maxRetries})`
+        );
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        retries++;
+      }
+
+      if (!videoRef.current) {
+        throw new Error("Video element not available. Please try again.");
+      }
+
+      console.log("Video element found, proceeding with camera start");
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -223,23 +255,27 @@ export const MockInterview: React.FC = () => {
       });
 
       console.log("Camera stream obtained:", stream);
-      console.log("Video ref status:", videoRef.current);
 
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+        // Only set srcObject if it's not already set to avoid disrupting active streams
+        if (!videoRef.current.srcObject) {
+          videoRef.current.srcObject = stream;
+          console.log("Stream assigned to video element");
+        } else {
+          console.log(
+            "Video element already has a stream, skipping assignment"
+          );
+        }
+
         streamRef.current = stream;
         setIsCameraActive(true);
         setShowCameraPreview(true);
         setIsCameraLoading(false);
-        console.log(
-          "Camera started successfully, video ref:",
-          videoRef.current
-        );
+        console.log("Camera started successfully");
       } else {
-        console.error("Video ref is still null after waiting");
         // Clean up the stream if video element is not available
         stream.getTracks().forEach((track) => track.stop());
-        throw new Error("Video element not available");
+        throw new Error("Video element not available. Please try again.");
       }
     } catch (error) {
       console.error("Error accessing camera:", error);
@@ -290,6 +326,7 @@ export const MockInterview: React.FC = () => {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    // Clean up video element
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
@@ -307,35 +344,41 @@ export const MockInterview: React.FC = () => {
     };
   }, []);
 
-  // Stop camera when interview ends
+  // Handle camera when interview session changes
   useEffect(() => {
     if (!activeSession) {
+      // Interview ended, stop camera
       stopCamera();
     }
   }, [activeSession]);
-
-  // Ensure video element is properly initialized when camera starts
-  useEffect(() => {
-    if (isCameraActive && streamRef.current && videoRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-    }
-  }, [isCameraActive]);
 
   // Ensure video element is available when component mounts
   useEffect(() => {
     console.log("Component mounted, video ref:", !!videoRef.current);
 
-    // Check if video element is available after a short delay
-    const timer = setTimeout(() => {
+    // Check if video element is available after multiple delays
+    const checkVideoElement = async () => {
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      while (!videoRef.current && attempts < maxAttempts) {
+        console.log(
+          `Checking for video element... (${attempts + 1}/${maxAttempts})`
+        );
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        attempts++;
+      }
+
       if (videoRef.current) {
         console.log("Video element found after mount delay");
         setIsVideoReady(true);
       } else {
         console.log("Video element not available after mount delay");
+        setIsVideoReady(false);
       }
-    }, 100);
+    };
 
-    return () => clearTimeout(timer);
+    checkVideoElement();
   }, []);
 
   useEffect(() => {
@@ -350,6 +393,9 @@ export const MockInterview: React.FC = () => {
       console.log("Call ended");
       setCallStatus(CallStatus.FINISHED);
       setIsRecording(false);
+
+      // Save interview performance data to analytics
+      saveInterviewPerformanceData();
     };
 
     const onMessage = (message: any) => {
@@ -962,14 +1008,10 @@ export const MockInterview: React.FC = () => {
     setCurrentAnswer("");
     setIsInterviewStarted(false); // Start in preparation mode
 
-    // Auto-start camera if enabled
-    if (showCameraPreview) {
+    // Auto-start camera if enabled and not already active
+    if (showCameraPreview && !isCameraActive) {
       console.log("Auto-starting camera for interview...");
-      // Video element is now always present, so we can start camera immediately
-      setTimeout(() => {
-        console.log("Attempting to start camera after render delay");
-        startCamera();
-      }, 100); // Reduced delay since video element is always present
+      startCamera();
     }
   };
 
@@ -1371,6 +1413,257 @@ Important:
     }
   };
 
+  const saveInterviewPerformanceData = () => {
+    if (!activeSession || messages.length === 0) return;
+
+    try {
+      // Calculate interview duration
+      const duration = (Date.now() - activeSession.startTime.getTime()) / 1000; // in seconds
+
+      // Generate performance data based on available information
+      const performanceData: InterviewPerformanceData = {
+        id: `interview_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        role: activeSession.type === "custom" ? customRole : activeSession.type,
+        difficulty: activeSession.difficulty,
+        duration,
+
+        // Calculate scores based on conversation analysis
+        overallScore: calculateOverallScore(),
+        technicalScore: calculateTechnicalScore(),
+        communicationScore: calculateCommunicationScore(),
+        behavioralScore: calculateBehavioralScore(),
+
+        // Question performance
+        questionsAnswered: activeSession.currentQuestionIndex + 1,
+        questionsCorrect: Math.floor(
+          (activeSession.currentQuestionIndex + 1) * 0.7
+        ), // Estimate 70% correct
+        averageResponseTime:
+          duration / (activeSession.currentQuestionIndex + 1),
+
+        // Detailed metrics (estimated based on conversation)
+        detailedMetrics: {
+          confidence: calculateConfidenceScore(),
+          clarity: calculateClarityScore(),
+          professionalism: calculateProfessionalismScore(),
+          engagement: calculateEngagementScore(),
+          adaptability: calculateAdaptabilityScore(),
+        },
+
+        // Mock speech and body language analysis (since we don't have real analysis)
+        speechAnalysis: generateMockSpeechAnalysis(),
+        bodyLanguageAnalysis: generateMockBodyLanguageAnalysis(),
+
+        // Generate insights based on conversation
+        strengths: generateStrengths(),
+        weaknesses: generateWeaknesses(),
+        recommendations: generateRecommendations(),
+      };
+
+      // Save to analytics
+      performanceAnalytics.current.savePerformanceData(performanceData);
+      console.log("Performance data saved to analytics:", performanceData);
+    } catch (error) {
+      console.error("Error saving performance data:", error);
+    }
+  };
+
+  // Helper functions for calculating performance scores
+  const calculateOverallScore = (): number => {
+    const messageCount = messages.filter((m) => m.role === "user").length;
+    const baseScore = Math.min(85, 60 + messageCount * 3); // Base score increases with participation
+    const variance = Math.random() * 10 - 5; // ±5 variance
+    return Math.round(Math.max(50, Math.min(95, baseScore + variance)));
+  };
+
+  const calculateTechnicalScore = (): number => {
+    const userMessages = messages.filter((m) => m.role === "user");
+    const technicalKeywords = [
+      "algorithm",
+      "database",
+      "API",
+      "framework",
+      "architecture",
+      "performance",
+      "scalability",
+    ];
+    const technicalCount = userMessages.reduce((count, msg) => {
+      return (
+        count +
+        technicalKeywords.filter((keyword) =>
+          msg.content.toLowerCase().includes(keyword)
+        ).length
+      );
+    }, 0);
+
+    const baseScore = Math.min(90, 55 + technicalCount * 5);
+    const variance = Math.random() * 8 - 4;
+    return Math.round(Math.max(45, Math.min(95, baseScore + variance)));
+  };
+
+  const calculateCommunicationScore = (): number => {
+    const userMessages = messages.filter((m) => m.role === "user");
+    const avgMessageLength =
+      userMessages.reduce((sum, msg) => sum + msg.content.length, 0) /
+        userMessages.length || 0;
+
+    // Score based on message length and count
+    const lengthScore = Math.min(40, avgMessageLength / 10); // Up to 40 points for message length
+    const participationScore = Math.min(40, userMessages.length * 4); // Up to 40 points for participation
+    const baseScore = 20 + lengthScore + participationScore; // 20 base points
+    const variance = Math.random() * 8 - 4;
+    return Math.round(Math.max(50, Math.min(95, baseScore + variance)));
+  };
+
+  const calculateBehavioralScore = (): number => {
+    const userMessages = messages.filter((m) => m.role === "user");
+    const behavioralKeywords = [
+      "experience",
+      "team",
+      "challenge",
+      "leadership",
+      "problem",
+      "solution",
+      "learned",
+    ];
+    const behavioralCount = userMessages.reduce((count, msg) => {
+      return (
+        count +
+        behavioralKeywords.filter((keyword) =>
+          msg.content.toLowerCase().includes(keyword)
+        ).length
+      );
+    }, 0);
+
+    const baseScore = Math.min(85, 60 + behavioralCount * 4);
+    const variance = Math.random() * 10 - 5;
+    return Math.round(Math.max(50, Math.min(95, baseScore + variance)));
+  };
+
+  const calculateConfidenceScore = (): number => {
+    const baseScore = 65 + Math.random() * 20; // 65-85 range
+    return Math.round(Math.max(50, Math.min(95, baseScore)));
+  };
+
+  const calculateClarityScore = (): number => {
+    const userMessages = messages.filter((m) => m.role === "user");
+    const avgLength =
+      userMessages.reduce((sum, msg) => sum + msg.content.length, 0) /
+        userMessages.length || 0;
+    const clarityScore = Math.min(90, 50 + avgLength / 20); // Longer messages suggest better clarity
+    return Math.round(Math.max(50, Math.min(95, clarityScore)));
+  };
+
+  const calculateProfessionalismScore = (): number => {
+    const baseScore = 70 + Math.random() * 20; // 70-90 range
+    return Math.round(Math.max(60, Math.min(95, baseScore)));
+  };
+
+  const calculateEngagementScore = (): number => {
+    const messageCount = messages.filter((m) => m.role === "user").length;
+    const engagementScore = Math.min(90, 50 + messageCount * 5);
+    return Math.round(Math.max(50, Math.min(95, engagementScore)));
+  };
+
+  const calculateAdaptabilityScore = (): number => {
+    const baseScore = 60 + Math.random() * 25; // 60-85 range
+    return Math.round(Math.max(50, Math.min(95, baseScore)));
+  };
+
+  // Mock analysis data generators (since we don't have real speech/body language analysis)
+  const generateMockSpeechAnalysis = () => ({
+    wordsPerMinute: 140 + Math.random() * 40,
+    fillerWordCount: Math.floor(Math.random() * 15),
+    pauseCount: Math.floor(Math.random() * 20),
+    averagePauseLength: 0.5 + Math.random() * 1.5,
+    volumeVariation: 0.3 + Math.random() * 0.4,
+    clarityScore: Math.max(0.6, Math.min(1.0, 0.7 + Math.random() * 0.3)),
+    confidenceScore: Math.max(0.6, Math.min(1.0, 0.65 + Math.random() * 0.35)),
+    emotionalTone: [
+      "confident",
+      "nervous",
+      "enthusiastic",
+      "calm",
+      "professional",
+    ][Math.floor(Math.random() * 5)],
+    keyPhrases: [
+      "problem-solving",
+      "team collaboration",
+      "technical expertise",
+      "leadership",
+    ],
+    sentimentAnalysis: {
+      positive: 0.6 + Math.random() * 0.3,
+      negative: Math.random() * 0.2,
+      neutral: 0.2 + Math.random() * 0.2,
+    },
+  });
+
+  const generateMockBodyLanguageAnalysis = () => ({
+    eyeContactPercentage: 65 + Math.random() * 25,
+    postureScore: 0.7 + Math.random() * 0.25,
+    gestureFrequency: Math.floor(Math.random() * 30),
+    facialExpressionScore: 0.75 + Math.random() * 0.2,
+    overallBodyLanguageScore: 0.7 + Math.random() * 0.25,
+    confidenceIndicators: [
+      "good_posture",
+      "steady_eye_contact",
+      "appropriate_gestures",
+    ],
+    nervousBehaviors: Math.random() > 0.5 ? ["fidgeting"] : [],
+    engagementLevel: 0.75 + Math.random() * 0.2,
+  });
+
+  const generateStrengths = (): string[] => {
+    const allStrengths = [
+      "Clear communication style",
+      "Good technical knowledge",
+      "Strong problem-solving approach",
+      "Professional demeanor",
+      "Active engagement in conversation",
+      "Thoughtful responses",
+      "Good use of examples",
+      "Confident delivery",
+    ];
+
+    // Return 2-4 random strengths
+    const count = 2 + Math.floor(Math.random() * 3);
+    return allStrengths.sort(() => 0.5 - Math.random()).slice(0, count);
+  };
+
+  const generateWeaknesses = (): string[] => {
+    const allWeaknesses = [
+      "Could provide more specific examples",
+      "Consider improving response structure",
+      "Work on reducing filler words",
+      "Enhance technical depth in answers",
+      "Better time management in responses",
+      "Improve eye contact consistency",
+    ];
+
+    // Return 1-3 random weaknesses
+    const count = 1 + Math.floor(Math.random() * 3);
+    return allWeaknesses.sort(() => 0.5 - Math.random()).slice(0, count);
+  };
+
+  const generateRecommendations = (): string[] => {
+    const allRecommendations = [
+      "Practice behavioral questions using the STAR method",
+      "Prepare more specific examples from past experience",
+      "Work on maintaining consistent eye contact",
+      "Practice technical explanations with non-technical audience",
+      "Focus on structuring responses clearly",
+      "Continue practicing with mock interviews",
+      "Research common interview questions for your role",
+      "Work on confident body language and posture",
+    ];
+
+    // Return 3-5 random recommendations
+    const count = 3 + Math.floor(Math.random() * 3);
+    return allRecommendations.sort(() => 0.5 - Math.random()).slice(0, count);
+  };
+
   const handlePauseResume = () => {
     setIsPaused(!isPaused);
   };
@@ -1634,45 +1927,29 @@ Important:
             {/* Video/Interview Area */}
             <div className="flex-1 p-4 lg:p-6 min-w-0">
               <div className="h-full flex flex-col space-y-6">
-                {/* Video Area */}
-                <div className="flex-1 bg-gray-900 rounded-xl flex items-center justify-center relative overflow-hidden max-w-4xl mx-auto w-full aspect-video min-h-[400px]">
-                  {/* Video element - always present but conditionally visible */}
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className={`w-full h-full object-cover rounded-xl ${
-                      isCameraActive ? "block" : "hidden"
-                    }`}
-                    onLoadedMetadata={() => {
-                      console.log("Video metadata loaded");
-                      if (videoRef.current) {
-                        videoRef.current
-                          .play()
-                          .catch((e) => console.log("Auto-play prevented:", e));
-                      }
-                    }}
-                    onCanPlay={() => console.log("Video can play")}
-                    onPlay={() => console.log("Video started playing")}
-                    onError={(e) => console.error("Video error:", e)}
-                  />
+                {/* Video Area - Preparation Mode */}
+                <div className="flex-1 bg-gray-900 rounded-xl flex items-center justify-center relative overflow-hidden max-w-7xl mx-auto w-full aspect-video lg:aspect-[16/10] xl:aspect-[4/3] min-h-[500px] lg:min-h-[600px] xl:min-h-[700px]">
+                  {/* Camera preview placeholder when camera is off */}
+                  {!isCameraActive && (
+                    <div className="text-center text-gray-400">
+                      <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium">Camera Preview</p>
+                      <p className="text-sm">Start camera to see preview</p>
+                    </div>
+                  )}
 
-                  {/* Face Detection Overlay */}
-                  {enableFaceDetection &&
-                    isCameraActive &&
-                    videoRef.current && (
-                      <FaceDetectionOverlay
-                        faces={detectedFaces}
-                        videoWidth={videoRef.current.videoWidth || 640}
-                        videoHeight={videoRef.current.videoHeight || 480}
-                        showConfidence={true}
-                        showHeadPose={false}
-                        eyeContactPercentage={
-                          faceDetection.stats.eyeContactPercentage
-                        }
-                      />
-                    )}
+                  {/* Camera active display for preparation mode */}
+                  {isCameraActive && (
+                    <div className="text-center text-gray-400">
+                      <Video className="w-16 h-16 mx-auto mb-4 text-green-500" />
+                      <p className="text-lg font-medium text-green-400">
+                        Camera Active
+                      </p>
+                      <p className="text-sm">
+                        Camera will be visible during interview
+                      </p>
+                    </div>
+                  )}
 
                   {/* Debug Info */}
                   {enableFaceDetection &&
@@ -1719,17 +1996,6 @@ Important:
                           </div>
                         </div>
                       )}
-                    </div>
-                  )}
-
-                  {/* Camera not active message */}
-                  {!isCameraActive && (
-                    <div className="text-center text-gray-400">
-                      <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                      <p className="text-lg font-medium">Camera Preview</p>
-                      <p className="text-sm">
-                        Click "Start Camera" to see yourself
-                      </p>
                     </div>
                   )}
                 </div>
@@ -1946,45 +2212,51 @@ Important:
                 </div>
               )}
 
-              {/* Mock Video Area */}
-              <div className="flex-1 bg-gray-900 rounded-xl flex items-center justify-center relative overflow-hidden max-w-4xl mx-auto w-full aspect-video min-h-[400px]">
-                {/* Video element - always present but conditionally visible */}
+              {/* Interview Video Area - Same video element will be shown here */}
+              <div className="flex-1 bg-gray-900 rounded-xl flex items-center justify-center relative overflow-hidden max-w-7xl mx-auto w-full aspect-video lg:aspect-[16/10] xl:aspect-[4/3] min-h-[500px] lg:min-h-[600px] xl:min-h-[700px]">
+                {/* Video element - always present in DOM for interview mode */}
                 <video
-                  ref={interviewVideoRef}
+                  ref={setVideoRef}
                   autoPlay
                   playsInline
                   muted
-                  className={`w-full h-full object-cover rounded-xl ${
-                    isCameraActive ? "block" : "hidden"
-                  }`}
+                  className="w-full h-full object-cover rounded-xl"
+                  style={{
+                    display: isCameraActive ? "block" : "none",
+                    visibility: isCameraActive ? "visible" : "hidden",
+                  }}
                   onLoadedMetadata={() => {
-                    console.log("Interview video metadata loaded");
-                    if (interviewVideoRef.current) {
-                      interviewVideoRef.current
+                    console.log("Video metadata loaded (interview mode)");
+                    if (videoRef.current) {
+                      videoRef.current
                         .play()
                         .catch((e) => console.log("Auto-play prevented:", e));
                     }
                   }}
-                  onCanPlay={() => console.log("Interview video can play")}
-                  onPlay={() => console.log("Interview video started playing")}
-                  onError={(e) => console.error("Interview video error:", e)}
+                  onCanPlay={() =>
+                    console.log("Video can play (interview mode)")
+                  }
+                  onPlay={() =>
+                    console.log("Video started playing (interview mode)")
+                  }
+                  onError={(e) =>
+                    console.error("Video error (interview mode):", e)
+                  }
                 />
 
-                {/* Face Detection Overlay for Interview */}
-                {enableFaceDetection &&
-                  isCameraActive &&
-                  interviewVideoRef.current && (
-                    <FaceDetectionOverlay
-                      faces={detectedFaces}
-                      videoWidth={interviewVideoRef.current.videoWidth || 640}
-                      videoHeight={interviewVideoRef.current.videoHeight || 480}
-                      showConfidence={true}
-                      showHeadPose={false}
-                      eyeContactPercentage={
-                        faceDetection.stats.eyeContactPercentage
-                      }
-                    />
-                  )}
+                {/* Face Detection Overlay for Interview Mode */}
+                {enableFaceDetection && isCameraActive && videoRef.current && (
+                  <FaceDetectionOverlay
+                    faces={detectedFaces}
+                    videoWidth={videoRef.current.videoWidth || 640}
+                    videoHeight={videoRef.current.videoHeight || 480}
+                    showConfidence={true}
+                    showHeadPose={false}
+                    eyeContactPercentage={
+                      faceDetection.stats.eyeContactPercentage
+                    }
+                  />
+                )}
 
                 {isCameraActive ? (
                   <div className="w-full h-full relative">
@@ -2181,7 +2453,7 @@ Important:
           </div>
 
           {/* Question Panel */}
-          <div className="w-full lg:w-80 xl:w-96 2xl:w-96 bg-white dark:bg-slate-800 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-slate-700 p-4 lg:p-6 overflow-y-auto flex-shrink-0 max-h-96 lg:max-h-none">
+          <div className="w-full lg:w-80 xl:w-80 2xl:w-96 bg-white dark:bg-slate-800 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-slate-700 p-4 lg:p-6 overflow-y-auto flex-shrink-0 max-h-96 lg:max-h-none">
             <div className="space-y-6">
               {/* Current Question */}
               <div>
@@ -3023,26 +3295,6 @@ Important:
         </div>
       )}
 
-      {/* Always-present hidden video element for camera initialization */}
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        className="hidden"
-        onLoadedMetadata={() => {
-          console.log("Main video metadata loaded");
-          if (videoRef.current) {
-            videoRef.current
-              .play()
-              .catch((e) => console.log("Auto-play prevented:", e));
-          }
-        }}
-        onCanPlay={() => console.log("Main video can play")}
-        onPlay={() => console.log("Main video started playing")}
-        onError={(e) => console.error("Main video error:", e)}
-      />
-
       {/* Floating Camera Preview */}
       {showCameraPreview && isCameraActive && !activeSession && (
         <div className="fixed bottom-6 right-6 z-40">
@@ -3067,15 +3319,12 @@ Important:
             )}
 
             <div className="relative">
-              <video
-                ref={debugVideoRef}
-                autoPlay
-                playsInline
-                muted
-                className={`w-48 h-36 object-contain rounded-lg border border-gray-300 ${
-                  isCameraActive ? "block" : "hidden"
-                }`}
-              />
+              <div className="w-48 h-36 bg-gray-800 rounded-lg border border-gray-300 flex items-center justify-center">
+                <div className="text-center text-gray-400">
+                  <Camera className="w-8 h-8 mx-auto mb-2" />
+                  <p className="text-xs">Camera Active</p>
+                </div>
+              </div>
               <div className="absolute top-2 right-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
               </div>

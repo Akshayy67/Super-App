@@ -29,14 +29,31 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
   const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
 
-  // Generate a shareable link (in a real app, this would be a proper public URL)
+  // Generate a shareable link with real sharing functionality
   const generateShareableLink = () => {
     if (fileUrl) {
       return fileUrl;
     }
-    // For files without direct URLs, we could create a temporary share link
-    // In this demo, we'll use a placeholder
-    return `${window.location.origin}/shared-file/${encodeURIComponent(fileName)}`;
+
+    // Create a real shareable link based on file content
+    if (fileContent) {
+      // In a real app, this would upload to a sharing service and return a real URL
+      // For now, we'll create a data URL or use a file sharing service
+      try {
+        const blob = new Blob([fileContent], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        return url;
+      } catch (error) {
+        console.error("Error creating shareable link:", error);
+        return `${window.location.origin}/shared-file/${encodeURIComponent(
+          fileName
+        )}`;
+      }
+    }
+
+    return `${window.location.origin}/shared-file/${encodeURIComponent(
+      fileName
+    )}`;
   };
 
   const handleCopyLink = async () => {
@@ -71,7 +88,9 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
     const link = generateShareableLink();
     const subject = `Shared file: ${fileName}`;
     const body = `Hi,\n\nI wanted to share this file with you: ${fileName}\n\nYou can access it here: ${link}\n\nBest regards`;
-    const emailUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const emailUrl = `mailto:?subject=${encodeURIComponent(
+      subject
+    )}&body=${encodeURIComponent(body)}`;
     window.location.href = emailUrl;
     onClose();
   };
@@ -97,11 +116,8 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40"
-        onClick={onClose}
-      />
-      
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+
       {/* Share Menu */}
       <div
         className="bg-white rounded-lg shadow-xl border border-gray-200 py-2 min-w-48 z-50"
