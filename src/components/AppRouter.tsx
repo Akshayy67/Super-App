@@ -4,7 +4,7 @@ import { Dashboard } from "./Dashboard";
 import { FileManager } from "./FileManager";
 import { TaskManager } from "./TaskManager";
 import { NotesManager } from "./NotesManager";
-import { AIChat } from "./AIChat";
+import { EnhancedAIChat } from "./EnhancedAIChat";
 import { StudyTools } from "./StudyTools";
 import { FlashCards } from "./FlashCards";
 import { InterviewPrep } from "./InterviewPrep/InterviewPrep";
@@ -26,12 +26,15 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
       <Route path="/files/*" element={<FileManager />} />
       <Route path="/tasks/*" element={<TaskManager />} />
       <Route path="/notes/*" element={<NotesManager />} />
-      <Route path="/chat/*" element={<AIChat />} />
+      <Route path="/chat/*" element={<EnhancedAIChat />} />
       <Route path="/tools/*" element={<StudyTools />} />
       <Route path="/flashcards/*" element={<FlashCards />} />
       <Route path="/interview/*" element={<InterviewPrep />} />
-      <Route path="/team/*" element={<TeamSpace invitationData={invitationData} />} />
-      
+      <Route
+        path="/team/*"
+        element={<TeamSpace invitationData={invitationData} />}
+      />
+
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

@@ -11,10 +11,15 @@ export interface AIResponse {
 export const unifiedAIService = {
   async generateResponse(
     prompt: string,
-    context?: string
+    context?: string,
+    conversationHistory?: Array<{ role: string; content: string }>
   ): Promise<AIResponse> {
     try {
-      const res = await aiService.generateResponse(prompt, context);
+      const res = await aiService.generateResponse(
+        prompt,
+        context,
+        conversationHistory
+      );
       if (res && res.success && res.data) return res;
       return {
         success: true,

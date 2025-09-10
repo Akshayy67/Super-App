@@ -81,6 +81,7 @@ export const EnhancedMockInterview: React.FC<EnhancedMockInterviewProps> = ({
 
   // Video and analysis
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -117,27 +118,94 @@ export const EnhancedMockInterview: React.FC<EnhancedMockInterviewProps> = ({
     return () => clearInterval(interval);
   }, [callStatus, startTime]);
 
+  const stopVideoStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        track.stop();
+        console.log(`Stopped ${track.kind} track`);
+      });
+      streamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    console.log("Video stream stopped and cleaned up");
+  };
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      console.log("Component unmounting, cleaning up video stream");
+      stopVideoStream();
+      speechAnalyzer.current.stopAnalysis();
+      bodyLanguageAnalyzer.current.stopAnalysis();
+    };
+  }, []);
+
   const initializeAnalyzers = async () => {
     try {
       // Initialize video stream
       if (isVideoEnabled) {
+        console.log("Initializing video stream...");
+
+        // Check if getUserMedia is available
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("Camera access not supported in this browser");
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            facingMode: "user",
+          },
           audio: true,
         });
 
+        console.log("Video stream obtained:", stream);
+
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
+          streamRef.current = stream;
 
-        // Initialize body language analyzer
-        if (videoRef.current) {
+          // Wait for video to be ready before playing
+          await new Promise((resolve, reject) => {
+            if (!videoRef.current) {
+              reject(new Error("Video element not available"));
+              return;
+            }
+
+            const video = videoRef.current;
+
+            const onLoadedMetadata = () => {
+              video.removeEventListener("loadedmetadata", onLoadedMetadata);
+              video.removeEventListener("error", onError);
+              resolve(void 0);
+            };
+
+            const onError = (e: Event) => {
+              video.removeEventListener("loadedmetadata", onLoadedMetadata);
+              video.removeEventListener("error", onError);
+              reject(new Error("Video failed to load"));
+            };
+
+            video.addEventListener("loadedmetadata", onLoadedMetadata);
+            video.addEventListener("error", onError);
+          });
+
+          await videoRef.current.play();
+          console.log("Video playing successfully");
+
+          // Initialize body language analyzer
           await bodyLanguageAnalyzer.current.initialize(videoRef.current);
+          console.log("Body language analyzer initialized");
         }
       }
 
       // Initialize speech analyzer
+      console.log("Initializing speech analyzer...");
       const speechInitialized = await speechAnalyzer.current.initialize();
 
       if (!speechInitialized) {
@@ -147,12 +215,42 @@ export const EnhancedMockInterview: React.FC<EnhancedMockInterviewProps> = ({
         return;
       }
 
+      console.log("All analyzers initialized successfully");
       setIsInitialized(true);
     } catch (error) {
       console.error("Failed to initialize analyzers:", error);
-      setError(
-        "Failed to initialize analysis systems. Please check permissions."
-      );
+
+      let errorMessage = "Failed to initialize analysis systems.";
+
+      if (error instanceof Error) {
+        if (error.name === "NotAllowedError") {
+          errorMessage =
+            "Camera and microphone access denied. Please allow permissions and try again.";
+        } else if (error.name === "NotFoundError") {
+          errorMessage =
+            "No camera or microphone found. Please connect a device and try again.";
+        } else if (error.name === "NotSupportedError") {
+          errorMessage = "Camera or microphone not supported in this browser.";
+        } else {
+          errorMessage = `${errorMessage} ${error.message}`;
+        }
+      }
+
+      setError(errorMessage);
+    }
+  };
+
+  const toggleVideo = () => {
+    const newVideoState = !isVideoEnabled;
+    setIsVideoEnabled(newVideoState);
+
+    if (!newVideoState) {
+      // If disabling video, stop the stream
+      stopVideoStream();
+      bodyLanguageAnalyzer.current.stopAnalysis();
+    } else if (isInitialized) {
+      // If enabling video and already initialized, restart the analyzers
+      initializeAnalyzers();
     }
   };
 
@@ -319,15 +417,20 @@ Remember: This is a voice conversation, so keep all responses short and conversa
   ): InterviewPerformanceData => {
     const duration = (Date.now() - startTime) / 1000;
 
-    // Calculate scores based on analysis results
-    const technicalScore = 70 + Math.random() * 25; // Mock technical assessment
-    const communicationScore =
-      (speechResults.pronunciationAssessment.overallScore +
-        speechResults.confidenceScore.overall) /
-      2;
-    const behavioralScore = bodyLanguageResults.overallBodyLanguage.score;
-    const overallScore =
-      (technicalScore + communicationScore + behavioralScore) / 3;
+    // Calculate sophisticated scores based on real analysis results
+    const technicalScore = calculateTechnicalScore(
+      speechResults,
+      bodyLanguageResults,
+      duration
+    );
+    const communicationScore = calculateCommunicationScore(speechResults);
+    const behavioralScore = calculateBehavioralScore(bodyLanguageResults);
+    const overallScore = calculateOverallScore(
+      technicalScore,
+      communicationScore,
+      behavioralScore,
+      difficulty
+    );
 
     return {
       id: `interview_${Date.now()}`,
@@ -342,15 +445,24 @@ Remember: This is a voice conversation, so keep all responses short and conversa
       speechAnalysis: speechResults,
       bodyLanguageAnalysis: bodyLanguageResults,
       questionsAnswered: questionCount,
-      questionsCorrect: Math.floor(questionCount * 0.7), // Mock correct answers
-      averageResponseTime: 15 + Math.random() * 10, // Mock response time
+      questionsCorrect: calculateCorrectAnswers(
+        speechResults,
+        bodyLanguageResults
+      ),
+      averageResponseTime: calculateAverageResponseTime(
+        speechResults,
+        duration
+      ),
       detailedMetrics: {
         confidence: speechResults.confidenceScore.overall,
         clarity: speechResults.pronunciationAssessment.clarity,
         professionalism:
           bodyLanguageResults.overallBodyLanguage.professionalismScore,
         engagement: bodyLanguageResults.facialExpressions.engagement,
-        adaptability: 75 + Math.random() * 20, // Mock adaptability score
+        adaptability: calculateAdaptabilityScore(
+          speechResults,
+          bodyLanguageResults
+        ),
       },
       strengths: [
         ...bodyLanguageResults.overallBodyLanguage.strengths,
@@ -375,6 +487,212 @@ Remember: This is a voice conversation, so keep all responses short and conversa
         "Practice answering behavioral questions with specific examples",
       ],
     };
+  };
+
+  // Sophisticated scoring calculation functions
+  const calculateTechnicalScore = (
+    speechResults: SpeechAnalysisResult,
+    bodyLanguageResults: BodyLanguageAnalysisResult,
+    duration: number
+  ): number => {
+    let baseScore = 60; // Starting point
+
+    // Speech clarity and articulation (30% weight)
+    const speechClarity = speechResults.pronunciationAssessment.clarity;
+    const articulation = speechResults.pronunciationAssessment.articulation;
+    const speechContribution = ((speechClarity + articulation) / 2) * 0.3;
+
+    // Response structure and coherence (25% weight)
+    const fillerWordPenalty = Math.min(
+      20,
+      speechResults.fillerWords.percentage * 2
+    );
+    const coherenceScore = Math.max(0, 100 - fillerWordPenalty);
+    const coherenceContribution = coherenceScore * 0.25;
+
+    // Professional presence (20% weight)
+    const professionalismScore =
+      bodyLanguageResults.overallBodyLanguage.professionalismScore;
+    const professionalismContribution = professionalismScore * 0.2;
+
+    // Engagement and confidence (15% weight)
+    const confidence = speechResults.confidenceScore.overall;
+    const engagement = bodyLanguageResults.facialExpressions.engagement;
+    const engagementScore = (confidence + engagement) / 2;
+    const engagementContribution = engagementScore * 0.15;
+
+    // Time management (10% weight)
+    const expectedDuration = questionCount * 120; // 2 minutes per question
+    const timeEfficiency = Math.min(100, (expectedDuration / duration) * 100);
+    const timeContribution = timeEfficiency * 0.1;
+
+    const finalScore =
+      baseScore +
+      speechContribution +
+      coherenceContribution +
+      professionalismContribution +
+      engagementContribution +
+      timeContribution;
+
+    return Math.round(Math.min(100, Math.max(0, finalScore)));
+  };
+
+  const calculateCommunicationScore = (
+    speechResults: SpeechAnalysisResult
+  ): number => {
+    const weights = {
+      pronunciation: 0.3,
+      fluency: 0.25,
+      confidence: 0.2,
+      pace: 0.15,
+      clarity: 0.1,
+    };
+
+    const pronunciation = speechResults.pronunciationAssessment.overallScore;
+    const fluency = speechResults.pronunciationAssessment.fluency;
+    const confidence = speechResults.confidenceScore.overall;
+    const pace = Math.min(100, speechResults.paceAnalysis.wordsPerMinute / 1.5); // Normalize to 150 WPM
+    const clarity = speechResults.pronunciationAssessment.clarity;
+
+    const score =
+      pronunciation * weights.pronunciation +
+      fluency * weights.fluency +
+      confidence * weights.confidence +
+      pace * weights.pace +
+      clarity * weights.clarity;
+
+    return Math.round(Math.min(100, Math.max(0, score)));
+  };
+
+  const calculateBehavioralScore = (
+    bodyLanguageResults: BodyLanguageAnalysisResult
+  ): number => {
+    const weights = {
+      eyeContact: 0.3,
+      posture: 0.25,
+      facialExpressions: 0.2,
+      gestures: 0.15,
+      overall: 0.1,
+    };
+
+    const eyeContactScore = bodyLanguageResults.eyeContact.score;
+    const postureScore = bodyLanguageResults.posture.score;
+    const expressionScore =
+      (bodyLanguageResults.facialExpressions.confidence +
+        bodyLanguageResults.facialExpressions.engagement) /
+      2;
+    const gestureScore = bodyLanguageResults.gestures.score;
+    const overallScore = bodyLanguageResults.overallBodyLanguage.score;
+
+    const score =
+      eyeContactScore * weights.eyeContact +
+      postureScore * weights.posture +
+      expressionScore * weights.facialExpressions +
+      gestureScore * weights.gestures +
+      overallScore * weights.overall;
+
+    return Math.round(Math.min(100, Math.max(0, score)));
+  };
+
+  const calculateOverallScore = (
+    technicalScore: number,
+    communicationScore: number,
+    behavioralScore: number,
+    difficulty: string
+  ): number => {
+    // Adjust weights based on difficulty level
+    let weights = { technical: 0.4, communication: 0.35, behavioral: 0.25 };
+
+    switch (difficulty) {
+      case "easy":
+        weights = { technical: 0.3, communication: 0.4, behavioral: 0.3 }; // More focus on communication
+        break;
+      case "hard":
+        weights = { technical: 0.5, communication: 0.3, behavioral: 0.2 }; // More focus on technical
+        break;
+      default: // medium
+        weights = { technical: 0.4, communication: 0.35, behavioral: 0.25 };
+    }
+
+    const weightedScore =
+      technicalScore * weights.technical +
+      communicationScore * weights.communication +
+      behavioralScore * weights.behavioral;
+
+    return Math.round(Math.min(100, Math.max(0, weightedScore)));
+  };
+
+  const calculateCorrectAnswers = (
+    speechResults: SpeechAnalysisResult,
+    bodyLanguageResults: BodyLanguageAnalysisResult
+  ): number => {
+    // Estimate correct answers based on communication quality and confidence
+    const communicationQuality =
+      (speechResults.pronunciationAssessment.overallScore +
+        speechResults.confidenceScore.overall +
+        speechResults.pronunciationAssessment.fluency) /
+      3;
+
+    const engagementLevel = bodyLanguageResults.facialExpressions.engagement;
+    const overallQuality = (communicationQuality + engagementLevel) / 2;
+
+    // Convert quality score to percentage of correct answers
+    let correctPercentage = 0.4; // Base 40% correct
+
+    if (overallQuality >= 80) correctPercentage = 0.85;
+    else if (overallQuality >= 70) correctPercentage = 0.75;
+    else if (overallQuality >= 60) correctPercentage = 0.65;
+    else if (overallQuality >= 50) correctPercentage = 0.55;
+
+    return Math.floor(questionCount * correctPercentage);
+  };
+
+  const calculateAverageResponseTime = (
+    speechResults: SpeechAnalysisResult,
+    totalDuration: number
+  ): number => {
+    // Calculate based on actual speech patterns and pauses
+    const wordsPerMinute = speechResults.paceAnalysis.wordsPerMinute;
+    const averagePause = speechResults.paceAnalysis.averagePause;
+    const fillerWordPercentage = speechResults.fillerWords.percentage;
+
+    // Base response time calculation
+    let baseResponseTime = totalDuration / questionCount;
+
+    // Adjust based on speech patterns
+    if (wordsPerMinute < 120) baseResponseTime *= 1.2; // Slower speakers take longer
+    if (wordsPerMinute > 180) baseResponseTime *= 0.9; // Faster speakers are quicker
+
+    // Adjust for pauses and filler words
+    const pauseAdjustment = Math.min(10, averagePause * 2);
+    const fillerAdjustment = Math.min(5, fillerWordPercentage * 0.5);
+
+    return Math.round(baseResponseTime + pauseAdjustment + fillerAdjustment);
+  };
+
+  const calculateAdaptabilityScore = (
+    speechResults: SpeechAnalysisResult,
+    bodyLanguageResults: BodyLanguageAnalysisResult
+  ): number => {
+    // Measure adaptability based on consistency and confidence throughout interview
+    const confidenceConsistency =
+      100 - speechResults.confidenceScore.volumeVariation * 0.5;
+    const engagementLevel = bodyLanguageResults.facialExpressions.engagement;
+    const postureStability = bodyLanguageResults.posture.score;
+
+    // Factor in speech pace consistency
+    const paceConsistency = Math.max(
+      0,
+      100 - (speechResults.paceAnalysis.wordsPerMinute > 200 ? 20 : 0)
+    );
+
+    const adaptabilityScore =
+      confidenceConsistency * 0.3 +
+      engagementLevel * 0.3 +
+      postureStability * 0.2 +
+      paceConsistency * 0.2;
+
+    return Math.round(Math.min(100, Math.max(40, adaptabilityScore)));
   };
 
   const cleanup = () => {
@@ -462,20 +780,49 @@ Remember: This is a voice conversation, so keep all responses short and conversa
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Video and Controls */}
-        <div className="lg:col-span-2">
-          <div className="bg-gray-900 rounded-lg overflow-hidden mb-4">
+      <div className="flex gap-6">
+        {/* Video and Controls - Takes most space */}
+        <div className="flex-1">
+          <div className="bg-gray-900 rounded-lg overflow-hidden mb-4 relative h-64">
             {isVideoEnabled ? (
               <video
                 ref={videoRef}
-                className="w-full h-64 object-cover"
-                muted
+                autoPlay
                 playsInline
+                muted
+                style={{
+                  transform: "scaleX(-1)",
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                }}
+                onLoadedMetadata={() => {
+                  console.log("Enhanced video metadata loaded");
+                  if (videoRef.current) {
+                    videoRef.current
+                      .play()
+                      .catch((e) => console.log("Auto-play prevented:", e));
+                  }
+                }}
+                onCanPlay={() => console.log("Enhanced video can play")}
+                onPlay={() => console.log("Enhanced video started playing")}
+                onError={(e) => {
+                  console.error("Enhanced video error:", e);
+                  setError("Video playback error. Please check your camera.");
+                }}
               />
             ) : (
-              <div className="w-full h-64 flex items-center justify-center text-white">
+              <div className="w-full h-full flex items-center justify-center text-white absolute top-0 left-0">
                 <VideoOff className="w-12 h-12" />
+                <div className="ml-4">
+                  <p className="text-lg font-medium">Camera Disabled</p>
+                  <p className="text-sm opacity-75">
+                    Click the camera button to enable
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -504,12 +851,13 @@ Remember: This is a voice conversation, so keep all responses short and conversa
             )}
 
             <button
-              onClick={() => setIsVideoEnabled(!isVideoEnabled)}
+              onClick={toggleVideo}
               className={`p-3 rounded-lg transition-colors ${
                 isVideoEnabled
                   ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
                   : "bg-red-100 text-red-700 hover:bg-red-200"
               }`}
+              title={isVideoEnabled ? "Disable Camera" : "Enable Camera"}
             >
               {isVideoEnabled ? (
                 <Camera className="w-5 h-5" />
@@ -520,97 +868,79 @@ Remember: This is a voice conversation, so keep all responses short and conversa
           </div>
         </div>
 
-        {/* Real-time Metrics */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Real-time Analysis
-          </h3>
+        {/* Question Panel */}
+        <div className="w-96 bg-white border-l border-gray-200 p-6 overflow-y-auto">
+          <div className="space-y-6">
+            {/* Current Question */}
+            {currentQuestion && (
+              <div>
+                <div className="flex items-center space-x-2 mb-3">
+                  <MessageSquare className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-semibold text-gray-900">
+                    Current Question
+                  </h3>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <p className="text-gray-900 font-medium">{currentQuestion}</p>
+                </div>
+              </div>
+            )}
 
-          {/* Filler Words */}
-          <div className="bg-blue-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Volume2 className="w-5 h-5 text-blue-600" />
-              <span className="font-medium text-blue-900">Filler Words</span>
-            </div>
-            <div className="text-2xl font-bold text-blue-600">
-              {realTimeMetrics.fillerWordCount}
-            </div>
-            <div className="text-sm text-blue-700">
-              {realTimeMetrics.fillerWordCount < 5
-                ? "Excellent"
-                : realTimeMetrics.fillerWordCount < 10
-                ? "Good"
-                : "Needs Improvement"}
-            </div>
-          </div>
+            {/* Real-time Metrics - Compact Version */}
+            <div>
+              <h4 className="font-medium text-gray-900 mb-3">Live Analysis</h4>
+              <div className="grid grid-cols-2 gap-3">
+                {/* Filler Words */}
+                <div className="bg-blue-50 rounded-lg p-3">
+                  <div className="text-lg font-bold text-blue-600">
+                    {realTimeMetrics.fillerWordCount}
+                  </div>
+                  <div className="text-xs text-blue-700">Filler Words</div>
+                </div>
 
-          {/* Eye Contact */}
-          <div className="bg-green-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Eye className="w-5 h-5 text-green-600" />
-              <span className="font-medium text-green-900">Eye Contact</span>
-            </div>
-            <div className="text-2xl font-bold text-green-600">
-              {Math.round(realTimeMetrics.eyeContactPercentage)}%
-            </div>
-            <div className="text-sm text-green-700">
-              {realTimeMetrics.eyeContactPercentage > 70
-                ? "Excellent"
-                : realTimeMetrics.eyeContactPercentage > 50
-                ? "Good"
-                : "Needs Improvement"}
-            </div>
-          </div>
+                {/* Eye Contact */}
+                <div className="bg-green-50 rounded-lg p-3">
+                  <div className="text-lg font-bold text-green-600">
+                    {Math.round(realTimeMetrics.eyeContactPercentage)}%
+                  </div>
+                  <div className="text-xs text-green-700">Eye Contact</div>
+                </div>
 
-          {/* Confidence Score */}
-          <div className="bg-purple-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Zap className="w-5 h-5 text-purple-600" />
-              <span className="font-medium text-purple-900">Confidence</span>
-            </div>
-            <div className="text-2xl font-bold text-purple-600">
-              {Math.round(realTimeMetrics.confidenceScore)}
-            </div>
-            <div className="text-sm text-purple-700">
-              {realTimeMetrics.confidenceScore > 80
-                ? "High"
-                : realTimeMetrics.confidenceScore > 60
-                ? "Moderate"
-                : "Low"}
-            </div>
-          </div>
+                {/* Confidence */}
+                <div className="bg-purple-50 rounded-lg p-3">
+                  <div className="text-lg font-bold text-purple-600">
+                    {Math.round(realTimeMetrics.confidenceScore)}
+                  </div>
+                  <div className="text-xs text-purple-700">Confidence</div>
+                </div>
 
-          {/* Speaking Pace */}
-          <div className="bg-orange-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Activity className="w-5 h-5 text-orange-600" />
-              <span className="font-medium text-orange-900">Speaking Pace</span>
+                {/* Speaking Pace */}
+                <div className="bg-orange-50 rounded-lg p-3">
+                  <div className="text-lg font-bold text-orange-600">
+                    {Math.round(realTimeMetrics.speakingPace)}
+                  </div>
+                  <div className="text-xs text-orange-700">WPM</div>
+                </div>
+              </div>
             </div>
-            <div className="text-2xl font-bold text-orange-600">
-              {Math.round(realTimeMetrics.speakingPace)} WPM
-            </div>
-            <div className="text-sm text-orange-700">
-              {realTimeMetrics.speakingPace >= 140 &&
-              realTimeMetrics.speakingPace <= 160
-                ? "Optimal"
-                : realTimeMetrics.speakingPace < 140
-                ? "Too Slow"
-                : "Too Fast"}
+
+            {/* Interview Progress */}
+            <div>
+              <h4 className="font-medium text-gray-900 mb-3">Progress</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Questions Asked</span>
+                  <span>{questionCount}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Duration</span>
+                  <span>{formatDuration(interviewDuration)}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Current Question Display */}
-      {callStatus === CallStatus.ACTIVE && currentQuestion && (
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <MessageSquare className="w-5 h-5 text-blue-600" />
-            <span className="font-medium text-blue-900">Current Question</span>
-          </div>
-          <p className="text-blue-800">{currentQuestion}</p>
-        </div>
-      )}
     </div>
   );
 };

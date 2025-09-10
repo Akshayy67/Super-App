@@ -149,38 +149,182 @@ Format your response as JSON with these fields:
   private buildInitialQuestionsPrompt(
     context: QuestionGenerationContext
   ): string {
+    const roleSpecificContext = this.getRoleSpecificContext(context.role);
+    const difficultyGuidelines = this.getDifficultyGuidelines(
+      context.difficulty
+    );
+    const questionCount = context.interviewType === "mixed" ? "5" : "3";
+
     return `
-Generate ${
-      context.interviewType === "mixed" ? "5" : "3"
-    } interview questions for a ${context.difficulty} level ${
+You are an expert technical interviewer with 15+ years of experience. Generate ${questionCount} highly targeted interview questions for a ${
       context.role
     } position.
 
-Context:
-- Role: ${context.role}
-- Difficulty: ${context.difficulty}
-- Interview Type: ${context.interviewType}
-- Focus Areas: ${context.focusAreas.join(", ")}
-- Time Available: ${context.timeRemaining} minutes
+## Interview Context
+- **Role**: ${context.role}
+- **Difficulty Level**: ${context.difficulty}
+- **Interview Type**: ${context.interviewType}
+- **Focus Areas**: ${context.focusAreas.join(", ")}
+- **Time Available**: ${context.timeRemaining} minutes
+- **Performance Context**: ${this.getPerformanceContext(
+      context.performanceMetrics
+    )}
 
-Requirements:
-1. Questions should be appropriate for the role and difficulty level
-2. Include a mix of technical and behavioral questions if interview type is 'mixed'
-3. Each question should have clear evaluation criteria
-4. Provide expected answer points for each question
-5. Include time limits for each question
+## Role-Specific Requirements
+${roleSpecificContext}
 
-Format your response as JSON array with each question having:
-- question: The actual question text
-- category: Question category (technical, behavioral, situational, etc.)
-- difficulty: easy, medium, or hard
-- expectedAnswerPoints: Array of key points expected in answer
-- followUpQuestions: Array of potential follow-up questions
-- evaluationCriteria: Array of criteria to evaluate the answer
-- timeLimit: Time limit in seconds
-- hints: Optional array of hints if candidate struggles
-- adaptationReason: Why this question was chosen for this context
+## Difficulty Guidelines
+${difficultyGuidelines}
+
+## Question Generation Rules
+1. **Relevance**: Each question must directly assess skills critical for the ${
+      context.role
+    } role
+2. **Progressive Difficulty**: Questions should build upon each other logically
+3. **Real-World Application**: Include scenarios the candidate would actually face
+4. **Measurable Outcomes**: Provide clear, objective evaluation criteria
+5. **Time Optimization**: Questions should be answerable within the time limit
+
+## Expected Response Format
+Return a JSON array with exactly ${questionCount} questions:
+
+\`\`\`json
+[
+  {
+    "question": "Detailed, role-specific question that tests core competencies",
+    "category": "technical|behavioral|situational|problem-solving",
+    "difficulty": "${context.difficulty}",
+    "expectedAnswerPoints": [
+      "Specific technical concept or approach",
+      "Implementation detail or best practice",
+      "Real-world consideration or trade-off"
+    ],
+    "followUpQuestions": [
+      "Probing question to test deeper understanding",
+      "Scenario-based follow-up to assess practical application"
+    ],
+    "evaluationCriteria": [
+      "Technical accuracy and depth of knowledge",
+      "Problem-solving approach and methodology",
+      "Communication clarity and structure"
+    ],
+    "timeLimit": ${Math.floor(context.timeRemaining / parseInt(questionCount))},
+    "hints": [
+      "Helpful hint if candidate struggles",
+      "Alternative approach suggestion"
+    ],
+    "adaptationReason": "Why this question was chosen for this specific context"
+  }
+]
+\`\`\`
+
+Generate questions that will effectively differentiate between candidates at the ${
+      context.difficulty
+    } level.
 `;
+  }
+
+  private getRoleSpecificContext(role: string): string {
+    const roleContexts: Record<string, string> = {
+      "Software Engineer": `
+- Focus on coding proficiency, system design, and problem-solving
+- Assess knowledge of data structures, algorithms, and software architecture
+- Evaluate experience with relevant technologies and frameworks
+- Test debugging skills and code optimization abilities`,
+
+      "Product Manager": `
+- Assess product strategy and roadmap planning capabilities
+- Evaluate stakeholder management and communication skills
+- Test data-driven decision making and metrics understanding
+- Focus on user experience and market analysis abilities`,
+
+      "Data Scientist": `
+- Evaluate statistical knowledge and machine learning expertise
+- Assess data analysis and visualization capabilities
+- Test programming skills in Python/R and SQL proficiency
+- Focus on experimental design and hypothesis testing`,
+
+      "Frontend Developer": `
+- Assess UI/UX implementation skills and responsive design
+- Evaluate JavaScript/TypeScript proficiency and framework knowledge
+- Test performance optimization and accessibility awareness
+- Focus on browser compatibility and modern development practices`,
+
+      "Backend Developer": `
+- Evaluate API design and database optimization skills
+- Assess scalability and performance considerations
+- Test security best practices and system architecture knowledge
+- Focus on microservices and cloud platform experience`,
+    };
+
+    return (
+      roleContexts[role] ||
+      `
+- Assess core competencies relevant to the ${role} position
+- Evaluate problem-solving and analytical thinking abilities
+- Test communication and collaboration skills
+- Focus on relevant technical and domain expertise`
+    );
+  }
+
+  private getDifficultyGuidelines(
+    difficulty: "easy" | "medium" | "hard"
+  ): string {
+    const guidelines = {
+      easy: `
+- **Entry Level (0-2 years)**: Focus on fundamental concepts and basic problem-solving
+- Questions should test foundational knowledge and learning ability
+- Allow for some uncertainty and provide guidance when needed
+- Emphasize potential and willingness to learn over deep expertise`,
+
+      medium: `
+- **Mid Level (2-5 years)**: Expect solid understanding of core concepts and practical experience
+- Questions should test real-world application and decision-making skills
+- Look for ability to handle complexity and trade-off analysis
+- Assess leadership potential and mentoring capabilities`,
+
+      hard: `
+- **Senior Level (5+ years)**: Demand deep expertise and strategic thinking
+- Questions should test system design, architecture, and optimization skills
+- Expect innovative solutions and industry best practices knowledge
+- Assess ability to lead teams and drive technical decisions`,
+    };
+
+    return guidelines[difficulty];
+  }
+
+  private getPerformanceContext(metrics: any): string {
+    if (!metrics) return "No previous performance data available";
+
+    const { technicalScore, communicationScore, confidenceScore } = metrics;
+
+    let context = "Previous performance indicators:\n";
+
+    if (technicalScore < 60) {
+      context +=
+        "- Consider focusing on fundamental concepts and providing more guidance\n";
+    } else if (technicalScore > 80) {
+      context +=
+        "- Candidate shows strong technical aptitude, can handle complex scenarios\n";
+    }
+
+    if (communicationScore < 60) {
+      context +=
+        "- May need questions that encourage structured thinking and clear explanation\n";
+    } else if (communicationScore > 80) {
+      context +=
+        "- Strong communicator, can handle open-ended and discussion-based questions\n";
+    }
+
+    if (confidenceScore < 60) {
+      context +=
+        "- Consider supportive questioning style with hints and encouragement\n";
+    } else if (confidenceScore > 80) {
+      context +=
+        "- Confident candidate, can handle challenging and pressure-testing questions\n";
+    }
+
+    return context;
   }
 
   private buildAnswerAnalysisPrompt(

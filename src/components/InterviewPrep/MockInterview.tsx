@@ -120,7 +120,10 @@ export const MockInterview: React.FC = () => {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string>("");
   const [isVideoReady, setIsVideoReady] = useState(false);
+  const [isCameraLoading, setIsCameraLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const interviewVideoRef = useRef<HTMLVideoElement>(null);
+  const debugVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   // Face detection state
@@ -132,10 +135,10 @@ export const MockInterview: React.FC = () => {
   // Feedback state
   const [showFeedback, setShowFeedback] = useState(false);
 
-  // Face detection integration
+  // Face detection integration - use the primary video element
   const faceDetection = useFaceDetection({
     enabled: enableFaceDetection && isCameraActive,
-    videoElement: videoRef.current,
+    videoElement: videoRef.current || interviewVideoRef.current,
     onFaceDetected: (faces: DetectedFace[]) => {
       setDetectedFaces(faces);
       if (faces.length > 0) {
@@ -189,7 +192,15 @@ export const MockInterview: React.FC = () => {
   const startCamera = async () => {
     try {
       console.log("Starting camera...");
+      setIsCameraLoading(true);
       setCameraError("");
+
+      // Check if camera is already active
+      if (isCameraActive && streamRef.current) {
+        console.log("Camera is already active");
+        setIsCameraLoading(false);
+        return;
+      }
 
       // Video element is now always present, but let's still check for safety
       if (!videoRef.current) {
@@ -219,21 +230,57 @@ export const MockInterview: React.FC = () => {
         streamRef.current = stream;
         setIsCameraActive(true);
         setShowCameraPreview(true);
+        setIsCameraLoading(false);
         console.log(
           "Camera started successfully, video ref:",
           videoRef.current
         );
       } else {
         console.error("Video ref is still null after waiting");
+        // Clean up the stream if video element is not available
+        stream.getTracks().forEach((track) => track.stop());
         throw new Error("Video element not available");
       }
     } catch (error) {
       console.error("Error accessing camera:", error);
-      setCameraError(
-        error instanceof Error
-          ? error.message
-          : "Unable to access camera. Please check permissions."
-      );
+      setIsCameraLoading(false);
+
+      // Provide more specific error messages based on error type
+      let errorMessage = "Unable to access camera. Please check permissions.";
+
+      if (error instanceof Error) {
+        if (
+          error.name === "NotAllowedError" ||
+          error.name === "PermissionDeniedError"
+        ) {
+          errorMessage =
+            "Camera access denied. Please allow camera permissions in your browser settings and refresh the page.";
+        } else if (
+          error.name === "NotFoundError" ||
+          error.name === "DevicesNotFoundError"
+        ) {
+          errorMessage =
+            "No camera found. Please connect a camera and try again.";
+        } else if (
+          error.name === "NotReadableError" ||
+          error.name === "TrackStartError"
+        ) {
+          errorMessage =
+            "Camera is already in use by another application. Please close other apps using the camera and try again.";
+        } else if (
+          error.name === "OverconstrainedError" ||
+          error.name === "ConstraintNotSatisfiedError"
+        ) {
+          errorMessage =
+            "Camera doesn't support the required settings. Please try with a different camera.";
+        } else if (error.message.includes("timeout")) {
+          errorMessage = error.message;
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      setCameraError(errorMessage);
     }
   };
 
@@ -269,14 +316,14 @@ export const MockInterview: React.FC = () => {
 
   // Ensure video element is properly initialized when camera starts
   useEffect(() => {
-    if (isCameraActive && videoRef.current && streamRef.current) {
+    if (isCameraActive && streamRef.current && videoRef.current) {
       videoRef.current.srcObject = streamRef.current;
     }
   }, [isCameraActive]);
 
   // Ensure video element is available when component mounts
   useEffect(() => {
-    console.log("Component mounted, video ref:", videoRef.current);
+    console.log("Component mounted, video ref:", !!videoRef.current);
 
     // Check if video element is available after a short delay
     const timer = setTimeout(() => {
@@ -284,20 +331,12 @@ export const MockInterview: React.FC = () => {
         console.log("Video element found after mount delay");
         setIsVideoReady(true);
       } else {
-        console.log("Video element still not available after mount delay");
+        console.log("Video element not available after mount delay");
       }
     }, 100);
 
     return () => clearTimeout(timer);
   }, []);
-
-  // Video ref callback to ensure proper initialization
-  const setVideoRef = (element: HTMLVideoElement | null) => {
-    console.log("Video ref callback called with:", element);
-
-    // Update video ready state
-    setIsVideoReady(!!element);
-  };
 
   useEffect(() => {
     const onCallStart = () => {
@@ -1513,19 +1552,28 @@ Important:
                 {/* Camera Toggle Button */}
                 <button
                   onClick={isCameraActive ? stopCamera : startCamera}
+                  disabled={isCameraLoading}
                   className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-300 ${
-                    isCameraActive
+                    isCameraLoading
+                      ? "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 cursor-not-allowed"
+                      : isCameraActive
                       ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50"
                       : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50"
                   }`}
                 >
-                  {isCameraActive ? (
+                  {isCameraLoading ? (
+                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                  ) : isCameraActive ? (
                     <VideoOff className="w-4 h-4" />
                   ) : (
                     <Camera className="w-4 h-4" />
                   )}
                   <span className="text-sm font-medium">
-                    {isCameraActive ? "Stop Camera" : "Start Camera"}
+                    {isCameraLoading
+                      ? "Starting..."
+                      : isCameraActive
+                      ? "Stop Camera"
+                      : "Start Camera"}
                   </span>
                 </button>
 
@@ -1816,19 +1864,28 @@ Important:
               {/* Camera Toggle Button */}
               <button
                 onClick={isCameraActive ? stopCamera : startCamera}
+                disabled={isCameraLoading}
                 className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-300 ${
-                  isCameraActive
+                  isCameraLoading
+                    ? "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 cursor-not-allowed"
+                    : isCameraActive
                     ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50"
                     : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50"
                 }`}
               >
-                {isCameraActive ? (
+                {isCameraLoading ? (
+                  <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                ) : isCameraActive ? (
                   <VideoOff className="w-4 h-4" />
                 ) : (
                   <Camera className="w-4 h-4" />
                 )}
                 <span className="text-sm font-medium">
-                  {isCameraActive ? "Stop Camera" : "Start Camera"}
+                  {isCameraLoading
+                    ? "Starting..."
+                    : isCameraActive
+                    ? "Stop Camera"
+                    : "Start Camera"}
                 </span>
               </button>
 
@@ -1893,7 +1950,7 @@ Important:
               <div className="flex-1 bg-gray-900 rounded-xl flex items-center justify-center relative overflow-hidden max-w-4xl mx-auto w-full aspect-video min-h-[400px]">
                 {/* Video element - always present but conditionally visible */}
                 <video
-                  ref={videoRef}
+                  ref={interviewVideoRef}
                   autoPlay
                   playsInline
                   muted
@@ -1901,31 +1958,33 @@ Important:
                     isCameraActive ? "block" : "hidden"
                   }`}
                   onLoadedMetadata={() => {
-                    console.log("Video metadata loaded");
-                    if (videoRef.current) {
-                      videoRef.current
+                    console.log("Interview video metadata loaded");
+                    if (interviewVideoRef.current) {
+                      interviewVideoRef.current
                         .play()
                         .catch((e) => console.log("Auto-play prevented:", e));
                     }
                   }}
-                  onCanPlay={() => console.log("Video can play")}
-                  onPlay={() => console.log("Video started playing")}
-                  onError={(e) => console.error("Video error:", e)}
+                  onCanPlay={() => console.log("Interview video can play")}
+                  onPlay={() => console.log("Interview video started playing")}
+                  onError={(e) => console.error("Interview video error:", e)}
                 />
 
                 {/* Face Detection Overlay for Interview */}
-                {enableFaceDetection && isCameraActive && videoRef.current && (
-                  <FaceDetectionOverlay
-                    faces={detectedFaces}
-                    videoWidth={videoRef.current.videoWidth || 640}
-                    videoHeight={videoRef.current.videoHeight || 480}
-                    showConfidence={true}
-                    showHeadPose={false}
-                    eyeContactPercentage={
-                      faceDetection.stats.eyeContactPercentage
-                    }
-                  />
-                )}
+                {enableFaceDetection &&
+                  isCameraActive &&
+                  interviewVideoRef.current && (
+                    <FaceDetectionOverlay
+                      faces={detectedFaces}
+                      videoWidth={interviewVideoRef.current.videoWidth || 640}
+                      videoHeight={interviewVideoRef.current.videoHeight || 480}
+                      showConfidence={true}
+                      showHeadPose={false}
+                      eyeContactPercentage={
+                        faceDetection.stats.eyeContactPercentage
+                      }
+                    />
+                  )}
 
                 {isCameraActive ? (
                   <div className="w-full h-full relative">
@@ -1991,18 +2050,26 @@ Important:
                 ) : (
                   <div className="text-center">
                     <div className="w-32 h-32 bg-gray-800 rounded-full mx-auto mb-4 flex items-center justify-center">
-                      {cameraError ? (
+                      {isCameraLoading ? (
+                        <div className="w-16 h-16 border-4 border-gray-600 border-t-blue-500 rounded-full animate-spin" />
+                      ) : cameraError ? (
                         <AlertCircle className="w-16 h-16 text-red-500" />
                       ) : (
                         <Camera className="w-16 h-16 text-gray-600" />
                       )}
                     </div>
                     <p className="text-white mb-2">
-                      {cameraError ? "Camera Error" : "Camera Preview"}
+                      {isCameraLoading
+                        ? "Starting Camera..."
+                        : cameraError
+                        ? "Camera Error"
+                        : "Camera Preview"}
                     </p>
                     <p className="text-gray-400 text-sm mb-4">
-                      {cameraError ||
-                        "Your video will appear here during the interview"}
+                      {isCameraLoading
+                        ? "Please wait while we access your camera"
+                        : cameraError ||
+                          "Your video will appear here during the interview"}
                     </p>
 
                     {cameraError && (
@@ -2014,13 +2081,24 @@ Important:
                     <div className="flex items-center justify-center space-x-3">
                       <button
                         onClick={startCamera}
-                        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        disabled={isCameraLoading}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                          isCameraLoading
+                            ? "bg-gray-600 cursor-not-allowed"
+                            : "bg-blue-600 hover:bg-blue-700"
+                        } text-white`}
                       >
-                        <Camera className="w-4 h-4" />
-                        <span>Start Camera</span>
+                        {isCameraLoading ? (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Camera className="w-4 h-4" />
+                        )}
+                        <span>
+                          {isCameraLoading ? "Starting..." : "Start Camera"}
+                        </span>
                       </button>
 
-                      {showCameraPreview && (
+                      {showCameraPreview && !isCameraLoading && (
                         <button
                           onClick={() => {
                             console.log("Retrying camera start...");
@@ -2945,6 +3023,26 @@ Important:
         </div>
       )}
 
+      {/* Always-present hidden video element for camera initialization */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className="hidden"
+        onLoadedMetadata={() => {
+          console.log("Main video metadata loaded");
+          if (videoRef.current) {
+            videoRef.current
+              .play()
+              .catch((e) => console.log("Auto-play prevented:", e));
+          }
+        }}
+        onCanPlay={() => console.log("Main video can play")}
+        onPlay={() => console.log("Main video started playing")}
+        onError={(e) => console.error("Main video error:", e)}
+      />
+
       {/* Floating Camera Preview */}
       {showCameraPreview && isCameraActive && !activeSession && (
         <div className="fixed bottom-6 right-6 z-40">
@@ -2970,7 +3068,7 @@ Important:
 
             <div className="relative">
               <video
-                ref={videoRef}
+                ref={debugVideoRef}
                 autoPlay
                 playsInline
                 muted

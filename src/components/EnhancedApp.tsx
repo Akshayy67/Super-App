@@ -25,6 +25,7 @@ import { AuthForm } from "./AuthForm";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { ThemeProvider } from "./ThemeProvider";
 import { ThemeToggle } from "./ThemeToggle";
+import { AuthWrapper } from "./AuthWrapper";
 
 interface User {
   id: string;
@@ -64,7 +65,7 @@ export const EnhancedApp: React.FC = () => {
     initializeAuth();
 
     // Listen for auth state changes
-    const unsubscribe = realTimeAuth.onAuthStateChanged((user) => {
+    const unsubscribe = realTimeAuth.onAuthStateChange((user) => {
       setUser(user);
       setIsLoading(false);
     });
@@ -74,7 +75,7 @@ export const EnhancedApp: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
-      await realTimeAuth.signOut();
+      await realTimeAuth.logout();
       setUser(null);
     } catch (error) {
       console.error("Sign out failed:", error);
@@ -115,24 +116,26 @@ export const EnhancedApp: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">
-            Loading Enhanced AI Interview System...
-          </p>
+      <AuthWrapper>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">
+              Loading Enhanced AI Interview System...
+            </p>
+          </div>
         </div>
-      </div>
+      </AuthWrapper>
     );
   }
 
   if (!user) {
     return (
-      <ThemeProvider>
+      <AuthWrapper>
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
           <AuthForm onAuthSuccess={(user) => setUser(user)} />
         </div>
-      </ThemeProvider>
+      </AuthWrapper>
     );
   }
 

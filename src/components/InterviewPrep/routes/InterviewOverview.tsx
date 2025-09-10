@@ -10,6 +10,8 @@ import {
   Lightbulb,
   Code,
   ExternalLink,
+  Brain,
+  Zap,
 } from "lucide-react";
 
 interface PrepCard {
@@ -61,6 +63,24 @@ export const InterviewOverview: React.FC = () => {
       color: "orange",
       path: "/interview/references",
     },
+    {
+      id: "mock-interview",
+      title: "Mock Interview",
+      description:
+        "Practice with AI interviewer using voice interaction and real-time feedback",
+      icon: Video,
+      color: "red",
+      path: "/interview/mock-interview",
+    },
+    {
+      id: "enhanced-interview",
+      title: "Enhanced AI Interview",
+      description:
+        "Advanced mock interview with ML analysis, speech recognition, and body language assessment",
+      icon: Brain,
+      color: "indigo",
+      path: "/interview/enhanced-interview",
+    },
   ];
 
   const getColorClasses = (color: string) => {
@@ -72,6 +92,9 @@ export const InterviewOverview: React.FC = () => {
         "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50",
       orange:
         "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50",
+      red: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50",
+      indigo:
+        "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50",
     };
     return (
       colorMap[color as keyof typeof colorMap] ||

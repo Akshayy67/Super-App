@@ -10,6 +10,7 @@ import { GlobalNoteCreator } from "./components/GlobalNoteCreator";
 import { useGlobalCopyListener } from "./hooks/useGlobalCopyListener";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { AuthWrapper } from "./components/AuthWrapper";
 
 // Component to handle authenticated app content
 const AuthenticatedApp: React.FC = () => {
@@ -125,7 +126,7 @@ const AuthenticatedApp: React.FC = () => {
         />
       )}
 
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col lg:flex-row landscape-compact transition-colors duration-300">
+      <div className="h-screen bg-gray-50 dark:bg-slate-900 flex flex-col lg:flex-row landscape-compact transition-colors duration-300 overflow-hidden">
         {/* Mobile Header */}
         <div className="mobile-header lg:hidden bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 p-3 sm:p-4 flex items-center justify-between relative z-30">
           <button
@@ -194,7 +195,7 @@ const AuthenticatedApp: React.FC = () => {
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden min-h-0 relative">
-          <div className="flex-1 overflow-hidden scroll-area">
+          <div className="flex-1 overflow-hidden">
             <div className="h-full">
               <AppRouter invitationData={invitationData} />
             </div>
@@ -228,13 +229,13 @@ function App() {
 
   if (!isAuthenticated) {
     return (
-      <ThemeProvider>
+      <AuthWrapper>
         <ErrorBoundary>
-          <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
+          <div className="min-h-screen bg-gray-50">
             <AuthForm onAuthSuccess={handleAuthSuccess} />
           </div>
         </ErrorBoundary>
-      </ThemeProvider>
+      </AuthWrapper>
     );
   }
 

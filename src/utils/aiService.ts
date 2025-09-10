@@ -172,7 +172,8 @@ export const aiService = {
 
   async generateResponse(
     prompt: string,
-    context?: string
+    context?: string,
+    conversationHistory?: Array<{ role: string; content: string }>
   ): Promise<AIResponse> {
     if (!API_KEY) {
       return {
@@ -183,9 +184,24 @@ export const aiService = {
     }
 
     try {
-      const fullPrompt = context
-        ? `Context: ${context}\n\nQuestion: ${prompt}\n\nPlease provide a helpful answer based on the context provided.`
-        : prompt;
+      let fullPrompt = prompt;
+
+      // Build conversation context if provided
+      if (conversationHistory && conversationHistory.length > 0) {
+        const conversationContext = conversationHistory
+          .map(
+            (msg) =>
+              `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}`
+          )
+          .join("\n\n");
+
+        fullPrompt = `Previous conversation:\n${conversationContext}\n\nCurrent message: ${prompt}\n\nPlease respond naturally, taking into account the conversation history. If the user refers to "that", "above", "earlier", "previous", etc., use the conversation context to understand what they're referring to.`;
+      }
+
+      // Add file context if provided
+      if (context) {
+        fullPrompt = `File context: ${context}\n\n${fullPrompt}`;
+      }
 
       const model = import.meta.env.VITE_GEMINI_MODEL || "gemini-2.0-flash";
 

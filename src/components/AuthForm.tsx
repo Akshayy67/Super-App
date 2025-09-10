@@ -3,7 +3,6 @@ import { realTimeAuth } from "../utils/realTimeAuth";
 import { PrivacyNotice } from "./PrivacyNotice";
 import { ParticleField } from "./ParticleField";
 import { LoadingGlobe } from "./LoadingGlobe";
-import { GoogleSignInButton } from "./GoogleSignInButton";
 
 // Add animation styles
 const styles = `
@@ -105,7 +104,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
   // Show centered loading state while page is loading
   if (pageLoading) {
     return (
-      <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-white dark:bg-slate-900 transition-colors duration-300">
+      <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-white">
         {/* Background Particle Effect */}
         <div className="absolute inset-0 z-0 opacity-60">
           <ParticleField
@@ -139,7 +138,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
           </h2>
 
           {/* Loading Subtitle */}
-          <p className="text-gray-600 dark:text-gray-400 text-lg font-medium max-w-xs mx-auto">
+          <p className="text-gray-600 text-lg font-medium max-w-xs mx-auto">
             Preparing your productivity suite...
           </p>
 
@@ -157,7 +156,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
   // Show centered loading state during sign-in process
   if (loading) {
     return (
-      <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-white dark:bg-slate-900 transition-colors duration-300">
+      <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-white">
         {/* Background Particle Effect */}
         <div className="absolute inset-0 z-0 opacity-60">
           <ParticleField
@@ -191,7 +190,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
           </h2>
 
           {/* Loading Subtitle */}
-          <p className="text-gray-600 dark:text-gray-400 text-lg font-medium max-w-xs mx-auto">
+          <p className="text-gray-600 text-lg font-medium max-w-xs mx-auto">
             Connecting to Google...
           </p>
 
@@ -207,7 +206,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
   }
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center container-safe overflow-hidden bg-white dark:bg-slate-900 transition-colors duration-300">
+    <div className="min-h-screen relative flex items-center justify-center container-safe overflow-hidden bg-white">
       {/* Background Particle Effect */}
       <div className="absolute inset-0 z-0 opacity-40 sm:opacity-60">
         <ParticleField
