@@ -39,6 +39,14 @@ import {
 import { aiService } from "../../utils/aiService";
 import { InterviewFeedback } from "./InterviewFeedback";
 import { JAMSession } from "./JAMSession";
+import { useFaceDetection } from "../../hooks/useFaceDetection";
+import {
+  FaceDetectionOverlay,
+  EyeContactStatus,
+  FaceDetectionStats,
+} from "../FaceDetectionOverlay";
+import { FaceDetectionDebug } from "../FaceDetectionDebug";
+import { DetectedFace } from "../../utils/faceDetection";
 
 interface InterviewQuestion {
   id: string;
@@ -115,8 +123,35 @@ export const MockInterview: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  // Face detection state
+  const [enableFaceDetection, setEnableFaceDetection] = useState(true);
+  const [detectedFaces, setDetectedFaces] = useState<DetectedFace[]>([]);
+  const [eyeContactHistory, setEyeContactHistory] = useState<boolean[]>([]);
+  const [showFaceDetectionStats, setShowFaceDetectionStats] = useState(false);
+
   // Feedback state
   const [showFeedback, setShowFeedback] = useState(false);
+
+  // Face detection integration
+  const faceDetection = useFaceDetection({
+    enabled: enableFaceDetection && isCameraActive,
+    videoElement: videoRef.current,
+    onFaceDetected: (faces: DetectedFace[]) => {
+      setDetectedFaces(faces);
+      if (faces.length > 0) {
+        console.log(
+          `📊 MockInterview: Received ${faces.length} face(s) for overlay`
+        );
+      }
+    },
+    onEyeContactChange: (hasEyeContact: boolean) => {
+      setEyeContactHistory((prev) => [...prev.slice(-99), hasEyeContact]); // Keep last 100 readings
+    },
+    eyeContactThreshold: {
+      yaw: 15, // degrees
+      pitch: 15, // degrees
+    },
+  });
 
   // Reset to templates view when component mounts or tab is clicked
   useEffect(() => {
@@ -1347,13 +1382,13 @@ Important:
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case "easy":
-        return "text-green-600 bg-green-100";
+        return "text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30";
       case "medium":
-        return "text-yellow-600 bg-yellow-100";
+        return "text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30";
       case "hard":
-        return "text-red-600 bg-red-100";
+        return "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30";
       default:
-        return "text-gray-600 bg-gray-100";
+        return "text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-slate-700";
     }
   };
 
@@ -1459,11 +1494,11 @@ Important:
                     setTimeRemaining(0);
                     handleDisconnect();
                   }}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
+                  <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                 </button>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Interview Preparation
                 </h2>
                 <span
@@ -1480,8 +1515,8 @@ Important:
                   onClick={isCameraActive ? stopCamera : startCamera}
                   className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-300 ${
                     isCameraActive
-                      ? "bg-red-100 text-red-700 border border-red-200 hover:bg-red-200"
-                      : "bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200"
+                      ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50"
+                      : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50"
                   }`}
                 >
                   {isCameraActive ? (
@@ -1494,11 +1529,42 @@ Important:
                   </span>
                 </button>
 
+                {/* Face Detection Toggle */}
+                {isCameraActive && (
+                  <button
+                    onClick={() => setEnableFaceDetection(!enableFaceDetection)}
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-300 ${
+                      enableFaceDetection
+                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/50"
+                        : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-600"
+                    }`}
+                  >
+                    <Target className="w-4 h-4" />
+                    <span className="text-sm font-medium">
+                      {enableFaceDetection
+                        ? "Face Detection ON"
+                        : "Face Detection OFF"}
+                    </span>
+                  </button>
+                )}
+
+                {/* Eye Contact Status */}
+                {enableFaceDetection &&
+                  isCameraActive &&
+                  faceDetection.hasActiveFaces && (
+                    <EyeContactStatus
+                      isEyeContact={faceDetection.eyeContactDetected}
+                      confidence={faceDetection.confidence}
+                      faceCount={faceDetection.faceCount}
+                      className="hidden md:flex"
+                    />
+                  )}
+
                 {/* Feedback Button */}
                 {messages.length > 0 && (
                   <button
                     onClick={() => setShowFeedback(true)}
-                    className="flex items-center space-x-2 px-3 py-2 bg-green-100 text-green-700 border border-green-200 hover:bg-green-200 rounded-lg transition-all duration-300"
+                    className="flex items-center space-x-2 px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/50 rounded-lg transition-all duration-300"
                   >
                     <BarChart className="w-4 h-4" />
                     <span className="text-sm font-medium">Get Feedback</span>
@@ -1506,8 +1572,8 @@ Important:
                 )}
 
                 <div className="flex items-center space-x-2">
-                  <Clock className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-700">
+                  <Clock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     {formatTime(timeRemaining)}
                   </span>
                 </div>
@@ -1516,19 +1582,19 @@ Important:
           </div>
 
           {/* Preparation Content */}
-          <div className="flex-1 flex">
+          <div className="flex-1 flex flex-col lg:flex-row max-w-7xl mx-auto">
             {/* Video/Interview Area */}
-            <div className="flex-1 p-6">
+            <div className="flex-1 p-4 lg:p-6 min-w-0">
               <div className="h-full flex flex-col space-y-6">
                 {/* Video Area */}
-                <div className="flex-1 bg-gray-900 rounded-xl flex items-center justify-center relative overflow-hidden">
+                <div className="flex-1 bg-gray-900 rounded-xl flex items-center justify-center relative overflow-hidden max-w-4xl mx-auto w-full aspect-video min-h-[400px]">
                   {/* Video element - always present but conditionally visible */}
                   <video
                     ref={videoRef}
                     autoPlay
                     playsInline
                     muted
-                    className={`w-full h-full object-cover ${
+                    className={`w-full h-full object-cover rounded-xl ${
                       isCameraActive ? "block" : "hidden"
                     }`}
                     onLoadedMetadata={() => {
@@ -1544,9 +1610,40 @@ Important:
                     onError={(e) => console.error("Video error:", e)}
                   />
 
+                  {/* Face Detection Overlay */}
+                  {enableFaceDetection &&
+                    isCameraActive &&
+                    videoRef.current && (
+                      <FaceDetectionOverlay
+                        faces={detectedFaces}
+                        videoWidth={videoRef.current.videoWidth || 640}
+                        videoHeight={videoRef.current.videoHeight || 480}
+                        showConfidence={true}
+                        showHeadPose={false}
+                        eyeContactPercentage={
+                          faceDetection.stats.eyeContactPercentage
+                        }
+                      />
+                    )}
+
+                  {/* Debug Info */}
+                  {enableFaceDetection &&
+                    isCameraActive &&
+                    videoRef.current && (
+                      <div className="absolute top-2 right-2 bg-black/80 text-white text-xs p-2 rounded">
+                        Video: {videoRef.current.videoWidth || 0}x
+                        {videoRef.current.videoHeight || 0}
+                        <br />
+                        Faces: {detectedFaces.length}
+                        <br />
+                        Status:{" "}
+                        {faceDetection.isProcessing ? "Processing" : "Ready"}
+                      </div>
+                    )}
+
                   {/* Camera Status Overlay */}
                   {isCameraActive && (
-                    <div className="absolute top-4 left-4 flex items-center space-x-2">
+                    <div className="absolute top-4 left-4 flex items-center space-x-2 z-20">
                       <div className="bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2">
                         <div className="flex items-center space-x-2">
                           <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
@@ -1555,6 +1652,25 @@ Important:
                           </span>
                         </div>
                       </div>
+
+                      {/* Face Detection Status */}
+                      {enableFaceDetection && (
+                        <div className="bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2">
+                          <div className="flex items-center space-x-2">
+                            <Target className="w-3 h-3 text-white" />
+                            <span className="text-white text-sm font-medium">
+                              {faceDetection.hasActiveFaces
+                                ? `${faceDetection.faceCount} face${
+                                    faceDetection.faceCount !== 1 ? "s" : ""
+                                  } detected`
+                                : "Scanning..."}
+                            </span>
+                            {faceDetection.eyeContactDetected && (
+                              <span className="text-green-400 text-sm">✅</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1573,10 +1689,10 @@ Important:
                 {/* Interview Details */}
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
                   <div className="text-center space-y-4">
-                    <h3 className="text-2xl font-bold text-gray-900">
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                       Ready to Start Your Interview?
                     </h3>
-                    <p className="text-gray-600">
+                    <p className="text-gray-600 dark:text-gray-400">
                       You're about to begin a {activeSession.type} interview
                       with {activeSession.questions.length} questions.
                     </p>
@@ -1586,30 +1702,44 @@ Important:
                         <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
                           <Clock className="w-6 h-6 text-blue-600" />
                         </div>
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {activeSession.duration} min
                         </p>
-                        <p className="text-xs text-gray-500">Duration</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Duration
+                        </p>
                       </div>
                       <div className="text-center">
                         <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
                           <Target className="w-6 h-6 text-green-600" />
                         </div>
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {activeSession.questions.length}
                         </p>
-                        <p className="text-xs text-gray-500">Questions</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Questions
+                        </p>
                       </div>
                       <div className="text-center">
                         <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
                           <TrendingUp className="w-6 h-6 text-purple-600" />
                         </div>
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {activeSession.difficulty}
                         </p>
-                        <p className="text-xs text-gray-500">Level</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Level
+                        </p>
                       </div>
                     </div>
+
+                    {/* Face Detection Stats */}
+                    {enableFaceDetection && isCameraActive && (
+                      <FaceDetectionStats
+                        stats={faceDetection.stats}
+                        className="mb-4"
+                      />
+                    )}
 
                     <div className="space-y-4">
                       <button
@@ -1667,11 +1797,11 @@ Important:
                   setTimeRemaining(0);
                   handleDisconnect();
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
+                <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Mock Interview Session
               </h2>
               <span
@@ -1688,8 +1818,8 @@ Important:
                 onClick={isCameraActive ? stopCamera : startCamera}
                 className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-300 ${
                   isCameraActive
-                    ? "bg-red-100 text-red-700 border border-red-200 hover:bg-red-200"
-                    : "bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200"
+                    ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50"
+                    : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50"
                 }`}
               >
                 {isCameraActive ? (
@@ -1706,7 +1836,7 @@ Important:
               {messages.length > 0 && (
                 <button
                   onClick={() => setShowFeedback(true)}
-                  className="flex items-center space-x-2 px-3 py-2 bg-green-100 text-green-700 border border-green-200 hover:bg-green-200 rounded-lg transition-all duration-300"
+                  className="flex items-center space-x-2 px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/50 rounded-lg transition-all duration-300"
                 >
                   <BarChart className="w-4 h-4" />
                   <span className="text-sm font-medium">Get Feedback</span>
@@ -1714,8 +1844,8 @@ Important:
               )}
 
               <div className="flex items-center space-x-2">
-                <Clock className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">
+                <Clock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   {formatTime(timeRemaining)}
                 </span>
               </div>
@@ -1724,11 +1854,11 @@ Important:
           {/* Progress Bar */}
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
                 Question {activeSession.currentQuestionIndex + 1} of{" "}
                 {activeSession.questions.length}
               </span>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
                 {Math.round(progress)}% Complete
               </span>
             </div>
@@ -1742,9 +1872,9 @@ Important:
         </div>
 
         {/* Interview Content */}
-        <div className="flex-1 flex">
+        <div className="flex-1 flex flex-col lg:flex-row max-w-7xl mx-auto">
           {/* Video/Interview Area */}
-          <div className="flex-1 p-6">
+          <div className="flex-1 p-4 lg:p-6 min-w-0">
             <div className="h-full flex flex-col space-y-6">
               {/* Interview Status Indicator */}
               {callStatus === CallStatus.ACTIVE && (
@@ -1760,14 +1890,14 @@ Important:
               )}
 
               {/* Mock Video Area */}
-              <div className="flex-1 bg-gray-900 rounded-xl flex items-center justify-center relative overflow-hidden">
+              <div className="flex-1 bg-gray-900 rounded-xl flex items-center justify-center relative overflow-hidden max-w-4xl mx-auto w-full aspect-video min-h-[400px]">
                 {/* Video element - always present but conditionally visible */}
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
                   muted
-                  className={`w-full h-full object-cover ${
+                  className={`w-full h-full object-cover rounded-xl ${
                     isCameraActive ? "block" : "hidden"
                   }`}
                   onLoadedMetadata={() => {
@@ -1783,10 +1913,24 @@ Important:
                   onError={(e) => console.error("Video error:", e)}
                 />
 
+                {/* Face Detection Overlay for Interview */}
+                {enableFaceDetection && isCameraActive && videoRef.current && (
+                  <FaceDetectionOverlay
+                    faces={detectedFaces}
+                    videoWidth={videoRef.current.videoWidth || 640}
+                    videoHeight={videoRef.current.videoHeight || 480}
+                    showConfidence={true}
+                    showHeadPose={false}
+                    eyeContactPercentage={
+                      faceDetection.stats.eyeContactPercentage
+                    }
+                  />
+                )}
+
                 {isCameraActive ? (
                   <div className="w-full h-full relative">
                     {/* Camera Status Overlay */}
-                    <div className="absolute top-4 left-4 flex items-center space-x-2">
+                    <div className="absolute top-4 left-4 flex items-center space-x-2 z-20">
                       <div className="bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2">
                         <div className="flex items-center space-x-2">
                           <Camera className="w-4 h-4 text-white" />
@@ -1795,6 +1939,25 @@ Important:
                           </span>
                         </div>
                       </div>
+
+                      {/* Face Detection Status */}
+                      {enableFaceDetection && (
+                        <div className="bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2">
+                          <div className="flex items-center space-x-2">
+                            <Target className="w-3 h-3 text-white" />
+                            <span className="text-white text-sm font-medium">
+                              {faceDetection.hasActiveFaces
+                                ? `${faceDetection.faceCount} face${
+                                    faceDetection.faceCount !== 1 ? "s" : ""
+                                  } detected`
+                                : "Scanning..."}
+                            </span>
+                            {faceDetection.eyeContactDetected && (
+                              <span className="text-green-400 text-sm">✅</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Recording Indicator */}
@@ -1940,18 +2103,18 @@ Important:
           </div>
 
           {/* Question Panel */}
-          <div className="w-96 bg-white dark:bg-slate-800 border-l border-gray-200 dark:border-slate-700 p-6 overflow-y-auto">
+          <div className="w-full lg:w-80 xl:w-96 2xl:w-96 bg-white dark:bg-slate-800 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-slate-700 p-4 lg:p-6 overflow-y-auto flex-shrink-0 max-h-96 lg:max-h-none">
             <div className="space-y-6">
               {/* Current Question */}
               <div>
                 <div className="flex items-center space-x-2 mb-3">
                   <Bot className="w-5 h-5 text-blue-600" />
-                  <h3 className="font-semibold text-gray-900">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                     Interview Question
                   </h3>
                 </div>
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                  <p className="text-gray-900 font-medium">
+                  <p className="text-gray-900 dark:text-gray-100 font-medium">
                     {currentQuestion.question}
                   </p>
                 </div>
@@ -1960,7 +2123,7 @@ Important:
               {/* Conversation Transcript */}
               {messages.length > 0 && (
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
                     Conversation
                   </h4>
                   <div className="space-y-3">
@@ -1977,7 +2140,7 @@ Important:
                           className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                             message.role === "user"
                               ? "bg-blue-600 text-white"
-                              : "bg-gray-100 text-gray-800"
+                              : "bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200"
                           }`}
                         >
                           <div className="flex items-center space-x-2 mb-1">
@@ -2096,7 +2259,7 @@ Important:
 
       {/* Interview Templates */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
           Choose Interview Type
         </h3>
 
@@ -2139,6 +2302,79 @@ Important:
             </button>
           </div>
         </div>
+
+        {/* Face Detection Option */}
+        {showCameraPreview && (
+          <div className="bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 dark:from-green-900/20 dark:via-emerald-900/20 dark:to-teal-900/20 rounded-2xl p-6 border border-green-200 dark:border-green-800 shadow-lg mb-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Target className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-lg mb-1">
+                    Face Detection & Eye Contact Analysis
+                  </h4>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Get real-time feedback on your eye contact and facial
+                    positioning during practice
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEnableFaceDetection(!enableFaceDetection)}
+                className={`flex items-center space-x-3 px-6 py-3 rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 ${
+                  enableFaceDetection
+                    ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-green-500/25"
+                    : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-slate-600 hover:border-green-300 dark:hover:border-green-500"
+                }`}
+              >
+                {enableFaceDetection ? (
+                  <>
+                    <Target className="w-5 h-5" />
+                    <span>Enabled</span>
+                  </>
+                ) : (
+                  <>
+                    <Target className="w-5 h-5" />
+                    <span>Disabled</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {enableFaceDetection && (
+              <div className="mt-4 p-4 bg-white/50 dark:bg-slate-800/50 rounded-xl border border-green-200 dark:border-green-700">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="text-center">
+                    <div className="text-green-600 font-semibold">
+                      ✅ Eye Contact Detection
+                    </div>
+                    <div className="text-gray-600 dark:text-gray-400">
+                      Real-time monitoring
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-green-600 font-semibold">
+                      📊 Performance Analytics
+                    </div>
+                    <div className="text-gray-600 dark:text-gray-400">
+                      Detailed statistics
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-green-600 font-semibold">
+                      🎯 Visual Feedback
+                    </div>
+                    <div className="text-gray-600 dark:text-gray-400">
+                      Live overlay indicators
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="mb-8">
@@ -2210,28 +2446,28 @@ Important:
                           <Target className="w-5 h-5 text-white" />
                         )}
                       </div>
-                      <h4 className="font-bold text-gray-900 text-lg">
+                      <h4 className="font-bold text-gray-900 dark:text-gray-100 text-lg">
                         {template.name}
                       </h4>
                     </div>
                     <span
                       className={`text-xs px-3 py-1 rounded-full font-semibold ${
                         template.difficulty === "easy"
-                          ? "text-green-700 bg-green-100"
+                          ? "text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30"
                           : template.difficulty === "medium"
-                          ? "text-yellow-700 bg-yellow-100"
-                          : "text-red-700 bg-red-100"
+                          ? "text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-900/30"
+                          : "text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30"
                       }`}
                     >
                       {template.difficulty}
                     </span>
                   </div>
 
-                  <p className="text-gray-600 mb-4 leading-relaxed">
+                  <p className="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
                     {template.description}
                   </p>
 
-                  <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
+                  <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-3">
                     <div className="flex items-center space-x-2">
                       <Clock className="w-4 h-4 text-blue-500" />
                       <span>{template.duration} min</span>
@@ -2243,7 +2479,7 @@ Important:
                   </div>
 
                   {showCameraPreview && (
-                    <div className="flex items-center space-x-2 text-sm text-blue-600 bg-blue-50 rounded-lg px-3 py-2">
+                    <div className="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded-lg px-3 py-2">
                       <Camera className="w-4 h-4" />
                       <span className="font-medium">+ Camera Preview</span>
                     </div>
@@ -2308,7 +2544,7 @@ Important:
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                     Number of Questions
                   </label>
                   <input
@@ -2386,10 +2622,10 @@ Important:
 
               {/* Technology Tags */}
               <div className="space-y-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   Technology Tags (Optional)
                 </label>
-                <p className="text-gray-600 bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
+                <p className="text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 border border-gray-200 dark:border-slate-600">
                   Add specific technologies, frameworks, or tools you want to be
                   asked about (e.g., React, Django, AWS, Docker)
                 </p>
@@ -2502,10 +2738,10 @@ Important:
 
               {/* Custom Questions */}
               <div className="space-y-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   Custom Questions (Optional)
                 </label>
-                <p className="text-gray-600 bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
+                <p className="text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-700 rounded-xl px-4 py-3 border border-gray-200 dark:border-slate-600">
                   Add specific questions you want to practice. Leave blank to
                   generate questions automatically using AI.
                 </p>
@@ -2559,10 +2795,10 @@ Important:
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-lg font-bold text-blue-900 mb-2">
+                    <h4 className="text-lg font-bold text-blue-900 dark:text-blue-100 mb-2">
                       AI-Powered Question Generation
                     </h4>
-                    <p className="text-blue-700 leading-relaxed">
+                    <p className="text-blue-700 dark:text-blue-300 leading-relaxed">
                       When you don't provide custom questions, our AI will
                       automatically generate up to {customQuestionCount}{" "}
                       personalized interview questions based on your role,
@@ -2572,7 +2808,7 @@ Important:
                       {customTechTags.filter((tag) => tag.trim()).length >
                         0 && (
                         <span className="block mt-3 p-3 bg-white/50 rounded-lg border border-blue-200">
-                          <strong className="text-blue-800">
+                          <strong className="text-blue-800 dark:text-blue-200">
                             Technology focus:
                           </strong>{" "}
                           {customTechTags
@@ -2628,7 +2864,7 @@ Important:
                   )}
                 </button>
                 {!customRole.trim() && (
-                  <p className="text-sm text-gray-500 text-center mt-3 bg-gray-50 rounded-lg px-4 py-2 border border-gray-200">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-3 bg-gray-50 dark:bg-slate-700 rounded-lg px-4 py-2 border border-gray-200 dark:border-slate-600">
                     Please enter a target role to create your custom interview
                   </p>
                 )}
@@ -2691,10 +2927,10 @@ Important:
             <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <BarChart className="w-10 h-10 text-white" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
               Interview Feedback Analysis
             </h3>
-            <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-2xl mx-auto">
               You have interview conversation data available. Get comprehensive
               AI-powered feedback on your performance, communication skills,
               technical knowledge, and areas for improvement.
@@ -2720,9 +2956,9 @@ Important:
               </h4>
               <button
                 onClick={stopCamera}
-                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
-                <X className="w-4 h-4 text-gray-500" />
+                <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
 
@@ -2738,7 +2974,7 @@ Important:
                 autoPlay
                 playsInline
                 muted
-                className={`w-48 h-36 object-cover rounded-lg border border-gray-300 ${
+                className={`w-48 h-36 object-contain rounded-lg border border-gray-300 ${
                   isCameraActive ? "block" : "hidden"
                 }`}
               />
@@ -2778,6 +3014,14 @@ Important:
           onClose={() => setShowFeedback(false)}
         />
       )}
+
+      {/* Face Detection Debug Panel */}
+      <FaceDetectionDebug
+        faces={detectedFaces}
+        isEnabled={enableFaceDetection && isCameraActive}
+        isProcessing={faceDetection.isProcessing}
+        stats={faceDetection.stats}
+      />
     </div>
   );
 };
