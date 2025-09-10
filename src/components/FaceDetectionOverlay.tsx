@@ -29,25 +29,42 @@ export const FaceDetectionOverlay: React.FC<FaceDetectionOverlayProps> = ({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Set canvas size
-    canvas.width = videoWidth;
-    canvas.height = videoHeight;
+    // Get the actual displayed size of the canvas
+    const rect = canvas.getBoundingClientRect();
+    const displayWidth = rect.width;
+    const displayHeight = rect.height;
+
+    // Set canvas internal size to match display size for 1:1 pixel mapping
+    canvas.width = displayWidth;
+    canvas.height = displayHeight;
 
     // Clear canvas
-    ctx.clearRect(0, 0, videoWidth, videoHeight);
+    ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+    // Calculate scaling factors from video native size to display size
+    const scaleX = displayWidth / videoWidth;
+    const scaleY = displayHeight / videoHeight;
 
     // Debug logging
     console.log(
-      `🎨 Canvas: ${videoWidth}x${videoHeight}, Faces: ${faces.length}`
+      `🎨 Canvas: ${displayWidth}x${displayHeight} (display) from ${videoWidth}x${videoHeight} (video), Scale: ${scaleX.toFixed(
+        2
+      )}x${scaleY.toFixed(2)}, Faces: ${faces.length}`
     );
 
     if (faces.length > 0) {
       console.log(
-        `🎨 Drawing ${faces.length} face(s) on canvas ${videoWidth}x${videoHeight}`
+        `🎨 Drawing ${faces.length} face(s) on canvas ${displayWidth}x${displayHeight}`
       );
       faces.forEach((face, index) => {
         console.log(`Face ${index}:`, {
           boundingBox: face.boundingBox,
+          scaledBoundingBox: {
+            x: face.boundingBox.x * scaleX,
+            y: face.boundingBox.y * scaleY,
+            width: face.boundingBox.width * scaleX,
+            height: face.boundingBox.height * scaleY,
+          },
           eyeContact: face.eyeContact,
           confidence: face.confidence,
         });
@@ -57,11 +74,19 @@ export const FaceDetectionOverlay: React.FC<FaceDetectionOverlayProps> = ({
     // Draw a test border to verify canvas is working
     ctx.strokeStyle = "#FF0000";
     ctx.lineWidth = 2;
-    ctx.strokeRect(2, 2, videoWidth - 4, videoHeight - 4);
+    ctx.strokeRect(2, 2, displayWidth - 4, displayHeight - 4);
 
-    // Draw each face
+    // Draw each face with proper scaling
     faces.forEach((face) => {
-      drawFace(ctx, face, showConfidence, showHeadPose, eyeContactPercentage);
+      drawFace(
+        ctx,
+        face,
+        showConfidence,
+        showHeadPose,
+        eyeContactPercentage,
+        scaleX,
+        scaleY
+      );
     });
   }, [faces, videoWidth, videoHeight, showConfidence, showHeadPose]);
 
@@ -70,9 +95,19 @@ export const FaceDetectionOverlay: React.FC<FaceDetectionOverlayProps> = ({
     face: DetectedFace,
     showConf: boolean,
     showPose: boolean,
-    eyeContactPerc: number = 0
+    eyeContactPerc: number = 0,
+    scaleX: number = 1,
+    scaleY: number = 1
   ) => {
     const { boundingBox, name, eyeContact, confidence, headPose } = face;
+
+    // Scale the bounding box coordinates to match display size
+    const scaledBox = {
+      x: boundingBox.x * scaleX,
+      y: boundingBox.y * scaleY,
+      width: boundingBox.width * scaleX,
+      height: boundingBox.height * scaleY,
+    };
 
     // Colors
     const boxColor = eyeContact ? "#10B981" : "#EF4444"; // Green for eye contact, red otherwise
@@ -81,15 +116,10 @@ export const FaceDetectionOverlay: React.FC<FaceDetectionOverlayProps> = ({
       ? "rgba(16, 185, 129, 0.8)"
       : "rgba(239, 68, 68, 0.8)";
 
-    // Draw bounding box
+    // Draw bounding box with scaled coordinates
     ctx.strokeStyle = boxColor;
     ctx.lineWidth = 3;
-    ctx.strokeRect(
-      boundingBox.x,
-      boundingBox.y,
-      boundingBox.width,
-      boundingBox.height
-    );
+    ctx.strokeRect(scaledBox.x, scaledBox.y, scaledBox.width, scaledBox.height);
 
     // Prepare text
     const eyeContactIcon = eyeContact ? "✅" : "❌";
@@ -123,47 +153,47 @@ export const FaceDetectionOverlay: React.FC<FaceDetectionOverlayProps> = ({
       ) +
       padding * 2;
 
-    // Draw background
-    const bgY = boundingBox.y - bgHeight - 5;
+    // Draw background with scaled coordinates
+    const bgY = scaledBox.y - bgHeight - 5;
     ctx.fillStyle = bgColor;
-    ctx.fillRect(boundingBox.x, bgY, bgWidth, bgHeight);
+    ctx.fillRect(scaledBox.x, bgY, bgWidth, bgHeight);
 
-    // Draw main text
+    // Draw main text with scaled coordinates
     ctx.fillStyle = textColor;
     ctx.font = "bold 14px Arial";
-    ctx.fillText(mainText, boundingBox.x + padding, bgY + lineHeight + padding);
+    ctx.fillText(mainText, scaledBox.x + padding, bgY + lineHeight + padding);
 
-    // Draw additional text
+    // Draw additional text with scaled coordinates
     ctx.font = "12px Arial";
     additionalTexts.forEach((text, index) => {
       ctx.fillText(
         text,
-        boundingBox.x + padding,
+        scaledBox.x + padding,
         bgY + (index + 2) * lineHeight + padding
       );
     });
 
-    // Draw eye contact indicator on the face
+    // Draw eye contact indicator on the face with scaled coordinates
     if (eyeContact) {
       // Draw a small green circle for eye contact
       ctx.fillStyle = "#10B981";
       ctx.beginPath();
       ctx.arc(
-        boundingBox.x + boundingBox.width - 15,
-        boundingBox.y + 15,
+        scaledBox.x + scaledBox.width - 15,
+        scaledBox.y + 15,
         8,
         0,
         2 * Math.PI
       );
       ctx.fill();
 
-      // Add checkmark
+      // Add checkmark with scaled coordinates
       ctx.strokeStyle = "#FFFFFF";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(boundingBox.x + boundingBox.width - 18, boundingBox.y + 15);
-      ctx.lineTo(boundingBox.x + boundingBox.width - 15, boundingBox.y + 18);
-      ctx.lineTo(boundingBox.x + boundingBox.width - 12, boundingBox.y + 12);
+      ctx.moveTo(scaledBox.x + scaledBox.width - 18, scaledBox.y + 15);
+      ctx.lineTo(scaledBox.x + scaledBox.width - 15, scaledBox.y + 18);
+      ctx.lineTo(scaledBox.x + scaledBox.width - 12, scaledBox.y + 12);
       ctx.stroke();
     }
   };
@@ -175,7 +205,6 @@ export const FaceDetectionOverlay: React.FC<FaceDetectionOverlayProps> = ({
       style={{
         width: "100%",
         height: "100%",
-        objectFit: "cover",
       }}
     />
   );
