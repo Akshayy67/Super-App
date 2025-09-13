@@ -92,6 +92,9 @@ export class BodyLanguageAnalyzer {
   private scaleY = 1;
   private resizeTimeout: any = null;
 
+  // Track if data is simulated vs real
+  private isSimulatedData = false;
+
   // Feature points for advanced tracking
   private featurePoints: Array<{ x: number; y: number; strength: number }> = [];
 
@@ -675,43 +678,43 @@ export class BodyLanguageAnalyzer {
   }
 
   private simulatePostureAnalysis(timestamp: number): void {
-    // Simulate posture detection
-    const postureScore = 70 + Math.random() * 25; // 70-95
-    const issues: string[] = [];
+    // CRITICAL: This should only be used as absolute fallback
+    console.warn(
+      "⚠️ USING SIMULATED POSTURE DATA - Results will be inaccurate!"
+    );
 
-    if (postureScore < 75) {
-      issues.push("Slouching detected");
-    }
-    if (Math.random() < 0.3) {
-      issues.push("Head tilted");
-    }
-    if (Math.random() < 0.2) {
-      issues.push("Shoulders uneven");
-    }
+    // Mark as simulated data
+    this.isSimulatedData = true;
 
+    // Minimal fallback data - clearly marked as unreliable
     this.postureData.push({
       timestamp,
-      score: postureScore,
-      issues,
+      score: 0, // Zero score for simulated data
+      issues: ["Simulated data - not accurate"],
     });
   }
 
   private simulateFacialExpressionAnalysis(timestamp: number): void {
-    // Simulate facial expression detection
-    const emotions = ["confident", "neutral", "nervous", "engaged", "focused"];
-    const emotion = emotions[Math.floor(Math.random() * emotions.length)];
-    const confidence = 60 + Math.random() * 35; // 60-95
+    // CRITICAL: This should only be used as absolute fallback
+    console.warn(
+      "⚠️ USING SIMULATED FACIAL EXPRESSION DATA - Results will be inaccurate!"
+    );
 
+    // Mark as simulated data
+    this.isSimulatedData = true;
+
+    // Minimal fallback data - clearly marked as unreliable
     this.expressionData.push({
       timestamp,
-      emotion,
-      confidence,
+      emotion: "simulated",
+      confidence: 0, // Zero confidence for simulated data
     });
   }
 
   private simulateEyeContactAnalysis(timestamp: number): void {
-    // Simulate eye contact detection
-    const isLooking = Math.random() > 0.3; // 70% chance of eye contact
+    // Data-driven eye contact analysis based on face detection
+    const faceData = this.detectFaceInCurrentFrame();
+    const isLooking = this.calculateEyeContactFromFaceData(faceData);
 
     this.eyeContactData.push({
       timestamp,
@@ -720,24 +723,20 @@ export class BodyLanguageAnalyzer {
   }
 
   private simulateGestureAnalysis(timestamp: number): void {
-    // Simulate gesture detection
-    const gestures = [
-      "pointing",
-      "open_palm",
-      "clasped_hands",
-      "fidgeting",
-      "none",
-    ];
-    const gestureType = gestures[Math.floor(Math.random() * gestures.length)];
-    const intensity = Math.random();
+    // CRITICAL: This should only be used as absolute fallback
+    console.warn(
+      "⚠️ USING SIMULATED GESTURE DATA - Results will be inaccurate!"
+    );
 
-    if (gestureType !== "none") {
-      this.gestureData.push({
-        timestamp,
-        type: gestureType,
-        intensity,
-      });
-    }
+    // Mark as simulated data
+    this.isSimulatedData = true;
+
+    // Minimal fallback data - clearly marked as unreliable
+    this.gestureData.push({
+      timestamp,
+      type: "simulated",
+      intensity: 0, // Zero intensity for simulated data
+    });
   }
 
   private generateAnalysisResult(): BodyLanguageAnalysisResult {
@@ -752,13 +751,26 @@ export class BodyLanguageAnalyzer {
       gestures
     );
 
-    return {
+    // Add simulation detection to results
+    const result = {
       posture,
       facialExpressions,
       eyeContact,
       gestures,
-      overallBodyLanguage,
+      overallBodyLanguage: {
+        ...overallBodyLanguage,
+        isSimulated: this.isSimulatedData,
+      },
     };
+
+    // Log warning if using simulated data
+    if (this.isSimulatedData) {
+      console.warn(
+        "⚠️ Body language analysis contains simulated data - scores will be inaccurate"
+      );
+    }
+
+    return result;
   }
 
   private analyzePosture() {
@@ -3750,5 +3762,192 @@ export class BodyLanguageAnalyzer {
     this.videoElement = null;
     this.canvas = null;
     this.context = null;
+  }
+
+  // Data-driven analysis helper methods
+  private analyzeCurrentFrame(): any {
+    if (!this.canvas || !this.context) {
+      return { brightness: 50, contrast: 50, motion: 0 };
+    }
+
+    const imageData = this.context.getImageData(
+      0,
+      0,
+      this.canvas.width,
+      this.canvas.height
+    );
+    const data = imageData.data;
+
+    // Calculate frame brightness and contrast for posture analysis
+    let totalBrightness = 0;
+    let pixelCount = 0;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const brightness = (r + g + b) / 3;
+      totalBrightness += brightness;
+      pixelCount++;
+    }
+
+    const avgBrightness = totalBrightness / pixelCount;
+
+    return {
+      brightness: avgBrightness,
+      contrast: this.calculateFrameContrast(data),
+      motion: this.calculateFrameMotion(data),
+    };
+  }
+
+  private calculatePostureScore(frameAnalysis: any): number {
+    // Base score on frame analysis quality and stability
+    let score = 75; // Base score
+
+    // Adjust based on frame quality
+    if (frameAnalysis.brightness > 100 && frameAnalysis.brightness < 200) {
+      score += 10; // Good lighting
+    }
+
+    if (frameAnalysis.contrast > 30) {
+      score += 5; // Good contrast
+    }
+
+    // Penalize excessive motion (indicates poor posture stability)
+    if (frameAnalysis.motion > 50) {
+      score -= 15;
+    } else if (frameAnalysis.motion > 20) {
+      score -= 5;
+    }
+
+    return Math.max(40, Math.min(95, score));
+  }
+
+  private detectFaceInCurrentFrame(): any {
+    if (!this.canvas || !this.context) {
+      return { faceDetected: false, eyeRegion: null };
+    }
+
+    const imageData = this.context.getImageData(
+      0,
+      0,
+      this.canvas.width,
+      this.canvas.height
+    );
+
+    // Simple face detection based on skin tone and facial features
+    const faceRegion = this.detectSkinToneRegions(imageData);
+
+    return {
+      faceDetected: faceRegion.area > 1000, // Minimum face size
+      eyeRegion:
+        faceRegion.area > 1000 ? this.estimateEyeRegion(faceRegion) : null,
+      confidence: Math.min(95, faceRegion.area / 100),
+    };
+  }
+
+  private calculateEyeContactFromFaceData(faceData: any): boolean {
+    if (!faceData.faceDetected || !faceData.eyeRegion) {
+      return false;
+    }
+
+    // Estimate eye contact based on eye region position and face orientation
+    const eyeCenterX = faceData.eyeRegion.centerX;
+    const eyeCenterY = faceData.eyeRegion.centerY;
+    const canvasWidth = this.canvas?.width || 640;
+    const canvasHeight = this.canvas?.height || 480;
+
+    // Eye contact is likely if eyes are in the center region of the frame
+    const centerRegionX =
+      canvasWidth * 0.3 < eyeCenterX && eyeCenterX < canvasWidth * 0.7;
+    const centerRegionY =
+      canvasHeight * 0.2 < eyeCenterY && eyeCenterY < canvasHeight * 0.6;
+
+    return centerRegionX && centerRegionY && faceData.confidence > 60;
+  }
+
+  private calculateFrameContrast(data: Uint8ClampedArray): number {
+    let min = 255;
+    let max = 0;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+      min = Math.min(min, brightness);
+      max = Math.max(max, brightness);
+    }
+
+    return max - min;
+  }
+
+  private calculateFrameMotion(data: Uint8ClampedArray): number {
+    if (!this.previousFrame || this.previousFrame.length !== data.length) {
+      this.previousFrame = new Uint8ClampedArray(data);
+      return 0;
+    }
+
+    let totalDifference = 0;
+    let pixelCount = 0;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const currentBrightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+      const previousBrightness =
+        (this.previousFrame[i] +
+          this.previousFrame[i + 1] +
+          this.previousFrame[i + 2]) /
+        3;
+      totalDifference += Math.abs(currentBrightness - previousBrightness);
+      pixelCount++;
+    }
+
+    this.previousFrame = new Uint8ClampedArray(data);
+    return totalDifference / pixelCount;
+  }
+
+  private detectSkinToneRegions(imageData: ImageData): {
+    area: number;
+    centerX: number;
+    centerY: number;
+  } {
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+
+    let skinPixels = 0;
+    let totalX = 0;
+    let totalY = 0;
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const index = (y * width + x) * 4;
+        const r = data[index];
+        const g = data[index + 1];
+        const b = data[index + 2];
+
+        // Simple skin tone detection
+        if (this.isSkinTone(r, g, b)) {
+          skinPixels++;
+          totalX += x;
+          totalY += y;
+        }
+      }
+    }
+
+    return {
+      area: skinPixels,
+      centerX: skinPixels > 0 ? totalX / skinPixels : width / 2,
+      centerY: skinPixels > 0 ? totalY / skinPixels : height / 2,
+    };
+  }
+
+  private estimateEyeRegion(faceRegion: {
+    centerX: number;
+    centerY: number;
+    area: number;
+  }): { centerX: number; centerY: number } {
+    // Estimate eye region based on face center
+    return {
+      centerX: faceRegion.centerX,
+      centerY: faceRegion.centerY - Math.sqrt(faceRegion.area) * 0.2, // Eyes are above face center
+    };
   }
 }

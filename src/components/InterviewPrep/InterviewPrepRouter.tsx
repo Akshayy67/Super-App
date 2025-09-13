@@ -8,6 +8,7 @@ import { MockInterview } from "./MockInterview";
 import { InterviewTips } from "./InterviewTips";
 import { EnhancedMockInterview } from "../EnhancedMockInterview";
 import { AnalyticsDashboardIntegration } from "../AnalyticsDashboardIntegration";
+import { EnhancedAnalyticsIntegration } from "../EnhancedAnalyticsIntegration";
 
 export const InterviewPrepRouter: React.FC = () => {
   return (
@@ -31,7 +32,7 @@ export const InterviewPrepRouter: React.FC = () => {
             />
           }
         />
-        <Route path="/analytics" element={<AnalyticsDashboardIntegration />} />
+        <Route path="/analytics" element={<EnhancedAnalyticsIntegration />} />
         <Route path="/interview-tips" element={<InterviewTips />} />
         <Route
           path="*"

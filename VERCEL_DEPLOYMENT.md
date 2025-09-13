@@ -7,7 +7,8 @@ To deploy your Super App with working AI services on Vercel, you need to set the
 ### Required Environment Variables
 
 1. **VITE_GOOGLE_AI_API_KEY**
-   - Value: `AIzaSyCv0kE7tjPswgTP3UTdMbw_cbmBbgY0nYk`
+
+   - Value: `AIzaSyBAFT_Q2U-KuyKZmIqtRG06Q8HT0fgdZ-U`
    - This enables Google Gemini AI functionality
 
 2. **VITE_GEMINI_MODEL** (Optional)
@@ -32,6 +33,7 @@ To deploy your Super App with working AI services on Vercel, you need to set the
 ### Testing
 
 After setting the environment variables and redeploying:
+
 - AI Chat should work without "Demo mode" messages
 - Study Tools should generate real AI responses
 - File Manager AI features should work properly
@@ -40,6 +42,7 @@ After setting the environment variables and redeploying:
 ### Troubleshooting
 
 If AI still shows as not configured:
+
 1. Verify environment variables are set in Vercel dashboard
 2. Redeploy the project after setting variables
 3. Check browser console for any API errors

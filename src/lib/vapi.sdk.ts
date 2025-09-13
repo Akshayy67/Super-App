@@ -1,10 +1,13 @@
-import Vapi from '@vapi-ai/web';
+import Vapi from "@vapi-ai/web";
 
 // Check if VAPI token is available
-const vapiToken = import.meta.env.VITE_VAPI_WEB_TOKEN || process.env.VITE_VAPI_WEB_TOKEN;
+const vapiToken =
+  import.meta.env.VITE_VAPI_WEB_TOKEN || process.env.VITE_VAPI_WEB_TOKEN;
 
 if (!vapiToken) {
-  console.warn('VAPI Web Token not found. Please set VITE_VAPI_WEB_TOKEN in your .env file');
+  console.warn(
+    "VAPI Web Token not found. Please set VITE_VAPI_WEB_TOKEN in your .env file"
+  );
 }
 
 // Initialize VAPI with error handling
@@ -13,48 +16,51 @@ let vapi: Vapi;
 try {
   if (vapiToken) {
     vapi = new Vapi(vapiToken);
-    console.log('VAPI SDK initialized successfully');
+    console.log("VAPI SDK initialized successfully");
   } else {
     // Create a mock VAPI instance for development
-    vapi = new Vapi('mock-token-for-development');
-    console.warn('Using mock VAPI instance. Real interviews will not work without proper configuration.');
+    vapi = new Vapi("mock-token-for-development");
+    console.warn(
+      "Using mock VAPI instance. Real interviews will not work without proper configuration."
+    );
   }
 } catch (error) {
-  console.error('Failed to initialize VAPI SDK:', error);
+  console.error("Failed to initialize VAPI SDK:", error);
   // Create a fallback instance
-  vapi = new Vapi('fallback-token');
+  vapi = new Vapi("fallback-token");
 }
 
 export { vapi };
 
 // Helper function to check if VAPI is properly configured
 export const isVapiConfigured = () => {
-  return !!vapiToken && vapiToken !== 'mock-token-for-development';
+  return !!vapiToken && vapiToken !== "mock-token-for-development";
 };
 
 // Helper function to check browser compatibility
 export const checkBrowserCompatibility = () => {
   const issues: string[] = [];
-  
+
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    issues.push('Microphone access not supported in this browser');
+    issues.push("Microphone access not supported in this browser");
   }
-  
+
   if (!window.RTCPeerConnection) {
-    issues.push('WebRTC not supported in this browser');
+    issues.push("WebRTC not supported in this browser");
   }
-  
+
   if (!navigator.clipboard) {
-    issues.push('Clipboard API not supported in this browser');
+    issues.push("Clipboard API not supported in this browser");
   }
-  
+
   return issues;
 };
 
 // Interviewer configuration with proper types
 export const interviewer = {
   name: "Interviewer",
-  firstMessage: "Hello! Thank you for taking the time to speak with me today. I'm excited to learn more about you and your experience.",
+  firstMessage:
+    "Hello! Thank you for taking the time to speak with me today. I'm excited to learn more about you and your experience.",
   transcriber: {
     provider: "deepgram" as const,
     model: "nova-2",
