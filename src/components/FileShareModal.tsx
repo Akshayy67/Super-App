@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Upload,
   File,
@@ -14,8 +14,11 @@ import {
   CheckCircle,
   XCircle,
   Tag,
+  Folder,
+  FolderPlus,
+  ChevronRight,
 } from "lucide-react";
-import { fileShareService } from "../utils/fileShareService";
+import { fileShareService, SharedFolder } from "../utils/fileShareService";
 import { realTimeAuth } from "../utils/realTimeAuth";
 
 interface FileShareModalProps {
@@ -24,6 +27,7 @@ interface FileShareModalProps {
   teamId: string;
   teamMembers: Array<{ id: string; name: string; email: string }>;
   onFileShared: (file: any) => void;
+  currentFolderId?: string | null; // Current folder context
 }
 
 interface FilePermissions {
@@ -38,6 +42,7 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
   teamId,
   teamMembers,
   onFileShared,
+  currentFolderId = null,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
@@ -55,7 +60,80 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
   const [shareType, setShareType] = useState<"upload" | "url">("upload");
   const [fileUrl, setFileUrl] = useState("");
 
+  // Folder-related state
+  const [availableFolders, setAvailableFolders] = useState<SharedFolder[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
+    currentFolderId
+  );
+  const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load available folders when modal opens
+  useEffect(() => {
+    if (isOpen && teamId) {
+      loadAvailableFolders();
+    }
+  }, [isOpen, teamId]);
+
+  // Update selected folder when currentFolderId changes
+  useEffect(() => {
+    setSelectedFolderId(currentFolderId);
+  }, [currentFolderId]);
+
+  const loadAvailableFolders = async () => {
+    try {
+      const user = realTimeAuth.getCurrentUser();
+      if (!user) {
+        console.warn("No user found when loading folders");
+        return;
+      }
+
+      console.log("Loading folders for team:", teamId, "user:", user.id);
+      const folders = await fileShareService.getTeamFolders(teamId, user.id);
+      console.log("Loaded folders:", folders);
+      setAvailableFolders(folders);
+    } catch (error) {
+      console.error("Error loading folders:", error);
+    }
+  };
+
+  const createNewFolder = async () => {
+    if (!newFolderName.trim()) return;
+
+    try {
+      const user = realTimeAuth.getCurrentUser();
+      if (!user) return;
+
+      setLoading(true);
+      const newFolder = await fileShareService.createFolder({
+        teamId,
+        folderName: newFolderName.trim(),
+        description: "",
+        parentId: selectedFolderId,
+        createdBy: user.id,
+        permissions: {
+          view: teamMembers.map((m) => m.id),
+          edit: teamMembers.map((m) => m.id),
+          admin: [user.id],
+        },
+      });
+
+      // Refresh folder list
+      await loadAvailableFolders();
+
+      // Select the newly created folder
+      setSelectedFolderId(newFolder.id);
+      setNewFolderName("");
+      setShowCreateFolder(false);
+    } catch (error) {
+      console.error("Error creating folder:", error);
+      setError("Failed to create folder");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -184,6 +262,7 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
         permissions,
         tags,
         description: description.trim(),
+        parentId: selectedFolderId,
       };
 
       console.log("📤 Sharing file with data:", {
@@ -224,6 +303,9 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
     setSuccess(null);
     setError(null);
     setFileUrl("");
+    setSelectedFolderId(null);
+    setShowCreateFolder(false);
+    setNewFolderName("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -360,6 +442,68 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
               placeholder="Enter file name"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+
+          {/* Folder Selection */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Target Folder (Optional)
+            </label>
+            <div className="space-y-2">
+              <select
+                value={selectedFolderId || ""}
+                onChange={(e) => setSelectedFolderId(e.target.value || null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Root Folder</option>
+                {availableFolders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.folderPath || `/${folder.folderName}`}
+                  </option>
+                ))}
+              </select>
+
+              {/* Create New Folder */}
+              {!showCreateFolder ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCreateFolder(true)}
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  <FolderPlus className="w-4 h-4" />
+                  Create New Folder
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    placeholder="Folder name"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onKeyDown={(e) => e.key === "Enter" && createNewFolder()}
+                  />
+                  <button
+                    type="button"
+                    onClick={createNewFolder}
+                    disabled={!newFolderName.trim() || loading}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Create
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateFolder(false);
+                      setNewFolderName("");
+                    }}
+                    className="px-3 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Description */}

@@ -8,6 +8,7 @@ import {
   deleteDoc,
   query,
   where,
+  orderBy,
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../config/firebase";
@@ -35,6 +36,28 @@ export interface SharedFile {
   lastModified: Date;
   lastModifiedBy: string;
   storageType: "firestore" | "drive" | "url"; // Where the file is actually stored
+  // Hierarchical organization fields
+  itemType: "file" | "folder"; // Type of item
+  parentId?: string; // Parent folder ID for hierarchical organization
+  folderPath?: string; // Full path for easier navigation (e.g., "/folder1/subfolder2")
+}
+
+export interface SharedFolder {
+  id: string;
+  teamId: string;
+  folderName: string;
+  description?: string;
+  parentId?: string; // Parent folder ID
+  folderPath: string; // Full path (e.g., "/folder1/subfolder2")
+  createdBy: string;
+  createdAt: Date;
+  permissions: {
+    view: string[]; // User IDs who can view
+    edit: string[]; // User IDs who can edit/add files
+    admin: string[]; // User IDs who can manage permissions and delete folder
+  };
+  lastModified: Date;
+  lastModifiedBy: string;
 }
 
 export interface FileShareData {
@@ -53,6 +76,20 @@ export interface FileShareData {
   };
   tags?: string[];
   description?: string;
+  parentId?: string; // Target folder for the file
+}
+
+export interface FolderCreateData {
+  teamId: string;
+  folderName: string;
+  description?: string;
+  parentId?: string; // Parent folder ID
+  createdBy: string;
+  permissions: {
+    view: string[];
+    edit: string[];
+    admin: string[];
+  };
 }
 
 class FileShareService {
@@ -90,6 +127,9 @@ class FileShareService {
       description: fileData.description || "",
       version: 1,
       storageType: "firestore",
+      itemType: "file",
+      parentId: fileData.parentId,
+      folderPath: await this.buildFolderPath(teamId, fileData.parentId),
     };
 
     console.log("💾 shareFile called with:", {
@@ -210,6 +250,10 @@ class FileShareService {
         ...data,
         sharedAt: data.sharedAt?.toDate() || new Date(),
         lastModified: data.lastModified?.toDate() || new Date(),
+        // Ensure backward compatibility with new hierarchical fields
+        itemType: data.itemType || "file",
+        parentId: data.parentId || null,
+        folderPath: data.folderPath || "/",
       } as SharedFile;
 
       // Check if user has permission to view this file
@@ -256,6 +300,10 @@ class FileShareService {
       ...data,
       sharedAt: data.sharedAt?.toDate() || new Date(),
       lastModified: data.lastModified?.toDate() || new Date(),
+      // Ensure backward compatibility with new hierarchical fields
+      itemType: data.itemType || "file",
+      parentId: data.parentId || null,
+      folderPath: data.folderPath || "/",
     } as SharedFile;
 
     // Check permissions
@@ -422,6 +470,209 @@ class FileShareService {
       });
       throw new Error("File content not available");
     }
+  }
+
+  // Folder management methods
+
+  // Create a new folder
+  async createFolder(folderData: FolderCreateData): Promise<SharedFolder> {
+    const { teamId, createdBy } = folderData;
+
+    // Verify user is team member
+    const teamDoc = await getDoc(doc(db, "teams", teamId));
+    if (!teamDoc.exists()) {
+      throw new Error("Team not found");
+    }
+
+    const teamData = teamDoc.data();
+    if (!teamData?.members?.[createdBy]) {
+      throw new Error("Access denied: Not a team member");
+    }
+
+    const folderId = `folder_${Date.now()}_${Math.random()
+      .toString(36)
+      .substring(2, 8)}`;
+
+    const folderPath = await this.buildFolderPath(
+      teamId,
+      folderData.parentId,
+      folderData.folderName
+    );
+
+    const newFolder: SharedFolder = {
+      id: folderId,
+      teamId,
+      folderName: folderData.folderName,
+      description: folderData.description || "",
+      parentId: folderData.parentId,
+      folderPath,
+      createdBy,
+      createdAt: new Date(),
+      permissions: {
+        view: folderData.permissions?.view || [createdBy],
+        edit: folderData.permissions?.edit || [createdBy],
+        admin: folderData.permissions?.admin || [createdBy],
+      },
+      lastModified: new Date(),
+      lastModifiedBy: createdBy,
+    };
+
+    // Store in Firestore with a separate collection for folders
+    await setDoc(doc(db, "sharedFolders", folderId), {
+      ...newFolder,
+      createdAt: serverTimestamp(),
+      lastModified: serverTimestamp(),
+    });
+
+    return newFolder;
+  }
+
+  // Get folders for a team
+  async getTeamFolders(
+    teamId: string,
+    userId: string
+  ): Promise<SharedFolder[]> {
+    // Verify user is team member
+    const teamDoc = await getDoc(doc(db, "teams", teamId));
+    if (!teamDoc.exists()) {
+      throw new Error("Team not found");
+    }
+
+    const teamData = teamDoc.data();
+    if (!teamData?.members?.[userId]) {
+      throw new Error("Access denied: Not a team member");
+    }
+
+    const foldersQuery = query(
+      collection(db, "sharedFolders"),
+      where("teamId", "==", teamId),
+      orderBy("folderName")
+    );
+
+    const querySnapshot = await getDocs(foldersQuery);
+    const folders: SharedFolder[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const folderData = doc.data() as SharedFolder;
+
+      // Convert Firestore timestamps
+      if (folderData.createdAt && typeof folderData.createdAt !== "string") {
+        folderData.createdAt = (folderData.createdAt as any).toDate();
+      }
+      if (
+        folderData.lastModified &&
+        typeof folderData.lastModified !== "string"
+      ) {
+        folderData.lastModified = (folderData.lastModified as any).toDate();
+      }
+
+      // Check if user has permission to view this folder
+      const userPermissions = this.getUserFolderPermissions(folderData, userId);
+      if (userPermissions.canView) {
+        folders.push({
+          ...folderData,
+          userPermissions,
+        } as any);
+      }
+    });
+
+    return folders;
+  }
+
+  // Build folder path for hierarchical navigation
+  private async buildFolderPath(
+    teamId: string,
+    parentId?: string,
+    currentFolderName?: string
+  ): Promise<string> {
+    if (!parentId) {
+      return currentFolderName ? `/${currentFolderName}` : "/";
+    }
+
+    try {
+      const parentDoc = await getDoc(doc(db, "sharedFolders", parentId));
+      if (!parentDoc.exists()) {
+        return currentFolderName ? `/${currentFolderName}` : "/";
+      }
+
+      const parentFolder = parentDoc.data() as SharedFolder;
+      const parentPath = parentFolder.folderPath || "/";
+
+      if (currentFolderName) {
+        return `${parentPath}${
+          parentPath.endsWith("/") ? "" : "/"
+        }${currentFolderName}`;
+      }
+
+      return parentPath;
+    } catch (error) {
+      console.error("Error building folder path:", error);
+      return currentFolderName ? `/${currentFolderName}` : "/";
+    }
+  }
+
+  // Get user permissions for a folder
+  private getUserFolderPermissions(folder: SharedFolder, userId: string) {
+    return {
+      canView:
+        folder.permissions.view.includes(userId) ||
+        folder.permissions.edit.includes(userId) ||
+        folder.permissions.admin.includes(userId),
+      canEdit:
+        folder.permissions.edit.includes(userId) ||
+        folder.permissions.admin.includes(userId),
+      canManage: folder.permissions.admin.includes(userId),
+    };
+  }
+
+  // Delete a folder (and optionally its contents)
+  async deleteFolder(
+    folderId: string,
+    userId: string,
+    deleteContents: boolean = false
+  ): Promise<void> {
+    const folderDoc = await getDoc(doc(db, "sharedFolders", folderId));
+    if (!folderDoc.exists()) {
+      throw new Error("Folder not found");
+    }
+
+    const folderData = folderDoc.data() as SharedFolder;
+    const userPermissions = this.getUserFolderPermissions(folderData, userId);
+
+    if (!userPermissions.canManage) {
+      throw new Error("Access denied: No admin permission");
+    }
+
+    if (deleteContents) {
+      // Delete all files in this folder
+      const filesQuery = query(
+        collection(db, "sharedFiles"),
+        where("teamId", "==", folderData.teamId),
+        where("parentId", "==", folderId)
+      );
+
+      const filesSnapshot = await getDocs(filesQuery);
+      const deletePromises = filesSnapshot.docs.map((doc) =>
+        this.deleteFile(doc.id, userId)
+      );
+      await Promise.all(deletePromises);
+
+      // Delete all subfolders recursively
+      const subfoldersQuery = query(
+        collection(db, "sharedFolders"),
+        where("teamId", "==", folderData.teamId),
+        where("parentId", "==", folderId)
+      );
+
+      const subfoldersSnapshot = await getDocs(subfoldersQuery);
+      const deleteFolderPromises = subfoldersSnapshot.docs.map((doc) =>
+        this.deleteFolder(doc.id, userId, true)
+      );
+      await Promise.all(deleteFolderPromises);
+    }
+
+    // Delete the folder itself
+    await deleteDoc(doc(db, "sharedFolders", folderId));
   }
 }
 

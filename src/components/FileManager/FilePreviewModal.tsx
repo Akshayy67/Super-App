@@ -14,7 +14,7 @@ import { FileItem } from "../../types";
 import { ShareMenu } from "../ShareMenu";
 
 interface FilePreviewModalProps {
-  previewFile: FileItem | null;
+  previewFile: (FileItem & { storageType?: string; url?: string }) | null;
   previewContent: string;
   previewZoom: number;
   onClose: () => void;
@@ -172,11 +172,33 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                     />
                   </div>
                 </div>
-              ) : (previewFile.mimeType?.includes("pdf") ||
-                  previewFile.name.endsWith(".pdf")) &&
-                previewContent !== "PDF_DOWNLOAD_ONLY" &&
-                (previewContent.startsWith("data:application/pdf") ||
-                  previewContent.startsWith("data:application/x-pdf")) ? (
+              ) : (() => {
+                  const isPdf =
+                    previewFile.mimeType?.includes("pdf") ||
+                    previewFile.name.endsWith(".pdf");
+                  const hasValidContent =
+                    previewContent &&
+                    previewContent !== "PDF_DOWNLOAD_ONLY" &&
+                    previewContent !== "Preview not available" &&
+                    previewContent !== "Loading file content...";
+                  const isValidPdfContent =
+                    previewContent &&
+                    (previewContent.startsWith("data:application/pdf") ||
+                      previewContent.startsWith("data:application/x-pdf") ||
+                      previewContent.startsWith("http") ||
+                      previewContent.includes(".pdf"));
+
+                  console.log("🔍 PDF Preview Debug:", {
+                    isPdf,
+                    hasValidContent,
+                    isValidPdfContent,
+                    previewContent: previewContent?.substring(0, 100) + "...",
+                    mimeType: previewFile.mimeType,
+                    fileName: previewFile.name,
+                  });
+
+                  return isPdf && hasValidContent && isValidPdfContent;
+                })() ? (
                 <div className="h-full flex flex-col bg-gray-100">
                   {/* PDF Header */}
                   <div className="flex items-center justify-between px-6 py-3 bg-red-50 border-b">
@@ -190,19 +212,114 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                         PDF Document Preview
                       </span>
                     </div>
-                    <div className="text-xs text-gray-600">
-                      Use browser controls to navigate • Scroll to zoom
+                    <div className="flex items-center gap-4">
+                      <div className="text-xs text-gray-600">
+                        Use browser controls to navigate • Scroll to zoom
+                      </div>
+                      <button
+                        onClick={() => {
+                          // Create a blob URL for better new tab handling
+                          if (
+                            previewContent.startsWith("data:application/pdf")
+                          ) {
+                            const byteCharacters = atob(
+                              previewContent.split(",")[1]
+                            );
+                            const byteNumbers = new Array(
+                              byteCharacters.length
+                            );
+                            for (let i = 0; i < byteCharacters.length; i++) {
+                              byteNumbers[i] = byteCharacters.charCodeAt(i);
+                            }
+                            const byteArray = new Uint8Array(byteNumbers);
+                            const blob = new Blob([byteArray], {
+                              type: "application/pdf",
+                            });
+                            const blobUrl = URL.createObjectURL(blob);
+                            window.open(blobUrl, "_blank");
+                            // Clean up the blob URL after a delay
+                            setTimeout(
+                              () => URL.revokeObjectURL(blobUrl),
+                              1000
+                            );
+                          } else {
+                            window.open(previewContent, "_blank");
+                          }
+                        }}
+                        className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                      >
+                        Open in New Tab
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Download the PDF
+                          if (
+                            previewContent.startsWith("data:application/pdf")
+                          ) {
+                            const byteCharacters = atob(
+                              previewContent.split(",")[1]
+                            );
+                            const byteNumbers = new Array(
+                              byteCharacters.length
+                            );
+                            for (let i = 0; i < byteCharacters.length; i++) {
+                              byteNumbers[i] = byteCharacters.charCodeAt(i);
+                            }
+                            const byteArray = new Uint8Array(byteNumbers);
+                            const blob = new Blob([byteArray], {
+                              type: "application/pdf",
+                            });
+                            const blobUrl = URL.createObjectURL(blob);
+                            const link = document.createElement("a");
+                            link.href = blobUrl;
+                            link.download = previewFile.name;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(blobUrl);
+                          } else {
+                            // For URL-based files, try to download
+                            const link = document.createElement("a");
+                            link.href = previewContent;
+                            link.download = previewFile.name;
+                            link.target = "_blank";
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }
+                        }}
+                        className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+                      >
+                        Download
+                      </button>
                     </div>
                   </div>
 
                   {/* PDF Viewer */}
-                  <div className="flex-1 bg-gray-200">
-                    <iframe
-                      src={previewContent}
-                      className="w-full h-full border-0"
-                      title={`PDF Preview - ${previewFile.name}`}
+                  <div className="flex-1 bg-gray-200 relative">
+                    <object
+                      data={
+                        previewContent.startsWith("http")
+                          ? previewContent.replace("/view?", "/preview?")
+                          : previewContent
+                      }
+                      type="application/pdf"
+                      className="w-full h-full absolute inset-0"
                       style={{ minHeight: "600px" }}
-                    />
+                    >
+                      <iframe
+                        src={
+                          previewContent.startsWith("http")
+                            ? previewContent.replace("/view?", "/preview?")
+                            : previewContent
+                        }
+                        className="w-full h-full border-0"
+                        title={`PDF Preview - ${previewFile.name}`}
+                        style={{ minHeight: "600px" }}
+                        sandbox="allow-same-origin allow-scripts allow-downloads"
+                        allow="fullscreen"
+                      />
+                    </object>
                   </div>
                 </div>
               ) : previewFile.mimeType === "text/plain" ||
@@ -326,8 +443,12 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
             ) : (previewFile.mimeType?.includes("pdf") ||
                 previewFile.name.endsWith(".pdf")) &&
               previewContent !== "PDF_DOWNLOAD_ONLY" &&
+              previewContent &&
+              previewContent !== "Preview not available" &&
               (previewContent.startsWith("data:application/pdf") ||
-                previewContent.startsWith("data:application/x-pdf")) ? (
+                previewContent.startsWith("data:application/x-pdf") ||
+                previewContent.startsWith("http") ||
+                previewContent.includes(".pdf")) ? (
               <div className="h-full flex flex-col bg-gray-100">
                 {/* PDF Header */}
                 <div className="flex items-center justify-between px-6 py-3 bg-red-50 border-b">
@@ -339,18 +460,102 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                       PDF Document Preview
                     </span>
                   </div>
-                  <div className="text-xs text-gray-600">
-                    Use browser controls to navigate • Scroll to zoom
+                  <div className="flex items-center gap-4">
+                    <div className="text-xs text-gray-600">
+                      Use browser controls to navigate • Scroll to zoom
+                    </div>
+                    <button
+                      onClick={() => {
+                        // Create a blob URL for better new tab handling
+                        if (previewContent.startsWith("data:application/pdf")) {
+                          const byteCharacters = atob(
+                            previewContent.split(",")[1]
+                          );
+                          const byteNumbers = new Array(byteCharacters.length);
+                          for (let i = 0; i < byteCharacters.length; i++) {
+                            byteNumbers[i] = byteCharacters.charCodeAt(i);
+                          }
+                          const byteArray = new Uint8Array(byteNumbers);
+                          const blob = new Blob([byteArray], {
+                            type: "application/pdf",
+                          });
+                          const blobUrl = URL.createObjectURL(blob);
+                          window.open(blobUrl, "_blank");
+                          // Clean up the blob URL after a delay
+                          setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                        } else {
+                          window.open(previewContent, "_blank");
+                        }
+                      }}
+                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                    >
+                      Open in New Tab
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Download the PDF
+                        if (previewContent.startsWith("data:application/pdf")) {
+                          const byteCharacters = atob(
+                            previewContent.split(",")[1]
+                          );
+                          const byteNumbers = new Array(byteCharacters.length);
+                          for (let i = 0; i < byteCharacters.length; i++) {
+                            byteNumbers[i] = byteCharacters.charCodeAt(i);
+                          }
+                          const byteArray = new Uint8Array(byteNumbers);
+                          const blob = new Blob([byteArray], {
+                            type: "application/pdf",
+                          });
+                          const blobUrl = URL.createObjectURL(blob);
+                          const link = document.createElement("a");
+                          link.href = blobUrl;
+                          link.download = previewFile.name;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(blobUrl);
+                        } else {
+                          // For URL-based files, try to download
+                          const link = document.createElement("a");
+                          link.href = previewContent;
+                          link.download = previewFile.name;
+                          link.target = "_blank";
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }
+                      }}
+                      className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+                    >
+                      Download
+                    </button>
                   </div>
                 </div>
                 {/* PDF Viewer */}
-                <div className="flex-1 bg-gray-200">
-                  <iframe
-                    src={previewContent}
-                    className="w-full h-full border-0"
-                    title={`PDF Preview - ${previewFile.name}`}
+                <div className="flex-1 bg-gray-200 relative">
+                  <object
+                    data={
+                      previewContent.startsWith("http")
+                        ? previewContent.replace("/view?", "/preview?")
+                        : previewContent
+                    }
+                    type="application/pdf"
+                    className="w-full h-full absolute inset-0"
                     style={{ minHeight: "600px" }}
-                  />
+                  >
+                    <iframe
+                      src={
+                        previewContent.startsWith("http")
+                          ? previewContent.replace("/view?", "/preview?")
+                          : previewContent
+                      }
+                      className="w-full h-full border-0"
+                      title={`PDF Preview - ${previewFile.name}`}
+                      style={{ minHeight: "600px" }}
+                      sandbox="allow-same-origin allow-scripts allow-downloads"
+                      allow="fullscreen"
+                    />
+                  </object>
                 </div>
               </div>
             ) : previewFile.mimeType === "text/plain" ||

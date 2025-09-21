@@ -24,6 +24,7 @@ import {
   Crown,
   XCircle,
   Plus,
+  Menu,
 } from "lucide-react";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import {
@@ -43,6 +44,7 @@ import { FilePreviewModal } from "./FileManager/FilePreviewModal";
 import { FileItem } from "../types";
 import { ShareMenu } from "./ShareMenu";
 import { extractTextFromPdfDataUrl } from "../utils/pdfText";
+import { TeamFileManager } from "./TeamFileManager";
 
 interface SharedResource {
   id: string;
@@ -63,6 +65,7 @@ export const TeamSpace: React.FC<{
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showJoinTeamModal, setShowJoinTeamModal] = useState(false);
   const [showFileShareModal, setShowFileShareModal] = useState(false);
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [showEmailTestPanel, setShowEmailTestPanel] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "overview" | "members" | "files" | "projects" | "chat" | "settings"
@@ -96,6 +99,7 @@ export const TeamSpace: React.FC<{
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [publicTeams, setPublicTeams] = useState<Team[]>([]);
   const [showDiscoverTeams, setShowDiscoverTeams] = useState(false);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   // Subscribe to team messages in real time when chat tab is active and a team is selected
@@ -767,7 +771,17 @@ export const TeamSpace: React.FC<{
         } else if (file.storageType === "drive" && file.driveFileId) {
           console.log("☁️ Using Google Drive storage");
           // For Google Drive files, use the webViewLink
-          setPreviewContent(file.url);
+          // Convert Google Drive view links to preview links for better PDF embedding
+          let driveUrl = file.url;
+          if (
+            driveUrl &&
+            driveUrl.includes("drive.google.com") &&
+            driveUrl.includes("/view")
+          ) {
+            driveUrl = driveUrl.replace("/view?", "/preview?");
+          }
+          console.log("📄 Setting Google Drive PDF content:", driveUrl);
+          setPreviewContent(driveUrl);
         } else {
           console.log("📦 Fetching from fileShareService...");
           // Try to fetch content from fileShareService
@@ -853,9 +867,19 @@ export const TeamSpace: React.FC<{
           setPreviewContent(file.content);
         } else {
           // Convert to proper PDF data URL
+          console.log(
+            "🔄 Converting content to PDF data URL, content type:",
+            typeof file.content,
+            "starts with:",
+            file.content.substring(0, 20)
+          );
           const pdfDataUrl = file.content.startsWith("data:")
             ? file.content
             : `data:application/pdf;base64,${file.content}`;
+          console.log(
+            "📄 Generated PDF data URL:",
+            pdfDataUrl.substring(0, 100) + "..."
+          );
           setPreviewContent(pdfDataUrl);
         }
         // Extract text for AI analysis
@@ -878,7 +902,14 @@ export const TeamSpace: React.FC<{
         setPreviewContent(file.content);
       }
     } else {
-      console.log("❌ No content or URL available for file");
+      console.log("❌ No content or URL available for file:", {
+        fileName: file.name,
+        storageType: file.storageType,
+        hasUrl: !!file.url,
+        hasWebViewLink: !!file.webViewLink,
+        hasContent: !!file.content,
+        mimeType: file.mimeType,
+      });
       setPreviewContent("No preview available for this file.");
     }
   };
@@ -978,7 +1009,7 @@ export const TeamSpace: React.FC<{
   return (
     <div className="bg-gray-50 dark:bg-slate-900 h-full flex transition-colors duration-300">
       {/* Sidebar */}
-      <div className="w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col">
+      <div className="hidden lg:flex lg:w-64 xl:w-72 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex-col">
         <div className="p-4 border-b border-gray-200 dark:border-slate-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             Teams
@@ -1030,34 +1061,121 @@ export const TeamSpace: React.FC<{
         </div>
       </div>
 
+      {/* Mobile Sidebar Overlay */}
+      {showMobileSidebar && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50"
+            onClick={() => setShowMobileSidebar(false)}
+          />
+          <div className="fixed left-0 top-0 h-full w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col">
+            <div className="p-4 border-b border-gray-200 dark:border-slate-700">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Teams
+                </h2>
+                <button
+                  onClick={() => setShowMobileSidebar(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="space-y-2 mt-4">
+                <button
+                  onClick={() => {
+                    setShowCreateTeam(true);
+                    setShowMobileSidebar(false);
+                  }}
+                  className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Create Team
+                </button>
+                <button
+                  onClick={() => {
+                    setShowJoinTeamModal(true);
+                    setShowMobileSidebar(false);
+                  }}
+                  className="w-full flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Join Team
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {teams.map((team) => (
+                <button
+                  key={team.id}
+                  onClick={() => {
+                    setSelectedTeam(team);
+                    setShowMobileSidebar(false);
+                  }}
+                  className={`w-full p-4 text-left border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors ${
+                    selectedTeam?.id === team.id
+                      ? "bg-blue-50 dark:bg-blue-900/20 border-r-2 border-blue-600"
+                      : ""
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Users className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm">
+                        {team.name}
+                      </h3>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                        {Object.keys(team.members).length} members
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       {selectedTeam ? (
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 p-6">
+          <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 p-4 sm:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {selectedTeam.name}
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400">
-                  {selectedTeam.description}
-                </p>
-              </div>
               <div className="flex items-center space-x-3">
+                {/* Mobile Menu Button */}
+                <button
+                  onClick={() => setShowMobileSidebar(true)}
+                  className="lg:hidden p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {selectedTeam.name}
+                  </h1>
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                    {selectedTeam.description}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 sm:space-x-3">
                 <button
                   onClick={() => setShowInviteModal(true)}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  className="flex items-center px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
                 >
-                  <Mail className="w-4 h-4 mr-2" />
-                  Invite via Email
+                  <Mail className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Invite via Email</span>
                 </button>
                 <button
                   onClick={() => setShowJoinTeamModal(true)}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex items-center px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                 >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Join Team
+                  <UserPlus className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Join Team</span>
                 </button>
                 <button
                   onClick={() => setActiveTab("settings")}
@@ -1078,7 +1196,7 @@ export const TeamSpace: React.FC<{
             </div>
 
             {/* Tabs */}
-            <div className="flex space-x-6 mt-6 border-b border-gray-200">
+            <div className="flex space-x-3 sm:space-x-6 mt-6 border-b border-gray-200 overflow-x-auto">
               {(
                 [
                   "overview",
@@ -1092,7 +1210,7 @@ export const TeamSpace: React.FC<{
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`pb-3 px-1 capitalize transition-colors flex items-center gap-2 ${
+                  className={`pb-3 px-1 capitalize transition-colors flex items-center gap-2 whitespace-nowrap text-sm sm:text-base ${
                     activeTab === tab
                       ? "border-b-2 border-blue-600 text-blue-600"
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
@@ -1110,11 +1228,11 @@ export const TeamSpace: React.FC<{
           </div>
 
           {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             {activeTab === "overview" && (
               <div className="space-y-6">
                 {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-slate-700">
                     <div className="flex items-center justify-between">
                       <div>
@@ -1203,7 +1321,7 @@ export const TeamSpace: React.FC<{
 
             {activeTab === "members" && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {getTeamMembers().map((member) => (
                     <div
                       key={member.id}
@@ -1366,182 +1484,81 @@ export const TeamSpace: React.FC<{
 
             {activeTab === "files" && (
               <div className="space-y-6">
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
-                  <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                      <Folder className="w-5 h-5 text-blue-600" />
-                      Shared Files ({sharedFiles.length})
-                    </h2>
-                    <button
-                      onClick={() => setShowFileShareModal(true)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                    >
-                      <Share2 className="w-4 h-4" />
-                      Share File
-                    </button>
-                  </div>
-                  <div className="p-4">
-                    {sharedFiles.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {sharedFiles.map((file) => (
-                          <div
-                            key={file.id}
-                            className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="flex-shrink-0">
-                                {file.fileType?.startsWith("image/") && (
-                                  <FileText className="w-8 h-8 text-green-500" />
-                                )}
-                                {file.fileType?.startsWith("video/") && (
-                                  <FileText className="w-8 h-8 text-purple-500" />
-                                )}
-                                {file.fileType?.startsWith("audio/") && (
-                                  <FileText className="w-8 h-8 text-orange-500" />
-                                )}
-                                {file.fileType === "url" && (
-                                  <ExternalLink className="w-8 h-8 text-blue-500" />
-                                )}
-                                {!file.fileType?.startsWith("image/") &&
-                                  !file.fileType?.startsWith("video/") &&
-                                  !file.fileType?.startsWith("audio/") &&
-                                  file.fileType !== "url" && (
-                                    <FileText className="w-8 h-8 text-gray-500" />
-                                  )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-medium text-gray-900 truncate">
-                                  {file.fileName}
-                                </h3>
-                                <p className="text-sm text-gray-600 mt-1">
-                                  Shared by{" "}
-                                  {getTeamMembers().find(
-                                    (m) => m.id === file.sharedBy
-                                  )?.name || "Unknown"}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {file.sharedAt?.toLocaleDateString
-                                    ? file.sharedAt.toLocaleDateString()
-                                    : new Date(
-                                        file.sharedAt
-                                      ).toLocaleDateString()}
-                                </p>
-                                {file.description && (
-                                  <p className="text-xs text-gray-600 mt-1">
-                                    {file.description}
-                                  </p>
-                                )}
-                                {file.tags && file.tags.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mt-2">
-                                    {file.tags
-                                      .slice(0, 2)
-                                      .map((tag: string) => (
-                                        <span
-                                          key={tag}
-                                          className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
-                                        >
-                                          <Hash className="w-3 h-3 mr-1" />
-                                          {tag}
-                                        </span>
-                                      ))}
-                                    {file.tags.length > 2 && (
-                                      <span className="text-xs text-gray-500">
-                                        +{file.tags.length - 2} more
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between mt-4">
-                              <div className="flex items-center gap-1">
-                                {file.userPermissions?.canView && (
-                                  <span className="flex items-center gap-1 text-xs text-gray-500">
-                                    <Eye className="w-3 h-3" />
-                                    View
-                                  </span>
-                                )}
-                                {file.userPermissions?.canEdit && (
-                                  <span className="flex items-center gap-1 text-xs text-blue-600">
-                                    <Edit3 className="w-3 h-3" />
-                                    Edit
-                                  </span>
-                                )}
-                                {file.userPermissions?.canManage && (
-                                  <span className="flex items-center gap-1 text-xs text-green-600">
-                                    <Shield className="w-3 h-3" />
-                                    Admin
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handlePreviewFile(file)}
-                                  className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                                  title="Preview File"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={(e) => handleShareFile(file, e)}
-                                  className="p-1 text-gray-400 hover:text-green-600 transition-colors"
-                                  title="Share File"
-                                >
-                                  <Share2 className="w-4 h-4" />
-                                </button>
-                                {file.userPermissions?.canManage && (
-                                  <button
-                                    onClick={() => {
-                                      if (
-                                        confirm(
-                                          "Are you sure you want to delete this file?"
-                                        )
-                                      ) {
-                                        fileShareService
-                                          .deleteFile(file.id, user.id)
-                                          .then(() => {
-                                            loadSharedFiles();
-                                          });
-                                      }
-                                    }}
-                                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                                    title="Delete File"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <Folder className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">
-                          No files shared yet
-                        </h3>
-                        <p className="text-gray-500 mb-4">
-                          Share files with your team to get started
-                        </p>
-                        <button
-                          onClick={() => setShowFileShareModal(true)}
-                          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
-                        >
-                          <Share2 className="w-5 h-5" />
-                          Share Your First File
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100">
+                    Team Files
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setCurrentFolderId(null); // Default to root folder
+                      setShowFileShareModal(true);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm sm:text-base"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share File
+                  </button>
                 </div>
+
+                <TeamFileManager
+                  teamId={selectedTeam?.id || ""}
+                  teamMembers={getTeamMembers()}
+                  onFilePreview={(file) => {
+                    console.log("🔍 File preview requested for:", {
+                      name: file.name,
+                      type: file.type,
+                      storageType: file.storageType,
+                      hasContent: !!file.content,
+                      hasUrl: !!file.url,
+                      fileType: file.fileType,
+                    });
+
+                    // Convert TeamFolderItem to SharedFile format and use existing preview logic
+                    const sharedFile = {
+                      id: file.id,
+                      fileName: file.name,
+                      fileType: file.fileType,
+                      fileSize: file.fileSize,
+                      content: file.content,
+                      url: file.url,
+                      storageType: file.storageType,
+                      sharedAt: file.createdAt,
+                      sharedBy: file.createdBy,
+                    };
+
+                    // Use the existing handlePreviewFile function which has all the PDF logic
+                    handlePreviewFile(sharedFile);
+                  }}
+                  onFileShare={(file, event) => {
+                    const target = event.target as HTMLElement;
+                    if (target && target.getBoundingClientRect) {
+                      const rect = target.getBoundingClientRect();
+                      setShareMenuPosition({
+                        x: rect.left,
+                        y: rect.bottom + 5,
+                      });
+                    } else {
+                      // Fallback positioning if target is not available
+                      setShareMenuPosition({
+                        x: event.clientX || 100,
+                        y: event.clientY || 100,
+                      });
+                    }
+                    setSelectedFileForShare(file as any);
+                    setShowShareMenu(true);
+                  }}
+                  onShareFileClick={(folderId) => {
+                    setCurrentFolderId(folderId);
+                    setShowFileShareModal(true);
+                  }}
+                />
               </div>
             )}
 
             {activeTab === "projects" && (
               <div className="space-y-6">
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
-                  <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                  <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                       <Folder className="w-5 h-5 text-green-600" />
                       Team Projects
@@ -1551,7 +1568,7 @@ export const TeamSpace: React.FC<{
                         setEditingProject(null);
                         setShowCreateProjectModal(true);
                       }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 text-sm sm:text-base"
                     >
                       <Plus className="w-4 h-4" />
                       New Project
@@ -1559,7 +1576,7 @@ export const TeamSpace: React.FC<{
                   </div>
                   <div className="p-4">
                     {/* Project Statistics */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                       <div className="bg-green-50 rounded-lg p-4">
                         <div className="flex items-center">
                           <div className="p-2 bg-green-100 rounded-lg">
@@ -1936,7 +1953,7 @@ export const TeamSpace: React.FC<{
                       <h3 className="text-md font-medium text-gray-900">
                         Team Information
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Team Name
@@ -2038,20 +2055,20 @@ export const TeamSpace: React.FC<{
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-center max-w-md mx-auto">
-            <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            <Users className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
               No Team Selected
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-sm sm:text-base text-gray-600 mb-6">
               Create or join a team to get started with collaborative learning
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
               <button
                 onClick={() => setShowCreateTeam(true)}
-                className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+                className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center text-sm sm:text-base"
               >
                 <UserPlus className="w-4 h-4 mr-2" />
                 Create Team
@@ -2062,7 +2079,7 @@ export const TeamSpace: React.FC<{
                   loadPublicTeams();
                   setShowDiscoverTeams(true);
                 }}
-                className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center"
+                className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center text-sm sm:text-base"
               >
                 <Search className="w-4 h-4 mr-2" />
                 Discover Teams
@@ -2070,7 +2087,7 @@ export const TeamSpace: React.FC<{
 
               <button
                 onClick={() => setShowJoinTeamModal(true)}
-                className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
+                className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center text-sm sm:text-base"
               >
                 <UserPlus className="w-4 h-4 mr-2" />
                 Join with Code
@@ -2095,8 +2112,8 @@ export const TeamSpace: React.FC<{
 
       {/* Create Team Modal */}
       {showCreateTeam && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Create New Team
             </h2>
@@ -2171,8 +2188,8 @@ export const TeamSpace: React.FC<{
 
       {/* Invite Member Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Invite Team Member
             </h2>
@@ -2264,8 +2281,8 @@ export const TeamSpace: React.FC<{
 
       {/* Join Team Modal */}
       {showJoinTeamModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Join Team
             </h2>
@@ -2333,6 +2350,7 @@ export const TeamSpace: React.FC<{
             // Refresh the shared files list
             loadSharedFiles();
           }}
+          currentFolderId={currentFolderId}
         />
       )}
 
@@ -2587,8 +2605,8 @@ export const TeamSpace: React.FC<{
 
       {/* Discover Teams Modal */}
       {showDiscoverTeams && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
