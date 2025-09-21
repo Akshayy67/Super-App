@@ -37,6 +37,17 @@ import {
   PerformanceAnalytics,
   InterviewPerformanceData,
 } from "../utils/performanceAnalytics";
+import { analyticsStorage } from "../utils/analyticsStorage";
+import { unifiedAnalyticsStorage } from "../utils/unifiedAnalyticsStorage";
+import {
+  StrictScoringEngine,
+  ComprehensiveScoreResult,
+} from "../utils/strictScoringEngine";
+import { PerformanceValidator } from "../utils/performanceValidator";
+import DataQualityIndicator from "./DataQualityIndicator";
+import DataResetButton from "./DataResetButton";
+// Clear all stored data immediately to ensure fresh analytics
+import "../utils/immediateDataClear";
 
 interface EnhancedMockInterviewProps {
   role: string;
@@ -368,14 +379,28 @@ Remember: This is a voice conversation, so keep all responses short and conversa
       // Stop VAPI call
       await vapi.stop();
 
-      // Generate comprehensive performance data
-      const performanceData = generatePerformanceData(
+      // Generate comprehensive performance data using strict scoring
+      const rawPerformanceData = generateStrictPerformanceData(
         speechResults,
         bodyLanguageResults
       );
 
-      // Save performance data
+      // Validate and finalize performance data
+      const performanceData =
+        validateAndReturnPerformanceData(rawPerformanceData);
+
+      // Save validated performance data to all analytics systems
       performanceAnalytics.current.savePerformanceData(performanceData);
+      analyticsStorage.savePerformanceData(performanceData);
+
+      // Save to unified cloud storage for cross-device sync
+      await unifiedAnalyticsStorage.savePerformanceData(performanceData);
+
+      console.log("✅ Interview performance data saved:", {
+        id: performanceData.id,
+        overallScore: performanceData.overallScore,
+        timestamp: performanceData.timestamp,
+      });
 
       // Call completion callback
       if (onComplete) {
@@ -391,19 +416,26 @@ Remember: This is a voice conversation, so keep all responses short and conversa
     const updateMetrics = () => {
       if (!isAnalyzing) return;
 
-      // Update real-time metrics (simplified for demo)
-      setRealTimeMetrics((prev) => ({
-        fillerWordCount: prev.fillerWordCount + (Math.random() < 0.1 ? 1 : 0),
-        eyeContactPercentage: Math.max(
-          0,
-          Math.min(100, prev.eyeContactPercentage + (Math.random() - 0.5) * 5)
-        ),
-        confidenceScore: Math.max(
-          0,
-          Math.min(100, prev.confidenceScore + (Math.random() - 0.5) * 3)
-        ),
-        speakingPace: 140 + Math.random() * 40, // 140-180 WPM
-      }));
+      // Get real-time data from analyzers instead of random data
+      const speechData = speechAnalyzer.current?.getCurrentMetrics();
+      const bodyData = bodyLanguageAnalyzer.current?.getCurrentMetrics();
+
+      if (speechData || bodyData) {
+        setRealTimeMetrics({
+          fillerWordCount: speechData?.fillerWordCount || 0,
+          eyeContactPercentage: bodyData?.eyeContactPercentage || 0,
+          confidenceScore: speechData?.confidenceScore || 0,
+          speakingPace: speechData?.wordsPerMinute || 0,
+        });
+      } else {
+        // If no real data available, show zeros instead of random data
+        setRealTimeMetrics({
+          fillerWordCount: 0,
+          eyeContactPercentage: 0,
+          confidenceScore: 0,
+          speakingPace: 0,
+        });
+      }
 
       setTimeout(updateMetrics, 2000); // Update every 2 seconds
     };
@@ -411,25 +443,33 @@ Remember: This is a voice conversation, so keep all responses short and conversa
     updateMetrics();
   };
 
-  const generatePerformanceData = (
+  const generateStrictPerformanceData = (
     speechResults: SpeechAnalysisResult,
     bodyLanguageResults: BodyLanguageAnalysisResult
   ): InterviewPerformanceData => {
     const duration = (Date.now() - startTime) / 1000;
 
-    // Calculate sophisticated scores based on real analysis results
-    const technicalScore = calculateTechnicalScore(
+    // Use strict scoring engine for accurate, data-driven scores
+    const technicalResult = StrictScoringEngine.calculateTechnicalScore(
       speechResults,
+      bodyLanguageResults,
+      duration,
+      questionCount
+    );
+    const communicationResult = StrictScoringEngine.calculateCommunicationScore(
+      speechResults,
+      duration
+    );
+    const behavioralResult = StrictScoringEngine.calculateBehavioralScore(
       bodyLanguageResults,
       duration
     );
-    const communicationScore = calculateCommunicationScore(speechResults);
-    const behavioralScore = calculateBehavioralScore(bodyLanguageResults);
-    const overallScore = calculateOverallScore(
-      technicalScore,
-      communicationScore,
-      behavioralScore,
-      difficulty
+    const overallResult = StrictScoringEngine.calculateOverallScore(
+      technicalResult,
+      communicationResult,
+      behavioralResult,
+      difficulty,
+      "mid" // Default experience level
     );
 
     return {
@@ -438,214 +478,119 @@ Remember: This is a voice conversation, so keep all responses short and conversa
       role,
       difficulty,
       duration,
-      overallScore: Math.round(overallScore),
-      technicalScore: Math.round(technicalScore),
-      communicationScore: Math.round(communicationScore),
-      behavioralScore: Math.round(behavioralScore),
+      overallScore: overallResult.score,
+      technicalScore: technicalResult.score,
+      communicationScore: communicationResult.score,
+      behavioralScore: behavioralResult.score,
       speechAnalysis: speechResults,
       bodyLanguageAnalysis: bodyLanguageResults,
       questionsAnswered: questionCount,
-      questionsCorrect: calculateCorrectAnswers(
-        speechResults,
-        bodyLanguageResults
+      questionsCorrect: calculateCorrectAnswersFromScores(
+        technicalResult,
+        communicationResult
       ),
       averageResponseTime: calculateAverageResponseTime(
         speechResults,
         duration
       ),
       detailedMetrics: {
-        confidence: speechResults.confidenceScore.overall,
-        clarity: speechResults.pronunciationAssessment.clarity,
-        professionalism:
-          bodyLanguageResults.overallBodyLanguage.professionalismScore,
-        engagement: bodyLanguageResults.facialExpressions.engagement,
-        adaptability: calculateAdaptabilityScore(
-          speechResults,
-          bodyLanguageResults
-        ),
+        confidence: communicationResult.breakdown.confidence,
+        clarity: communicationResult.breakdown.clarity,
+        professionalism: behavioralResult.breakdown.overall,
+        engagement: behavioralResult.breakdown.facialExpressions,
+        adaptability: technicalResult.breakdown.accuracy,
       },
       strengths: [
-        ...bodyLanguageResults.overallBodyLanguage.strengths,
-        ...(speechResults.pronunciationAssessment.overallScore > 80
-          ? ["Clear pronunciation"]
-          : []),
-        ...(speechResults.fillerWords.percentage < 5
-          ? ["Minimal filler words"]
-          : []),
-      ],
+        ...technicalResult.recommendations.filter(
+          (r) => r.includes("excellent") || r.includes("strong")
+        ),
+        ...communicationResult.recommendations.filter(
+          (r) => r.includes("excellent") || r.includes("clear")
+        ),
+        ...behavioralResult.recommendations.filter(
+          (r) => r.includes("excellent") || r.includes("good")
+        ),
+      ].slice(0, 5), // Limit to top 5 strengths
       weaknesses: [
-        ...bodyLanguageResults.overallBodyLanguage.improvements,
-        ...speechResults.pronunciationAssessment.issues,
-        ...(speechResults.fillerWords.percentage > 10
-          ? ["Excessive filler words"]
-          : []),
-      ],
+        ...technicalResult.issues,
+        ...communicationResult.issues,
+        ...behavioralResult.issues,
+      ].slice(0, 5), // Limit to top 5 weaknesses
       recommendations: [
-        "Continue practicing with mock interviews",
-        "Focus on maintaining consistent eye contact",
-        "Work on reducing speaking pace variations",
-        "Practice answering behavioral questions with specific examples",
-      ],
+        ...technicalResult.recommendations,
+        ...communicationResult.recommendations,
+        ...behavioralResult.recommendations,
+        ...overallResult.recommendations,
+      ].slice(0, 8), // Limit to top 8 recommendations
     };
   };
 
-  // Sophisticated scoring calculation functions
-  const calculateTechnicalScore = (
-    speechResults: SpeechAnalysisResult,
-    bodyLanguageResults: BodyLanguageAnalysisResult,
-    duration: number
-  ): number => {
-    let baseScore = 60; // Starting point
+  // Validate performance data before returning
+  const validateAndReturnPerformanceData = (
+    data: InterviewPerformanceData
+  ): InterviewPerformanceData => {
+    const validation = PerformanceValidator.validatePerformanceData(data);
 
-    // Speech clarity and articulation (30% weight)
-    const speechClarity = speechResults.pronunciationAssessment.clarity;
-    const articulation = speechResults.pronunciationAssessment.articulation;
-    const speechContribution = ((speechClarity + articulation) / 2) * 0.3;
+    // Log validation results for debugging
+    console.log("Performance Data Validation:", {
+      isValid: validation.isValid,
+      dataQuality: validation.dataQuality,
+      confidence: validation.confidence,
+      errors: validation.errors,
+      warnings: validation.warnings,
+    });
 
-    // Response structure and coherence (25% weight)
-    const fillerWordPenalty = Math.min(
-      20,
-      speechResults.fillerWords.percentage * 2
-    );
-    const coherenceScore = Math.max(0, 100 - fillerWordPenalty);
-    const coherenceContribution = coherenceScore * 0.25;
-
-    // Professional presence (20% weight)
-    const professionalismScore =
-      bodyLanguageResults.overallBodyLanguage.professionalismScore;
-    const professionalismContribution = professionalismScore * 0.2;
-
-    // Engagement and confidence (15% weight)
-    const confidence = speechResults.confidenceScore.overall;
-    const engagement = bodyLanguageResults.facialExpressions.engagement;
-    const engagementScore = (confidence + engagement) / 2;
-    const engagementContribution = engagementScore * 0.15;
-
-    // Time management (10% weight)
-    const expectedDuration = questionCount * 120; // 2 minutes per question
-    const timeEfficiency = Math.min(100, (expectedDuration / duration) * 100);
-    const timeContribution = timeEfficiency * 0.1;
-
-    const finalScore =
-      baseScore +
-      speechContribution +
-      coherenceContribution +
-      professionalismContribution +
-      engagementContribution +
-      timeContribution;
-
-    return Math.round(Math.min(100, Math.max(0, finalScore)));
-  };
-
-  const calculateCommunicationScore = (
-    speechResults: SpeechAnalysisResult
-  ): number => {
-    const weights = {
-      pronunciation: 0.3,
-      fluency: 0.25,
-      confidence: 0.2,
-      pace: 0.15,
-      clarity: 0.1,
+    // Add validation metadata to the performance data
+    const validatedData = {
+      ...data,
+      metadata: {
+        ...data,
+        validation: {
+          isValid: validation.isValid,
+          dataQuality: validation.dataQuality,
+          confidence: validation.confidence,
+          errors: validation.errors,
+          warnings: validation.warnings,
+        },
+      },
     };
 
-    const pronunciation = speechResults.pronunciationAssessment.overallScore;
-    const fluency = speechResults.pronunciationAssessment.fluency;
-    const confidence = speechResults.confidenceScore.overall;
-    const pace = Math.min(100, speechResults.paceAnalysis.wordsPerMinute / 1.5); // Normalize to 150 WPM
-    const clarity = speechResults.pronunciationAssessment.clarity;
-
-    const score =
-      pronunciation * weights.pronunciation +
-      fluency * weights.fluency +
-      confidence * weights.confidence +
-      pace * weights.pace +
-      clarity * weights.clarity;
-
-    return Math.round(Math.min(100, Math.max(0, score)));
-  };
-
-  const calculateBehavioralScore = (
-    bodyLanguageResults: BodyLanguageAnalysisResult
-  ): number => {
-    const weights = {
-      eyeContact: 0.3,
-      posture: 0.25,
-      facialExpressions: 0.2,
-      gestures: 0.15,
-      overall: 0.1,
-    };
-
-    const eyeContactScore = bodyLanguageResults.eyeContact.score;
-    const postureScore = bodyLanguageResults.posture.score;
-    const expressionScore =
-      (bodyLanguageResults.facialExpressions.confidence +
-        bodyLanguageResults.facialExpressions.engagement) /
-      2;
-    const gestureScore = bodyLanguageResults.gestures.score;
-    const overallScore = bodyLanguageResults.overallBodyLanguage.score;
-
-    const score =
-      eyeContactScore * weights.eyeContact +
-      postureScore * weights.posture +
-      expressionScore * weights.facialExpressions +
-      gestureScore * weights.gestures +
-      overallScore * weights.overall;
-
-    return Math.round(Math.min(100, Math.max(0, score)));
-  };
-
-  const calculateOverallScore = (
-    technicalScore: number,
-    communicationScore: number,
-    behavioralScore: number,
-    difficulty: string
-  ): number => {
-    // Adjust weights based on difficulty level
-    let weights = { technical: 0.4, communication: 0.35, behavioral: 0.25 };
-
-    switch (difficulty) {
-      case "easy":
-        weights = { technical: 0.3, communication: 0.4, behavioral: 0.3 }; // More focus on communication
-        break;
-      case "hard":
-        weights = { technical: 0.5, communication: 0.3, behavioral: 0.2 }; // More focus on technical
-        break;
-      default: // medium
-        weights = { technical: 0.4, communication: 0.35, behavioral: 0.25 };
+    // If there are critical errors, adjust scores to be more conservative
+    if (!validation.isValid || validation.confidence < 50) {
+      console.warn(
+        "Low confidence in performance data - applying conservative adjustments"
+      );
+      validatedData.overallScore = Math.min(validatedData.overallScore, 75);
+      validatedData.recommendations.unshift(
+        "Results may be less accurate due to data quality issues"
+      );
     }
 
-    const weightedScore =
-      technicalScore * weights.technical +
-      communicationScore * weights.communication +
-      behavioralScore * weights.behavioral;
-
-    return Math.round(Math.min(100, Math.max(0, weightedScore)));
+    return validatedData;
   };
 
-  const calculateCorrectAnswers = (
-    speechResults: SpeechAnalysisResult,
-    bodyLanguageResults: BodyLanguageAnalysisResult
+  // Helper function for calculating correct answers from strict scores
+  const calculateCorrectAnswersFromScores = (
+    technicalResult: any,
+    communicationResult: any
   ): number => {
-    // Estimate correct answers based on communication quality and confidence
-    const communicationQuality =
-      (speechResults.pronunciationAssessment.overallScore +
-        speechResults.confidenceScore.overall +
-        speechResults.pronunciationAssessment.fluency) /
-      3;
+    // Estimate correct answers based on technical and communication performance
+    const avgScore = (technicalResult.score + communicationResult.score) / 2;
 
-    const engagementLevel = bodyLanguageResults.facialExpressions.engagement;
-    const overallQuality = (communicationQuality + engagementLevel) / 2;
-
-    // Convert quality score to percentage of correct answers
     let correctPercentage = 0.4; // Base 40% correct
 
-    if (overallQuality >= 80) correctPercentage = 0.85;
-    else if (overallQuality >= 70) correctPercentage = 0.75;
-    else if (overallQuality >= 60) correctPercentage = 0.65;
-    else if (overallQuality >= 50) correctPercentage = 0.55;
+    if (avgScore >= 85) correctPercentage = 0.9;
+    else if (avgScore >= 75) correctPercentage = 0.8;
+    else if (avgScore >= 65) correctPercentage = 0.7;
+    else if (avgScore >= 55) correctPercentage = 0.6;
+    else if (avgScore >= 45) correctPercentage = 0.5;
 
     return Math.floor(questionCount * correctPercentage);
   };
+
+  // Legacy functions removed - now using StrictScoringEngine
+
+  // All legacy scoring functions removed - using StrictScoringEngine
 
   const calculateAverageResponseTime = (
     speechResults: SpeechAnalysisResult,
@@ -886,6 +831,15 @@ Remember: This is a voice conversation, so keep all responses short and conversa
               </div>
             )}
 
+            {/* Data Quality Indicator */}
+            {(speechAnalysisResult || bodyLanguageResult) && (
+              <DataQualityIndicator
+                speechAnalysis={speechAnalysisResult}
+                bodyLanguageAnalysis={bodyLanguageResult}
+                className="mb-4"
+              />
+            )}
+
             {/* Real-time Metrics - Compact Version */}
             <div>
               <h4 className="font-medium text-gray-900 mb-3">Live Analysis</h4>
@@ -936,6 +890,23 @@ Remember: This is a voice conversation, so keep all responses short and conversa
                   <span>Duration</span>
                   <span>{formatDuration(interviewDuration)}</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Data Reset Option */}
+            <div className="border-t pt-4">
+              <h4 className="font-medium text-gray-900 mb-3">
+                Data Management
+              </h4>
+              <div className="space-y-2">
+                <p className="text-xs text-gray-600 mb-2">
+                  Clear all stored data to start fresh with accurate analytics
+                </p>
+                <DataResetButton
+                  variant="button"
+                  size="sm"
+                  className="w-full"
+                />
               </div>
             </div>
           </div>

@@ -51,6 +51,8 @@ import {
   PerformanceAnalytics,
   InterviewPerformanceData,
 } from "../../utils/performanceAnalytics";
+import { analyticsStorage } from "../../utils/analyticsStorage";
+import { unifiedAnalyticsStorage } from "../../utils/unifiedAnalyticsStorage";
 
 interface InterviewQuestion {
   id: string;
@@ -84,6 +86,9 @@ interface SavedMessage {
 
 export const MockInterview: React.FC = () => {
   const [activeSession, setActiveSession] = useState<InterviewSession | null>(
+    null
+  );
+  const [sessionToSave, setSessionToSave] = useState<InterviewSession | null>(
     null
   );
   const [isRecording, setIsRecording] = useState(false);
@@ -389,13 +394,25 @@ export const MockInterview: React.FC = () => {
       setIsRecording(true);
     };
 
-    const onCallEnd = () => {
-      console.log("Call ended");
+    const onCallEnd = async () => {
+      console.log("📞 Call ended - onCallEnd triggered");
       setCallStatus(CallStatus.FINISHED);
       setIsRecording(false);
 
-      // Save interview performance data to analytics
-      saveInterviewPerformanceData();
+      // Save interview performance data to analytics using captured session
+      console.log("💾 About to save interview performance data...");
+      const sessionForSaving = sessionToSave || activeSession;
+      console.log("🔍 Session for saving:", {
+        hasSessionToSave: !!sessionToSave,
+        hasActiveSession: !!activeSession,
+        sessionForSaving: !!sessionForSaving,
+      });
+
+      await saveInterviewPerformanceData(sessionForSaving);
+      console.log("✅ saveInterviewPerformanceData completed");
+
+      // Clear the captured session
+      setSessionToSave(null);
     };
 
     const onMessage = (message: any) => {
@@ -1405,6 +1422,13 @@ Important:
   const handleDisconnect = async () => {
     try {
       console.log("Disconnecting call");
+
+      // Capture session for saving before clearing it
+      if (activeSession) {
+        console.log("📝 Capturing session for saving:", activeSession.id);
+        setSessionToSave(activeSession);
+      }
+
       setCallStatus(CallStatus.FINISHED);
       setIsRecording(false);
       await vapi.stop();
@@ -1413,42 +1437,95 @@ Important:
     }
   };
 
-  const saveInterviewPerformanceData = () => {
-    if (!activeSession || messages.length === 0) return;
+  const saveInterviewPerformanceData = async (session?: InterviewSession) => {
+    const sessionToUse = session || activeSession;
+
+    console.log("🔍 saveInterviewPerformanceData called", {
+      hasActiveSession: !!activeSession,
+      hasSessionParam: !!session,
+      hasSessionToUse: !!sessionToUse,
+      messagesLength: messages.length,
+      sessionToUse,
+      messages: messages.slice(0, 3), // Show first 3 messages for debugging
+    });
+
+    if (!sessionToUse) {
+      console.log("❌ Early return: No session available", {
+        hasSession: !!sessionToUse,
+        messagesLength: messages.length,
+      });
+      return;
+    }
+
+    // Allow saving even with empty messages for real score updates
+    if (messages.length === 0) {
+      console.warn(
+        "⚠️ No messages available - this might be a real score update",
+        {
+          hasSession: !!sessionToUse,
+          messagesLength: messages.length,
+          hasRealAIScores: !!realAIScores,
+        }
+      );
+    }
 
     try {
       // Calculate interview duration
-      const duration = (Date.now() - activeSession.startTime.getTime()) / 1000; // in seconds
+      const duration = (Date.now() - sessionToUse.startTime.getTime()) / 1000; // in seconds
+
+      // Convert session questions to InterviewQuestionData format
+      const sessionQuestions = (sessionToUse.questions || []).map(
+        (q, index) => ({
+          id: q.id || `q_${index}`,
+          question: q.question || "Question not available",
+          category: q.category || "general",
+          timeLimit: q.timeLimit || 120,
+          hints: q.hints || [],
+          askedAt: new Date(
+            sessionToUse.startTime.getTime() + index * 180000
+          ).toISOString(), // Estimate timing
+          answeredAt:
+            index <= sessionToUse.currentQuestionIndex
+              ? new Date(
+                  sessionToUse.startTime.getTime() + (index + 1) * 180000
+                ).toISOString()
+              : new Date(
+                  sessionToUse.startTime.getTime() + (index + 1) * 180000
+                ).toISOString(), // Always provide a timestamp
+        })
+      );
 
       // Generate performance data based on available information
       const performanceData: InterviewPerformanceData = {
         id: `interview_${Date.now()}`,
         timestamp: new Date().toISOString(),
-        role: activeSession.type === "custom" ? customRole : activeSession.type,
-        difficulty: activeSession.difficulty,
-        duration,
+        role:
+          sessionToUse.type === "custom"
+            ? customRole || "Custom Role"
+            : sessionToUse.type,
+        difficulty: sessionToUse.difficulty || "medium",
+        duration: duration || 0,
 
-        // Calculate scores based on conversation analysis
-        overallScore: calculateOverallScore(),
-        technicalScore: calculateTechnicalScore(),
-        communicationScore: calculateCommunicationScore(),
-        behavioralScore: calculateBehavioralScore(),
+        // Use real AI feedback scores if available, otherwise use minimal fallback
+        overallScore: getActualPerformanceScore("overall"),
+        technicalScore: getActualPerformanceScore("technical"),
+        communicationScore: getActualPerformanceScore("communication"),
+        behavioralScore: getActualPerformanceScore("behavioral"),
 
         // Question performance
-        questionsAnswered: activeSession.currentQuestionIndex + 1,
+        questionsAnswered: sessionToUse.currentQuestionIndex + 1,
         questionsCorrect: Math.floor(
-          (activeSession.currentQuestionIndex + 1) * 0.7
+          (sessionToUse.currentQuestionIndex + 1) * 0.7
         ), // Estimate 70% correct
-        averageResponseTime:
-          duration / (activeSession.currentQuestionIndex + 1),
+        averageResponseTime: duration / (sessionToUse.currentQuestionIndex + 1),
 
-        // Detailed metrics (estimated based on conversation)
+        // Detailed metrics (using real analysis or transparent fallback)
         detailedMetrics: {
-          confidence: calculateConfidenceScore(),
-          clarity: calculateClarityScore(),
-          professionalism: calculateProfessionalismScore(),
-          engagement: calculateEngagementScore(),
-          adaptability: calculateAdaptabilityScore(),
+          confidence: getActualPerformanceScore("overall"), // Use same fallback for consistency
+          clarity: getActualPerformanceScore("communication"),
+          professionalism: getActualPerformanceScore("behavioral"),
+          engagement: getActualPerformanceScore("behavioral"),
+          adaptability: getActualPerformanceScore("overall"),
         },
 
         // Mock speech and body language analysis (since we don't have real analysis)
@@ -1459,216 +1536,231 @@ Important:
         strengths: generateStrengths(),
         weaknesses: generateWeaknesses(),
         recommendations: generateRecommendations(),
+
+        // NEW: Store actual interview session data
+        interviewSession: {
+          questions: sessionQuestions || [],
+          messages: (messages || []).map((msg) => ({
+            role: msg.role || "user",
+            content: msg.content || "",
+            timestamp: msg.timestamp || new Date().toISOString(),
+          })),
+          sessionType: sessionToUse.type || "general",
+          interviewType:
+            sessionToUse.type === "custom"
+              ? customRole || "Custom Role"
+              : sessionToUse.type || "general",
+        },
       };
 
-      // Save to analytics
+      // Validate data before saving to prevent undefined values
+      const validateData = (obj: any, path = ""): void => {
+        for (const [key, value] of Object.entries(obj)) {
+          const currentPath = path ? `${path}.${key}` : key;
+          if (value === undefined) {
+            console.error(`❌ Undefined value found at ${currentPath}`);
+            throw new Error(`Undefined value at ${currentPath}`);
+          }
+          if (
+            value !== null &&
+            typeof value === "object" &&
+            !Array.isArray(value)
+          ) {
+            validateData(value, currentPath);
+          }
+          if (Array.isArray(value)) {
+            value.forEach((item, index) => {
+              if (item !== null && typeof item === "object") {
+                validateData(item, `${currentPath}[${index}]`);
+              }
+            });
+          }
+        }
+      };
+
+      try {
+        validateData(performanceData);
+        console.log("✅ Data validation passed - no undefined values found");
+      } catch (error) {
+        console.error("❌ Data validation failed:", error);
+        throw error;
+      }
+
+      console.log("💾 Saving performance data:", performanceData);
+
+      // Save to all analytics systems
       performanceAnalytics.current.savePerformanceData(performanceData);
-      console.log("Performance data saved to analytics:", performanceData);
+      analyticsStorage.savePerformanceData(performanceData);
+
+      // Save to unified cloud storage for cross-device sync
+      const cloudSaveResult = await unifiedAnalyticsStorage.savePerformanceData(
+        performanceData
+      );
+      console.log("☁️ Cloud save result:", cloudSaveResult);
+
+      console.log("✅ Performance data saved to analytics:", {
+        id: performanceData.id,
+        overallScore: performanceData.overallScore,
+        timestamp: performanceData.timestamp,
+      });
     } catch (error) {
       console.error("Error saving performance data:", error);
     }
   };
 
-  // Helper functions for calculating performance scores
-  const calculateOverallScore = (): number => {
-    const messageCount = messages.filter((m) => m.role === "user").length;
-    const baseScore = Math.min(85, 60 + messageCount * 3); // Base score increases with participation
-    const variance = Math.random() * 10 - 5; // ±5 variance
-    return Math.round(Math.max(50, Math.min(95, baseScore + variance)));
-  };
+  // State to store real AI feedback scores
+  const [realAIScores, setRealAIScores] = useState<{
+    overall: number;
+    technical: number;
+    communication: number;
+    behavioral: number;
+  } | null>(null);
 
-  const calculateTechnicalScore = (): number => {
-    const userMessages = messages.filter((m) => m.role === "user");
-    const technicalKeywords = [
-      "algorithm",
-      "database",
-      "API",
-      "framework",
-      "architecture",
-      "performance",
-      "scalability",
-    ];
-    const technicalCount = userMessages.reduce((count, msg) => {
-      return (
-        count +
-        technicalKeywords.filter((keyword) =>
-          msg.content.toLowerCase().includes(keyword)
-        ).length
+  // Function to get actual performance scores from AI feedback or provide transparent fallback
+  const getActualPerformanceScore = (
+    scoreType: "overall" | "technical" | "communication" | "behavioral"
+  ): number => {
+    // Use real AI scores if available
+    if (realAIScores) {
+      console.log(
+        `✅ Using real AI score for ${scoreType}:`,
+        realAIScores[scoreType]
       );
-    }, 0);
+      return realAIScores[scoreType];
+    }
 
-    const baseScore = Math.min(90, 55 + technicalCount * 5);
-    const variance = Math.random() * 8 - 4;
-    return Math.round(Math.max(45, Math.min(95, baseScore + variance)));
+    // Fallback: return minimal scores to indicate no real analysis was performed
+    console.warn(
+      `⚠️ Using fallback score for ${scoreType} - real AI feedback analysis not available`
+    );
+    return 10; // Minimal score to indicate no real analysis
   };
 
-  const calculateCommunicationScore = (): number => {
-    const userMessages = messages.filter((m) => m.role === "user");
-    const avgMessageLength =
-      userMessages.reduce((sum, msg) => sum + msg.content.length, 0) /
-        userMessages.length || 0;
+  // Callback to receive real AI scores from feedback component
+  const handleAIScoresAnalyzed = (scores: {
+    overall: number;
+    technical: number;
+    communication: number;
+    behavioral: number;
+  }) => {
+    console.log("📊 Received real AI scores:", scores);
+    setRealAIScores(scores);
 
-    // Score based on message length and count
-    const lengthScore = Math.min(40, avgMessageLength / 10); // Up to 40 points for message length
-    const participationScore = Math.min(40, userMessages.length * 4); // Up to 40 points for participation
-    const baseScore = 20 + lengthScore + participationScore; // 20 base points
-    const variance = Math.random() * 8 - 4;
-    return Math.round(Math.max(50, Math.min(95, baseScore + variance)));
+    // Trigger analytics save with real scores (this will update the existing entry)
+    setTimeout(() => {
+      console.log("🔄 Updating analytics with real AI scores...");
+      // Use sessionToSave if activeSession is null (interview ended)
+      const sessionForUpdate = activeSession || sessionToSave;
+      if (sessionForUpdate) {
+        console.log(
+          "✅ Using session for AI score update:",
+          sessionForUpdate.id
+        );
+        saveInterviewPerformanceData(sessionForUpdate);
+
+        // Clear saved session after AI analysis is complete
+        if (sessionForUpdate === sessionToSave) {
+          setTimeout(() => {
+            console.log("🧹 Clearing saved session after AI analysis");
+            setSessionToSave(null);
+          }, 2000); // Clear after a delay to ensure save is complete
+        }
+      } else {
+        console.warn("⚠️ No session available for real score update");
+      }
+    }, 1000); // Small delay to ensure scores are set
   };
 
-  const calculateBehavioralScore = (): number => {
-    const userMessages = messages.filter((m) => m.role === "user");
-    const behavioralKeywords = [
-      "experience",
-      "team",
-      "challenge",
-      "leadership",
-      "problem",
-      "solution",
-      "learned",
-    ];
-    const behavioralCount = userMessages.reduce((count, msg) => {
-      return (
-        count +
-        behavioralKeywords.filter((keyword) =>
-          msg.content.toLowerCase().includes(keyword)
-        ).length
-      );
-    }, 0);
+  // Removed old scoring functions that generated inflated dummy scores
+  // All scoring now uses getActualPerformanceScore() for transparency
 
-    const baseScore = Math.min(85, 60 + behavioralCount * 4);
-    const variance = Math.random() * 10 - 5;
-    return Math.round(Math.max(50, Math.min(95, baseScore + variance)));
+  // All old scoring functions removed - now using getActualPerformanceScore() for transparency
+
+  // Generate speech analysis from real data or provide minimal fallback
+  const generateMockSpeechAnalysis = () => {
+    console.warn(
+      "⚠️ Using fallback speech analysis - real speech analysis not available"
+    );
+
+    return {
+      wordsPerMinute: 0, // No real data available
+      fillerWordCount: 0,
+      pauseCount: 0,
+      averagePauseLength: 0,
+      volumeVariation: 0,
+      clarityScore: 0, // Indicate no real analysis
+      confidenceScore: 0,
+      emotionalTone: "unknown", // Clear indication of no real data
+      keyPhrases: [], // Empty array for no real data
+      isFallbackData: true, // Mark as fallback data, not simulated
+      analysisAvailable: false, // Explicitly indicate no real analysis performed
+    };
   };
 
-  const calculateConfidenceScore = (): number => {
-    const baseScore = 65 + Math.random() * 20; // 65-85 range
-    return Math.round(Math.max(50, Math.min(95, baseScore)));
+  const generateMockBodyLanguageAnalysis = () => {
+    console.warn(
+      "⚠️ Using fallback body language analysis - real video analysis not available"
+    );
+
+    return {
+      eyeContactPercentage: 0, // No real data available
+      postureScore: 0,
+      gestureFrequency: 0,
+      facialExpressionScore: 0,
+      overallBodyLanguageScore: 0,
+      confidenceIndicators: [], // Empty for no real data
+      nervousBehaviors: [],
+      engagementLevel: 0,
+      isFallbackData: true, // Mark as fallback data, not simulated
+      analysisAvailable: false, // Explicitly indicate no real analysis performed
+    };
   };
-
-  const calculateClarityScore = (): number => {
-    const userMessages = messages.filter((m) => m.role === "user");
-    const avgLength =
-      userMessages.reduce((sum, msg) => sum + msg.content.length, 0) /
-        userMessages.length || 0;
-    const clarityScore = Math.min(90, 50 + avgLength / 20); // Longer messages suggest better clarity
-    return Math.round(Math.max(50, Math.min(95, clarityScore)));
-  };
-
-  const calculateProfessionalismScore = (): number => {
-    const baseScore = 70 + Math.random() * 20; // 70-90 range
-    return Math.round(Math.max(60, Math.min(95, baseScore)));
-  };
-
-  const calculateEngagementScore = (): number => {
-    const messageCount = messages.filter((m) => m.role === "user").length;
-    const engagementScore = Math.min(90, 50 + messageCount * 5);
-    return Math.round(Math.max(50, Math.min(95, engagementScore)));
-  };
-
-  const calculateAdaptabilityScore = (): number => {
-    const baseScore = 60 + Math.random() * 25; // 60-85 range
-    return Math.round(Math.max(50, Math.min(95, baseScore)));
-  };
-
-  // Mock analysis data generators (since we don't have real speech/body language analysis)
-  const generateMockSpeechAnalysis = () => ({
-    wordsPerMinute: 140 + Math.random() * 40,
-    fillerWordCount: Math.floor(Math.random() * 15),
-    pauseCount: Math.floor(Math.random() * 20),
-    averagePauseLength: 0.5 + Math.random() * 1.5,
-    volumeVariation: 0.3 + Math.random() * 0.4,
-    clarityScore: Math.max(0.6, Math.min(1.0, 0.7 + Math.random() * 0.3)),
-    confidenceScore: Math.max(0.6, Math.min(1.0, 0.65 + Math.random() * 0.35)),
-    emotionalTone: [
-      "confident",
-      "nervous",
-      "enthusiastic",
-      "calm",
-      "professional",
-    ][Math.floor(Math.random() * 5)],
-    keyPhrases: [
-      "problem-solving",
-      "team collaboration",
-      "technical expertise",
-      "leadership",
-    ],
-    sentimentAnalysis: {
-      positive: 0.6 + Math.random() * 0.3,
-      negative: Math.random() * 0.2,
-      neutral: 0.2 + Math.random() * 0.2,
-    },
-  });
-
-  const generateMockBodyLanguageAnalysis = () => ({
-    eyeContactPercentage: 65 + Math.random() * 25,
-    postureScore: 0.7 + Math.random() * 0.25,
-    gestureFrequency: Math.floor(Math.random() * 30),
-    facialExpressionScore: 0.75 + Math.random() * 0.2,
-    overallBodyLanguageScore: 0.7 + Math.random() * 0.25,
-    confidenceIndicators: [
-      "good_posture",
-      "steady_eye_contact",
-      "appropriate_gestures",
-    ],
-    nervousBehaviors: Math.random() > 0.5 ? ["fidgeting"] : [],
-    engagementLevel: 0.75 + Math.random() * 0.2,
-  });
 
   const generateStrengths = (): string[] => {
-    const allStrengths = [
-      "Clear communication style",
-      "Good technical knowledge",
-      "Strong problem-solving approach",
-      "Professional demeanor",
-      "Active engagement in conversation",
-      "Thoughtful responses",
-      "Good use of examples",
-      "Confident delivery",
-    ];
+    // Return generic strengths since we don't have real analysis data
+    // In a real implementation, this would be based on actual performance metrics
+    console.warn(
+      "⚠️ Using generic strengths - real performance analysis not available"
+    );
 
-    // Return 2-4 random strengths
-    const count = 2 + Math.floor(Math.random() * 3);
-    return allStrengths.sort(() => 0.5 - Math.random()).slice(0, count);
+    return [
+      "Completed interview session",
+      "Engaged with interview questions",
+      "Maintained professional communication",
+    ];
   };
 
   const generateWeaknesses = (): string[] => {
-    const allWeaknesses = [
-      "Could provide more specific examples",
-      "Consider improving response structure",
-      "Work on reducing filler words",
-      "Enhance technical depth in answers",
-      "Better time management in responses",
-      "Improve eye contact consistency",
-    ];
+    // Return generic improvement areas since we don't have real analysis data
+    console.warn(
+      "⚠️ Using generic weaknesses - real performance analysis not available"
+    );
 
-    // Return 1-3 random weaknesses
-    const count = 1 + Math.floor(Math.random() * 3);
-    return allWeaknesses.sort(() => 0.5 - Math.random()).slice(0, count);
+    return [
+      "Enable speech analysis for detailed feedback",
+      "Enable video analysis for body language insights",
+    ];
   };
 
   const generateRecommendations = (): string[] => {
-    const allRecommendations = [
-      "Practice behavioral questions using the STAR method",
-      "Prepare more specific examples from past experience",
-      "Work on maintaining consistent eye contact",
-      "Practice technical explanations with non-technical audience",
-      "Focus on structuring responses clearly",
-      "Continue practicing with mock interviews",
-      "Research common interview questions for your role",
-      "Work on confident body language and posture",
-    ];
+    // Return actionable recommendations
+    console.warn(
+      "⚠️ Using generic recommendations - real performance analysis not available"
+    );
 
-    // Return 3-5 random recommendations
-    const count = 3 + Math.floor(Math.random() * 3);
-    return allRecommendations.sort(() => 0.5 - Math.random()).slice(0, count);
+    return [
+      "Complete more interviews to build performance history",
+      "Enable microphone access for speech analysis",
+      "Enable camera access for body language analysis",
+      "Practice behavioral questions using the STAR method",
+    ];
   };
 
   const handlePauseResume = () => {
     setIsPaused(!isPaused);
   };
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = async () => {
     if (!activeSession) return;
 
     const updatedSession = {
@@ -1677,7 +1769,12 @@ Important:
     };
 
     if (updatedSession.currentQuestionIndex >= activeSession.questions.length) {
-      // End interview
+      // End interview - save data before clearing session
+      console.log("🏁 Interview completed, saving data...");
+      await saveInterviewPerformanceData(activeSession);
+
+      // Preserve session for AI analysis
+      setSessionToSave(activeSession);
       setActiveSession(null);
       setIsRecording(false);
       setIsPaused(false);
@@ -1694,7 +1791,12 @@ Important:
     }
   };
 
-  const endInterview = (session: InterviewSession) => {
+  const endInterview = async (session: InterviewSession) => {
+    console.log("🏁 Ending interview manually, saving data...");
+    await saveInterviewPerformanceData(session);
+
+    // Preserve session for AI analysis
+    setSessionToSave(session);
     setActiveSession(null);
     setIsInterviewStarted(false);
     setIsRecording(false);
@@ -2408,7 +2510,7 @@ Important:
                 ) : (
                   <>
                     <button
-                      onClick={handleNextQuestion}
+                      onClick={() => handleNextQuestion()}
                       className="flex items-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                     >
                       <SkipForward className="w-5 h-5" />
@@ -2432,13 +2534,13 @@ Important:
                       Click the button below to end your interview session
                     </p>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         if (
                           window.confirm(
                             "Are you sure you want to end this interview session? This action cannot be undone."
                           )
                         ) {
-                          endInterview(activeSession);
+                          await endInterview(activeSession);
                         }
                       }}
                       className="flex items-center space-x-3 px-8 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 font-semibold text-lg border-2 border-red-400 mx-auto"
@@ -3359,6 +3461,7 @@ Important:
               : (activeSession as InterviewSession | null)?.type || "general"
           }
           onClose={() => setShowFeedback(false)}
+          onScoresAnalyzed={handleAIScoresAnalyzed}
         />
       )}
 

@@ -29,6 +29,12 @@ interface InterviewFeedbackProps {
   role: string;
   performanceData?: InterviewPerformanceData | null;
   onClose: () => void;
+  onScoresAnalyzed?: (scores: {
+    overall: number;
+    technical: number;
+    communication: number;
+    behavioral: number;
+  }) => void;
 }
 
 export const InterviewFeedback: React.FC<InterviewFeedbackProps> = ({
@@ -38,6 +44,7 @@ export const InterviewFeedback: React.FC<InterviewFeedbackProps> = ({
   role,
   performanceData,
   onClose,
+  onScoresAnalyzed,
 }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [feedbackSections, setFeedbackSections] = useState<FeedbackSection[]>(
@@ -136,6 +143,18 @@ export const InterviewFeedback: React.FC<InterviewFeedbackProps> = ({
       setFeedbackSections(sections);
       setOverallScore(overallAnalysis.overallScore);
       setAnalysisComplete(true);
+
+      // Pass the real AI scores back to parent component for analytics
+      if (onScoresAnalyzed) {
+        const realScores = {
+          overall: overallAnalysis.overallScore * 10, // Convert 1-10 to 1-100 scale
+          technical: technicalAnalysis.score * 10,
+          communication: communicationAnalysis.score * 10,
+          behavioral: behavioralAnalysis.score * 10,
+        };
+        console.log("📊 Passing real AI scores to analytics:", realScores);
+        onScoresAnalyzed(realScores);
+      }
     } catch (error) {
       console.error("Error analyzing interview:", error);
       // Fallback feedback

@@ -1,6 +1,22 @@
 import { SpeechAnalysisResult } from "./speechAnalysis";
 import { BodyLanguageAnalysisResult } from "./bodyLanguageAnalysis";
 
+export interface SavedMessage {
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp?: string;
+}
+
+export interface InterviewQuestionData {
+  id: string;
+  question: string;
+  category: string;
+  timeLimit: number;
+  hints?: string[];
+  askedAt?: string; // timestamp when question was asked
+  answeredAt?: string; // timestamp when user finished answering
+}
+
 export interface InterviewPerformanceData {
   id: string;
   timestamp: string;
@@ -38,6 +54,14 @@ export interface InterviewPerformanceData {
   strengths: string[];
   weaknesses: string[];
   recommendations: string[];
+
+  // NEW: Actual Interview Content
+  interviewSession?: {
+    questions: InterviewQuestionData[];
+    messages: SavedMessage[];
+    sessionType: string;
+    interviewType: string;
+  };
 }
 
 export interface PerformanceComparison {
@@ -75,6 +99,8 @@ export class PerformanceAnalytics {
   private readonly STORAGE_KEY = "interview_performance_history";
 
   constructor() {
+    // Clear any existing data to ensure fresh start
+    this.clearHistory();
     this.loadPerformanceHistory();
   }
 

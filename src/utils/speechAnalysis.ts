@@ -45,6 +45,7 @@ export class SpeechAnalyzer {
   private currentTranscript = "";
   private wordTimestamps: { word: string; time: number }[] = [];
   private frequencyStability = 1; // Track frequency stability for tremor detection
+  private isSimulatedData = false; // Track if data is simulated vs real
 
   // Common filler words to detect
   private readonly FILLER_WORDS = [
@@ -475,25 +476,21 @@ export class SpeechAnalyzer {
   }
 
   private simulateTranscription() {
-    // Enhanced mock transcription with more realistic patterns
-    const mockPhrases = [
-      "I have experience with React and Node.js",
-      "Um, let me think about that for a moment",
-      "My approach would be to first analyze the requirements",
-      "I believe the best solution is to use a microservices architecture",
-      "Well, in my previous role I worked on similar challenges",
+    // CRITICAL: This should only be used as absolute fallback
+    console.warn(
+      "⚠️ USING SIMULATED SPEECH DATA - Results will be inaccurate!"
+    );
+
+    // Mark this as simulated data for validation
+    this.isSimulatedData = true;
+
+    // Minimal fallback data - clearly marked as unreliable
+    this.currentTranscript = "Simulated speech data - results not accurate";
+    this.wordTimestamps = [
+      { word: "simulated", time: 0 },
+      { word: "data", time: 500 },
     ];
-
-    const selectedPhrase =
-      mockPhrases[Math.floor(Math.random() * mockPhrases.length)];
-    const words = selectedPhrase.toLowerCase().split(/\s+/);
-
-    this.wordTimestamps = words.map((word, index) => ({
-      word,
-      time: index * 0.5 + Math.random() * 0.3,
-    }));
-
-    this.currentTranscript = selectedPhrase;
+    this.pauseTimestamps = [1000];
   }
 
   updateTranscript(
@@ -536,7 +533,8 @@ export class SpeechAnalyzer {
     const silencePercentage =
       ((this.pauseTimestamps.length * 0.1) / duration) * 100; // Rough estimate
 
-    return {
+    // Add simulation detection to results
+    const result = {
       fillerWords: fillerWordAnalysis,
       paceAnalysis,
       confidenceScore,
@@ -546,8 +544,18 @@ export class SpeechAnalyzer {
         totalDuration: duration,
         averageVolume,
         silencePercentage: Math.min(silencePercentage, 100),
+        isSimulated: this.isSimulatedData,
       },
     };
+
+    // Log warning if using simulated data
+    if (this.isSimulatedData) {
+      console.warn(
+        "⚠️ Speech analysis contains simulated data - scores will be inaccurate"
+      );
+    }
+
+    return result;
   }
 
   private analyzeFillerWords(words: string[]) {
@@ -597,7 +605,10 @@ export class SpeechAnalyzer {
       paceScore = Math.max(0, 100 - ((wordsPerMinute - 180) / 60) * 30);
     } else {
       paceRating = "optimal";
-      paceScore = 85 + Math.random() * 15; // 85-100 for optimal pace
+      // Remove random component - use deterministic scoring
+      const optimalMid = 150; // Optimal WPM midpoint
+      const deviation = Math.abs(wordsPerMinute - optimalMid);
+      paceScore = Math.max(85, 100 - deviation * 0.5); // 85-100 for optimal pace
     }
 
     return {
@@ -627,7 +638,7 @@ export class SpeechAnalyzer {
     );
 
     return {
-      overall: Math.max(0, Math.min(100, overall)),
+      overall: Math.max(30, Math.min(100, overall)), // Minimum 30 for valid data
       volumeVariation: Math.round((1 - volumeVariation) * 100),
       voiceTremor: Math.round((1 - voiceTremor) * 100),
       pausePattern: Math.round(pausePattern * 100),

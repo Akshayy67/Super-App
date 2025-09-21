@@ -1,26 +1,26 @@
-import { InterviewPerformanceData } from './performanceAnalytics';
+import { InterviewPerformanceData } from "./performanceAnalytics";
 
 // Storage keys
 const STORAGE_KEYS = {
-  PERFORMANCE_HISTORY: 'interview_performance_history',
-  USER_PREFERENCES: 'user_preferences',
-  ANALYTICS_SETTINGS: 'analytics_settings',
-  ACHIEVEMENT_PROGRESS: 'achievement_progress',
-  IMPROVEMENT_MILESTONES: 'improvement_milestones',
-  FEEDBACK_RESPONSES: 'feedback_responses',
+  PERFORMANCE_HISTORY: "interview_performance_history",
+  USER_PREFERENCES: "user_preferences",
+  ANALYTICS_SETTINGS: "analytics_settings",
+  ACHIEVEMENT_PROGRESS: "achievement_progress",
+  IMPROVEMENT_MILESTONES: "improvement_milestones",
+  FEEDBACK_RESPONSES: "feedback_responses",
 } as const;
 
 // User preferences interface
 export interface UserPreferences {
   darkMode: boolean;
-  defaultTimeRange: '30' | '60' | '90' | 'all';
-  defaultChartType: 'line' | 'bar' | 'radar';
+  defaultTimeRange: "30" | "60" | "90" | "all";
+  defaultChartType: "line" | "bar" | "radar";
   showPercentiles: boolean;
   showTrends: boolean;
   showDetailedScores: boolean;
   notificationsEnabled: boolean;
   autoExportEnabled: boolean;
-  preferredExportFormat: 'pdf' | 'json' | 'csv';
+  preferredExportFormat: "pdf" | "json" | "csv";
 }
 
 // Analytics settings interface
@@ -51,7 +51,7 @@ export interface ImprovementMilestone {
   targetScore: number;
   currentScore: number;
   deadline: string;
-  status: 'pending' | 'in-progress' | 'completed';
+  status: "pending" | "in-progress" | "completed";
   category: string;
   createdDate: string;
   completedDate?: string;
@@ -63,15 +63,15 @@ export interface FeedbackResponse {
   response: string;
   timestamp: string;
   category: string;
-  sentiment?: 'positive' | 'neutral' | 'negative';
+  sentiment?: "positive" | "neutral" | "negative";
 }
 
 // Analytics storage service
 export class AnalyticsStorageService {
   private static instance: AnalyticsStorageService;
-  
+
   private constructor() {}
-  
+
   public static getInstance(): AnalyticsStorageService {
     if (!AnalyticsStorageService.instance) {
       AnalyticsStorageService.instance = new AnalyticsStorageService();
@@ -101,10 +101,10 @@ export class AnalyticsStorageService {
   // Performance data methods
   public savePerformanceData(data: InterviewPerformanceData): void {
     const history = this.getPerformanceHistory();
-    
+
     // Check if this performance data already exists (by ID)
-    const existingIndex = history.findIndex(item => item.id === data.id);
-    
+    const existingIndex = history.findIndex((item) => item.id === data.id);
+
     if (existingIndex >= 0) {
       // Update existing entry
       history[existingIndex] = data;
@@ -112,13 +112,16 @@ export class AnalyticsStorageService {
       // Add new entry
       history.push(data);
     }
-    
+
     // Sort by timestamp (newest first)
-    history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    
+    history.sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
     // Limit to last 100 interviews to prevent storage bloat
     const limitedHistory = history.slice(0, 100);
-    
+
     this.setItem(STORAGE_KEYS.PERFORMANCE_HISTORY, limitedHistory);
   }
 
@@ -128,13 +131,13 @@ export class AnalyticsStorageService {
 
   public getPerformanceById(id: string): InterviewPerformanceData | null {
     const history = this.getPerformanceHistory();
-    return history.find(item => item.id === id) || null;
+    return history.find((item) => item.id === id) || null;
   }
 
   public deletePerformanceData(id: string): boolean {
     const history = this.getPerformanceHistory();
-    const filteredHistory = history.filter(item => item.id !== id);
-    
+    const filteredHistory = history.filter((item) => item.id !== id);
+
     if (filteredHistory.length !== history.length) {
       this.setItem(STORAGE_KEYS.PERFORMANCE_HISTORY, filteredHistory);
       return true;
@@ -150,14 +153,14 @@ export class AnalyticsStorageService {
   public getUserPreferences(): UserPreferences {
     return this.getItem(STORAGE_KEYS.USER_PREFERENCES, {
       darkMode: false,
-      defaultTimeRange: '60',
-      defaultChartType: 'line',
+      defaultTimeRange: "60",
+      defaultChartType: "line",
       showPercentiles: true,
       showTrends: true,
       showDetailedScores: true,
       notificationsEnabled: true,
       autoExportEnabled: false,
-      preferredExportFormat: 'pdf',
+      preferredExportFormat: "pdf",
     });
   }
 
@@ -190,7 +193,10 @@ export class AnalyticsStorageService {
     return this.getItem(STORAGE_KEYS.ACHIEVEMENT_PROGRESS, {});
   }
 
-  public updateAchievementProgress(achievementId: string, progress: Partial<AchievementProgress[string]>): void {
+  public updateAchievementProgress(
+    achievementId: string,
+    progress: Partial<AchievementProgress[string]>
+  ): void {
     const current = this.getAchievementProgress();
     current[achievementId] = {
       ...current[achievementId],
@@ -212,32 +218,37 @@ export class AnalyticsStorageService {
     return this.getItem(STORAGE_KEYS.IMPROVEMENT_MILESTONES, []);
   }
 
-  public addImprovementMilestone(milestone: Omit<ImprovementMilestone, 'id' | 'createdDate'>): string {
+  public addImprovementMilestone(
+    milestone: Omit<ImprovementMilestone, "id" | "createdDate">
+  ): string {
     const milestones = this.getImprovementMilestones();
     const newMilestone: ImprovementMilestone = {
       ...milestone,
       id: `milestone_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       createdDate: new Date().toISOString(),
     };
-    
+
     milestones.push(newMilestone);
     this.setItem(STORAGE_KEYS.IMPROVEMENT_MILESTONES, milestones);
-    
+
     return newMilestone.id;
   }
 
-  public updateImprovementMilestone(id: string, updates: Partial<ImprovementMilestone>): boolean {
+  public updateImprovementMilestone(
+    id: string,
+    updates: Partial<ImprovementMilestone>
+  ): boolean {
     const milestones = this.getImprovementMilestones();
-    const index = milestones.findIndex(m => m.id === id);
-    
+    const index = milestones.findIndex((m) => m.id === id);
+
     if (index >= 0) {
       milestones[index] = { ...milestones[index], ...updates };
-      
+
       // If marking as completed, add completion date
-      if (updates.status === 'completed' && !milestones[index].completedDate) {
+      if (updates.status === "completed" && !milestones[index].completedDate) {
         milestones[index].completedDate = new Date().toISOString();
       }
-      
+
       this.setItem(STORAGE_KEYS.IMPROVEMENT_MILESTONES, milestones);
       return true;
     }
@@ -246,8 +257,8 @@ export class AnalyticsStorageService {
 
   public deleteImprovementMilestone(id: string): boolean {
     const milestones = this.getImprovementMilestones();
-    const filteredMilestones = milestones.filter(m => m.id !== id);
-    
+    const filteredMilestones = milestones.filter((m) => m.id !== id);
+
     if (filteredMilestones.length !== milestones.length) {
       this.setItem(STORAGE_KEYS.IMPROVEMENT_MILESTONES, filteredMilestones);
       return true;
@@ -260,24 +271,26 @@ export class AnalyticsStorageService {
     return this.getItem(STORAGE_KEYS.FEEDBACK_RESPONSES, []);
   }
 
-  public addFeedbackResponse(response: Omit<FeedbackResponse, 'timestamp'>): void {
+  public addFeedbackResponse(
+    response: Omit<FeedbackResponse, "timestamp">
+  ): void {
     const responses = this.getFeedbackResponses();
     const newResponse: FeedbackResponse = {
       ...response,
       timestamp: new Date().toISOString(),
     };
-    
+
     responses.push(newResponse);
-    
+
     // Keep only last 500 responses to prevent storage bloat
     const limitedResponses = responses.slice(-500);
-    
+
     this.setItem(STORAGE_KEYS.FEEDBACK_RESPONSES, limitedResponses);
   }
 
   public getFeedbackResponsesByCategory(category: string): FeedbackResponse[] {
     const responses = this.getFeedbackResponses();
-    return responses.filter(r => r.category === category);
+    return responses.filter((r) => r.category === category);
   }
 
   // Data export methods
@@ -290,49 +303,55 @@ export class AnalyticsStorageService {
       improvementMilestones: this.getImprovementMilestones(),
       feedbackResponses: this.getFeedbackResponses(),
       exportDate: new Date().toISOString(),
-      version: '1.0',
+      version: "1.0",
     };
-    
+
     return JSON.stringify(data, null, 2);
   }
 
   public importData(jsonData: string): boolean {
     try {
       const data = JSON.parse(jsonData);
-      
+
       // Validate data structure
       if (!data.version || !data.exportDate) {
-        throw new Error('Invalid data format');
+        throw new Error("Invalid data format");
       }
-      
+
       // Import each data type if present
       if (data.performanceHistory) {
         this.setItem(STORAGE_KEYS.PERFORMANCE_HISTORY, data.performanceHistory);
       }
-      
+
       if (data.userPreferences) {
         this.setItem(STORAGE_KEYS.USER_PREFERENCES, data.userPreferences);
       }
-      
+
       if (data.analyticsSettings) {
         this.setItem(STORAGE_KEYS.ANALYTICS_SETTINGS, data.analyticsSettings);
       }
-      
+
       if (data.achievementProgress) {
-        this.setItem(STORAGE_KEYS.ACHIEVEMENT_PROGRESS, data.achievementProgress);
+        this.setItem(
+          STORAGE_KEYS.ACHIEVEMENT_PROGRESS,
+          data.achievementProgress
+        );
       }
-      
+
       if (data.improvementMilestones) {
-        this.setItem(STORAGE_KEYS.IMPROVEMENT_MILESTONES, data.improvementMilestones);
+        this.setItem(
+          STORAGE_KEYS.IMPROVEMENT_MILESTONES,
+          data.improvementMilestones
+        );
       }
-      
+
       if (data.feedbackResponses) {
         this.setItem(STORAGE_KEYS.FEEDBACK_RESPONSES, data.feedbackResponses);
       }
-      
+
       return true;
     } catch (error) {
-      console.error('Error importing data:', error);
+      console.error("Error importing data:", error);
       return false;
     }
   }
@@ -342,24 +361,28 @@ export class AnalyticsStorageService {
     const settings = this.getAnalyticsSettings();
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - settings.dataRetentionDays);
-    
+
     // Clean up old performance data
     const history = this.getPerformanceHistory();
     const filteredHistory = history.filter(
-      item => new Date(item.timestamp) > cutoffDate
+      (item) => new Date(item.timestamp) > cutoffDate
     );
     this.setItem(STORAGE_KEYS.PERFORMANCE_HISTORY, filteredHistory);
-    
+
     // Clean up old feedback responses
     const responses = this.getFeedbackResponses();
     const filteredResponses = responses.filter(
-      response => new Date(response.timestamp) > cutoffDate
+      (response) => new Date(response.timestamp) > cutoffDate
     );
     this.setItem(STORAGE_KEYS.FEEDBACK_RESPONSES, filteredResponses);
   }
 
   // Storage usage methods
-  public getStorageUsage(): { used: number; available: number; percentage: number } {
+  public getStorageUsage(): {
+    used: number;
+    available: number;
+    percentage: number;
+  } {
     try {
       let used = 0;
       for (const key in localStorage) {
@@ -367,15 +390,29 @@ export class AnalyticsStorageService {
           used += localStorage[key].length;
         }
       }
-      
+
       // Estimate available storage (5MB is typical localStorage limit)
       const available = 5 * 1024 * 1024; // 5MB in bytes
       const percentage = (used / available) * 100;
-      
+
       return { used, available, percentage };
     } catch (error) {
-      console.error('Error calculating storage usage:', error);
+      console.error("Error calculating storage usage:", error);
       return { used: 0, available: 0, percentage: 0 };
+    }
+  }
+
+  /**
+   * Clear all analytics data from localStorage
+   */
+  clearAllData(): void {
+    try {
+      Object.values(STORAGE_KEYS).forEach((key) => {
+        localStorage.removeItem(key);
+      });
+      console.log("✅ All analytics data cleared from localStorage");
+    } catch (error) {
+      console.error("❌ Error clearing analytics data:", error);
     }
   }
 }
