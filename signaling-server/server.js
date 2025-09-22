@@ -1,7 +1,7 @@
-const WebSocket = require('ws');
-const express = require('express');
-const cors = require('cors');
-const http = require('http');
+const WebSocket = require("ws");
+const express = require("express");
+const cors = require("cors");
+const http = require("http");
 
 const app = express();
 app.use(cors());
@@ -14,33 +14,40 @@ const wss = new WebSocket.Server({ server });
 const meetings = new Map();
 const participants = new Map(); // websocket -> participant info
 
-console.log('🚀 WebRTC Signaling Server Starting...');
+console.log("🚀 WebRTC Signaling Server Starting...");
 
-wss.on('connection', (ws) => {
-  console.log('👤 New client connected');
+wss.on("connection", (ws) => {
+  console.log("👤 New client connected");
 
-  ws.on('message', (data) => {
+  ws.on("message", (data) => {
     try {
       const message = JSON.parse(data.toString());
-      console.log('📨 Received message:', message.type, 'for meeting:', message.meetingId);
-      
+      console.log(
+        "📨 Received message:",
+        message.type,
+        "for meeting:",
+        message.meetingId
+      );
+
       handleSignalingMessage(ws, message);
     } catch (error) {
-      console.error('❌ Error parsing message:', error);
-      ws.send(JSON.stringify({
-        type: 'error',
-        message: 'Invalid message format'
-      }));
+      console.error("❌ Error parsing message:", error);
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          message: "Invalid message format",
+        })
+      );
     }
   });
 
-  ws.on('close', () => {
-    console.log('👋 Client disconnected');
+  ws.on("close", () => {
+    console.log("👋 Client disconnected");
     handleClientDisconnect(ws);
   });
 
-  ws.on('error', (error) => {
-    console.error('🔥 WebSocket error:', error);
+  ws.on("error", (error) => {
+    console.error("🔥 WebSocket error:", error);
   });
 });
 
@@ -48,34 +55,34 @@ function handleSignalingMessage(ws, message) {
   const { type, meetingId, fromParticipant, toParticipant, data } = message;
 
   switch (type) {
-    case 'join-meeting':
+    case "join-meeting":
       handleJoinMeeting(ws, message);
       break;
-      
-    case 'offer':
-    case 'answer':
-    case 'ice-candidate':
+
+    case "offer":
+    case "answer":
+    case "ice-candidate":
       forwardToParticipant(message);
       break;
-      
-    case 'participant-joined':
-    case 'participant-left':
+
+    case "participant-joined":
+    case "participant-left":
       broadcastToMeeting(meetingId, message, ws);
       break;
-      
+
     default:
-      console.log('🤷 Unknown message type:', type);
+      console.log("🤷 Unknown message type:", type);
   }
 }
 
 function handleJoinMeeting(ws, message) {
   const { meetingId, fromParticipant, data } = message;
-  
+
   // Store participant info
   participants.set(ws, {
     id: fromParticipant,
     meetingId: meetingId,
-    name: data.participantName || 'Unknown'
+    name: data.participantName || "Unknown",
   });
 
   // Add to meeting
@@ -85,51 +92,57 @@ function handleJoinMeeting(ws, message) {
   meetings.get(meetingId).add(ws);
 
   console.log(`✅ ${data.participantName} joined meeting ${meetingId}`);
-  
+
   // Notify existing participants about new participant
-  broadcastToMeeting(meetingId, {
-    type: 'participant-joined',
+  broadcastToMeeting(
     meetingId,
-    fromParticipant,
-    data: {
-      participantId: fromParticipant,
-      participantName: data.participantName,
-      isHost: data.isHost || false
-    }
-  }, ws);
+    {
+      type: "participant-joined",
+      meetingId,
+      fromParticipant,
+      data: {
+        participantId: fromParticipant,
+        participantName: data.participantName,
+        isHost: data.isHost || false,
+      },
+    },
+    ws
+  );
 
   // Send current participants list to new participant
   const currentParticipants = [];
   if (meetings.has(meetingId)) {
-    meetings.get(meetingId).forEach(participantWs => {
+    meetings.get(meetingId).forEach((participantWs) => {
       if (participantWs !== ws && participants.has(participantWs)) {
         const participant = participants.get(participantWs);
         currentParticipants.push({
           participantId: participant.id,
-          participantName: participant.name
+          participantName: participant.name,
         });
       }
     });
   }
 
-  ws.send(JSON.stringify({
-    type: 'meeting-participants',
-    meetingId,
-    data: { participants: currentParticipants }
-  }));
+  ws.send(
+    JSON.stringify({
+      type: "meeting-participants",
+      meetingId,
+      data: { participants: currentParticipants },
+    })
+  );
 }
 
 function forwardToParticipant(message) {
   const { meetingId, toParticipant } = message;
-  
+
   if (!meetings.has(meetingId)) {
-    console.log('❌ Meeting not found:', meetingId);
+    console.log("❌ Meeting not found:", meetingId);
     return;
   }
 
   // Find target participant
   let targetWs = null;
-  meetings.get(meetingId).forEach(ws => {
+  meetings.get(meetingId).forEach((ws) => {
     const participant = participants.get(ws);
     if (participant && participant.id === toParticipant) {
       targetWs = ws;
@@ -146,36 +159,38 @@ function forwardToParticipant(message) {
 
 function broadcastToMeeting(meetingId, message, excludeWs = null) {
   if (!meetings.has(meetingId)) {
-    console.log('❌ Meeting not found for broadcast:', meetingId);
+    console.log("❌ Meeting not found for broadcast:", meetingId);
     return;
   }
 
   let sentCount = 0;
-  meetings.get(meetingId).forEach(ws => {
+  meetings.get(meetingId).forEach((ws) => {
     if (ws !== excludeWs && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(message));
       sentCount++;
     }
   });
 
-  console.log(`📢 Broadcasted ${message.type} to ${sentCount} participants in meeting ${meetingId}`);
+  console.log(
+    `📢 Broadcasted ${message.type} to ${sentCount} participants in meeting ${meetingId}`
+  );
 }
 
 function handleClientDisconnect(ws) {
   const participant = participants.get(ws);
   if (participant) {
     const { id, meetingId, name } = participant;
-    
+
     // Remove from meeting
     if (meetings.has(meetingId)) {
       meetings.get(meetingId).delete(ws);
-      
+
       // Notify other participants
       broadcastToMeeting(meetingId, {
-        type: 'participant-left',
+        type: "participant-left",
         meetingId,
         fromParticipant: id,
-        data: { participantId: id }
+        data: { participantId: id },
       });
 
       // Clean up empty meetings
@@ -191,31 +206,31 @@ function handleClientDisconnect(ws) {
 }
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get("/health", (req, res) => {
   res.json({
-    status: 'healthy',
+    status: "healthy",
     activeMeetings: meetings.size,
     activeParticipants: participants.size,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
 // Get meeting info
-app.get('/meeting/:meetingId', (req, res) => {
+app.get("/meeting/:meetingId", (req, res) => {
   const { meetingId } = req.params;
   const meeting = meetings.get(meetingId);
-  
+
   if (!meeting) {
-    return res.status(404).json({ error: 'Meeting not found' });
+    return res.status(404).json({ error: "Meeting not found" });
   }
 
   const participantsList = [];
-  meeting.forEach(ws => {
+  meeting.forEach((ws) => {
     const participant = participants.get(ws);
     if (participant) {
       participantsList.push({
         id: participant.id,
-        name: participant.name
+        name: participant.name,
       });
     }
   });
@@ -223,11 +238,11 @@ app.get('/meeting/:meetingId', (req, res) => {
   res.json({
     meetingId,
     participantCount: meeting.size,
-    participants: participantsList
+    participants: participantsList,
   });
 });
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`🎯 WebRTC Signaling Server running on port ${PORT}`);
   console.log(`📡 WebSocket endpoint: ws://localhost:${PORT}`);
@@ -235,10 +250,10 @@ server.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('🛑 Shutting down signaling server...');
+process.on("SIGTERM", () => {
+  console.log("🛑 Shutting down signaling server...");
   server.close(() => {
-    console.log('✅ Server shut down gracefully');
+    console.log("✅ Server shut down gracefully");
     process.exit(0);
   });
 });

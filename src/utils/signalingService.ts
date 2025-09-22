@@ -45,12 +45,12 @@ class SignalingService {
 
   private tryWebSocketConnection(): boolean {
     try {
-      // Try multiple free WebSocket services
+      // Try multiple WebSocket services in order of preference
       const wsUrls = [
         process.env.REACT_APP_SIGNALING_SERVER,
-        "wss://ws.postman-echo.com/raw", // Free WebSocket echo service
-        "wss://echo.websocket.org", // Free WebSocket echo service
-        "ws://localhost:8080", // Local development
+        "ws://localhost:3001", // Local signaling server
+        "ws://localhost:8080", // Fallback local port
+        // Note: For production, deploy your signaling server to Railway, Render, or Heroku
       ].filter(Boolean);
 
       const wsUrl = wsUrls[0];
@@ -134,7 +134,7 @@ class SignalingService {
     const { meetingId, fromParticipant, data } = message;
 
     console.log(
-      `🔄 Processing join-meeting request from ${
+      `🔄 [BroadcastChannel] Processing join-meeting request from ${
         data?.participantName || fromParticipant
       }`
     );
@@ -156,7 +156,10 @@ class SignalingService {
     participants.add(fromParticipant);
 
     console.log(
-      `📋 Sending existing participants (${existingParticipants.length}) to ${data?.participantName}`
+      `📋 [BroadcastChannel] Sending existing participants (${existingParticipants.length}) to ${data?.participantName}`
+    );
+    console.log(
+      `💡 [BroadcastChannel] Meeting ${meetingId} now has ${participants.size} participants`
     );
 
     // Send existing participants to the joining user
@@ -171,6 +174,9 @@ class SignalingService {
         timestamp: new Date(),
       };
 
+      console.log(
+        `📤 [BroadcastChannel] Sending meeting-participants response to ${data?.participantName}`
+      );
       this.notifyListeners(responseMessage);
     }, 100);
   }

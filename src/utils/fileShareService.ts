@@ -13,6 +13,11 @@ import {
 } from "firebase/firestore";
 import { db } from "../config/firebase";
 import { googleDriveService } from "./googleDriveService";
+import {
+  filterUndefinedValues,
+  validateFirestoreDocumentSize,
+  FILE_SIZE_LIMITS,
+} from "./firestoreHelpers";
 
 export interface SharedFile {
   id: string;
@@ -150,7 +155,9 @@ class FileShareService {
         "bytes"
       );
       // File upload - decide between Firestore and Google Drive
-      if (fileData.file.size > 1024 * 1024) {
+      // Use consistent file size limits from constants
+
+      if (fileData.file.size > FILE_SIZE_LIMITS.GOOGLE_DRIVE_THRESHOLD) {
         // > 1MB, use Google Drive
         try {
           console.log("☁️ Uploading large file to Google Drive...");
@@ -166,15 +173,54 @@ class FileShareService {
           finalFileData.storageType = "drive";
           console.log("✅ Uploaded to Google Drive:", driveFile.id);
         } catch (error) {
-          console.warn(
-            "Failed to upload to Google Drive, falling back to base64:",
-            error
-          );
-          // Fallback to base64 in Firestore
+          console.warn("Failed to upload to Google Drive:", error);
+
+          // Check if file is too large for Firestore fallback
+          if (fileData.file.size > FILE_SIZE_LIMITS.FIRESTORE_SAFE_LIMIT) {
+            throw new Error(
+              `File is too large (${Math.round(
+                fileData.file.size / 1024
+              )}KB). ` +
+                `Google Drive upload failed and file exceeds Firestore limit (${Math.round(
+                  FILE_SIZE_LIMITS.FIRESTORE_SAFE_LIMIT / 1024
+                )}KB). ` +
+                `Please try a smaller file or check your Google Drive connection.`
+            );
+          }
+
+          // Fallback to base64 in Firestore for smaller files only
+          console.log("📄 Fallback: storing as base64 in Firestore...");
           const base64Content = await this.fileToBase64(fileData.file);
           finalFileData.content = base64Content;
           finalFileData.storageType = "firestore";
-          console.log("📄 Fallback: stored as base64 in Firestore");
+          console.log("✅ Fallback: stored as base64 in Firestore");
+        }
+      } else if (fileData.file.size > FILE_SIZE_LIMITS.FIRESTORE_SAFE_LIMIT) {
+        // Between 700KB and 1MB - try Google Drive first, then error if it fails
+        try {
+          console.log("☁️ Uploading medium file to Google Drive...");
+          const driveFile = await googleDriveService.uploadTeamFile(
+            fileData.file,
+            teamId,
+            `shared-files/${fileData.fileName}`
+          );
+
+          finalFileData.driveFileId = driveFile.id;
+          finalFileData.url = driveFile.webViewLink;
+          finalFileData.storageType = "drive";
+          console.log("✅ Uploaded to Google Drive:", driveFile.id);
+        } catch (error) {
+          throw new Error(
+            `File is too large for Firestore storage (${Math.round(
+              fileData.file.size / 1024
+            )}KB > ${Math.round(
+              FILE_SIZE_LIMITS.FIRESTORE_SAFE_LIMIT / 1024
+            )}KB limit). ` +
+              `Google Drive upload failed: ${
+                error instanceof Error ? error.message : "Unknown error"
+              }. ` +
+              `Please check your Google Drive connection or try a smaller file.`
+          );
         }
       } else {
         console.log("📄 Storing small file as base64 in Firestore...");
@@ -214,11 +260,28 @@ class FileShareService {
       hasDriveFileId: !!sharedFile.driveFileId,
     });
 
-    await setDoc(doc(db, "sharedFiles", fileId), {
+    // Filter out undefined values before saving to Firestore
+    const firestoreData = filterUndefinedValues({
       ...sharedFile,
       sharedAt: serverTimestamp(),
       lastModified: serverTimestamp(),
     });
+
+    // Validate document size before saving
+    const sizeValidation = validateFirestoreDocumentSize(firestoreData);
+    if (!sizeValidation.isValid) {
+      console.error("❌ Document size validation failed:", sizeValidation);
+      throw new Error(
+        `Document too large for Firestore: ${sizeValidation.errors.join(
+          ", "
+        )}. ` + `Consider using Google Drive for large files.`
+      );
+    }
+
+    console.log(
+      `📏 Document size: ${Math.round(sizeValidation.sizeMB * 100) / 100}MB`
+    );
+    await setDoc(doc(db, "sharedFiles", fileId), firestoreData);
 
     console.log("✅ File saved successfully to Firestore");
     return sharedFile;
@@ -518,11 +581,14 @@ class FileShareService {
     };
 
     // Store in Firestore with a separate collection for folders
-    await setDoc(doc(db, "sharedFolders", folderId), {
+    // Filter out undefined values before saving to Firestore
+    const firestoreData = filterUndefinedValues({
       ...newFolder,
       createdAt: serverTimestamp(),
       lastModified: serverTimestamp(),
     });
+
+    await setDoc(doc(db, "sharedFolders", folderId), firestoreData);
 
     return newFolder;
   }

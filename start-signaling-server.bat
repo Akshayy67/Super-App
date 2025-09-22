@@ -8,9 +8,9 @@ echo 📦 Installing dependencies...
 call npm install
 
 echo.
-echo 🎯 Starting server on port 8080...
-echo 📡 WebSocket endpoint: ws://localhost:8080
-echo 🌐 Health check: http://localhost:8080/health
+echo 🎯 Starting server on port 3001...
+echo 📡 WebSocket endpoint: ws://localhost:3001
+echo 🌐 Health check: http://localhost:3001/health
 echo.
 echo Press Ctrl+C to stop the server
 echo.

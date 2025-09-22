@@ -138,6 +138,34 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Check file size and provide helpful feedback
+      const fileSizeKB = Math.round(file.size / 1024);
+      const fileSizeMB = Math.round((file.size / (1024 * 1024)) * 100) / 100;
+
+      if (file.size > 10 * 1024 * 1024) {
+        // 10MB absolute limit
+        setError(
+          `File is too large (${fileSizeMB}MB). Maximum file size is 10MB.`
+        );
+        return;
+      }
+
+      if (file.size > 1024 * 1024) {
+        // > 1MB
+        console.log(
+          `📁 Large file selected (${fileSizeMB}MB) - will use Google Drive storage`
+        );
+      } else if (file.size > 700 * 1024) {
+        // > 700KB
+        console.log(
+          `📁 Medium file selected (${fileSizeKB}KB) - will try Google Drive, may require connection`
+        );
+      } else {
+        console.log(
+          `📁 Small file selected (${fileSizeKB}KB) - will use Firestore storage`
+        );
+      }
+
       setSelectedFile(file);
       setFileName(file.name);
       setError(null);
@@ -228,8 +256,9 @@ export const FileShareModal: React.FC<FileShareModalProps> = ({
         fileType = selectedFile.type;
 
         // Convert file to base64 for storage
-        if (selectedFile.size < 5 * 1024 * 1024) {
-          // 5MB limit
+        // Use consistent file size limits
+        if (selectedFile.size < 700 * 1024) {
+          // 700KB limit for Firestore compatibility
           const reader = new FileReader();
           fileContent = await new Promise<string>((resolve, reject) => {
             reader.onload = () => resolve(reader.result as string);

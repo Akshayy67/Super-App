@@ -13,6 +13,7 @@ import {
   orderBy,
   serverTimestamp,
 } from "firebase/firestore";
+import { filterUndefinedValues } from "../src/utils/firestoreHelpers";
 
 interface SharedFile {
   id: string;
@@ -281,11 +282,14 @@ async function shareFile(req: NextApiRequest, res: NextApiResponse) {
       folderPath: req.body.folderPath || "/",
     };
 
-    await setDoc(doc(db, "sharedFiles", fileId), {
+    // Filter out undefined values before saving to Firestore
+    const firestoreData = filterUndefinedValues({
       ...file,
       sharedAt: serverTimestamp(),
       lastModified: serverTimestamp(),
     });
+
+    await setDoc(doc(db, "sharedFiles", fileId), firestoreData);
 
     return res.status(201).json({
       file,
