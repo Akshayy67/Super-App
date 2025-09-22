@@ -54,6 +54,8 @@ import { ShareMenu } from "./ShareMenu";
 import { extractTextFromPdfDataUrl } from "../utils/pdfText";
 import { TeamFileManager } from "./TeamFileManager";
 import { StudyTeam } from "./StudyTeam";
+import { autoFileAccessChecker } from "../utils/autoFileAccessChecker";
+import { filePreviewService } from "../utils/filePreviewService";
 
 // Study motivational quotes
 const STUDY_QUOTES = [
@@ -300,6 +302,9 @@ export const TeamSpace: React.FC<{
 
   const loadTeamData = async (teamId: string) => {
     try {
+      // Automatically check and fix file access for this team
+      await autoFileAccessChecker.ensureTeamFileAccess(teamId);
+
       const activities = await teamManagementService.getTeamActivities(teamId);
       setTeamActivities(activities);
 
@@ -851,6 +856,28 @@ export const TeamSpace: React.FC<{
     setPreviewFile(fileItem);
     setPreviewZoom(100);
     setShowAIChat(false);
+
+    // Use the enhanced preview service to check file type and handle appropriately
+    const previewInfo = filePreviewService.getPreviewInfo(
+      file.fileName,
+      file.fileType,
+      file.content,
+      file.id
+    );
+
+    console.log("📋 Preview info:", previewInfo);
+
+    // For Office documents and corrupted files, set appropriate preview content
+    if (
+      previewInfo.previewType === "office" ||
+      previewInfo.previewType === "corrupted"
+    ) {
+      console.log(
+        `📄 Handling ${previewInfo.previewType} file: ${file.fileName}`
+      );
+      setPreviewContent(previewInfo.description);
+      return;
+    }
 
     // Always try to fetch content if not available, regardless of URL
     if (!file.content) {

@@ -1,5 +1,6 @@
 import { realTimeAuth } from "./realTimeAuth";
 import { signalingService, SignalingMessage } from "./signalingService";
+import { meetingDebugger } from "./meetingDebugger";
 
 export interface WebRTCParticipant {
   id: string;
@@ -45,13 +46,18 @@ class WebRTCService {
   // Peer connections for each participant
   private peerConnections = new Map<string, RTCPeerConnection>();
 
-  // WebRTC Configuration
+  // WebRTC Configuration with better STUN/TURN servers
   private rtcConfig: RTCConfiguration = {
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },
       { urls: "stun:stun1.l.google.com:19302" },
       { urls: "stun:stun2.l.google.com:19302" },
+      { urls: "stun:stun3.l.google.com:19302" },
+      { urls: "stun:stun4.l.google.com:19302" },
     ],
+    iceCandidatePoolSize: 10,
+    bundlePolicy: "max-bundle",
+    rtcpMuxPolicy: "require",
   };
 
   constructor() {
@@ -165,48 +171,206 @@ class WebRTCService {
     const peerConnection = new RTCPeerConnection(this.rtcConfig);
     this.peerConnections.set(participantId, peerConnection);
 
-    // Handle ICE candidates
+    // Handle ICE candidates with error handling
     peerConnection.onicecandidate = (event) => {
-      if (event.candidate && this.currentMeeting) {
-        signalingService.sendIceCandidate(
-          this.currentMeeting.id,
-          participantId,
-          realTimeAuth.getCurrentUser()!.id,
-          event.candidate
+      try {
+        if (event.candidate && this.currentMeeting) {
+          console.log(`🧊 Sending ICE candidate to ${participantId}`);
+          signalingService.sendIceCandidate(
+            this.currentMeeting.id,
+            participantId,
+            realTimeAuth.getCurrentUser()!.id,
+            event.candidate
+          );
+        } else if (!event.candidate) {
+          console.log(`✅ ICE gathering complete for ${participantId}`);
+        }
+      } catch (error) {
+        console.error(
+          `❌ Error sending ICE candidate to ${participantId}:`,
+          error
         );
       }
     };
 
-    // Handle remote stream
+    // Handle remote stream with better error handling
     peerConnection.ontrack = (event) => {
-      const [remoteStream] = event.streams;
-      if (remoteStream && this.currentMeeting) {
-        const participant = this.currentMeeting.participants.get(participantId);
-        if (participant) {
-          participant.stream = remoteStream;
-          this.emit({
-            type: "stream-added",
-            meetingId: this.currentMeeting.id,
-            participantId,
-            data: { stream: remoteStream },
-            timestamp: new Date(),
-          });
+      try {
+        const [remoteStream] = event.streams;
+        console.log(
+          `🎥 Received remote stream from ${participantId}`,
+          remoteStream
+        );
+
+        if (remoteStream && this.currentMeeting) {
+          const participant =
+            this.currentMeeting.participants.get(participantId);
+          if (participant) {
+            participant.stream = remoteStream;
+            console.log(`✅ Stream assigned to participant ${participantId}`);
+
+            this.emit({
+              type: "stream-added",
+              meetingId: this.currentMeeting.id,
+              participantId,
+              data: { stream: remoteStream },
+              timestamp: new Date(),
+            });
+          } else {
+            console.warn(
+              `⚠️ Participant ${participantId} not found for stream`
+            );
+          }
+        }
+      } catch (error) {
+        console.error(
+          `❌ Error handling remote stream from ${participantId}:`,
+          error
+        );
+      }
+    };
+
+    // Enhanced connection state handling
+    peerConnection.onconnectionstatechange = () => {
+      const state = peerConnection.connectionState;
+      console.log(`🔗 Peer connection with ${participantId}: ${state}`);
+
+      switch (state) {
+        case "connected":
+          console.log(`✅ Successfully connected to ${participantId}`);
+          break;
+        case "disconnected":
+          console.log(
+            `⚠️ Disconnected from ${participantId}, attempting reconnection...`
+          );
+          // Try to restart ICE after a short delay
+          setTimeout(() => {
+            if (peerConnection.connectionState === "disconnected") {
+              console.log(`🔄 Restarting ICE for ${participantId}`);
+              peerConnection.restartIce();
+            }
+          }, 2000);
+          break;
+        case "failed":
+          console.error(`❌ Connection failed with ${participantId}`);
+          // Try to restart ICE immediately
+          try {
+            peerConnection.restartIce();
+          } catch (error) {
+            console.error(
+              `❌ Failed to restart ICE for ${participantId}:`,
+              error
+            );
+            // Remove failed connection
+            this.handleConnectionFailure(participantId);
+          }
+          break;
+        case "closed":
+          console.log(`🔒 Connection closed with ${participantId}`);
+          break;
+      }
+    };
+
+    // Handle ICE connection state changes
+    peerConnection.oniceconnectionstatechange = () => {
+      const iceState = peerConnection.iceConnectionState;
+      console.log(`🧊 ICE connection with ${participantId}: ${iceState}`);
+
+      if (iceState === "failed") {
+        console.error(`❌ ICE connection failed with ${participantId}`);
+        // Try to restart ICE
+        try {
+          peerConnection.restartIce();
+        } catch (error) {
+          console.error(
+            `❌ Failed to restart ICE for ${participantId}:`,
+            error
+          );
         }
       }
     };
 
-    // Handle connection state changes
-    peerConnection.onconnectionstatechange = () => {
+    // Handle ICE gathering state changes
+    peerConnection.onicegatheringstatechange = () => {
       console.log(
-        `Peer connection with ${participantId}: ${peerConnection.connectionState}`
+        `🧊 ICE gathering state for ${participantId}: ${peerConnection.iceGatheringState}`
       );
-      if (peerConnection.connectionState === "failed") {
-        // Try to restart ICE
-        peerConnection.restartIce();
-      }
     };
 
     return peerConnection;
+  }
+
+  private handleConnectionFailure(participantId: string): void {
+    console.log(`🔧 Handling connection failure for ${participantId}`);
+
+    // Remove the failed peer connection
+    const peerConnection = this.peerConnections.get(participantId);
+    if (peerConnection) {
+      peerConnection.close();
+      this.peerConnections.delete(participantId);
+    }
+
+    // Remove participant stream
+    if (this.currentMeeting) {
+      const participant = this.currentMeeting.participants.get(participantId);
+      if (participant && participant.stream) {
+        participant.stream = undefined;
+
+        this.emit({
+          type: "stream-removed",
+          meetingId: this.currentMeeting.id,
+          participantId,
+          data: {},
+          timestamp: new Date(),
+        });
+      }
+    }
+
+    // Attempt to reconnect after a delay
+    setTimeout(() => {
+      this.attemptReconnection(participantId);
+    }, 3000);
+  }
+
+  private async attemptReconnection(participantId: string): Promise<void> {
+    if (
+      !this.currentMeeting ||
+      !this.currentMeeting.participants.has(participantId)
+    ) {
+      console.log(
+        `⚠️ Cannot reconnect to ${participantId}: participant no longer in meeting`
+      );
+      return;
+    }
+
+    try {
+      console.log(`🔄 Attempting to reconnect to ${participantId}`);
+
+      // Create new peer connection
+      const peerConnection = await this.createPeerConnection(participantId);
+
+      // Add local stream if available
+      if (this.localStream) {
+        this.localStream.getTracks().forEach((track) => {
+          peerConnection.addTrack(track, this.localStream!);
+        });
+      }
+
+      // Create and send new offer
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+
+      signalingService.sendOffer(
+        this.currentMeeting.id,
+        participantId,
+        realTimeAuth.getCurrentUser()!.id,
+        offer
+      );
+
+      console.log(`✅ Reconnection attempt sent to ${participantId}`);
+    } catch (error) {
+      console.error(`❌ Failed to reconnect to ${participantId}:`, error);
+    }
   }
 
   private async handleRemoteParticipantJoined(data: any) {
@@ -391,37 +555,58 @@ class WebRTCService {
 
   // Public API methods
   async createMeeting(title: string): Promise<WebRTCMeeting> {
-    const user = realTimeAuth.getCurrentUser();
-    if (!user) throw new Error("User not authenticated");
+    try {
+      const user = realTimeAuth.getCurrentUser();
+      if (!user) {
+        meetingDebugger.logError(
+          "auth",
+          "high",
+          "User not authenticated when creating meeting"
+        );
+        throw new Error("User not authenticated");
+      }
 
-    const meetingId = `meeting_${Date.now()}_${Math.random()
-      .toString(36)
-      .substring(2, 11)}`;
+      console.log(`🎯 Creating meeting: ${title}`);
 
-    const meeting: WebRTCMeeting = {
-      id: meetingId,
-      title,
-      hostId: user.id,
-      participants: new Map(),
-      isActive: true,
-      createdAt: new Date(),
-    };
+      const meetingId = `meeting_${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(2, 11)}`;
 
-    // Add host as participant
-    const hostParticipant: WebRTCParticipant = {
-      id: user.id,
-      name: (user as any).name || user.email || "Host",
-      isHost: true,
-      isMuted: false,
-      isCameraOn: false,
-      isScreenSharing: false,
-    };
+      const meeting: WebRTCMeeting = {
+        id: meetingId,
+        title,
+        hostId: user.id,
+        participants: new Map(),
+        isActive: true,
+        createdAt: new Date(),
+      };
 
-    meeting.participants.set(user.id, hostParticipant);
-    this.meetings.set(meetingId, meeting);
-    this.currentMeeting = meeting;
+      // Add host as participant
+      const hostParticipant: WebRTCParticipant = {
+        id: user.id,
+        name: (user as any).name || user.email || "Host",
+        isHost: true,
+        isMuted: false,
+        isCameraOn: false,
+        isScreenSharing: false,
+      };
 
-    return meeting;
+      meeting.participants.set(user.id, hostParticipant);
+      this.meetings.set(meetingId, meeting);
+      this.currentMeeting = meeting;
+
+      console.log(`✅ Meeting created successfully: ${meetingId}`);
+      return meeting;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Unknown error creating meeting";
+      meetingDebugger.logError("webrtc", "high", "Failed to create meeting", {
+        error: errorMessage,
+      });
+      throw error;
+    }
   }
 
   async joinMeeting(meetingId: string): Promise<WebRTCMeeting> {
@@ -484,15 +669,47 @@ class WebRTCService {
 
   async startCamera(): Promise<MediaStream> {
     try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 1280, height: 720 },
-        audio: true,
-      });
+      console.log("🎥 Starting camera...");
+
+      // Check if getUserMedia is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Camera access not supported in this browser");
+      }
+
+      // Request camera and microphone access with better constraints
+      const constraints: MediaStreamConstraints = {
+        video: {
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          frameRate: { ideal: 30, max: 60 },
+          facingMode: "user",
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 44100,
+        },
+      };
+
+      this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log("✅ Camera and microphone access granted", this.localStream);
 
       // Add stream to all existing peer connections
       this.peerConnections.forEach((peerConnection, participantId) => {
+        console.log(
+          `📤 Adding local stream to peer connection with ${participantId}`
+        );
         this.localStream!.getTracks().forEach((track) => {
-          peerConnection.addTrack(track, this.localStream!);
+          try {
+            peerConnection.addTrack(track, this.localStream!);
+            console.log(`✅ Added ${track.kind} track to ${participantId}`);
+          } catch (error) {
+            console.error(
+              `❌ Failed to add ${track.kind} track to ${participantId}:`,
+              error
+            );
+          }
         });
       });
 
@@ -504,13 +721,36 @@ class WebRTCService {
           if (participant) {
             participant.isCameraOn = true;
             participant.stream = this.localStream;
+            console.log(`✅ Updated participant ${user.id} camera status`);
           }
         }
       }
 
       return this.localStream;
     } catch (error) {
-      console.error("Error starting camera:", error);
+      console.error("❌ Error starting camera:", error);
+
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.name === "NotAllowedError") {
+          throw new Error(
+            "Camera and microphone access denied. Please allow access and try again."
+          );
+        } else if (error.name === "NotFoundError") {
+          throw new Error(
+            "No camera or microphone found. Please connect a device and try again."
+          );
+        } else if (error.name === "NotReadableError") {
+          throw new Error(
+            "Camera or microphone is already in use by another application."
+          );
+        } else if (error.name === "OverconstrainedError") {
+          throw new Error(
+            "Camera settings not supported. Trying with basic settings..."
+          );
+        }
+      }
+
       throw error;
     }
   }
@@ -535,35 +775,58 @@ class WebRTCService {
   }
 
   async toggleMute(): Promise<boolean> {
-    if (!this.localStream) return false;
-
-    const audioTrack = this.localStream.getAudioTracks()[0];
-    if (audioTrack) {
-      audioTrack.enabled = !audioTrack.enabled;
-
-      // Update current participant
-      if (this.currentMeeting) {
-        const user = realTimeAuth.getCurrentUser();
-        if (user) {
-          const participant = this.currentMeeting.participants.get(user.id);
-          if (participant) {
-            participant.isMuted = !audioTrack.enabled;
-          }
-        }
+    try {
+      if (!this.localStream) {
+        console.log("⚠️ No local stream available for mute toggle");
+        return false;
       }
 
-      return !audioTrack.enabled;
+      const audioTrack = this.localStream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        const isMuted = !audioTrack.enabled;
+
+        console.log(`🎤 Audio ${isMuted ? "muted" : "unmuted"}`);
+
+        // Update current participant
+        if (this.currentMeeting) {
+          const user = realTimeAuth.getCurrentUser();
+          if (user) {
+            const participant = this.currentMeeting.participants.get(user.id);
+            if (participant) {
+              participant.isMuted = isMuted;
+              console.log(
+                `✅ Updated participant ${user.id} mute status: ${isMuted}`
+              );
+            }
+          }
+        }
+
+        return isMuted;
+      } else {
+        console.warn("⚠️ No audio track found in local stream");
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Error toggling mute:", error);
+      return false;
     }
-    return false;
   }
 
   async toggleCamera(): Promise<boolean> {
-    if (!this.localStream) {
-      await this.startCamera();
-      return true;
-    } else {
-      await this.stopCamera();
-      return false;
+    try {
+      if (!this.localStream) {
+        console.log("📹 Starting camera...");
+        await this.startCamera();
+        return true;
+      } else {
+        console.log("📹 Stopping camera...");
+        await this.stopCamera();
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Error toggling camera:", error);
+      throw error;
     }
   }
 

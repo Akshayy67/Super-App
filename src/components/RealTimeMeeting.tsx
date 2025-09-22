@@ -15,6 +15,7 @@ import {
   Settings,
   Maximize,
   Minimize,
+  AlertTriangle,
 } from "lucide-react";
 import {
   webrtcService,
@@ -23,6 +24,7 @@ import {
   WebRTCEvent,
 } from "../utils/webrtcService";
 import { realTimeAuth } from "../utils/realTimeAuth";
+import { MeetingTroubleshooter } from "./MeetingTroubleshooter";
 
 interface RealTimeMeetingProps {
   meetingId?: string;
@@ -102,6 +104,7 @@ export const RealTimeMeeting: React.FC<RealTimeMeetingProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [newMeetingTitle, setNewMeetingTitle] = useState("");
   const [joinMeetingId, setJoinMeetingId] = useState("");
+  const [showTroubleshooter, setShowTroubleshooter] = useState(false);
 
   const meetingContainerRef = useRef<HTMLDivElement>(null);
 
@@ -533,6 +536,15 @@ export const RealTimeMeeting: React.FC<RealTimeMeetingProps> = ({
             )}
           </button>
 
+          {/* Troubleshooter */}
+          <button
+            onClick={() => setShowTroubleshooter(true)}
+            className="p-3 rounded-full bg-orange-600 hover:bg-orange-700 text-white transition-colors"
+            title="Troubleshoot issues"
+          >
+            <AlertTriangle className="w-5 h-5" />
+          </button>
+
           {/* Leave Meeting */}
           <button
             onClick={handleLeaveMeeting}
@@ -550,6 +562,12 @@ export const RealTimeMeeting: React.FC<RealTimeMeetingProps> = ({
           </p>
         </div>
       </div>
+
+      {/* Troubleshooter Modal */}
+      <MeetingTroubleshooter
+        isOpen={showTroubleshooter}
+        onClose={() => setShowTroubleshooter(false)}
+      />
     </div>
   );
 };

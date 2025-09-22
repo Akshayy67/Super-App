@@ -17,6 +17,7 @@ import {
 import { db } from "../config/firebase";
 import { realTimeAuth } from "./realTimeAuth";
 import { emailService } from "./emailService";
+import { teamFilePermissionService } from "./teamFilePermissionService";
 
 export interface TeamMember {
   id: string;
@@ -391,6 +392,25 @@ class TeamManagementService {
       updatedAt: serverTimestamp(),
     });
 
+    // Grant access to all existing team files for the new member
+    try {
+      console.log("🔄 Granting file access to new team member...");
+      const fileUpdates =
+        await teamFilePermissionService.grantTeamFileAccessToNewMember(
+          teamDoc.id,
+          user.id,
+          newMember.role
+        );
+      console.log(
+        `✅ Granted access to ${
+          fileUpdates.filter((u) => u.updated).length
+        } files/folders`
+      );
+    } catch (error) {
+      console.error("⚠️ Error granting file access to new member:", error);
+      // Don't fail the join operation if file permission update fails
+    }
+
     await this.logActivity(
       teamDoc.id,
       "joined team",
@@ -431,6 +451,27 @@ class TeamManagementService {
       [`members.${memberId}`]: deleteField(),
       updatedAt: serverTimestamp(),
     });
+
+    // Revoke access to all team files for the removed member
+    try {
+      console.log("🔄 Revoking file access from removed team member...");
+      const fileUpdates =
+        await teamFilePermissionService.revokeTeamFileAccessFromMember(
+          teamId,
+          memberId
+        );
+      console.log(
+        `✅ Revoked access from ${
+          fileUpdates.filter((u) => u.updated).length
+        } files/folders`
+      );
+    } catch (error) {
+      console.error(
+        "⚠️ Error revoking file access from removed member:",
+        error
+      );
+      // Don't fail the removal operation if file permission update fails
+    }
 
     await this.logActivity(
       teamId,
@@ -607,6 +648,36 @@ class TeamManagementService {
       [`members.${memberId}.role`]: newRole,
       updatedAt: serverTimestamp(),
     });
+
+    // Update file permissions based on new role
+    try {
+      console.log(
+        `🔄 Updating file permissions for role change: ${targetMember.role} -> ${newRole}`
+      );
+      // First revoke all current permissions
+      await teamFilePermissionService.revokeTeamFileAccessFromMember(
+        teamId,
+        memberId
+      );
+      // Then grant new permissions based on new role
+      const fileUpdates =
+        await teamFilePermissionService.grantTeamFileAccessToNewMember(
+          teamId,
+          memberId,
+          newRole
+        );
+      console.log(
+        `✅ Updated permissions for ${
+          fileUpdates.filter((u) => u.updated).length
+        } files/folders`
+      );
+    } catch (error) {
+      console.error(
+        "⚠️ Error updating file permissions for role change:",
+        error
+      );
+      // Don't fail the role update if file permission update fails
+    }
 
     await this.logActivity(
       teamId,

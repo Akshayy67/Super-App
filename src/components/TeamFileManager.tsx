@@ -25,6 +25,7 @@ import {
 } from "../utils/teamFolderService";
 import { fileShareService } from "../utils/fileShareService";
 import { realTimeAuth } from "../utils/realTimeAuth";
+import { FileAccessFixButton } from "./FileAccessFixButton";
 
 interface TeamFileManagerProps {
   teamId: string;
@@ -207,11 +208,7 @@ export const TeamFileManager: React.FC<TeamFileManagerProps> = ({
         description: "",
         parentId: navigation.currentFolderId,
         createdBy: user.id,
-        permissions: {
-          view: teamMembers.map((m) => m.id),
-          edit: teamMembers.map((m) => m.id),
-          admin: [user.id],
-        },
+        // Permissions will be automatically set based on team membership
       });
 
       // Refresh folder contents
@@ -375,6 +372,7 @@ export const TeamFileManager: React.FC<TeamFileManagerProps> = ({
                 Share File
               </button>
             )}
+            <FileAccessFixButton teamId={teamId} className="text-sm" />
             <button
               onClick={() => setShowCreateFolder(true)}
               className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm"

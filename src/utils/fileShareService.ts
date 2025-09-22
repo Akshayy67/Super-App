@@ -98,6 +98,63 @@ export interface FolderCreateData {
 }
 
 class FileShareService {
+  // Helper function to get team-based permissions for new files/folders
+  private async getTeamBasedPermissions(teamId: string, creatorId: string) {
+    try {
+      const teamDoc = await getDoc(doc(db, "teams", teamId));
+      if (!teamDoc.exists()) {
+        throw new Error("Team not found");
+      }
+
+      const teamData = teamDoc.data();
+      const members = teamData?.members || {};
+
+      const permissions = {
+        view: [] as string[],
+        edit: [] as string[],
+        admin: [] as string[],
+      };
+
+      // Add all team members to appropriate permission levels based on their roles
+      Object.entries(members).forEach(([memberId, member]: [string, any]) => {
+        const role = member.role || "member";
+
+        switch (role) {
+          case "owner":
+          case "admin":
+            permissions.admin.push(memberId);
+            break;
+          case "member":
+            permissions.edit.push(memberId);
+            break;
+          case "viewer":
+            permissions.view.push(memberId);
+            break;
+          default:
+            permissions.view.push(memberId);
+        }
+      });
+
+      // Ensure creator has admin access regardless of role
+      if (!permissions.admin.includes(creatorId)) {
+        permissions.admin = permissions.admin.filter((id) => id !== creatorId);
+        permissions.edit = permissions.edit.filter((id) => id !== creatorId);
+        permissions.view = permissions.view.filter((id) => id !== creatorId);
+        permissions.admin.push(creatorId);
+      }
+
+      return permissions;
+    } catch (error) {
+      console.error("Error getting team-based permissions:", error);
+      // Fallback to creator-only permissions
+      return {
+        view: [creatorId],
+        edit: [creatorId],
+        admin: [creatorId],
+      };
+    }
+  }
+
   // Share a file with the team
   async shareFile(fileData: FileShareData): Promise<SharedFile> {
     const { teamId, sharedBy } = fileData;
@@ -116,6 +173,12 @@ class FileShareService {
     const fileId = `file_${Date.now()}_${Math.random()
       .toString(36)
       .substring(2, 8)}`;
+
+    // Get team-based permissions instead of individual permissions
+    const teamPermissions =
+      fileData.permissions ||
+      (await this.getTeamBasedPermissions(teamId, sharedBy));
+
     let finalFileData: Partial<SharedFile> = {
       id: fileId,
       teamId,
@@ -123,11 +186,7 @@ class FileShareService {
       fileType: fileData.fileType || "unknown",
       fileSize: fileData.fileSize || 0,
       sharedBy,
-      permissions: {
-        view: fileData.permissions?.view || [sharedBy],
-        edit: fileData.permissions?.edit || [sharedBy],
-        admin: fileData.permissions?.admin || [sharedBy],
-      },
+      permissions: teamPermissions,
       tags: fileData.tags || [],
       description: fileData.description || "",
       version: 1,
@@ -562,6 +621,11 @@ class FileShareService {
       folderData.folderName
     );
 
+    // Get team-based permissions instead of individual permissions
+    const teamPermissions =
+      folderData.permissions ||
+      (await this.getTeamBasedPermissions(teamId, createdBy));
+
     const newFolder: SharedFolder = {
       id: folderId,
       teamId,
@@ -571,11 +635,7 @@ class FileShareService {
       folderPath,
       createdBy,
       createdAt: new Date(),
-      permissions: {
-        view: folderData.permissions?.view || [createdBy],
-        edit: folderData.permissions?.edit || [createdBy],
-        admin: folderData.permissions?.admin || [createdBy],
-      },
+      permissions: teamPermissions,
       lastModified: new Date(),
       lastModifiedBy: createdBy,
     };

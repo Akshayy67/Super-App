@@ -11,6 +11,8 @@ import {
   Clock,
   AlertTriangle,
   Users,
+  Settings,
+  X,
 } from "lucide-react";
 import { storageUtils } from "../utils/storage"; // still used for short notes
 import { driveStorageUtils } from "../utils/driveStorage"; // for accurate file count (Drive or local fallback)
@@ -18,6 +20,7 @@ import { firestoreUserTasks } from "../utils/firestoreUserTasks";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { format, isAfter, startOfDay, isToday, isTomorrow } from "date-fns";
 import { Task } from "../types";
+import { FilePermissionsFixer } from "./FilePermissionsFixer";
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -32,6 +35,8 @@ export const Dashboard: React.FC = () => {
     totalShortNotes: 0,
   });
   const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([]);
+  const [showFilePermissionsFixer, setShowFilePermissionsFixer] =
+    useState(false);
 
   const user = realTimeAuth.getCurrentUser();
 
@@ -274,6 +279,13 @@ export const Dashboard: React.FC = () => {
                   <Users className="w-5 h-5 mr-3 flex-shrink-0" />
                   <span className="truncate">Team Space</span>
                 </button>
+                <button
+                  onClick={() => setShowFilePermissionsFixer(true)}
+                  className="w-full flex items-center px-3 sm:px-4 py-3 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/50 transition-colors text-sm btn-touch"
+                >
+                  <Settings className="w-5 h-5 mr-3 flex-shrink-0" />
+                  <span className="truncate">Fix File Access</span>
+                </button>
               </div>
             </div>
           </div>
@@ -427,6 +439,28 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* File Permissions Fixer Modal */}
+      {showFilePermissionsFixer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Fix File Access Issues
+              </h2>
+              <button
+                onClick={() => setShowFilePermissionsFixer(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <FilePermissionsFixer />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

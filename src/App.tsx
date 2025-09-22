@@ -11,6 +11,10 @@ import { useGlobalCopyListener } from "./hooks/useGlobalCopyListener";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthWrapper } from "./components/AuthWrapper";
+// Import the file permissions fixer to make it available in console
+import "./utils/fixExistingFilePermissions";
+// Import file preview test utility
+import "./utils/testFilePreview";
 
 // Component to handle authenticated app content
 const AuthenticatedApp: React.FC = () => {

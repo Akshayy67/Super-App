@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { Users, Mail, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
-import { realTimeAuth } from '../utils/realTimeAuth';
-import { emailService } from '../utils/emailService';
-import { db } from '../config/firebase';
-import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import React, { useState } from "react";
+import { Users, Mail, CheckCircle, XCircle, ExternalLink } from "lucide-react";
+import { realTimeAuth } from "../utils/realTimeAuth";
+import { emailService } from "../utils/emailService";
+import { teamManagementService } from "../utils/teamManagement";
+import { db } from "../config/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 interface JoinTeamModalProps {
   isOpen: boolean;
@@ -12,13 +13,13 @@ interface JoinTeamModalProps {
   onTeamJoined?: () => void;
 }
 
-export const JoinTeamModal: React.FC<JoinTeamModalProps> = ({ 
-  isOpen, 
-  onClose, 
+export const JoinTeamModal: React.FC<JoinTeamModalProps> = ({
+  isOpen,
+  onClose,
   inviteCode: initialInviteCode,
-  onTeamJoined
+  onTeamJoined,
 }) => {
-  const [inviteCode, setInviteCode] = useState(initialInviteCode || '');
+  const [inviteCode, setInviteCode] = useState(initialInviteCode || "");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,53 +37,35 @@ export const JoinTeamModal: React.FC<JoinTeamModalProps> = ({
     try {
       // Get invite details
       const invite = await emailService.getInviteByCode(inviteCode.trim());
-      
+
       if (!invite) {
-        setError('Invalid or expired invite code');
+        setError("Invalid or expired invite code");
         return;
       }
 
-      if (invite.status !== 'pending') {
-        setError('This invitation has already been used or expired');
+      if (invite.status !== "pending") {
+        setError("This invitation has already been used or expired");
         return;
       }
 
       // Check if user is already a member
-      const teamDoc = await getDoc(doc(db, 'teams', invite.teamId));
+      const teamDoc = await getDoc(doc(db, "teams", invite.teamId));
       if (!teamDoc.exists()) {
-        setError('Team not found');
+        setError("Team not found");
         return;
       }
 
       const teamData = teamDoc.data();
       if (teamData?.members?.[user.id]) {
-        setError('You are already a member of this team');
+        setError("You are already a member of this team");
         return;
       }
 
-      // Create new member object
-      const newMember = {
-        id: user.id,
-        name: user.username || user.email,
-        email: user.email,
-        role: 'member' as const,
-        joinedAt: new Date(),
-        lastActive: new Date(),
-        isOnline: true,
-        skills: [],
-        stats: {
-          tasksCompleted: 0,
-          projectsContributed: 0,
-          documentsCreated: 0,
-          hoursLogged: 0
-        }
-      };
+      // The team management service will handle creating the member object
 
-      // Add user to team using the team management service
-      await updateDoc(doc(db, 'teams', invite.teamId), {
-        [`members.${user.id}`]: newMember,
-        updatedAt: serverTimestamp()
-      });
+      // Use the team management service to properly join the team
+      // This will automatically grant file access to the new member
+      await teamManagementService.joinTeamByInviteCode(inviteCode);
 
       // Mark invite as accepted
       await emailService.acceptInvite(invite.id, user.id);
@@ -96,14 +79,13 @@ export const JoinTeamModal: React.FC<JoinTeamModalProps> = ({
       // Close modal after delay
       setTimeout(() => {
         onClose();
-        setInviteCode('');
+        setInviteCode("");
         setSuccess(null);
         setInviteDetails(null);
       }, 3000);
-
     } catch (error) {
-      console.error('Error joining team:', error);
-      setError('Failed to join team. Please try again.');
+      console.error("Error joining team:", error);
+      setError("Failed to join team. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -124,7 +106,9 @@ export const JoinTeamModal: React.FC<JoinTeamModalProps> = ({
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">{success}</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              {success}
+            </h3>
             {inviteDetails && (
               <p className="text-sm text-gray-600 mb-4">
                 You can now access the team from your team list.

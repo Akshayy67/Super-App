@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { X, Download, ZoomIn, ZoomOut, ExternalLink } from "lucide-react";
 import { FileItem } from "../types";
 import { driveStorageUtils } from "../utils/driveStorage";
+import { filePreviewService } from "../utils/filePreviewService";
 
 interface FilePreviewProps {
   file: FileItem | null;
@@ -94,6 +95,61 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
       );
     }
 
+    // Get preview info using the enhanced service
+    const previewInfo = filePreviewService.getPreviewInfo(
+      file.name,
+      file.mimeType,
+      file.content,
+      file.id
+    );
+
+    // Check for corrupted or invalid data
+    if (previewInfo.previewType === "corrupted") {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-yellow-600"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <p className="text-gray-600 mb-2">{previewInfo.title}</p>
+            <p className="text-sm text-gray-500 mb-4">
+              {previewInfo.description}
+            </p>
+            <div className="space-y-2">
+              {previewInfo.actions.map((action, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    if (action.action === "download") {
+                      downloadFile();
+                    } else if (
+                      action.action === "office-online" &&
+                      action.url
+                    ) {
+                      window.open(action.url, "_blank");
+                    }
+                  }}
+                  className={`px-4 py-2 text-white rounded-lg transition-colors mr-2 ${action.color}`}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // Image preview
     if (file.mimeType?.startsWith("image/")) {
       return (
@@ -113,7 +169,10 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
       try {
         const textContent = atob(file.content.split(",")[1]);
         return (
-          <div className="h-full p-6 overflow-auto" data-component="file-content">
+          <div
+            className="h-full p-6 overflow-auto"
+            data-component="file-content"
+          >
             <pre
               className="whitespace-pre-wrap font-mono text-sm text-gray-800 leading-relaxed"
               style={{ fontSize: `${zoom}%` }}
@@ -132,60 +191,231 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
       }
     }
 
-    // PDF preview (simplified - in production would use react-pdf)
+    // PDF preview with embedded viewer
     if (file.mimeType === "application/pdf") {
+      try {
+        return (
+          <div className="h-full w-full">
+            <iframe
+              src={file.content}
+              className="w-full h-full border-0"
+              title={`PDF Preview: ${file.name}`}
+              onError={() => {
+                console.error("PDF iframe failed to load");
+              }}
+            />
+          </div>
+        );
+      } catch (error) {
+        console.error("Error rendering PDF:", error);
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg
+                  className="w-8 h-8 text-red-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M4 18h12V6l-4-4H4v16zm8-14v3h3l-3-3z" />
+                </svg>
+              </div>
+              <p className="text-gray-600 mb-4">PDF Preview Error</p>
+              <p className="text-sm text-gray-500 mb-4">
+                Could not display PDF preview.
+                <br />
+                The file may be corrupted or too large.
+              </p>
+              <button
+                onClick={downloadFile}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Download PDF
+              </button>
+            </div>
+          </div>
+        );
+      }
+    }
+
+    // PowerPoint files (.ppt, .pptx)
+    if (
+      file.mimeType?.includes("powerpoint") ||
+      file.mimeType?.includes("presentation") ||
+      file.name?.toLowerCase().endsWith(".ppt") ||
+      file.name?.toLowerCase().endsWith(".pptx")
+    ) {
       return (
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
-                className="w-8 h-8 text-red-600"
+                className="w-8 h-8 text-orange-600"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
+              </svg>
+            </div>
+            <p className="text-gray-600 mb-4">PowerPoint Presentation</p>
+            <p className="text-sm text-gray-500 mb-4">
+              PowerPoint files cannot be previewed in the browser.
+              <br />
+              Download to view in PowerPoint or compatible software.
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={downloadFile}
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors block mx-auto"
+              >
+                Download PowerPoint
+              </button>
+              <button
+                onClick={() => {
+                  // Try to open in Office Online if available
+                  const officeUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(
+                    window.location.origin + "/api/file/" + file.id
+                  )}`;
+                  window.open(officeUrl, "_blank");
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm block mx-auto"
+              >
+                Try Office Online
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Word documents (.doc, .docx)
+    if (
+      file.mimeType?.includes("msword") ||
+      file.mimeType?.includes("wordprocessingml") ||
+      file.name?.toLowerCase().endsWith(".doc") ||
+      file.name?.toLowerCase().endsWith(".docx")
+    ) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-blue-600"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
                 <path d="M4 18h12V6l-4-4H4v16zm8-14v3h3l-3-3z" />
               </svg>
             </div>
-            <p className="text-gray-600 mb-4">PDF Preview</p>
+            <p className="text-gray-600 mb-4">Word Document</p>
             <p className="text-sm text-gray-500 mb-4">
-              Full PDF preview requires additional setup.
+              Word documents cannot be previewed in the browser.
               <br />
-              Click download to view the file.
+              Download to view in Word or compatible software.
             </p>
-            <button
-              onClick={downloadFile}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Download PDF
-            </button>
+            <div className="space-y-2">
+              <button
+                onClick={downloadFile}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors block mx-auto"
+              >
+                Download Document
+              </button>
+              <button
+                onClick={() => {
+                  // Try to open in Office Online if available
+                  const officeUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(
+                    window.location.origin + "/api/file/" + file.id
+                  )}`;
+                  window.open(officeUrl, "_blank");
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm block mx-auto"
+              >
+                Try Office Online
+              </button>
+            </div>
           </div>
         </div>
       );
     }
 
-    // Unsupported file type
+    // Excel files (.xls, .xlsx)
+    if (
+      file.mimeType?.includes("excel") ||
+      file.mimeType?.includes("spreadsheetml") ||
+      file.name?.toLowerCase().endsWith(".xls") ||
+      file.name?.toLowerCase().endsWith(".xlsx")
+    ) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-green-600"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+              </svg>
+            </div>
+            <p className="text-gray-600 mb-4">Excel Spreadsheet</p>
+            <p className="text-sm text-gray-500 mb-4">
+              Excel files cannot be previewed in the browser.
+              <br />
+              Download to view in Excel or compatible software.
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={downloadFile}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors block mx-auto"
+              >
+                Download Spreadsheet
+              </button>
+              <button
+                onClick={() => {
+                  // Try to open in Office Online if available
+                  const officeUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(
+                    window.location.origin + "/api/file/" + file.id
+                  )}`;
+                  window.open(officeUrl, "_blank");
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm block mx-auto"
+              >
+                Try Office Online
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Use the enhanced preview service for unsupported files
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg
-              className="w-8 h-8 text-gray-400"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path d="M4 18h12V6l-4-4H4v16zm8-14v3h3l-3-3z" />
-            </svg>
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">{previewInfo.icon}</span>
           </div>
-          <p className="text-gray-600 mb-2">Preview not available</p>
+          <p className="text-gray-600 mb-2">{previewInfo.title}</p>
           <p className="text-sm text-gray-500 mb-4">
-            This file type is not supported for preview
+            {previewInfo.description}
           </p>
-          <button
-            onClick={downloadFile}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Download File
-          </button>
+          <div className="space-y-2">
+            {previewInfo.actions.map((action, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  if (action.action === "download") {
+                    downloadFile();
+                  } else if (action.action === "office-online" && action.url) {
+                    window.open(action.url, "_blank");
+                  }
+                }}
+                className={`px-4 py-2 text-white rounded-lg transition-colors mr-2 block mx-auto mb-2 ${action.color}`}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -304,21 +534,25 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
             >
               {/* AIChat component side-by-side */}
               {/* @ts-ignore */}
-              <AIChat file={file} fileContent={
-                // Try to reuse rendered/decoded content where possible
-                (() => {
-                  if (!file?.content) return "";
-                  if (file?.mimeType?.startsWith("image/")) return file.content;
-                  if (file?.mimeType === "text/plain") {
-                    try {
-                      return atob(file.content.split(",")[1]);
-                    } catch {
-                      return "";
+              <AIChat
+                file={file}
+                fileContent={
+                  // Try to reuse rendered/decoded content where possible
+                  (() => {
+                    if (!file?.content) return "";
+                    if (file?.mimeType?.startsWith("image/"))
+                      return file.content;
+                    if (file?.mimeType === "text/plain") {
+                      try {
+                        return atob(file.content.split(",")[1]);
+                      } catch {
+                        return "";
+                      }
                     }
-                  }
-                  return "";
-                })()
-              } />
+                    return "";
+                  })()
+                }
+              />
             </div>
           </div>
         ) : (

@@ -25,6 +25,8 @@ class SignalingService {
   private broadcastChannel: BroadcastChannel | null = null;
   private websocket: WebSocket | null = null;
   private isConnected = false;
+  private retryCount = 0;
+  private maxRetries = 5;
 
   // Simple meeting state for BroadcastChannel fallback
   private meetingParticipants = new Map<string, Set<string>>();
@@ -53,26 +55,62 @@ class SignalingService {
         // Note: For production, deploy your signaling server to Railway, Render, or Heroku
       ].filter(Boolean);
 
+      if (wsUrls.length === 0) {
+        console.log("⚠️ No WebSocket URLs configured, using BroadcastChannel");
+        return false;
+      }
+
       const wsUrl = wsUrls[0];
       console.log("🔄 Attempting WebSocket connection to:", wsUrl);
+
       this.websocket = new WebSocket(wsUrl);
 
+      // Set a connection timeout
+      const connectionTimeout = setTimeout(() => {
+        if (
+          this.websocket &&
+          this.websocket.readyState === WebSocket.CONNECTING
+        ) {
+          console.log("⏰ WebSocket connection timeout, closing...");
+          this.websocket.close();
+          this.websocket = null;
+          this.isConnected = false;
+        }
+      }, 5000); // 5 second timeout
+
       this.websocket.onopen = () => {
+        clearTimeout(connectionTimeout);
         console.log("✅ WebSocket signaling connected to:", wsUrl);
         this.isConnected = true;
+
+        // Send a ping to verify connection
+        this.sendMessage({
+          type: "ping" as any,
+          meetingId: "system",
+          fromParticipant: "client",
+          data: { timestamp: Date.now() },
+        });
       };
 
       this.websocket.onmessage = (event) => {
         try {
           const message: SignalingMessage = JSON.parse(event.data);
           console.log("📨 Received signaling message:", message.type);
+
+          // Handle pong responses
+          if (message.type === ("pong" as any)) {
+            console.log("🏓 Received pong from server");
+            return;
+          }
+
           this.handleIncomingMessage(message);
         } catch (error) {
-          console.error("Failed to parse signaling message:", error);
+          console.error("❌ Failed to parse signaling message:", error);
         }
       };
 
       this.websocket.onclose = (event) => {
+        clearTimeout(connectionTimeout);
         console.log(
           "❌ WebSocket signaling disconnected:",
           event.code,
@@ -81,17 +119,39 @@ class SignalingService {
         this.isConnected = false;
         this.websocket = null;
 
-        // Retry connection after 3 seconds
-        setTimeout(() => {
-          console.log("🔄 Retrying WebSocket connection...");
-          if (!this.tryWebSocketConnection()) {
-            console.log("🔄 WebSocket retry failed, using BroadcastChannel");
-            this.initializeBroadcastChannel();
-          }
-        }, 3000);
+        // Only retry if it wasn't a manual close
+        if (event.code !== 1000) {
+          // Retry connection after 3 seconds with exponential backoff
+          const retryDelay = Math.min(
+            3000 * Math.pow(2, this.retryCount),
+            30000
+          );
+          console.log(
+            `🔄 Retrying WebSocket connection in ${retryDelay}ms (attempt ${
+              this.retryCount + 1
+            })`
+          );
+
+          setTimeout(() => {
+            this.retryCount++;
+            if (this.retryCount <= 5 && !this.tryWebSocketConnection()) {
+              console.log("🔄 WebSocket retry failed, using BroadcastChannel");
+              this.initializeBroadcastChannel();
+            } else if (this.retryCount > 5) {
+              console.log(
+                "❌ Max WebSocket retry attempts reached, using BroadcastChannel"
+              );
+              this.initializeBroadcastChannel();
+            }
+          }, retryDelay);
+        } else {
+          // Manual close, fallback to BroadcastChannel
+          this.initializeBroadcastChannel();
+        }
       };
 
       this.websocket.onerror = (error) => {
+        clearTimeout(connectionTimeout);
         console.error("❌ WebSocket signaling error:", error);
         this.websocket = null;
         this.isConnected = false;
@@ -101,7 +161,8 @@ class SignalingService {
       return true;
     } catch (error) {
       console.log(
-        "❌ WebSocket not available, using BroadcastChannel fallback"
+        "❌ WebSocket not available, using BroadcastChannel fallback:",
+        error
       );
       return false;
     }
@@ -109,14 +170,27 @@ class SignalingService {
 
   private initializeBroadcastChannel() {
     try {
+      // Reset retry count when falling back to BroadcastChannel
+      this.retryCount = 0;
+
       this.broadcastChannel = new BroadcastChannel("webrtc-signaling");
       this.broadcastChannel.addEventListener("message", (event) => {
-        this.handleIncomingMessage(event.data);
+        try {
+          this.handleIncomingMessage(event.data);
+        } catch (error) {
+          console.error("❌ Error handling BroadcastChannel message:", error);
+        }
       });
+
+      this.broadcastChannel.addEventListener("messageerror", (event) => {
+        console.error("❌ BroadcastChannel message error:", event);
+      });
+
       console.log("✅ BroadcastChannel signaling initialized");
       this.isConnected = true;
     } catch (error) {
-      console.error("Failed to initialize BroadcastChannel:", error);
+      console.error("❌ Failed to initialize BroadcastChannel:", error);
+      this.isConnected = false;
     }
   }
 
