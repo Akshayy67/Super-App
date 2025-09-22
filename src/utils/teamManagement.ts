@@ -56,6 +56,7 @@ export interface Team {
   members: { [key: string]: TeamMember };
   projects: string[];
   exitRequests?: { [key: string]: ExitRequest };
+  teamType: "general" | "study"; // New field for team type
   settings: {
     isPublic: boolean;
     allowInvites: boolean;
@@ -124,6 +125,7 @@ class TeamManagementService {
     description: string;
     size: string;
     industry?: string;
+    teamType: "general" | "study";
   }): Promise<Team> {
     const user = realTimeAuth.getCurrentUser();
     if (!user) throw new Error("User not authenticated");
@@ -141,6 +143,7 @@ class TeamManagementService {
       description: teamData.description,
       size: teamData.size,
       ...(teamData.industry && { industry: teamData.industry }),
+      teamType: teamData.teamType,
       ownerId: user.id,
       members: {
         [user.id]: {

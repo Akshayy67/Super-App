@@ -25,6 +25,14 @@ import {
   XCircle,
   Plus,
   Menu,
+  BookOpen,
+  GraduationCap,
+  Clock,
+  Target,
+  Award,
+  TrendingUp,
+  Calendar,
+  Brain,
 } from "lucide-react";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import {
@@ -45,6 +53,77 @@ import { FileItem } from "../types";
 import { ShareMenu } from "./ShareMenu";
 import { extractTextFromPdfDataUrl } from "../utils/pdfText";
 import { TeamFileManager } from "./TeamFileManager";
+import { StudyTeam } from "./StudyTeam";
+
+// Study motivational quotes
+const STUDY_QUOTES = [
+  "Education is the most powerful weapon which you can use to change the world. - Nelson Mandela",
+  "The beautiful thing about learning is that no one can take it away from you. - B.B. King",
+  "Success is the sum of small efforts repeated day in and day out. - Robert Collier",
+  "The expert in anything was once a beginner. - Helen Hayes",
+  "Learning never exhausts the mind. - Leonardo da Vinci",
+  "Knowledge is power. - Francis Bacon",
+  "The more that you read, the more things you will know. - Dr. Seuss",
+  "Study hard what interests you the most in the most undisciplined, irreverent and original manner possible. - Richard Feynman",
+];
+
+// Helper functions for team type styling
+const getTeamTypeColors = (teamType: "general" | "study") => {
+  if (teamType === "study") {
+    return {
+      primary: "bg-purple-600 hover:bg-purple-700",
+      secondary: "bg-indigo-600 hover:bg-indigo-700",
+      accent: "bg-emerald-600 hover:bg-emerald-700",
+      text: "text-purple-600",
+      bg: "bg-purple-50 dark:bg-purple-900/20",
+      border: "border-purple-200 dark:border-purple-800",
+    };
+  }
+  return {
+    primary: "bg-blue-600 hover:bg-blue-700",
+    secondary: "bg-green-600 hover:bg-green-700",
+    accent: "bg-orange-600 hover:bg-orange-700",
+    text: "text-blue-600",
+    bg: "bg-blue-50 dark:bg-blue-900/20",
+    border: "border-blue-200 dark:border-blue-800",
+  };
+};
+
+const getRandomStudyQuote = () => {
+  return STUDY_QUOTES[Math.floor(Math.random() * STUDY_QUOTES.length)];
+};
+
+const getTeamTypeIcon = (
+  teamType: "general" | "study",
+  className: string = "w-5 h-5"
+) => {
+  if (teamType === "study") {
+    return <GraduationCap className={className} />;
+  }
+  return <Users className={className} />;
+};
+
+const getTabConfig = (teamType: "general" | "study") => {
+  if (teamType === "study") {
+    return [
+      { key: "overview", label: "Dashboard", icon: TrendingUp },
+      { key: "study", label: "Study Team", icon: GraduationCap },
+      { key: "members", label: "Study Groups", icon: Users },
+      { key: "files", label: "Study Materials", icon: BookOpen },
+      { key: "projects", label: "Study Sessions", icon: Clock },
+      { key: "chat", label: "Discussion", icon: MessageSquare },
+      { key: "settings", label: "Settings", icon: Settings },
+    ];
+  }
+  return [
+    { key: "overview", label: "Overview", icon: Activity },
+    { key: "members", label: "Members", icon: Users },
+    { key: "files", label: "Files", icon: FileText },
+    { key: "projects", label: "Projects", icon: Folder },
+    { key: "chat", label: "Chat", icon: MessageSquare },
+    { key: "settings", label: "Settings", icon: Settings },
+  ];
+};
 
 interface SharedResource {
   id: string;
@@ -68,7 +147,13 @@ export const TeamSpace: React.FC<{
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [showEmailTestPanel, setShowEmailTestPanel] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "members" | "files" | "projects" | "chat" | "settings"
+    | "overview"
+    | "members"
+    | "files"
+    | "projects"
+    | "chat"
+    | "settings"
+    | "study"
   >("overview");
   const [teamActivities, setTeamActivities] = useState<TeamActivity[]>([]);
   const [sharedResources, setSharedResources] = useState<SharedResource[]>([]);
@@ -119,6 +204,9 @@ export const TeamSpace: React.FC<{
   const [newMessage, setNewMessage] = useState("");
   const [showExitRequestModal, setShowExitRequestModal] = useState(false);
   const [exitReason, setExitReason] = useState("");
+  const [newTeamType, setNewTeamType] = useState<"general" | "study">(
+    "general"
+  );
   const [showExitRequestsPanel, setShowExitRequestsPanel] = useState(false);
   const [pendingExitRequests, setPendingExitRequests] = useState<any[]>([]);
 
@@ -235,7 +323,8 @@ export const TeamSpace: React.FC<{
   const createTeam = async (
     name: string,
     description: string,
-    size: string = "small"
+    size: string = "small",
+    teamType: "general" | "study" = "general"
   ) => {
     if (!user) return;
 
@@ -245,6 +334,7 @@ export const TeamSpace: React.FC<{
         name,
         description,
         size,
+        teamType,
       });
 
       setTeams((prev) => [...prev, newTeam]);
@@ -361,6 +451,7 @@ export const TeamSpace: React.FC<{
           ownerId: "demo-user",
           members: {},
           projects: [],
+          teamType: "study",
           settings: {
             isPublic: true,
             allowInvites: true,
@@ -379,6 +470,7 @@ export const TeamSpace: React.FC<{
           ownerId: "demo-user-2",
           members: {},
           projects: [],
+          teamType: "study",
           settings: {
             isPublic: true,
             allowInvites: true,
@@ -1153,13 +1245,29 @@ export const TeamSpace: React.FC<{
                 >
                   <Menu className="w-5 h-5" />
                 </button>
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {selectedTeam.name}
-                  </h1>
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-                    {selectedTeam.description}
-                  </p>
+                <div className="flex items-center space-x-3">
+                  {getTeamTypeIcon(selectedTeam.teamType, "w-8 h-8")}
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                        {selectedTeam.name}
+                      </h1>
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          selectedTeam.teamType === "study"
+                            ? "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200"
+                            : "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200"
+                        }`}
+                      >
+                        {selectedTeam.teamType === "study"
+                          ? "Study Team"
+                          : "General Team"}
+                      </span>
+                    </div>
+                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                      {selectedTeam.description}
+                    </p>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center space-x-2 sm:space-x-3">
@@ -1196,34 +1304,35 @@ export const TeamSpace: React.FC<{
             </div>
 
             {/* Tabs */}
-            <div className="flex space-x-3 sm:space-x-6 mt-6 border-b border-gray-200 overflow-x-auto">
-              {(
-                [
-                  "overview",
-                  "members",
-                  "files",
-                  "projects",
-                  "chat",
-                  "settings",
-                ] as const
-              ).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`pb-3 px-1 capitalize transition-colors flex items-center gap-2 whitespace-nowrap text-sm sm:text-base ${
-                    activeTab === tab
-                      ? "border-b-2 border-blue-600 text-blue-600"
-                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                  }`}
-                >
-                  {tab === "overview" && <Activity className="w-4 h-4" />}
-                  {tab === "members" && <Users className="w-4 h-4" />}
-                  {tab === "files" && <FileText className="w-4 h-4" />}
-                  {tab === "chat" && <MessageSquare className="w-4 h-4" />}
-                  {tab === "settings" && <Settings className="w-4 h-4" />}
-                  {tab}
-                </button>
-              ))}
+            <div className="flex space-x-3 sm:space-x-6 mt-6 border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
+              {getTabConfig(selectedTeam?.teamType || "general").map(
+                (tabConfig) => {
+                  const IconComponent = tabConfig.icon;
+                  const isActive = activeTab === tabConfig.key;
+                  const colors = getTeamTypeColors(
+                    selectedTeam?.teamType || "general"
+                  );
+
+                  return (
+                    <button
+                      key={tabConfig.key}
+                      onClick={() => setActiveTab(tabConfig.key as any)}
+                      className={`pb-3 px-1 transition-colors flex items-center gap-2 whitespace-nowrap text-sm sm:text-base ${
+                        isActive
+                          ? `border-b-2 ${
+                              selectedTeam?.teamType === "study"
+                                ? "border-purple-600 text-purple-600"
+                                : "border-blue-600 text-blue-600"
+                            }`
+                          : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                      }`}
+                    >
+                      <IconComponent className="w-4 h-4" />
+                      {tabConfig.label}
+                    </button>
+                  );
+                }
+              )}
             </div>
           </div>
 
@@ -1231,19 +1340,44 @@ export const TeamSpace: React.FC<{
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             {activeTab === "overview" && (
               <div className="space-y-6">
+                {/* Study Team Motivational Quote */}
+                {selectedTeam?.teamType === "study" && (
+                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-lg p-6 border border-purple-200 dark:border-purple-800">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <Brain className="w-8 h-8 text-purple-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-100 mb-2">
+                          Daily Study Inspiration
+                        </h3>
+                        <blockquote className="text-purple-700 dark:text-purple-200 italic">
+                          "{getRandomStudyQuote()}"
+                        </blockquote>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Stats */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-slate-700">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Team Members
+                          {selectedTeam?.teamType === "study"
+                            ? "Study Partners"
+                            : "Team Members"}
                         </p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {getTeamMembers().length}
                         </p>
                       </div>
-                      <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                      {selectedTeam?.teamType === "study" ? (
+                        <GraduationCap className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                      ) : (
+                        <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                      )}
                     </div>
                   </div>
 
@@ -1251,13 +1385,19 @@ export const TeamSpace: React.FC<{
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Shared Files
+                          {selectedTeam?.teamType === "study"
+                            ? "Study Materials"
+                            : "Shared Files"}
                         </p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {sharedResources.length}
                         </p>
                       </div>
-                      <FileText className="w-8 h-8 text-green-600 dark:text-green-400" />
+                      {selectedTeam?.teamType === "study" ? (
+                        <BookOpen className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <FileText className="w-8 h-8 text-green-600 dark:text-green-400" />
+                      )}
                     </div>
                   </div>
 
@@ -1265,16 +1405,100 @@ export const TeamSpace: React.FC<{
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Messages
+                          {selectedTeam?.teamType === "study"
+                            ? "Study Sessions"
+                            : "Messages"}
                         </p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          0
+                          {selectedTeam?.teamType === "study"
+                            ? projects.length
+                            : 0}
                         </p>
                       </div>
-                      <MessageSquare className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                      {selectedTeam?.teamType === "study" ? (
+                        <Clock className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                      ) : (
+                        <MessageSquare className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                      )}
                     </div>
                   </div>
                 </div>
+
+                {/* Study Progress Section - Only for Study Teams */}
+                {selectedTeam?.teamType === "study" && (
+                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
+                    <div className="p-4 border-b border-gray-200 dark:border-slate-700">
+                      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                        <Target className="w-5 h-5 mr-2 text-purple-500" />
+                        Study Progress
+                      </h2>
+                    </div>
+                    <div className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Weekly Study Goal */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Weekly Study Goal
+                            </span>
+                            <span className="text-sm text-purple-600 dark:text-purple-400">
+                              12 / 20 hours
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                              className="bg-purple-600 h-2 rounded-full"
+                              style={{ width: "60%" }}
+                            ></div>
+                          </div>
+                        </div>
+
+                        {/* Study Streak */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Study Streak
+                            </span>
+                            <span className="text-sm text-emerald-600 dark:text-emerald-400">
+                              7 days
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            {[...Array(7)].map((_, i) => (
+                              <div
+                                key={i}
+                                className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center"
+                              >
+                                <Award className="w-3 h-3 text-white" />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Study Achievements */}
+                      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-700">
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                          Recent Achievements
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200">
+                            <Award className="w-3 h-3 mr-1" />
+                            Week Warrior
+                          </span>
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200">
+                            <TrendingUp className="w-3 h-3 mr-1" />
+                            Progress Master
+                          </span>
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            Consistent Learner
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Recent Activity */}
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
@@ -1939,6 +2163,10 @@ export const TeamSpace: React.FC<{
               </div>
             )}
 
+            {activeTab === "study" && selectedTeam && (
+              <StudyTeam teamId={selectedTeam.id} />
+            )}
+
             {activeTab === "settings" && selectedTeam && (
               <div className="space-y-6">
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
@@ -2124,41 +2352,117 @@ export const TeamSpace: React.FC<{
                 createTeam(
                   formData.get("name") as string,
                   formData.get("description") as string,
-                  formData.get("size") as string
+                  formData.get("size") as string,
+                  newTeamType
                 );
               }}
             >
               <div className="space-y-4">
+                {/* Team Type Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Team Type
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setNewTeamType("general")}
+                      className={`p-4 border-2 rounded-lg transition-all ${
+                        newTeamType === "general"
+                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                          : "border-gray-200 dark:border-gray-600 hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="flex flex-col items-center space-y-2">
+                        <Users
+                          className={`w-8 h-8 ${
+                            newTeamType === "general"
+                              ? "text-blue-600"
+                              : "text-gray-400"
+                          }`}
+                        />
+                        <div className="text-center">
+                          <h3
+                            className={`font-medium ${
+                              newTeamType === "general"
+                                ? "text-blue-900 dark:text-blue-100"
+                                : "text-gray-700 dark:text-gray-300"
+                            }`}
+                          >
+                            General Team
+                          </h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            For business & collaboration
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewTeamType("study")}
+                      className={`p-4 border-2 rounded-lg transition-all ${
+                        newTeamType === "study"
+                          ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20"
+                          : "border-gray-200 dark:border-gray-600 hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="flex flex-col items-center space-y-2">
+                        <GraduationCap
+                          className={`w-8 h-8 ${
+                            newTeamType === "study"
+                              ? "text-purple-600"
+                              : "text-gray-400"
+                          }`}
+                        />
+                        <div className="text-center">
+                          <h3
+                            className={`font-medium ${
+                              newTeamType === "study"
+                                ? "text-purple-900 dark:text-purple-100"
+                                : "text-gray-700 dark:text-gray-300"
+                            }`}
+                          >
+                            Study Team
+                          </h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            For learning & education
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Team Name
                   </label>
                   <input
                     type="text"
                     name="name"
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter team name"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Description
                   </label>
                   <textarea
                     name="description"
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Describe your team"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Team Size
                   </label>
                   <select
                     name="size"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="small">Small (2-10 members)</option>
                     <option value="medium">Medium (11-50 members)</option>
