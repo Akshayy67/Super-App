@@ -8,6 +8,7 @@ import {
   Home,
   Lightbulb,
   BarChart3,
+  Brain,
 } from "lucide-react";
 
 interface InterviewPrepLayoutProps {
@@ -66,6 +67,12 @@ export const InterviewPrepLayout: React.FC<InterviewPrepLayoutProps> = ({
       label: "Interview Tips",
       icon: Lightbulb,
       path: "/interview/interview-tips",
+    },
+    {
+      id: "ats-score",
+      label: "ATS Score",
+      icon: Brain,
+      path: "/interview/ats-score",
     },
   ];
 

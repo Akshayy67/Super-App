@@ -186,7 +186,7 @@ class RealTimeAuthService {
     this.googleAccessToken = null;
     localStorage.removeItem("google_access_token");
     localStorage.removeItem("user_session");
-    
+
     // Notify all listeners about auth state change
     this.authStateListeners.forEach((listener) => listener(null));
     console.log("✅ Authentication state cleared");
@@ -195,25 +195,24 @@ class RealTimeAuthService {
   async logout(): Promise<void> {
     try {
       console.log("🔄 Starting logout process...");
-      
+
       // Clear Google access token
       this.googleAccessToken = null;
       localStorage.removeItem("google_access_token");
       console.log("✅ Google access token cleared");
-      
+
       // Clear current user data
       this.currentUser = null;
       console.log("✅ Current user data cleared");
-      
+
       // Sign out from Firebase
       await signOut(auth);
       console.log("✅ Firebase sign out successful");
-      
+
       // Clear any other stored data
       localStorage.removeItem("user_session");
-      
+
       console.log("✅ Logout completed successfully");
-      
     } catch (error) {
       console.error("❌ Logout error:", error);
       // Even if Firebase logout fails, clear local data
@@ -273,6 +272,32 @@ class RealTimeAuthService {
   // Get current user
   getCurrentUser(): User | null {
     return this.currentUser;
+  }
+
+  // Create a guest user for testing/demo purposes
+  createGuestUser(name?: string): User {
+    const guestId = `guest_${Date.now()}_${Math.random()
+      .toString(36)
+      .substring(2, 9)}`;
+    const guestUser: User = {
+      id: guestId,
+      username: name || `Guest_${guestId.slice(-6)}`,
+      email: `${guestId}@guest.local`,
+      createdAt: new Date().toISOString(),
+    };
+
+    this.currentUser = guestUser;
+    console.log(`👤 Created guest user: ${guestUser.username}`);
+
+    // Notify listeners
+    this.authStateListeners.forEach((listener) => listener(this.currentUser));
+
+    return guestUser;
+  }
+
+  // Check if current user is a guest
+  isGuestUser(): boolean {
+    return this.currentUser?.id.startsWith("guest_") || false;
   }
 }
 

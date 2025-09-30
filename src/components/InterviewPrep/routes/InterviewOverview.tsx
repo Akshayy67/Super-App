@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Brain,
   Zap,
+  FileText,
 } from "lucide-react";
 
 interface PrepCard {
@@ -81,6 +82,15 @@ export const InterviewOverview: React.FC = () => {
       color: "indigo",
       path: "/interview/enhanced-interview",
     },
+    {
+      id: "ats-score",
+      title: "ATS Score Generator",
+      description:
+        "Analyze your resume against job descriptions and get ATS compatibility scores with improvement suggestions",
+      icon: FileText,
+      color: "teal",
+      path: "/interview/ats-score",
+    },
   ];
 
   const getColorClasses = (color: string) => {
@@ -95,6 +105,7 @@ export const InterviewOverview: React.FC = () => {
       red: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50",
       indigo:
         "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50",
+      teal: "bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 hover:bg-teal-200 dark:hover:bg-teal-900/50",
     };
     return (
       colorMap[color as keyof typeof colorMap] ||

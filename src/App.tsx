@@ -34,6 +34,8 @@ const AuthenticatedApp: React.FC = () => {
     const inviteCode = urlParams.get("invite") || urlParams.get("code");
     const teamId = urlParams.get("team");
 
+    // Debug URL parsing if needed
+    /*
     console.log("🔍 URL Parsing Debug:", {
       fullURL: window.location.href,
       searchParams: window.location.search,
@@ -43,6 +45,7 @@ const AuthenticatedApp: React.FC = () => {
       inviteCodeLength: inviteCode?.length,
       inviteCodeChars: inviteCode?.split("").join(", "),
     });
+    */
 
     if (inviteCode || teamId) {
       console.log("🎯 Team invitation detected:", { inviteCode, teamId });

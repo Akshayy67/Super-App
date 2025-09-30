@@ -18,10 +18,9 @@ import {
 } from "lucide-react";
 import { PomodoroTimer } from "./PomodoroTimer";
 import { SmartNotifications } from "./SmartNotifications";
-import { VirtualStudyMeeting } from "./VirtualStudyMeeting";
-import { RealTimeMeeting } from "./RealTimeMeeting";
 import { StudySessionManager } from "./StudySessionManager";
 import { SharedWhiteboard } from "./SharedWhiteboard";
+import { ExternalVideoMeeting } from "./ExternalVideoMeeting";
 import {
   studySessionService,
   StudySession,
@@ -41,13 +40,11 @@ export const StudyTeam: React.FC<StudyTeamProps> = ({
     | "overview"
     | "sessions"
     | "meeting"
-    | "realtime-meeting"
     | "pomodoro"
     | "notifications"
     | "whiteboard"
   >("overview");
   const [activeSession, setActiveSession] = useState<StudySession | null>(null);
-  const [activeMeeting, setActiveMeeting] = useState<string | null>(null);
   const [pomodoroSession, setPomodoroSession] =
     useState<PomodoroSession | null>(null);
   const [stats, setStats] = useState({
@@ -114,16 +111,10 @@ export const StudyTeam: React.FC<StudyTeamProps> = ({
     setActiveTab("pomodoro");
   };
 
-  const handleJoinMeeting = (meetingId: string) => {
-    setActiveMeeting(meetingId);
-    setActiveTab("meeting");
-  };
-
   const tabs = [
     { id: "overview", label: "Overview", icon: BarChart3 },
     { id: "sessions", label: "Sessions", icon: Calendar },
-    { id: "meeting", label: "Meeting", icon: Video },
-    { id: "realtime-meeting", label: "Live Meeting", icon: Video },
+    { id: "meeting", label: "Video Meeting", icon: Video },
     { id: "pomodoro", label: "Pomodoro", icon: Clock },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "whiteboard", label: "Whiteboard", icon: PenTool },
@@ -162,14 +153,7 @@ export const StudyTeam: React.FC<StudyTeamProps> = ({
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Video className="w-4 h-4" />
-              Meeting
-            </button>
-            <button
-              onClick={() => setActiveTab("realtime-meeting")}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-            >
-              <Video className="w-4 h-4" />
-              Live Meeting
+              Video Meeting
             </button>
           </div>
         </div>
@@ -345,11 +329,11 @@ export const StudyTeam: React.FC<StudyTeamProps> = ({
                 <div className="flex items-center gap-3 mb-2">
                   <Video className="w-5 h-5 text-green-600" />
                   <span className="font-medium text-gray-900 dark:text-gray-100">
-                    Virtual Meeting
+                    Video Meeting
                   </span>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Start or join a study meeting
+                  Start or join a video meeting
                 </p>
               </button>
 
@@ -374,17 +358,7 @@ export const StudyTeam: React.FC<StudyTeamProps> = ({
         {activeTab === "sessions" && <StudySessionManager />}
 
         {activeTab === "meeting" && (
-          <VirtualStudyMeeting
-            meetingId={activeMeeting || undefined}
-            onMeetingEnd={() => setActiveMeeting(null)}
-          />
-        )}
-
-        {activeTab === "realtime-meeting" && (
-          <RealTimeMeeting
-            meetingId={activeMeeting || undefined}
-            onMeetingEnd={() => setActiveMeeting(null)}
-          />
+          <ExternalVideoMeeting onMeetingEnd={() => setActiveTab("overview")} />
         )}
 
         {activeTab === "pomodoro" && (

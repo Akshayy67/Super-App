@@ -13,6 +13,7 @@ import {
   Users,
   Settings,
   X,
+  Video,
 } from "lucide-react";
 import { storageUtils } from "../utils/storage"; // still used for short notes
 import { driveStorageUtils } from "../utils/driveStorage"; // for accurate file count (Drive or local fallback)
@@ -271,6 +272,13 @@ export const Dashboard: React.FC = () => {
                 >
                   <Brain className="w-5 h-5 mr-3 flex-shrink-0" />
                   <span className="truncate">Ask AI Assistant</span>
+                </button>
+                <button
+                  onClick={() => navigate("/video-call")}
+                  className="w-full flex items-center px-3 sm:px-4 py-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors text-sm btn-touch"
+                >
+                  <Video className="w-5 h-5 mr-3 flex-shrink-0" />
+                  <span className="truncate">Start Video Call</span>
                 </button>
                 <button
                   onClick={() => navigate("/team")}

@@ -1,0 +1,87 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  resumes   Resume[]
+  jobDescs  JobDesc[]
+  scoreRuns ScoreRun[]
+
+  @@map("users")
+}
+
+model Resume {
+  id           String   @id @default(cuid())
+  userId       String?
+  title        String
+  originalName String
+  text         String
+  parsedJson   String   // JSON string of parsed sections
+  createdAt    DateTime @default(now())
+
+  // Relations
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scoreRuns ScoreRun[]
+
+  @@map("resumes")
+}
+
+model JobDesc {
+  id         String   @id @default(cuid())
+  userId     String?
+  title      String
+  source     String?  // Company name or source
+  text       String
+  parsedJson String   // JSON string of parsed requirements
+  createdAt  DateTime @default(now())
+
+  // Relations
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scoreRuns ScoreRun[]
+
+  @@map("job_descriptions")
+}
+
+model ScoreRun {
+  id              String   @id @default(cuid())
+  userId          String?
+  resumeId        String
+  jobDescId       String
+  overall         Int      // 0-100
+  sectionJson     String   // JSON string of section scores
+  gapsJson        String   // JSON string of missing keywords/gaps
+  suggestionsJson String   // JSON string of improvement suggestions
+  modelVersion    String   @default("1.0")
+  createdAt       DateTime @default(now())
+
+  // Relations
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resume  Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  jobDesc JobDesc  @relation(fields: [jobDescId], references: [id], onDelete: Cascade)
+
+  @@map("score_runs")
+}
+
+model Config {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  jsonValue String   // JSON string for flexible config storage
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("configs")
+}
