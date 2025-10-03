@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import { BrowserRouter as Router, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import { AuthForm } from "./components/AuthForm";
 import { Sidebar } from "./components/Sidebar";
 import { AppRouter } from "./components/AppRouter";
@@ -24,6 +28,7 @@ const AuthenticatedApp: React.FC = () => {
     teamId?: string;
   } | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Global copy listener for note creation
   const { copyEvent, isModalVisible, closeModal } = useGlobalCopyListener();
@@ -133,7 +138,7 @@ const AuthenticatedApp: React.FC = () => {
         />
       )}
 
-      <div className="h-screen bg-gray-50 dark:bg-slate-900 flex flex-col lg:flex-row landscape-compact transition-colors duration-300 overflow-hidden">
+      <div className="h-screen bg-gray-50 dark:bg-slate-900 flex flex-col lg:flex-row landscape-compact transition-colors duration-300">
         {/* Mobile Header */}
         <div className="mobile-header lg:hidden bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 p-3 sm:p-4 flex items-center justify-between relative z-30">
           <button
@@ -183,7 +188,7 @@ const AuthenticatedApp: React.FC = () => {
         <div
           className={`
             ${isMobileMenuOpen ? "mobile-nav-panel" : "hidden"}
-            lg:relative lg:block lg:w-64 xl:w-72 lg:flex-shrink-0
+            lg:block lg:w-64 xl:w-72 lg:flex-shrink-0
             ${
               isMobileMenuOpen
                 ? "translate-x-0"
@@ -201,8 +206,8 @@ const AuthenticatedApp: React.FC = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden min-h-0 relative">
-          <div className="flex-1 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 relative">
+          <div className="flex-1">
             <div className="h-full">
               <AppRouter invitationData={invitationData} />
             </div>

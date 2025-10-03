@@ -13,6 +13,7 @@ import authRoutes from "./routes/auth.js";
 import runRoutes from "./routes/runs.js";
 import healthRoutes from "./routes/health.js";
 import zoomRoutes from "./routes/zoom.js";
+import adminRoutes from "./routes/admin.js";
 
 // Import middleware
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -76,6 +77,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/runs", runRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api/zoom", zoomRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Root endpoint
 app.get("/", (req, res) => {

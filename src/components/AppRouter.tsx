@@ -9,6 +9,8 @@ import { StudyTools } from "./StudyTools";
 import { FlashCards } from "./FlashCards";
 import { InterviewPrep } from "./InterviewPrep/InterviewPrep";
 import { TeamSpace } from "./TeamSpace";
+import { AboutUs } from "./AboutUs";
+import { AdminDashboard } from "./AdminDashboard";
 
 interface AppRouterProps {
   invitationData: {
@@ -34,6 +36,10 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/team/*"
         element={<TeamSpace invitationData={invitationData} />}
       />
+      <Route path="/about" element={<AboutUs />} />
+
+      {/* Admin Routes - Protected */}
+      <Route path="/admin/*" element={<AdminDashboard />} />
 
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

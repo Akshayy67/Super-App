@@ -18,6 +18,7 @@ import { TaskCelebration } from "./TaskCelebration";
 import { AchievementNotification } from "./AchievementNotification";
 import { StreakDisplay } from "./StreakDisplay";
 import { MotivationalToast } from "./MotivationalToast";
+import { GeneralLayout } from "./PageLayout";
 import { VibrationSettings } from "./VibrationSettings";
 import { StreakTracker, Achievement, StreakData } from "../utils/streakTracker";
 import { TaskFeedback } from "../utils/soundEffects";
@@ -643,605 +644,607 @@ export const TaskManager: React.FC = () => {
   };
 
   return (
-    <div
-      className="bg-white dark:bg-slate-900 h-full flex flex-col scroll-area transition-colors duration-300"
-      data-component="tasks"
-    >
-      {/* Header */}
-      <div className="border-b border-gray-200 dark:border-slate-700 p-responsive">
-        <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              To-Do List
-            </h2>
-            <div className="overflow-x-auto scrollbar-hide">
-              <StreakDisplay streakData={streakData} className="min-w-max" />
+    <GeneralLayout>
+      <div
+        className="min-h-screen flex flex-col scroll-area transition-colors duration-300"
+        data-component="tasks"
+      >
+        {/* Header */}
+        <div className="border-b border-gray-200 dark:border-slate-700 p-responsive">
+          <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                To-Do List
+              </h2>
+              <div className="overflow-x-auto scrollbar-hide">
+                <StreakDisplay streakData={streakData} className="min-w-max" />
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0 overflow-x-auto">
+              {/* Sort Dropdown */}
+              <div className="relative dropdown-container">
+                <button
+                  onClick={() => setShowSortOptions(!showSortOptions)}
+                  className="btn-touch flex items-center px-2 sm:px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors text-sm touch-manipulation"
+                >
+                  <ArrowUpDown className="w-4 h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Sort</span>
+                </button>
+                {showSortOptions && (
+                  <div className="absolute right-0 mt-2 w-44 sm:w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                    <div className="py-1">
+                      {[
+                        { key: "smart", label: "Smart (Recommended)" },
+                        { key: "dueDate", label: "Due Date" },
+                        { key: "priority", label: "Priority" },
+                        { key: "created", label: "Date Created" },
+                        { key: "alphabetical", label: "Alphabetical" },
+                      ].map((option) => (
+                        <button
+                          key={option.key}
+                          onClick={() => {
+                            setSortBy(option.key as any);
+                            setShowSortOptions(false);
+                          }}
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
+                            sortBy === option.key
+                              ? "bg-blue-50 text-blue-600"
+                              : "text-gray-700"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Advanced Filters Toggle */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className={`flex items-center px-2 sm:px-3 py-2 border rounded-lg transition-colors text-sm ${
+                    showAdvancedFilters
+                      ? "bg-purple-50 text-purple-600 border-purple-200"
+                      : "text-gray-600 hover:text-gray-900 border-gray-200"
+                  }`}
+                >
+                  <Filter className="w-4 h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Advanced Filters</span>
+                  {getActiveFiltersCount() > 0 && (
+                    <span className="ml-2 px-1.5 py-0.5 text-xs bg-purple-600 text-white rounded-full">
+                      {getActiveFiltersCount()}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Vibration Settings Button (Mobile Only) */}
+              {VibrationManager.isSupported() && (
+                <button
+                  onClick={() => setShowVibrationSettings(true)}
+                  className="flex items-center px-2 sm:px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors text-sm"
+                  title="Vibration Settings"
+                >
+                  <Smartphone className="w-4 h-4" />
+                </button>
+              )}
+
+              <button
+                onClick={() => setShowAddTask(true)}
+                className="btn-touch flex items-center px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm sm:text-base touch-manipulation"
+              >
+                <Plus className="w-4 h-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline">Add Task</span>
+                <span className="xs:hidden">Add</span>
+              </button>
             </div>
           </div>
-          <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0 overflow-x-auto">
-            {/* Sort Dropdown */}
-            <div className="relative dropdown-container">
+
+          {/* Search Bar */}
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="relative flex-1 max-w-md">
+              <input
+                type="text"
+                placeholder="Search tasks by title, description, subject, priority, or status..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-sm"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => setShowSearchBar(!showSearchBar)}
+              className={`px-3 py-2 text-sm border rounded-lg transition-colors ${
+                showSearchBar
+                  ? "bg-blue-50 text-blue-600 border-blue-200"
+                  : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+              }`}
+            >
+              {showSearchBar ? "Hide" : "Search"}
+            </button>
+            <button
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className={`px-3 py-2 text-sm border rounded-lg transition-colors ${
+                showAdvancedFilters
+                  ? "bg-purple-50 text-purple-600 border-purple-200"
+                  : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+              }`}
+            >
+              Advanced Filters
+            </button>
+            {getActiveFiltersCount() > 0 && (
               <button
-                onClick={() => setShowSortOptions(!showSortOptions)}
-                className="btn-touch flex items-center px-2 sm:px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors text-sm touch-manipulation"
+                onClick={clearAllFilters}
+                className="px-3 py-2 text-sm border border-red-200 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center space-x-1"
+                title={`Clear ${getActiveFiltersCount()} active filter${
+                  getActiveFiltersCount() > 1 ? "s" : ""
+                }`}
               >
-                <ArrowUpDown className="w-4 h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Sort</span>
+                <X className="w-4 h-4" />
+                <span>Clear All</span>
               </button>
-              {showSortOptions && (
-                <div className="absolute right-0 mt-2 w-44 sm:w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                  <div className="py-1">
-                    {[
-                      { key: "smart", label: "Smart (Recommended)" },
-                      { key: "dueDate", label: "Due Date" },
-                      { key: "priority", label: "Priority" },
-                      { key: "created", label: "Date Created" },
-                      { key: "alphabetical", label: "Alphabetical" },
-                    ].map((option) => (
-                      <button
-                        key={option.key}
-                        onClick={() => {
-                          setSortBy(option.key as any);
-                          setShowSortOptions(false);
-                        }}
-                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
-                          sortBy === option.key
-                            ? "bg-blue-50 text-blue-600"
-                            : "text-gray-700"
-                        }`}
+            )}
+          </div>
+
+          {/* Advanced Filters Panel */}
+          {showAdvancedFilters && (
+            <div className="mb-4 p-4 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Subject Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Subjects ({selectedSubjects.length} selected)
+                  </label>
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {getAvailableSubjects().map((subject) => (
+                      <label
+                        key={subject}
+                        className="flex items-center space-x-2 cursor-pointer"
                       >
-                        {option.label}
-                      </button>
+                        <input
+                          type="checkbox"
+                          checked={selectedSubjects.includes(subject)}
+                          onChange={() => toggleSubjectFilter(subject)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">{subject}</span>
+                      </label>
+                    ))}
+                    {getAvailableSubjects().length === 0 && (
+                      <span className="text-sm text-gray-500">
+                        No subjects available
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Priority Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Priorities ({selectedPriorities.length} selected)
+                  </label>
+                  <div className="space-y-1">
+                    {getAvailablePriorities().map((priority) => (
+                      <label
+                        key={priority}
+                        className="flex items-center space-x-2 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedPriorities.includes(priority)}
+                          onChange={() => togglePriorityFilter(priority)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span
+                          className={`text-sm capitalize ${getPriorityColor(
+                            priority
+                          )}`}
+                        >
+                          {priority}
+                        </span>
+                      </label>
                     ))}
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Advanced Filters Toggle */}
-            <div className="relative">
-              <button
-                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                className={`flex items-center px-2 sm:px-3 py-2 border rounded-lg transition-colors text-sm ${
-                  showAdvancedFilters
-                    ? "bg-purple-50 text-purple-600 border-purple-200"
-                    : "text-gray-600 hover:text-gray-900 border-gray-200"
-                }`}
-              >
-                <Filter className="w-4 h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Advanced Filters</span>
-                {getActiveFiltersCount() > 0 && (
-                  <span className="ml-2 px-1.5 py-0.5 text-xs bg-purple-600 text-white rounded-full">
-                    {getActiveFiltersCount()}
-                  </span>
-                )}
-              </button>
-            </div>
+                {/* Status Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status ({selectedStatuses.length} selected)
+                  </label>
+                  <div className="space-y-1">
+                    {getAvailableStatuses().map((status) => (
+                      <label
+                        key={status}
+                        className="flex items-center space-x-2 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedStatuses.includes(status)}
+                          onChange={() => toggleStatusFilter(status)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span
+                          className={`text-sm capitalize ${
+                            status === "completed"
+                              ? "text-green-600"
+                              : "text-orange-600"
+                          }`}
+                        >
+                          {status}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Vibration Settings Button (Mobile Only) */}
-            {VibrationManager.isSupported() && (
-              <button
-                onClick={() => setShowVibrationSettings(true)}
-                className="flex items-center px-2 sm:px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors text-sm"
-                title="Vibration Settings"
-              >
-                <Smartphone className="w-4 h-4" />
-              </button>
-            )}
+                {/* Date Range Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Date Range
+                  </label>
+                  <div className="space-y-2">
+                    <input
+                      type="date"
+                      value={dateRange.startDate}
+                      onChange={(e) =>
+                        setDateRange((prev) => ({
+                          ...prev,
+                          startDate: e.target.value,
+                        }))
+                      }
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Start Date"
+                    />
+                    <input
+                      type="date"
+                      value={dateRange.endDate}
+                      onChange={(e) =>
+                        setDateRange((prev) => ({
+                          ...prev,
+                          endDate: e.target.value,
+                        }))
+                      }
+                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="End Date"
+                    />
+                  </div>
+                </div>
+              </div>
 
-            <button
-              onClick={() => setShowAddTask(true)}
-              className="btn-touch flex items-center px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm sm:text-base touch-manipulation"
-            >
-              <Plus className="w-4 h-4 mr-1 sm:mr-2" />
-              <span className="hidden xs:inline">Add Task</span>
-              <span className="xs:hidden">Add</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="flex items-center space-x-2 mb-4">
-          <div className="relative flex-1 max-w-md">
-            <input
-              type="text"
-              placeholder="Search tasks by title, description, subject, priority, or status..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-sm"
-            />
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          <button
-            onClick={() => setShowSearchBar(!showSearchBar)}
-            className={`px-3 py-2 text-sm border rounded-lg transition-colors ${
-              showSearchBar
-                ? "bg-blue-50 text-blue-600 border-blue-200"
-                : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-            }`}
-          >
-            {showSearchBar ? "Hide" : "Search"}
-          </button>
-          <button
-            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-            className={`px-3 py-2 text-sm border rounded-lg transition-colors ${
-              showAdvancedFilters
-                ? "bg-purple-50 text-purple-600 border-purple-200"
-                : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-            }`}
-          >
-            Advanced Filters
-          </button>
-          {getActiveFiltersCount() > 0 && (
-            <button
-              onClick={clearAllFilters}
-              className="px-3 py-2 text-sm border border-red-200 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center space-x-1"
-              title={`Clear ${getActiveFiltersCount()} active filter${
-                getActiveFiltersCount() > 1 ? "s" : ""
-              }`}
-            >
-              <X className="w-4 h-4" />
-              <span>Clear All</span>
-            </button>
-          )}
-        </div>
-
-        {/* Advanced Filters Panel */}
-        {showAdvancedFilters && (
-          <div className="mb-4 p-4 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Subject Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Subjects ({selectedSubjects.length} selected)
-                </label>
-                <div className="max-h-32 overflow-y-auto space-y-1">
-                  {getAvailableSubjects().map((subject) => (
-                    <label
-                      key={subject}
-                      className="flex items-center space-x-2 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedSubjects.includes(subject)}
-                        onChange={() => toggleSubjectFilter(subject)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">{subject}</span>
-                    </label>
-                  ))}
-                  {getAvailableSubjects().length === 0 && (
-                    <span className="text-sm text-gray-500">
-                      No subjects available
+              {/* Advanced Filters Actions */}
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                <div className="text-sm text-gray-600">
+                  {getActiveFiltersCount() > 0 && (
+                    <span>
+                      {getActiveFiltersCount()} active filter
+                      {getActiveFiltersCount() > 1 ? "s" : ""}
                     </span>
                   )}
                 </div>
-              </div>
-
-              {/* Priority Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Priorities ({selectedPriorities.length} selected)
-                </label>
-                <div className="space-y-1">
-                  {getAvailablePriorities().map((priority) => (
-                    <label
-                      key={priority}
-                      className="flex items-center space-x-2 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedPriorities.includes(priority)}
-                        onChange={() => togglePriorityFilter(priority)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span
-                        className={`text-sm capitalize ${getPriorityColor(
-                          priority
-                        )}`}
-                      >
-                        {priority}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Status Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status ({selectedStatuses.length} selected)
-                </label>
-                <div className="space-y-1">
-                  {getAvailableStatuses().map((status) => (
-                    <label
-                      key={status}
-                      className="flex items-center space-x-2 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedStatuses.includes(status)}
-                        onChange={() => toggleStatusFilter(status)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span
-                        className={`text-sm capitalize ${
-                          status === "completed"
-                            ? "text-green-600"
-                            : "text-orange-600"
-                        }`}
-                      >
-                        {status}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Date Range Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date Range
-                </label>
-                <div className="space-y-2">
-                  <input
-                    type="date"
-                    value={dateRange.startDate}
-                    onChange={(e) =>
-                      setDateRange((prev) => ({
-                        ...prev,
-                        startDate: e.target.value,
-                      }))
-                    }
-                    className="w-full px-2 py-1 text-sm border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Start Date"
-                  />
-                  <input
-                    type="date"
-                    value={dateRange.endDate}
-                    onChange={(e) =>
-                      setDateRange((prev) => ({
-                        ...prev,
-                        endDate: e.target.value,
-                      }))
-                    }
-                    className="w-full px-2 py-1 text-sm border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="End Date"
-                  />
+                <div className="flex space-x-2">
+                  <button
+                    onClick={clearAdvancedFilters}
+                    className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  >
+                    Clear Advanced
+                  </button>
+                  <button
+                    onClick={() => setShowAdvancedFilters(false)}
+                    className="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
             </div>
+          )}
 
-            {/* Advanced Filters Actions */}
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-              <div className="text-sm text-gray-600">
-                {getActiveFiltersCount() > 0 && (
-                  <span>
-                    {getActiveFiltersCount()} active filter
-                    {getActiveFiltersCount() > 1 ? "s" : ""}
+          {/* Quick Stats */}
+          <div className="flex space-x-1 bg-gray-100 p-3 rounded-lg">
+            <div className="flex items-center space-x-4 text-sm text-gray-600">
+              <span>
+                Total: <strong className="text-gray-900">{tasks.length}</strong>
+              </span>
+              <span>
+                Pending:{" "}
+                <strong className="text-orange-600">
+                  {tasks.filter((t) => t.status === "pending").length}
+                </strong>
+              </span>
+              <span>
+                Completed:{" "}
+                <strong className="text-green-600">
+                  {tasks.filter((t) => t.status === "completed").length}
+                </strong>
+              </span>
+              <span>
+                Overdue:{" "}
+                <strong className="text-red-600">
+                  {tasks.filter((t) => isOverdue(t)).length}
+                </strong>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Task List */}
+        <div className="flex-1 overflow-auto scroll-area container-safe py-responsive">
+          {/* Search Results Indicator */}
+          {(searchQuery.trim() || getActiveFiltersCount() > 0) && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <Search className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm text-blue-800 font-medium">
+                    Active Filters & Search
+                  </span>
+                </div>
+                <div className="text-sm text-blue-600">
+                  {getFilteredTasks().length} of {tasks.length} tasks
+                </div>
+              </div>
+
+              {/* Active Filters Display */}
+              <div className="flex flex-wrap gap-2 mb-2">
+                {searchQuery.trim() && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                    🔍 "{searchQuery}"
+                  </span>
+                )}
+                {selectedSubjects.map((subject) => (
+                  <span
+                    key={subject}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800"
+                  >
+                    📚 {subject}
+                  </span>
+                ))}
+                {selectedPriorities.map((priority) => (
+                  <span
+                    key={priority}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800"
+                  >
+                    ⚡ {priority}
+                  </span>
+                ))}
+                {selectedStatuses.map((status) => (
+                  <span
+                    key={status}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800"
+                  >
+                    📋 {status}
+                  </span>
+                ))}
+                {(dateRange.startDate || dateRange.endDate) && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                    📅 {dateRange.startDate || "Any"} -{" "}
+                    {dateRange.endDate || "Any"}
                   </span>
                 )}
               </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={clearAdvancedFilters}
-                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
-                >
-                  Clear Advanced
-                </button>
-                <button
-                  onClick={() => setShowAdvancedFilters(false)}
-                  className="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Quick Stats */}
-        <div className="flex space-x-1 bg-gray-100 p-3 rounded-lg">
-          <div className="flex items-center space-x-4 text-sm text-gray-600">
-            <span>
-              Total: <strong className="text-gray-900">{tasks.length}</strong>
-            </span>
-            <span>
-              Pending:{" "}
-              <strong className="text-orange-600">
-                {tasks.filter((t) => t.status === "pending").length}
-              </strong>
-            </span>
-            <span>
-              Completed:{" "}
-              <strong className="text-green-600">
-                {tasks.filter((t) => t.status === "completed").length}
-              </strong>
-            </span>
-            <span>
-              Overdue:{" "}
-              <strong className="text-red-600">
-                {tasks.filter((t) => isOverdue(t)).length}
-              </strong>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Task List */}
-      <div className="flex-1 overflow-auto scroll-area container-safe py-responsive">
-        {/* Search Results Indicator */}
-        {(searchQuery.trim() || getActiveFiltersCount() > 0) && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <Search className="w-4 h-4 text-blue-600" />
-                <span className="text-sm text-blue-800 font-medium">
-                  Active Filters & Search
-                </span>
-              </div>
-              <div className="text-sm text-blue-600">
-                {getFilteredTasks().length} of {tasks.length} tasks
-              </div>
-            </div>
-
-            {/* Active Filters Display */}
-            <div className="flex flex-wrap gap-2 mb-2">
-              {searchQuery.trim() && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                  🔍 "{searchQuery}"
-                </span>
-              )}
-              {selectedSubjects.map((subject) => (
-                <span
-                  key={subject}
-                  className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800"
-                >
-                  📚 {subject}
-                </span>
-              ))}
-              {selectedPriorities.map((priority) => (
-                <span
-                  key={priority}
-                  className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800"
-                >
-                  ⚡ {priority}
-                </span>
-              ))}
-              {selectedStatuses.map((status) => (
-                <span
-                  key={status}
-                  className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800"
-                >
-                  📋 {status}
-                </span>
-              ))}
-              {(dateRange.startDate || dateRange.endDate) && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
-                  📅 {dateRange.startDate || "Any"} -{" "}
-                  {dateRange.endDate || "Any"}
-                </span>
+              {getFilteredTasks().length === 0 && (
+                <p className="text-xs text-blue-600">
+                  Try adjusting your search terms or filters
+                </p>
               )}
             </div>
+          )}
 
-            {getFilteredTasks().length === 0 && (
-              <p className="text-xs text-blue-600">
-                Try adjusting your search terms or filters
-              </p>
-            )}
-          </div>
-        )}
-
-        {showSwipeTip && (
-          <div className="mb-4 sm:mb-5 animate-fadeSlideIn relative">
-            <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-dashed border-gray-300 text-[11px] sm:text-xs text-gray-600 italic">
-              <ArrowLeftRight className="w-3.5 h-3.5 text-gray-400" />
-              <span>Swipe right to complete, left to delete.</span>
-              <button
-                onClick={dismissSwipeTip}
-                className="absolute top-1 right-1 p-1 text-gray-400 hover:text-gray-600"
-                aria-label="Dismiss swipe tip"
-              >
-                <X className="w-3 h-3" />
-              </button>
+          {showSwipeTip && (
+            <div className="mb-4 sm:mb-5 animate-fadeSlideIn relative">
+              <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-dashed border-gray-300 text-[11px] sm:text-xs text-gray-600 italic">
+                <ArrowLeftRight className="w-3.5 h-3.5 text-gray-400" />
+                <span>Swipe right to complete, left to delete.</span>
+                <button
+                  onClick={dismissSwipeTip}
+                  className="absolute top-1 right-1 p-1 text-gray-400 hover:text-gray-600"
+                  aria-label="Dismiss swipe tip"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
             </div>
+          )}
+          <div className="space-y-3 sm:space-y-4">
+            {getFilteredTasks().map((task) => (
+              <SwipeableTaskItem
+                key={task.id}
+                task={task}
+                onToggleStatus={toggleTaskStatus}
+                onEdit={startEditing}
+                onDelete={deleteTask}
+                getPriorityColor={getPriorityColor}
+              />
+            ))}
           </div>
-        )}
-        <div className="space-y-3 sm:space-y-4">
-          {getFilteredTasks().map((task) => (
-            <SwipeableTaskItem
-              key={task.id}
-              task={task}
-              onToggleStatus={toggleTaskStatus}
-              onEdit={startEditing}
-              onDelete={deleteTask}
-              getPriorityColor={getPriorityColor}
-            />
-          ))}
-        </div>
 
-        {getFilteredTasks().length === 0 && (
-          <div className="text-center py-8 sm:py-12 px-4">
-            <CheckCircle2 className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
-            <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
-              {tasks.length === 0
-                ? "No tasks yet"
-                : "No tasks match your current filters"}
-            </h3>
-            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 max-w-sm mx-auto">
-              {tasks.length === 0
-                ? "Create your first task to get started with organized studying"
-                : "Try adjusting your search terms or clearing some filters to see more tasks"}
-            </p>
-            {tasks.length === 0 && (
-              <button
-                onClick={() => setShowAddTask(true)}
-                className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm sm:text-base"
-              >
-                <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                Add Your First Task
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Add/Edit Task Modal */}
-      {(showAddTask || editingTask) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-6">
-          <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto scroll-area">
-            <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-slate-700">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {editingTask ? "Edit Task" : "Add New Task"}
+          {getFilteredTasks().length === 0 && (
+            <div className="text-center py-8 sm:py-12 px-4">
+              <CheckCircle2 className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
+                {tasks.length === 0
+                  ? "No tasks yet"
+                  : "No tasks match your current filters"}
               </h3>
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 max-w-sm mx-auto">
+                {tasks.length === 0
+                  ? "Create your first task to get started with organized studying"
+                  : "Try adjusting your search terms or clearing some filters to see more tasks"}
+              </p>
+              {tasks.length === 0 && (
+                <button
+                  onClick={() => setShowAddTask(true)}
+                  className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm sm:text-base"
+                >
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                  Add Your First Task
+                </button>
+              )}
             </div>
+          )}
+        </div>
 
-            <div className="p-4 sm:p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Title *
-                </label>
-                <input
-                  type="text"
-                  value={taskForm.title}
-                  onChange={(e) =>
-                    setTaskForm({ ...taskForm, title: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-                  placeholder="Enter task title"
-                />
+        {/* Add/Edit Task Modal */}
+        {(showAddTask || editingTask) && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto scroll-area">
+              <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-slate-700">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {editingTask ? "Edit Task" : "Add New Task"}
+                </h3>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={taskForm.description}
-                  onChange={(e) =>
-                    setTaskForm({ ...taskForm, description: e.target.value })
-                  }
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter task description"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 sm:p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Subject
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Title *
                   </label>
                   <input
                     type="text"
-                    value={taskForm.subject}
+                    value={taskForm.title}
                     onChange={(e) =>
-                      setTaskForm({ ...taskForm, subject: e.target.value })
+                      setTaskForm({ ...taskForm, title: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="e.g., Mathematics"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                    placeholder="Enter task title"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Priority
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Description
                   </label>
-                  <select
-                    value={taskForm.priority}
+                  <textarea
+                    value={taskForm.description}
                     onChange={(e) =>
-                      setTaskForm({
-                        ...taskForm,
-                        priority: e.target.value as any,
-                      })
+                      setTaskForm({ ...taskForm, description: e.target.value })
+                    }
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter task description"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Subject
+                    </label>
+                    <input
+                      type="text"
+                      value={taskForm.subject}
+                      onChange={(e) =>
+                        setTaskForm({ ...taskForm, subject: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="e.g., Mathematics"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Priority
+                    </label>
+                    <select
+                      value={taskForm.priority}
+                      onChange={(e) =>
+                        setTaskForm({
+                          ...taskForm,
+                          priority: e.target.value as any,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Due Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={taskForm.dueDate}
+                    onChange={(e) =>
+                      setTaskForm({ ...taskForm, dueDate: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
+                  />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Due Date *
-                </label>
-                <input
-                  type="date"
-                  value={taskForm.dueDate}
-                  onChange={(e) =>
-                    setTaskForm({ ...taskForm, dueDate: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 p-4 sm:p-6 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    if (editingTask) {
+                      setEditingTask(null);
+                    } else {
+                      setShowAddTask(false);
+                    }
+                    resetForm();
+                  }}
+                  className="w-full sm:w-auto px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors text-sm sm:text-base"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={editingTask ? handleEditTask : handleAddTask}
+                  disabled={!taskForm.title.trim() || !taskForm.dueDate}
+                  className="w-full sm:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                >
+                  {editingTask ? "Update" : "Add"} Task
+                </button>
               </div>
             </div>
-
-            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 p-4 sm:p-6 border-t border-gray-200">
-              <button
-                onClick={() => {
-                  if (editingTask) {
-                    setEditingTask(null);
-                  } else {
-                    setShowAddTask(false);
-                  }
-                  resetForm();
-                }}
-                className="w-full sm:w-auto px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors text-sm sm:text-base"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={editingTask ? handleEditTask : handleAddTask}
-                disabled={!taskForm.title.trim() || !taskForm.dueDate}
-                className="w-full sm:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
-              >
-                {editingTask ? "Update" : "Add"} Task
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Task Celebration */}
-      <TaskCelebration
-        isVisible={showCelebration}
-        taskTitle={celebrationTask?.title || ""}
-        priority={celebrationTask?.priority || "medium"}
-        onComplete={() => {
-          setShowCelebration(false);
-          setCelebrationTask(null);
-        }}
-      />
+        {/* Task Celebration */}
+        <TaskCelebration
+          isVisible={showCelebration}
+          taskTitle={celebrationTask?.title || ""}
+          priority={celebrationTask?.priority || "medium"}
+          onComplete={() => {
+            setShowCelebration(false);
+            setCelebrationTask(null);
+          }}
+        />
 
-      {/* Achievement Notification */}
-      <AchievementNotification
-        achievement={newAchievement}
-        onClose={() => setNewAchievement(null)}
-      />
+        {/* Achievement Notification */}
+        <AchievementNotification
+          achievement={newAchievement}
+          onClose={() => setNewAchievement(null)}
+        />
 
-      {/* Motivational Toast */}
-      <MotivationalToast
-        streakData={streakData}
-        isVisible={showMotivationalToast}
-        onClose={() => setShowMotivationalToast(false)}
-      />
+        {/* Motivational Toast */}
+        <MotivationalToast
+          streakData={streakData}
+          isVisible={showMotivationalToast}
+          onClose={() => setShowMotivationalToast(false)}
+        />
 
-      {/* Vibration Settings */}
-      <VibrationSettings
-        isOpen={showVibrationSettings}
-        onClose={() => setShowVibrationSettings(false)}
-      />
-    </div>
+        {/* Vibration Settings */}
+        <VibrationSettings
+          isOpen={showVibrationSettings}
+          onClose={() => setShowVibrationSettings(false)}
+        />
+      </div>
+    </GeneralLayout>
   );
 };

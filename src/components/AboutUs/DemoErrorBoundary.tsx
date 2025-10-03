@@ -1,0 +1,74 @@
+import React, { Component, ErrorInfo, ReactNode } from "react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
+
+interface Props {
+  children: ReactNode;
+  fallback?: ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  error?: Error;
+}
+
+export class DemoErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Demo viewer error:", error, errorInfo);
+  }
+
+  handleRetry = () => {
+    this.setState({ hasError: false, error: undefined });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
+      return (
+        <div className="flex flex-col items-center justify-center p-8 text-center bg-gray-50 dark:bg-slate-800 rounded-xl">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
+            <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 font-playfair">
+            Demo Temporarily Unavailable
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4 text-premium-body max-w-md">
+            We're experiencing a temporary issue with the demo viewer. 
+            Please try again or contact support if the problem persists.
+          </p>
+          <button
+            onClick={this.handleRetry}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors premium-button premium-focus"
+            aria-label="Retry loading demo"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Try Again</span>
+          </button>
+          {process.env.NODE_ENV === "development" && this.state.error && (
+            <details className="mt-4 text-left">
+              <summary className="cursor-pointer text-sm text-gray-500 dark:text-gray-400">
+                Error Details (Development)
+              </summary>
+              <pre className="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded overflow-auto">
+                {this.state.error.stack}
+              </pre>
+            </details>
+          )}
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}

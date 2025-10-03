@@ -12,6 +12,7 @@ import {
   BookOpen,
   Briefcase,
   Users,
+  Info,
 } from "lucide-react";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { useCurrentRoute } from "../hooks/useCurrentRoute";
@@ -51,6 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       path: "/interview",
     },
     { id: "team", label: "Team Space", icon: Users, path: "/team" },
+    { id: "about", label: "About Us", icon: Info, path: "/about" },
   ];
 
   const handleNavigation = (path: string) => {

@@ -18,6 +18,7 @@ import {
   Share2,
 } from "lucide-react";
 import { FileItem } from "../types";
+import { GeneralLayout } from "./PageLayout";
 import { driveStorageUtils } from "../utils/driveStorage";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { unifiedAIService } from "../utils/aiConfig";
@@ -656,284 +657,146 @@ export const FileManager: React.FC<FileManagerProps> = () => {
   };
 
   return (
-    <div
-      className="bg-white dark:bg-slate-900 h-full flex flex-col scroll-area transition-colors duration-300"
-      data-component="file-manager"
-    >
-      {/* Header */}
-      <div className="border-b border-gray-200 dark:border-slate-700 p-responsive">
-        {/* Error Banner */}
-        {storageStatus.error && (
-          <div
-            className={`mb-4 p-3 rounded-lg ${
-              storageStatus.needsReauth
-                ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
-                : "bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <svg
-                  className={`w-5 h-5 mr-2 ${
-                    storageStatus.needsReauth
-                      ? "text-red-600 dark:text-red-400"
-                      : "text-yellow-600 dark:text-yellow-400"
-                  }`}
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <span
-                  className={`text-sm font-medium ${
-                    storageStatus.needsReauth
-                      ? "text-red-800 dark:text-red-200"
-                      : "text-yellow-800 dark:text-yellow-200"
-                  }`}
-                >
-                  {storageStatus.error}
-                </span>
-              </div>
-              {storageStatus.needsReauth && (
-                <button
-                  onClick={() => {
-                    // Sign out to force re-authentication
-                    realTimeAuth.logout();
-                  }}
-                  className="text-sm bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md transition-colors"
-                >
-                  Sign Out & Re-authenticate
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Google Drive Access Warning */}
-        {user &&
-          !realTimeAuth.hasGoogleDriveAccess() &&
-          realTimeAuth.shouldHaveGoogleDriveAccess() && (
-            <div className="bg-orange-50 border-l-4 border-orange-400 p-4 mx-6 mt-4 rounded-r-lg">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-5 h-5 bg-orange-400 rounded-full"></div>
+    <GeneralLayout>
+      <div
+        className="min-h-screen flex flex-col scroll-area transition-colors duration-300"
+        data-component="file-manager"
+      >
+        {/* Header */}
+        <div className="border-b border-gray-200 dark:border-slate-700 p-responsive">
+          {/* Error Banner */}
+          {storageStatus.error && (
+            <div
+              className={`mb-4 p-3 rounded-lg ${
+                storageStatus.needsReauth
+                  ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                  : "bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <svg
+                    className={`w-5 h-5 mr-2 ${
+                      storageStatus.needsReauth
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-yellow-600 dark:text-yellow-400"
+                    }`}
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span
+                    className={`text-sm font-medium ${
+                      storageStatus.needsReauth
+                        ? "text-red-800 dark:text-red-200"
+                        : "text-yellow-800 dark:text-yellow-200"
+                    }`}
+                  >
+                    {storageStatus.error}
+                  </span>
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm text-orange-800">
-                    <strong>Google Drive Access Expired:</strong> Your session
-                    has expired.
-                    <button
-                      onClick={handleRelogin}
-                      className="ml-2 underline hover:no-underline font-medium"
-                    >
-                      Sign in again
-                    </button>
-                    to sync your files with Google Drive, or continue using
-                    local storage.
-                  </p>
-                </div>
+                {storageStatus.needsReauth && (
+                  <button
+                    onClick={() => {
+                      // Sign out to force re-authentication
+                      realTimeAuth.logout();
+                    }}
+                    className="text-sm bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md transition-colors"
+                  >
+                    Sign Out & Re-authenticate
+                  </button>
+                )}
               </div>
             </div>
           )}
 
-        <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              File Manager
-            </h2>
-            <div className="flex items-center space-x-2">
-              <span className="text-responsive-sm text-gray-600 dark:text-gray-400">
-                Storage:
-              </span>
-              <div
-                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                  storageStatus.type === "googleDrive"
-                    ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400"
-                    : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400"
-                }`}
-              >
-                {storageStatus.type === "googleDrive" ? (
-                  <>
-                    <svg
-                      className="w-3 h-3 mr-1"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <path d="M6.28 3l5.72 10 5.72-10H6.28zm7.32 11L9 24h11l-6.4-10zm-7.2 0L0 24h9l-2.6-10z" />
-                    </svg>
-                    Google Drive
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="w-3 h-3 mr-1"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-                    </svg>
-                    Local Storage
-                  </>
-                )}
+          {/* Google Drive Access Warning */}
+          {user &&
+            !realTimeAuth.hasGoogleDriveAccess() &&
+            realTimeAuth.shouldHaveGoogleDriveAccess() && (
+              <div className="bg-orange-50 border-l-4 border-orange-400 p-4 mx-6 mt-4 rounded-r-lg">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-5 h-5 bg-orange-400 rounded-full"></div>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-orange-800">
+                      <strong>Google Drive Access Expired:</strong> Your session
+                      has expired.
+                      <button
+                        onClick={handleRelogin}
+                        className="ml-2 underline hover:no-underline font-medium"
+                      >
+                        Sign in again
+                      </button>
+                      to sync your files with Google Drive, or continue using
+                      local storage.
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2 sm:space-x-3 overflow-x-auto">
-            <button
-              onClick={() => setShowNewFolder(true)}
-              className="btn-touch flex items-center px-3 sm:px-4 py-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm touch-manipulation"
-            >
-              <FolderPlus className="w-4 h-4 mr-1 sm:mr-2" />
-              <span className="hidden xs:inline">New Folder</span>
-              <span className="xs:hidden">New</span>
-            </button>
-            <label className="btn-touch flex items-center px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors text-sm touch-manipulation">
-              <Upload className="w-4 h-4 mr-1 sm:mr-2" />
-              <span className="hidden xs:inline">Upload Files</span>
-              <span className="xs:hidden">Upload</span>
-              <input
-                type="file"
-                multiple
-                onChange={handleFileUpload}
-                className="hidden"
-                accept=".pdf,.ppt,.pptx,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt"
-              />
-            </label>
-          </div>
-        </div>
+            )}
 
-        {/* Breadcrumb */}
-        <div className="flex items-center space-x-2 mb-4 overflow-x-auto scrollbar-hide">
-          {getCurrentPath().map((pathItem, index) => (
-            <React.Fragment key={index}>
-              {index > 0 && (
-                <span className="text-gray-400 dark:text-gray-500 flex-shrink-0">
-                  /
+          <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                File Manager
+              </h2>
+              <div className="flex items-center space-x-2">
+                <span className="text-responsive-sm text-gray-600 dark:text-gray-400">
+                  Storage:
                 </span>
-              )}
-              <button
-                onClick={() => {
-                  console.log(
-                    "🧭 Navigating to:",
-                    pathItem.name,
-                    "ID:",
-                    pathItem.id
-                  );
-                  setCurrentFolderId(pathItem.id);
-                }}
-                className="btn-touch text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base whitespace-nowrap touch-manipulation"
-              >
-                {pathItem.name}
-              </button>
-            </React.Fragment>
-          ))}
-        </div>
-
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500" />
-          <input
-            type="text"
-            placeholder="Search files and folders..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
-          />
-        </div>
-      </div>
-
-      {/* Upload Progress */}
-      {Object.keys(uploadProgress).length > 0 && (
-        <div className="border-b border-gray-200 p-4">
-          {Object.entries(uploadProgress).map(([fileId, progress]) => (
-            <div key={fileId} className="mb-2">
-              <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
-                <span>Uploading...</span>
-                <span>{progress}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                ></div>
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    storageStatus.type === "googleDrive"
+                      ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400"
+                      : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400"
+                  }`}
+                >
+                  {storageStatus.type === "googleDrive" ? (
+                    <>
+                      <svg
+                        className="w-3 h-3 mr-1"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
+                        <path d="M6.28 3l5.72 10 5.72-10H6.28zm7.32 11L9 24h11l-6.4-10zm-7.2 0L0 24h9l-2.6-10z" />
+                      </svg>
+                      Google Drive
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="w-3 h-3 mr-1"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                      </svg>
+                      Local Storage
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* New Folder Modal */}
-      {showNewFolder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Create New Folder
-            </h3>
-            <input
-              type="text"
-              placeholder="Folder name"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
-              onKeyDown={(e) => e.key === "Enter" && createFolder()}
-              autoFocus
-            />
-            <div className="flex justify-end space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3 overflow-x-auto">
               <button
-                onClick={() => {
-                  setShowNewFolder(false);
-                  setNewFolderName("");
-                }}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                onClick={() => setShowNewFolder(true)}
+                className="btn-touch flex items-center px-3 sm:px-4 py-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm touch-manipulation"
               >
-                Cancel
+                <FolderPlus className="w-4 h-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline">New Folder</span>
+                <span className="xs:hidden">New</span>
               </button>
-              <button
-                onClick={createFolder}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-              >
-                Create
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* File List */}
-      <div className="flex-1 overflow-auto scroll-area container-safe py-responsive">
-        {currentFolderId && (
-          <button
-            onClick={() =>
-              setCurrentFolderId(
-                files.find((f) => f.id === currentFolderId)?.parentId
-              )
-            }
-            className="flex items-center mb-4 text-blue-600 hover:text-blue-700 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </button>
-        )}
-
-        {getFilteredFiles().length === 0 ? (
-          <div className="text-center py-12">
-            <FolderOpen className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-              {searchQuery ? "No files found" : "No files yet"}
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              {searchQuery
-                ? "Try adjusting your search terms"
-                : "Upload your first document to get started with AI-powered study assistance"}
-            </p>
-            {!searchQuery && (
-              <label className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors">
-                <Upload className="w-5 h-5 mr-2" />
-                Upload Files
+              <label className="btn-touch flex items-center px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors text-sm touch-manipulation">
+                <Upload className="w-4 h-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline">Upload Files</span>
+                <span className="xs:hidden">Upload</span>
                 <input
                   type="file"
                   multiple
@@ -942,226 +805,367 @@ export const FileManager: React.FC<FileManagerProps> = () => {
                   accept=".pdf,.ppt,.pptx,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt"
                 />
               </label>
-            )}
+            </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {getFilteredFiles().map((file) => (
-              <div
-                key={file.id}
-                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow group relative"
-              >
-                <div className="flex flex-col space-y-3">
-                  <div
-                    className={`flex items-center space-x-3 ${
-                      file.type === "folder"
-                        ? "cursor-pointer hover:bg-gray-50 p-2 rounded-lg -m-2"
-                        : ""
-                    }`}
-                    onClick={() => {
-                      if (file.type === "folder") {
-                        console.log(
-                          "📁 Opening folder:",
-                          file.name,
-                          "ID:",
-                          file.id
-                        );
-                        setCurrentFolderId(file.id);
-                      }
-                    }}
-                  >
-                    {file.type === "folder" ? (
-                      <Folder className="w-8 h-8 text-blue-500 flex-shrink-0" />
-                    ) : (
-                      <File className="w-8 h-8 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h3
-                        className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm"
-                        title={file.name}
-                      >
-                        {file.name}
-                      </h3>
-                      {file.type === "file" && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatFileSize(file.size)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
 
-                  <div className="relative">
-                    <button
-                      onClick={() =>
-                        setSelectedFile(
-                          selectedFile === file.id ? null : file.id
-                        )
-                      }
-                      className="p-1 hover:bg-gray-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <MoreVertical className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    </button>
-
-                    {selectedFile === file.id && (
-                      <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1 min-w-[160px]">
-                        {file.type === "folder" ? (
-                          <button
-                            onClick={() => {
-                              setCurrentFolderId(file.id);
-                              setSelectedFile(null);
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center"
-                          >
-                            <FolderOpen className="w-4 h-4 mr-2" />
-                            Open
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => {
-                                handlePreviewFile(file);
-                                setSelectedFile(null);
-                              }}
-                              className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center"
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              Preview
-                            </button>
-                            <button
-                              onClick={() => {
-                                analyzeWithAI(file);
-                                setSelectedFile(null);
-                              }}
-                              className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center"
-                            >
-                              <Brain className="w-4 h-4 mr-2" />
-                              Analyze with AI
-                            </button>
-                            <button
-                              onClick={(e) => handleShareFile(file, e)}
-                              className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center"
-                            >
-                              <Share2 className="w-4 h-4 mr-2" />
-                              Share
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => {
-                            deleteFile(file.id);
-                            setSelectedFile(null);
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {file.type === "folder" ? (
-                  <button
-                    onClick={() => setCurrentFolderId(file.id)}
-                    className="w-full text-left"
-                  >
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {files.filter((f) => f.parentId === file.id).length} items
-                    </p>
-                  </button>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {new Date(file.uploadedAt).toLocaleDateString()}
-                    </p>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handlePreviewFile(file)}
-                        className="flex-1 px-3 py-1 bg-blue-50 text-blue-600 text-xs rounded-md hover:bg-blue-100 transition-colors"
-                      >
-                        Preview
-                      </button>
-                      <button
-                        onClick={() => analyzeWithAI(file)}
-                        className="flex-1 px-3 py-1 bg-purple-50 text-purple-600 text-xs rounded-md hover:bg-purple-100 transition-colors"
-                      >
-                        AI Analyze
-                      </button>
-                    </div>
-                  </div>
+          {/* Breadcrumb */}
+          <div className="flex items-center space-x-2 mb-4 overflow-x-auto scrollbar-hide">
+            {getCurrentPath().map((pathItem, index) => (
+              <React.Fragment key={index}>
+                {index > 0 && (
+                  <span className="text-gray-400 dark:text-gray-500 flex-shrink-0">
+                    /
+                  </span>
                 )}
+                <button
+                  onClick={() => {
+                    console.log(
+                      "🧭 Navigating to:",
+                      pathItem.name,
+                      "ID:",
+                      pathItem.id
+                    );
+                    setCurrentFolderId(pathItem.id);
+                  }}
+                  className="btn-touch text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base whitespace-nowrap touch-manipulation"
+                >
+                  {pathItem.name}
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search files and folders..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+            />
+          </div>
+        </div>
+
+        {/* Upload Progress */}
+        {Object.keys(uploadProgress).length > 0 && (
+          <div className="border-b border-gray-200 p-4">
+            {Object.entries(uploadProgress).map(([fileId, progress]) => (
+              <div key={fileId} className="mb-2">
+                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
+                  <span>Uploading...</span>
+                  <span>{progress}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  ></div>
+                </div>
               </div>
             ))}
           </div>
         )}
-      </div>
 
-      {/* Session Expired Modal */}
-      {showSessionExpiredModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <div className="w-8 h-8 bg-red-500 rounded-full"></div>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                Session Expired
+        {/* New Folder Modal */}
+        {showNewFolder && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                Create New Folder
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                {sessionExpiredMessage}
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={handleRelogin}
-                className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
-              >
-                Sign In Again
-              </button>
-              <button
-                onClick={continueWithLocalStorage}
-                className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-all duration-200 font-medium"
-              >
-                Continue with Local Storage
-              </button>
+              <input
+                type="text"
+                placeholder="Folder name"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+                onKeyDown={(e) => e.key === "Enter" && createFolder()}
+                autoFocus
+              />
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowNewFolder(false);
+                    setNewFolderName("");
+                  }}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createFolder}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  Create
+                </button>
+              </div>
             </div>
           </div>
+        )}
+
+        {/* File List */}
+        <div className="flex-1 overflow-auto scroll-area container-safe py-responsive">
+          {currentFolderId && (
+            <button
+              onClick={() =>
+                setCurrentFolderId(
+                  files.find((f) => f.id === currentFolderId)?.parentId
+                )
+              }
+              className="flex items-center mb-4 text-blue-600 hover:text-blue-700 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </button>
+          )}
+
+          {getFilteredFiles().length === 0 ? (
+            <div className="text-center py-12">
+              <FolderOpen className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                {searchQuery ? "No files found" : "No files yet"}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                {searchQuery
+                  ? "Try adjusting your search terms"
+                  : "Upload your first document to get started with AI-powered study assistance"}
+              </p>
+              {!searchQuery && (
+                <label className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors">
+                  <Upload className="w-5 h-5 mr-2" />
+                  Upload Files
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    accept=".pdf,.ppt,.pptx,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt"
+                  />
+                </label>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {getFilteredFiles().map((file) => (
+                <div
+                  key={file.id}
+                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow group relative"
+                >
+                  <div className="flex flex-col space-y-3">
+                    <div
+                      className={`flex items-center space-x-3 ${
+                        file.type === "folder"
+                          ? "cursor-pointer hover:bg-gray-50 p-2 rounded-lg -m-2"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        if (file.type === "folder") {
+                          console.log(
+                            "📁 Opening folder:",
+                            file.name,
+                            "ID:",
+                            file.id
+                          );
+                          setCurrentFolderId(file.id);
+                        }
+                      }}
+                    >
+                      {file.type === "folder" ? (
+                        <Folder className="w-8 h-8 text-blue-500 flex-shrink-0" />
+                      ) : (
+                        <File className="w-8 h-8 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3
+                          className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm"
+                          title={file.name}
+                        >
+                          {file.name}
+                        </h3>
+                        {file.type === "file" && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatFileSize(file.size)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <button
+                        onClick={() =>
+                          setSelectedFile(
+                            selectedFile === file.id ? null : file.id
+                          )
+                        }
+                        className="p-1 hover:bg-gray-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <MoreVertical className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                      </button>
+
+                      {selectedFile === file.id && (
+                        <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1 min-w-[160px]">
+                          {file.type === "folder" ? (
+                            <button
+                              onClick={() => {
+                                setCurrentFolderId(file.id);
+                                setSelectedFile(null);
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center"
+                            >
+                              <FolderOpen className="w-4 h-4 mr-2" />
+                              Open
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => {
+                                  handlePreviewFile(file);
+                                  setSelectedFile(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center"
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                Preview
+                              </button>
+                              <button
+                                onClick={() => {
+                                  analyzeWithAI(file);
+                                  setSelectedFile(null);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center"
+                              >
+                                <Brain className="w-4 h-4 mr-2" />
+                                Analyze with AI
+                              </button>
+                              <button
+                                onClick={(e) => handleShareFile(file, e)}
+                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center"
+                              >
+                                <Share2 className="w-4 h-4 mr-2" />
+                                Share
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => {
+                              deleteFile(file.id);
+                              setSelectedFile(null);
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {file.type === "folder" ? (
+                    <button
+                      onClick={() => setCurrentFolderId(file.id)}
+                      className="w-full text-left"
+                    >
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {files.filter((f) => f.parentId === file.id).length}{" "}
+                        items
+                      </p>
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {new Date(file.uploadedAt).toLocaleDateString()}
+                      </p>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handlePreviewFile(file)}
+                          className="flex-1 px-3 py-1 bg-blue-50 text-blue-600 text-xs rounded-md hover:bg-blue-100 transition-colors"
+                        >
+                          Preview
+                        </button>
+                        <button
+                          onClick={() => analyzeWithAI(file)}
+                          className="flex-1 px-3 py-1 bg-purple-50 text-purple-600 text-xs rounded-md hover:bg-purple-100 transition-colors"
+                        >
+                          AI Analyze
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
 
-      {/* Preview Modal - now using FilePreviewModal */}
-      {previewFile && (
-        <FilePreviewModal
-          previewFile={previewFile}
-          previewContent={previewContent}
-          previewZoom={previewZoom}
-          onClose={() => setPreviewFile(null)}
-          onZoomChange={setPreviewZoom}
-          onDownload={downloadFile}
-          onAnalyze={() => setShowAIChat((prev) => !prev)}
-          formatFileSize={formatFileSize}
-          showAIChat={showAIChat}
-          setShowAIChat={setShowAIChat}
-        />
-      )}
+        {/* Session Expired Modal */}
+        {showSessionExpiredModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 w-full max-w-md">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-8 h-8 bg-red-500 rounded-full"></div>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  Session Expired
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                  {sessionExpiredMessage}
+                </p>
+              </div>
 
-      {/* Share Menu */}
-      {selectedFileForShare && (
-        <ShareMenu
-          isOpen={showShareMenu}
-          onClose={() => {
-            setShowShareMenu(false);
-            setSelectedFileForShare(null);
-          }}
-          fileName={selectedFileForShare.name}
-          fileUrl={
-            selectedFileForShare.webViewLink || selectedFileForShare.content
-          }
-          position={shareMenuPosition}
-        />
-      )}
-    </div>
+              <div className="space-y-3">
+                <button
+                  onClick={handleRelogin}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  Sign In Again
+                </button>
+                <button
+                  onClick={continueWithLocalStorage}
+                  className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-all duration-200 font-medium"
+                >
+                  Continue with Local Storage
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Preview Modal - now using FilePreviewModal */}
+        {previewFile && (
+          <FilePreviewModal
+            previewFile={previewFile}
+            previewContent={previewContent}
+            previewZoom={previewZoom}
+            onClose={() => setPreviewFile(null)}
+            onZoomChange={setPreviewZoom}
+            onDownload={downloadFile}
+            onAnalyze={() => setShowAIChat((prev) => !prev)}
+            formatFileSize={formatFileSize}
+            showAIChat={showAIChat}
+            setShowAIChat={setShowAIChat}
+          />
+        )}
+
+        {/* Share Menu */}
+        {selectedFileForShare && (
+          <ShareMenu
+            isOpen={showShareMenu}
+            onClose={() => {
+              setShowShareMenu(false);
+              setSelectedFileForShare(null);
+            }}
+            fileName={selectedFileForShare.name}
+            fileUrl={
+              selectedFileForShare.webViewLink || selectedFileForShare.content
+            }
+            position={shareMenuPosition}
+          />
+        )}
+      </div>
+    </GeneralLayout>
   );
 };
