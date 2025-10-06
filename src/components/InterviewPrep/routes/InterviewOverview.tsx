@@ -114,21 +114,21 @@ export const InterviewOverview: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="container-mobile space-responsive">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 sm:p-6 text-white">
-        <div className="flex items-start justify-between">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-responsive text-white">
+        <div className="flex-responsive items-start">
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl sm:text-2xl font-bold mb-2">
+            <h2 className="text-responsive-2xl font-bold mb-3">
               Welcome to Interview Prep Hub
             </h2>
-            <p className="text-blue-100 mb-4 text-sm sm:text-base">
+            <p className="text-blue-100 mb-4 text-responsive-base">
               Your comprehensive platform for mastering job interviews
             </p>
-            <div className="flex items-center space-x-4 sm:space-x-6">
-              <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-2">
                 <Target className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                <span className="text-xs sm:text-sm">
+                <span className="text-responsive-sm">
                   Prepare for your next interview
                 </span>
               </div>
@@ -141,15 +141,15 @@ export const InterviewOverview: React.FC = () => {
       </div>
 
       {/* Feature Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-responsive">
         {prepCards.map((card) => {
           const Icon = card.icon;
 
           return (
-            <div
+            <button
               key={card.id}
               onClick={() => navigate(card.path)}
-              className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-slate-700 hover:shadow-lg transition-all cursor-pointer group touch-manipulation"
+              className="card-responsive hover:shadow-lg transition-all cursor-pointer group btn-touch text-left w-full"
             >
               <div className="flex items-start justify-between mb-4">
                 <div
@@ -161,26 +161,26 @@ export const InterviewOverview: React.FC = () => {
                 </div>
                 <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors flex-shrink-0" />
               </div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              <h3 className="text-responsive-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 {card.title}
               </h3>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-3">
+              <p className="text-responsive-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-3">
                 {card.description}
               </p>
-            </div>
+            </button>
           );
         })}
       </div>
 
       {/* Quick Tips Section */}
-      <div className="bg-yellow-50 dark:bg-yellow-900/10 rounded-xl p-4 sm:p-6 border border-yellow-200 dark:border-yellow-800">
-        <div className="flex items-start space-x-3">
+      <div className="bg-yellow-50 dark:bg-yellow-900/10 rounded-xl p-responsive border border-yellow-200 dark:border-yellow-800">
+        <div className="flex items-start gap-3">
           <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 text-sm sm:text-base">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 text-responsive-base">
               Pro Tip
             </h3>
-            <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+            <p className="text-responsive-sm text-gray-700 dark:text-gray-300">
               Always research the company before your interview. Understanding
               their values, recent news, and culture shows genuine interest and
               helps you tailor your responses.
@@ -190,14 +190,13 @@ export const InterviewOverview: React.FC = () => {
       </div>
 
       {/* Statistics Section */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              500+
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Questions
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-responsive">
+        <div className="card-responsive-compact text-center">
+          <div className="text-responsive-2xl font-bold text-gray-900 dark:text-gray-100">
+            500+
+          </div>
+          <div className="text-responsive-sm text-gray-600 dark:text-gray-400">
+            Questions
             </div>
           </div>
         </div>

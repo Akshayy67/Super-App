@@ -2472,50 +2472,67 @@ export const FlashCards: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          {/* Mobile-friendly navigation tabs */}
+          <div className="tabs-mobile">
             <button
               onClick={() => setCurrentView("create")}
-              className={`px-6 py-3 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl ${
+              className={`tab-mobile btn-touch flex items-center gap-2 ${
+                currentView === "create" ? "active" : ""
+              } ${
                 currentView === "create"
-                  ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-xl"
-                  : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500"
+                  ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-500"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-gray-100"
               }`}
             >
-              <Plus className="w-5 h-5 mr-2 inline" />
-              <span className="font-semibold">Create</span>
+              <Plus className="w-4 h-4 flex-shrink-0" />
+              <span className="text-responsive-sm font-semibold truncate">
+                Create
+              </span>
             </button>
             <button
               onClick={() => setCurrentView("study")}
-              className={`px-6 py-3 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl ${
+              className={`tab-mobile btn-touch flex items-center gap-2 ${
+                currentView === "study" ? "active" : ""
+              } ${
                 currentView === "study"
-                  ? "bg-gradient-to-r from-green-600 to-blue-600 text-white shadow-xl"
-                  : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 hover:border-green-300 dark:hover:border-green-500"
+                  ? "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-500"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-gray-100"
               }`}
             >
-              <Play className="w-5 h-5 mr-2 inline" />
-              <span className="font-semibold">Study</span>
+              <Play className="w-4 h-4 flex-shrink-0" />
+              <span className="text-responsive-sm font-semibold truncate">
+                Study
+              </span>
             </button>
             <button
               onClick={() => setCurrentView("manage")}
-              className={`px-6 py-3 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl ${
+              className={`tab-mobile btn-touch flex items-center gap-2 ${
+                currentView === "manage" ? "active" : ""
+              } ${
                 currentView === "manage"
-                  ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xl"
-                  : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 hover:border-purple-300 dark:hover:border-purple-500"
+                  ? "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-500"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-gray-100"
               }`}
             >
-              <Settings className="w-5 h-5 mr-2 inline" />
-              <span className="font-semibold">Manage</span>
+              <Settings className="w-4 h-4 flex-shrink-0" />
+              <span className="text-responsive-sm font-semibold truncate">
+                Manage
+              </span>
             </button>
             <button
               onClick={() => setCurrentView("stats")}
-              className={`px-6 py-3 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl ${
+              className={`tab-mobile btn-touch flex items-center gap-2 ${
+                currentView === "stats" ? "active" : ""
+              } ${
                 currentView === "stats"
-                  ? "bg-gradient-to-r from-orange-600 to-red-600 text-white shadow-xl"
-                  : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 hover:border-orange-300 dark:hover:border-orange-500"
+                  ? "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-500"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-gray-100"
               }`}
             >
-              <BarChart3 className="w-5 h-5 mr-2 inline" />
-              <span className="font-semibold">Stats</span>
+              <BarChart3 className="w-4 h-4 flex-shrink-0" />
+              <span className="text-responsive-sm font-semibold truncate">
+                Stats
+              </span>
             </button>
           </div>
         </div>

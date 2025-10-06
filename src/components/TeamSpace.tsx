@@ -1126,51 +1126,51 @@ export const TeamSpace: React.FC<{
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-slate-900 h-full flex transition-colors duration-300">
+    <div className="bg-gray-50 dark:bg-slate-900 h-full mobile-viewport flex transition-colors duration-300">
       {/* Sidebar */}
-      <div className="hidden lg:flex lg:w-64 xl:w-72 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex-col">
-        <div className="p-4 border-b border-gray-200 dark:border-slate-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+      <div className="hidden lg:flex lg:w-64 xl:w-72 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex-col flex-shrink-0">
+        <div className="p-responsive border-b border-gray-200 dark:border-slate-700">
+          <h2 className="text-responsive-lg font-semibold text-gray-900 dark:text-gray-100">
             Teams
           </h2>
           <div className="mt-3 space-y-2">
             <button
               onClick={() => setShowCreateTeam(true)}
-              className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="btn-touch w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Create Team
+              <UserPlus className="w-4 h-4 mr-2 flex-shrink-0" />
+              <span className="text-responsive-sm">Create Team</span>
             </button>
             <button
               onClick={() => setShowJoinTeamModal(true)}
-              className="w-full flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="btn-touch w-full flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Join Team
+              <UserPlus className="w-4 h-4 mr-2 flex-shrink-0" />
+              <span className="text-responsive-sm">Join Team</span>
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto scroll-area-mobile">
           {teams.map((team) => (
             <button
               key={team.id}
               onClick={() => setSelectedTeam(team)}
-              className={`w-full p-4 text-left hover:bg-gray-50 border-b border-gray-100 transition-colors ${
+              className={`btn-touch w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-slate-700 border-b border-gray-100 dark:border-slate-700 transition-colors ${
                 selectedTeam?.id === team.id
-                  ? "bg-blue-50 border-l-4 border-l-blue-600"
+                  ? "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-600"
                   : ""
               }`}
             >
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Users className="w-5 h-5 text-blue-600" />
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate text-responsive-sm">
                     {team.name}
                   </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-responsive-xs text-gray-500 dark:text-gray-400">
                     {Object.keys(team.members).length} members
                   </p>
                 </div>
@@ -1182,20 +1182,20 @@ export const TeamSpace: React.FC<{
 
       {/* Mobile Sidebar Overlay */}
       {showMobileSidebar && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="mobile-nav-overlay lg:hidden">
           <div
             className="fixed inset-0 bg-black bg-opacity-50"
             onClick={() => setShowMobileSidebar(false)}
           />
-          <div className="fixed left-0 top-0 h-full w-64 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col">
-            <div className="p-4 border-b border-gray-200 dark:border-slate-700">
+          <div className="mobile-nav-panel open">
+            <div className="p-responsive border-b border-gray-200 dark:border-slate-700">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                <h2 className="text-responsive-lg font-semibold text-gray-900 dark:text-gray-100">
                   Teams
                 </h2>
                 <button
                   onClick={() => setShowMobileSidebar(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="btn-touch p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1206,25 +1206,25 @@ export const TeamSpace: React.FC<{
                     setShowCreateTeam(true);
                     setShowMobileSidebar(false);
                   }}
-                  className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  className="btn-touch w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Create Team
+                  <UserPlus className="w-4 h-4 mr-2 flex-shrink-0" />
+                  <span className="text-responsive-sm">Create Team</span>
                 </button>
                 <button
                   onClick={() => {
                     setShowJoinTeamModal(true);
                     setShowMobileSidebar(false);
                   }}
-                  className="w-full flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                  className="btn-touch w-full flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Join Team
+                  <UserPlus className="w-4 h-4 mr-2 flex-shrink-0" />
+                  <span className="text-responsive-sm">Join Team</span>
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto scroll-area-mobile">
               {teams.map((team) => (
                 <button
                   key={team.id}
@@ -1232,21 +1232,21 @@ export const TeamSpace: React.FC<{
                     setSelectedTeam(team);
                     setShowMobileSidebar(false);
                   }}
-                  className={`w-full p-4 text-left border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors ${
+                  className={`btn-touch w-full p-4 text-left border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors ${
                     selectedTeam?.id === team.id
                       ? "bg-blue-50 dark:bg-blue-900/20 border-r-2 border-blue-600"
                       : ""
                   }`}
                 >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Users className="w-4 h-4 text-blue-600" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm">
+                      <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate text-responsive-sm">
                         {team.name}
                       </h3>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                      <p className="text-responsive-xs text-gray-600 dark:text-gray-400 truncate">
                         {Object.keys(team.members).length} members
                       </p>
                     </div>
@@ -1260,27 +1260,29 @@ export const TeamSpace: React.FC<{
 
       {/* Main Content */}
       {selectedTeam ? (
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col mobile-content">
           {/* Header */}
-          <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
+          <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 p-responsive flex-shrink-0">
+            <div className="flex-responsive items-center">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
                 {/* Mobile Menu Button */}
                 <button
                   onClick={() => setShowMobileSidebar(true)}
-                  className="lg:hidden p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="btn-touch lg:hidden p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
                 >
                   <Menu className="w-5 h-5" />
                 </button>
-                <div className="flex items-center space-x-3">
-                  {getTeamTypeIcon(selectedTeam.teamType, "w-8 h-8")}
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="flex-shrink-0">
+                    {getTeamTypeIcon(selectedTeam.teamType, "w-8 h-8")}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h1 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100 truncate">
                         {selectedTeam.name}
                       </h1>
                       <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        className={`px-2 py-1 text-responsive-xs font-medium rounded-full flex-shrink-0 ${
                           selectedTeam.teamType === "study"
                             ? "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200"
                             : "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200"
@@ -1291,13 +1293,13 @@ export const TeamSpace: React.FC<{
                           : "General Team"}
                       </span>
                     </div>
-                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+                    <p className="text-responsive-sm text-gray-600 dark:text-gray-400 line-clamp-2">
                       {selectedTeam.description}
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={() => setShowInviteModal(true)}
                   className="flex items-center px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
@@ -1323,7 +1325,7 @@ export const TeamSpace: React.FC<{
             </div>
 
             {/* Tabs */}
-            <div className="flex space-x-3 sm:space-x-6 mt-6 border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
+            <div className="tabs-mobile mt-6">
               {getTabConfig(selectedTeam?.teamType || "general").map(
                 (tabConfig) => {
                   const IconComponent = tabConfig.icon;
@@ -1336,18 +1338,20 @@ export const TeamSpace: React.FC<{
                     <button
                       key={tabConfig.key}
                       onClick={() => setActiveTab(tabConfig.key as any)}
-                      className={`pb-3 px-1 transition-colors flex items-center gap-2 whitespace-nowrap text-sm sm:text-base ${
+                      className={`tab-mobile btn-touch flex items-center gap-2 ${
+                        isActive ? "active" : ""
+                      } ${
                         isActive
-                          ? `border-b-2 ${
-                              selectedTeam?.teamType === "study"
-                                ? "border-purple-600 text-purple-600"
-                                : "border-blue-600 text-blue-600"
-                            }`
-                          : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                          ? selectedTeam?.teamType === "study"
+                            ? "border-purple-600 text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20"
+                            : "border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
+                          : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-slate-700"
                       }`}
                     >
-                      <IconComponent className="w-4 h-4" />
-                      {tabConfig.label}
+                      <IconComponent className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-responsive-sm font-medium truncate">
+                        {tabConfig.label}
+                      </span>
                     </button>
                   );
                 }
@@ -1356,949 +1360,969 @@ export const TeamSpace: React.FC<{
           </div>
 
           {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-            {activeTab === "overview" && (
-              <div className="space-y-6">
-                {/* Study Team Motivational Quote */}
-                {selectedTeam?.teamType === "study" && (
-                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-lg p-6 border border-purple-200 dark:border-purple-800">
-                    <div className="flex items-start space-x-4">
-                      <div className="flex-shrink-0">
-                        <Brain className="w-8 h-8 text-purple-600" />
+          <div className="flex-1 overflow-y-auto scroll-area-mobile mobile-content">
+            <div className="container-mobile py-responsive">
+              {activeTab === "overview" && (
+                <div className="space-responsive">
+                  {/* Study Team Motivational Quote */}
+                  {selectedTeam?.teamType === "study" && (
+                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-lg p-responsive border border-purple-200 dark:border-purple-800">
+                      <div className="flex-responsive items-start">
+                        <div className="flex-shrink-0">
+                          <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-responsive-lg font-semibold text-purple-900 dark:text-purple-100 mb-2">
+                            Daily Study Inspiration
+                          </h3>
+                          <blockquote className="text-responsive-sm text-purple-700 dark:text-purple-200 italic">
+                            "{getRandomStudyQuote()}"
+                          </blockquote>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-100 mb-2">
-                          Daily Study Inspiration
-                        </h3>
-                        <blockquote className="text-purple-700 dark:text-purple-200 italic">
-                          "{getRandomStudyQuote()}"
-                        </blockquote>
+                    </div>
+                  )}
+
+                  {/* Stats */}
+                  <div className="grid-responsive gap-responsive">
+                    <div className="card-responsive-compact">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-responsive-xs text-gray-600 dark:text-gray-400 truncate">
+                            {selectedTeam?.teamType === "study"
+                              ? "Study Partners"
+                              : "Team Members"}
+                          </p>
+                          <p className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100">
+                            {getTeamMembers().length}
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {selectedTeam?.teamType === "study" ? (
+                            <GraduationCap className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 dark:text-purple-400" />
+                          ) : (
+                            <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 dark:text-blue-400" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="card-responsive-compact">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-responsive-xs text-gray-600 dark:text-gray-400 truncate">
+                            {selectedTeam?.teamType === "study"
+                              ? "Study Materials"
+                              : "Shared Files"}
+                          </p>
+                          <p className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100">
+                            {sharedResources.length}
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {selectedTeam?.teamType === "study" ? (
+                            <BookOpen className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600 dark:text-emerald-400" />
+                          ) : (
+                            <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 dark:text-green-400" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="card-responsive-compact">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-responsive-xs text-gray-600 dark:text-gray-400 truncate">
+                            {selectedTeam?.teamType === "study"
+                              ? "Study Sessions"
+                              : "Messages"}
+                          </p>
+                          <p className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100">
+                            {selectedTeam?.teamType === "study"
+                              ? projects.length
+                              : 0}
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {selectedTeam?.teamType === "study" ? (
+                            <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-600 dark:text-indigo-400" />
+                          ) : (
+                            <MessageSquare className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 dark:text-purple-400" />
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                )}
 
-                {/* Stats */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-slate-700">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {selectedTeam?.teamType === "study"
-                            ? "Study Partners"
-                            : "Team Members"}
-                        </p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          {getTeamMembers().length}
-                        </p>
+                  {/* Study Progress Section - Only for Study Teams */}
+                  {selectedTeam?.teamType === "study" && (
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
+                      <div className="p-4 border-b border-gray-200 dark:border-slate-700">
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                          <Target className="w-5 h-5 mr-2 text-purple-500" />
+                          Study Progress
+                        </h2>
                       </div>
-                      {selectedTeam?.teamType === "study" ? (
-                        <GraduationCap className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-                      ) : (
-                        <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                      )}
+                      <div className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Weekly Study Goal */}
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Weekly Study Goal
+                              </span>
+                              <span className="text-sm text-purple-600 dark:text-purple-400">
+                                12 / 20 hours
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                              <div
+                                className="bg-purple-600 h-2 rounded-full"
+                                style={{ width: "60%" }}
+                              ></div>
+                            </div>
+                          </div>
+
+                          {/* Study Streak */}
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Study Streak
+                              </span>
+                              <span className="text-sm text-emerald-600 dark:text-emerald-400">
+                                7 days
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              {[...Array(7)].map((_, i) => (
+                                <div
+                                  key={i}
+                                  className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center"
+                                >
+                                  <Award className="w-3 h-3 text-white" />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Study Achievements */}
+                        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-700">
+                          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                            Recent Achievements
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200">
+                              <Award className="w-3 h-3 mr-1" />
+                              Week Warrior
+                            </span>
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200">
+                              <TrendingUp className="w-3 h-3 mr-1" />
+                              Progress Master
+                            </span>
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200">
+                              <Calendar className="w-3 h-3 mr-1" />
+                              Consistent Learner
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-slate-700">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {selectedTeam?.teamType === "study"
-                            ? "Study Materials"
-                            : "Shared Files"}
-                        </p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          {sharedResources.length}
-                        </p>
-                      </div>
-                      {selectedTeam?.teamType === "study" ? (
-                        <BookOpen className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
-                      ) : (
-                        <FileText className="w-8 h-8 text-green-600 dark:text-green-400" />
-                      )}
+                  {/* Recent Activity */}
+                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
+                    <div className="p-4 border-b border-gray-200">
+                      <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                        <Activity className="w-5 h-5 mr-2 text-orange-500" />
+                        Recent Activity
+                      </h2>
                     </div>
-                  </div>
-
-                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-slate-700">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {selectedTeam?.teamType === "study"
-                            ? "Study Sessions"
-                            : "Messages"}
-                        </p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          {selectedTeam?.teamType === "study"
-                            ? projects.length
-                            : 0}
-                        </p>
-                      </div>
-                      {selectedTeam?.teamType === "study" ? (
-                        <Clock className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                    <div className="p-6">
+                      {teamActivities.length > 0 ? (
+                        <div className="space-y-3">
+                          {teamActivities.slice(0, 5).map((activity) => (
+                            <div
+                              key={activity.id}
+                              className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                            >
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <Activity className="w-4 h-4 text-blue-600" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm text-gray-900">
+                                  <span className="font-medium">
+                                    {activity.userName}
+                                  </span>{" "}
+                                  {activity.action} {activity.target}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {activity.timestamp.toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       ) : (
-                        <MessageSquare className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                        <p className="text-center text-gray-500">
+                          No recent activity
+                        </p>
                       )}
                     </div>
                   </div>
                 </div>
+              )}
 
-                {/* Study Progress Section - Only for Study Teams */}
-                {selectedTeam?.teamType === "study" && (
-                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
-                    <div className="p-4 border-b border-gray-200 dark:border-slate-700">
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                        <Target className="w-5 h-5 mr-2 text-purple-500" />
-                        Study Progress
-                      </h2>
-                    </div>
-                    <div className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Weekly Study Goal */}
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Weekly Study Goal
-                            </span>
-                            <span className="text-sm text-purple-600 dark:text-purple-400">
-                              12 / 20 hours
-                            </span>
+              {activeTab === "members" && (
+                <div className="space-responsive">
+                  <div className="grid-responsive gap-responsive">
+                    {getTeamMembers().map((member) => (
+                      <div key={member.id} className="card-responsive">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="relative flex-shrink-0">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                                <span className="text-responsive-sm font-medium text-blue-600 dark:text-blue-400">
+                                  {member.name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                              <div
+                                className={`absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-white dark:border-slate-800 ${
+                                  member.isOnline
+                                    ? "bg-green-500"
+                                    : "bg-gray-400"
+                                }`}
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-responsive-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                                {member.name}
+                              </h3>
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {member.role === "owner" && (
+                                  <Crown className="w-3 h-3 text-yellow-500 flex-shrink-0" />
+                                )}
+                                {member.role === "admin" && (
+                                  <Shield className="w-3 h-3 text-purple-500 flex-shrink-0" />
+                                )}
+                                <p className="text-responsive-xs text-gray-600 dark:text-gray-400 capitalize">
+                                  {member.role}
+                                </p>
+                              </div>
+                              <p className="text-responsive-xs text-gray-500 dark:text-gray-500 truncate">
+                                {member.email}
+                              </p>
+                            </div>
                           </div>
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div
-                              className="bg-purple-600 h-2 rounded-full"
-                              style={{ width: "60%" }}
-                            ></div>
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {/* Exit team button for current user (non-owners) */}
+                            {member.id === user?.id &&
+                              member.role !== "owner" && (
+                                <button
+                                  onClick={() => {
+                                    const hasExitRequest =
+                                      selectedTeam?.exitRequests?.[user.id];
+                                    if (hasExitRequest?.status === "pending") {
+                                      if (
+                                        confirm(
+                                          "You have a pending exit request. Would you like to cancel it?"
+                                        )
+                                      ) {
+                                        cancelExitRequest();
+                                      }
+                                    } else {
+                                      setShowExitRequestModal(true);
+                                    }
+                                  }}
+                                  className={`btn-touch px-2 py-1 rounded transition-colors text-responsive-xs ${
+                                    selectedTeam?.exitRequests?.[user.id]
+                                      ?.status === "pending"
+                                      ? "text-orange-600 hover:bg-orange-50 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400"
+                                      : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700"
+                                  }`}
+                                  title={
+                                    selectedTeam?.exitRequests?.[user.id]
+                                      ?.status === "pending"
+                                      ? "Cancel exit request"
+                                      : "Request to exit team"
+                                  }
+                                >
+                                  {selectedTeam?.exitRequests?.[user.id]
+                                    ?.status === "pending"
+                                    ? "Cancel"
+                                    : "Exit"}
+                                </button>
+                              )}
+
+                            {/* Remove member button for leaders */}
+                            {member.id !== user?.id &&
+                              member.role !== "owner" &&
+                              (getTeamMembers().find((m) => m.id === user?.id)
+                                ?.role === "owner" ||
+                                getTeamMembers().find((m) => m.id === user?.id)
+                                  ?.role === "admin") && (
+                                <button
+                                  onClick={() => confirmRemoveMember(member)}
+                                  className="btn-touch p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                                  title={`Remove ${member.name} from team`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                           </div>
                         </div>
 
-                        {/* Study Streak */}
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Study Streak
-                            </span>
-                            <span className="text-sm text-emerald-600 dark:text-emerald-400">
-                              7 days
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            {[...Array(7)].map((_, i) => (
-                              <div
-                                key={i}
-                                className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center"
-                              >
-                                <Award className="w-3 h-3 text-white" />
+                        {/* Exit request indicator */}
+                        {selectedTeam?.exitRequests?.[member.id]?.status ===
+                          "pending" && (
+                          <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                            <p className="text-sm text-orange-800">
+                              <span className="font-medium">
+                                Exit request pending
+                              </span>
+                              {selectedTeam.exitRequests[member.id].reason && (
+                                <>
+                                  <br />
+                                  <span className="text-orange-600">
+                                    Reason:{" "}
+                                    {
+                                      selectedTeam.exitRequests[member.id]
+                                        .reason
+                                    }
+                                  </span>
+                                </>
+                              )}
+                            </p>
+                            {(getTeamMembers().find((m) => m.id === user?.id)
+                              ?.role === "owner" ||
+                              getTeamMembers().find((m) => m.id === user?.id)
+                                ?.role === "admin") && (
+                              <div className="flex gap-2 mt-2">
+                                <button
+                                  onClick={() => approveExitRequest(member.id)}
+                                  className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => rejectExitRequest(member.id)}
+                                  className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                                >
+                                  Reject
+                                </button>
                               </div>
+                            )}
+                          </div>
+                        )}
+                        {member.skills.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-1">
+                            {member.skills.slice(0, 3).map((skill) => (
+                              <span
+                                key={skill}
+                                className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded"
+                              >
+                                {skill}
+                              </span>
                             ))}
+                            {member.skills.length > 3 && (
+                              <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                                +{member.skills.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "files" && (
+                <div className="space-responsive">
+                  <div className="flex-responsive items-center justify-between mb-4">
+                    <h2 className="text-responsive-lg font-semibold text-gray-900 dark:text-gray-100">
+                      Team Files
+                    </h2>
+                    <button
+                      onClick={() => {
+                        setCurrentFolderId(null); // Default to root folder
+                        setShowFileShareModal(true);
+                      }}
+                      className="btn-touch px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-responsive-sm"
+                    >
+                      <Share2 className="w-4 h-4 flex-shrink-0" />
+                      <span className="hidden sm:inline">Share File</span>
+                      <span className="sm:hidden">Share</span>
+                    </button>
+                  </div>
+
+                  <TeamFileManager
+                    teamId={selectedTeam?.id || ""}
+                    teamMembers={getTeamMembers()}
+                    onFilePreview={(file) => {
+                      console.log("🔍 File preview requested for:", {
+                        name: file.name,
+                        type: file.type,
+                        storageType: file.storageType,
+                        hasContent: !!file.content,
+                        hasUrl: !!file.url,
+                        fileType: file.fileType,
+                      });
+
+                      // Convert TeamFolderItem to SharedFile format and use existing preview logic
+                      const sharedFile = {
+                        id: file.id,
+                        fileName: file.name,
+                        fileType: file.fileType,
+                        fileSize: file.fileSize,
+                        content: file.content,
+                        url: file.url,
+                        storageType: file.storageType,
+                        sharedAt: file.createdAt,
+                        sharedBy: file.createdBy,
+                      };
+
+                      // Use the existing handlePreviewFile function which has all the PDF logic
+                      handlePreviewFile(sharedFile);
+                    }}
+                    onFileShare={(file, event) => {
+                      const target = event.target as HTMLElement;
+                      if (target && target.getBoundingClientRect) {
+                        const rect = target.getBoundingClientRect();
+                        setShareMenuPosition({
+                          x: rect.left,
+                          y: rect.bottom + 5,
+                        });
+                      } else {
+                        // Fallback positioning if target is not available
+                        setShareMenuPosition({
+                          x: event.clientX || 100,
+                          y: event.clientY || 100,
+                        });
+                      }
+                      setSelectedFileForShare(file as any);
+                      setShowShareMenu(true);
+                    }}
+                    onShareFileClick={(folderId) => {
+                      setCurrentFolderId(folderId);
+                      setShowFileShareModal(true);
+                    }}
+                  />
+                </div>
+              )}
+
+              {activeTab === "projects" && (
+                <div className="space-responsive">
+                  <div className="card-responsive">
+                    <div className="p-responsive border-b border-gray-200 dark:border-slate-700 flex-responsive items-center justify-between">
+                      <h2 className="text-responsive-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                        <Folder className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        <span className="truncate">Team Projects</span>
+                      </h2>
+                      <button
+                        onClick={() => {
+                          setEditingProject(null);
+                          setShowCreateProjectModal(true);
+                        }}
+                        className="btn-touch px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 text-responsive-sm flex-shrink-0"
+                      >
+                        <Plus className="w-4 h-4 flex-shrink-0" />
+                        <span className="hidden sm:inline">New Project</span>
+                        <span className="sm:hidden">New</span>
+                      </button>
+                    </div>
+                    <div className="p-responsive">
+                      {/* Project Statistics */}
+                      <div className="grid-responsive gap-responsive mb-6">
+                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-responsive-sm">
+                          <div className="flex items-center">
+                            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg flex-shrink-0">
+                              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div className="ml-3 min-w-0 flex-1">
+                              <p className="text-responsive-xs font-medium text-green-900 dark:text-green-100 truncate">
+                                Active Projects
+                              </p>
+                              <p className="text-responsive-lg font-bold text-green-600 dark:text-green-400">
+                                {projectStats.active}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-responsive-sm">
+                          <div className="flex items-center">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex-shrink-0">
+                              <Star className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div className="ml-3 min-w-0 flex-1">
+                              <p className="text-responsive-xs font-medium text-blue-900 dark:text-blue-100 truncate">
+                                In Progress
+                              </p>
+                              <p className="text-responsive-lg font-bold text-blue-600 dark:text-blue-400">
+                                {projectStats.inProgress}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-responsive-sm">
+                          <div className="flex items-center">
+                            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex-shrink-0">
+                              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <div className="ml-3 min-w-0 flex-1">
+                              <p className="text-responsive-xs font-medium text-purple-900 dark:text-purple-100 truncate">
+                                Team Members
+                              </p>
+                              <p className="text-responsive-lg font-bold text-purple-600 dark:text-purple-400">
+                                {
+                                  Object.keys(selectedTeam?.members || {})
+                                    .length
+                                }
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-orange-50 rounded-lg p-4">
+                          <div className="flex items-center">
+                            <div className="p-2 bg-orange-100 rounded-lg">
+                              <CheckCircle className="w-5 h-5 text-orange-600" />
+                            </div>
+                            <div className="ml-3">
+                              <p className="text-sm font-medium text-orange-900">
+                                Completed
+                              </p>
+                              <p className="text-2xl font-bold text-orange-600">
+                                {projectStats.completed}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* Study Achievements */}
-                      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-700">
-                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                          Recent Achievements
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200">
-                            <Award className="w-3 h-3 mr-1" />
-                            Week Warrior
-                          </span>
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200">
-                            <TrendingUp className="w-3 h-3 mr-1" />
-                            Progress Master
-                          </span>
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200">
-                            <Calendar className="w-3 h-3 mr-1" />
-                            Consistent Learner
-                          </span>
-                        </div>
+                      {/* Projects List */}
+                      <div className="space-y-4">
+                        {projects.length > 0 ? (
+                          projects.map((project) => {
+                            const getStatusColor = (
+                              status: TeamProject["status"]
+                            ) => {
+                              switch (status) {
+                                case "active":
+                                  return "bg-green-100 text-green-800";
+                                case "in-progress":
+                                  return "bg-blue-100 text-blue-800";
+                                case "completed":
+                                  return "bg-gray-100 text-gray-800";
+                                case "on-hold":
+                                  return "bg-yellow-100 text-yellow-800";
+                                case "cancelled":
+                                  return "bg-red-100 text-red-800";
+                                case "planning":
+                                  return "bg-purple-100 text-purple-800";
+                                default:
+                                  return "bg-gray-100 text-gray-800";
+                              }
+                            };
+
+                            const getProgressColor = (progress: number) => {
+                              if (progress >= 80)
+                                return "bg-green-100 text-green-800";
+                              if (progress >= 50)
+                                return "bg-blue-100 text-blue-800";
+                              if (progress >= 25)
+                                return "bg-yellow-100 text-yellow-800";
+                              return "bg-red-100 text-red-800";
+                            };
+
+                            const getPriorityIcon = (
+                              priority: TeamProject["priority"]
+                            ) => {
+                              switch (priority) {
+                                case "urgent":
+                                  return "🔥";
+                                case "high":
+                                  return "⚡";
+                                case "medium":
+                                  return "📋";
+                                case "low":
+                                  return "📝";
+                                default:
+                                  return "📋";
+                              }
+                            };
+
+                            return (
+                              <div
+                                key={project.id}
+                                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                              >
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                      <Folder className="w-5 h-5 text-green-600" />
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <h3 className="font-medium text-gray-900">
+                                          {project.name}
+                                        </h3>
+                                        <span className="text-sm">
+                                          {getPriorityIcon(project.priority)}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-gray-500">
+                                        Updated{" "}
+                                        {project.updatedAt.toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`px-2 py-1 text-xs rounded-full capitalize ${getStatusColor(
+                                        project.status
+                                      )}`}
+                                    >
+                                      {project.status.replace("-", " ")}
+                                    </span>
+                                    <span
+                                      className={`px-2 py-1 text-xs rounded-full ${getProgressColor(
+                                        project.progress
+                                      )}`}
+                                    >
+                                      {project.progress}% Complete
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <p className="text-gray-600 text-sm mb-3">
+                                  {project.description ||
+                                    "No description provided"}
+                                </p>
+
+                                {/* Tags */}
+                                {project.tags.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mb-3">
+                                    {project.tags.slice(0, 3).map((tag) => (
+                                      <span
+                                        key={tag}
+                                        className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
+                                      >
+                                        <Hash className="w-3 h-3 mr-1" />
+                                        {tag}
+                                      </span>
+                                    ))}
+                                    {project.tags.length > 3 && (
+                                      <span className="text-xs text-gray-500">
+                                        +{project.tags.length - 3} more
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Tasks Summary */}
+                                <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-gray-600">
+                                      Tasks:
+                                    </span>
+                                    <span className="font-medium text-gray-900">
+                                      {project.stats.completedTasks}/
+                                      {project.stats.totalTasks} completed
+                                    </span>
+                                  </div>
+                                  {project.stats.totalTasks > 0 && (
+                                    <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                      <div
+                                        className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                                        style={{
+                                          width: `${
+                                            (project.stats.completedTasks /
+                                              project.stats.totalTasks) *
+                                            100
+                                          }%`,
+                                        }}
+                                      ></div>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex -space-x-2">
+                                      {project.assignedMembers
+                                        .slice(0, 3)
+                                        .map((memberId) => {
+                                          const member = getTeamMembers().find(
+                                            (m) => m.id === memberId
+                                          );
+                                          return member ? (
+                                            <div
+                                              key={member.id}
+                                              className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white"
+                                              title={member.name}
+                                            >
+                                              {member.name
+                                                .charAt(0)
+                                                .toUpperCase()}
+                                            </div>
+                                          ) : null;
+                                        })}
+                                    </div>
+                                    {project.assignedMembers.length > 3 && (
+                                      <span className="text-sm text-gray-500">
+                                        +{project.assignedMembers.length - 3}{" "}
+                                        more
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() =>
+                                        handleAddTaskToProject(project)
+                                      }
+                                      className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                                      title="Add Task"
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                      Task
+                                    </button>
+                                    <button
+                                      onClick={() => handleEditProject(project)}
+                                      className="text-gray-600 hover:text-gray-800 text-sm flex items-center gap-1"
+                                      title="Edit Project"
+                                    >
+                                      <Edit3 className="w-3 h-3" />
+                                      Edit
+                                    </button>
+                                    <div className="text-sm text-gray-500">
+                                      {project.dueDate
+                                        ? `Due: ${project.dueDate.toLocaleDateString()}`
+                                        : project.status === "completed" &&
+                                          project.completedDate
+                                        ? `Completed: ${project.completedDate.toLocaleDateString()}`
+                                        : "No due date"}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="text-center py-12">
+                            <Folder className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                              No Projects Yet
+                            </h3>
+                            <p className="text-gray-500 mb-4">
+                              Create your first project to start collaborating
+                              with your team.
+                            </p>
+                            <button
+                              onClick={() => {
+                                setEditingProject(null);
+                                setShowCreateProjectModal(true);
+                              }}
+                              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 mx-auto"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Create First Project
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Recent Activity */}
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
-                  <div className="p-4 border-b border-gray-200">
-                    <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-                      <Activity className="w-5 h-5 mr-2 text-orange-500" />
-                      Recent Activity
+              {activeTab === "chat" && (
+                <div className="card-responsive h-full flex flex-col">
+                  <div className="p-responsive border-b border-gray-200 dark:border-slate-700">
+                    <h2 className="text-responsive-lg font-semibold text-gray-900 dark:text-gray-100">
+                      Team Chat
                     </h2>
                   </div>
-                  <div className="p-6">
-                    {teamActivities.length > 0 ? (
+                  <div className="flex-1 p-responsive overflow-y-auto scroll-area-mobile">
+                    {messages.length > 0 ? (
                       <div className="space-y-3">
-                        {teamActivities.slice(0, 5).map((activity) => (
-                          <div
-                            key={activity.id}
-                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
-                          >
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                              <Activity className="w-4 h-4 text-blue-600" />
+                        {messages.map((message) => (
+                          <div key={message.id} className="flex gap-3">
+                            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-responsive-xs font-medium text-blue-600 dark:text-blue-400">
+                                {message.userName.charAt(0).toUpperCase()}
+                              </span>
                             </div>
-                            <div className="flex-1">
-                              <p className="text-sm text-gray-900">
-                                <span className="font-medium">
-                                  {activity.userName}
-                                </span>{" "}
-                                {activity.action} {activity.target}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {activity.timestamp.toLocaleString()}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-medium text-responsive-sm text-gray-900 dark:text-gray-100">
+                                  {message.userName}
+                                </span>
+                                <span className="text-responsive-xs text-gray-500 dark:text-gray-400">
+                                  {message.timestamp.toLocaleTimeString()}
+                                </span>
+                              </div>
+                              <p className="text-responsive-sm text-gray-900 dark:text-gray-100 mt-1 break-words">
+                                {message.message}
                               </p>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-center text-gray-500">
-                        No recent activity
-                      </p>
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-responsive-sm text-gray-500 dark:text-gray-400 text-center">
+                          No messages yet. Start the conversation!
+                        </p>
+                      </div>
                     )}
                   </div>
+                  <div className="p-responsive border-t border-gray-200 dark:border-slate-700">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                        placeholder="Type a message..."
+                        className="input-mobile flex-1"
+                      />
+                      <button
+                        onClick={sendMessage}
+                        disabled={!newMessage.trim()}
+                        className="btn-touch px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {activeTab === "members" && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {getTeamMembers().map((member) => (
-                    <div
-                      key={member.id}
-                      className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-slate-700"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="relative">
-                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                              <span className="text-sm font-medium text-blue-600">
-                                {member.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                            <div
-                              className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
-                                member.isOnline ? "bg-green-500" : "bg-gray-400"
-                              }`}
+              {activeTab === "study" && selectedTeam && (
+                <StudyTeam teamId={selectedTeam.id} />
+              )}
+
+              {activeTab === "settings" && selectedTeam && (
+                <div className="space-responsive">
+                  <div className="card-responsive">
+                    <div className="p-responsive border-b border-gray-200 dark:border-slate-700">
+                      <h2 className="text-responsive-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                        <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
+                        <span className="truncate">Team Settings</span>
+                      </h2>
+                    </div>
+                    <div className="p-responsive space-responsive">
+                      <div className="space-responsive">
+                        <h3 className="text-responsive-base font-medium text-gray-900 dark:text-gray-100">
+                          Team Information
+                        </h3>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-responsive">
+                          <div>
+                            <label className="block text-responsive-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Team Name
+                            </label>
+                            <input
+                              type="text"
+                              value={selectedTeam.name}
+                              className="input-mobile"
+                              readOnly
                             />
                           </div>
                           <div>
-                            <h3 className="font-medium text-gray-900">
-                              {member.name}
-                            </h3>
-                            <div className="flex items-center gap-1">
-                              {member.role === "owner" && (
-                                <Crown className="w-3 h-3 text-yellow-500" />
-                              )}
-                              {member.role === "admin" && (
-                                <Shield className="w-3 h-3 text-purple-500" />
-                              )}
-                              <p className="text-sm text-gray-600 capitalize">
-                                {member.role}
+                            <label className="block text-responsive-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Team Size
+                            </label>
+                            <input
+                              type="text"
+                              value={selectedTeam.size}
+                              className="input-mobile"
+                              readOnly
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-responsive-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Description
+                          </label>
+                          <textarea
+                            value={selectedTeam.description}
+                            rows={3}
+                            className="textarea-mobile"
+                            readOnly
+                          />
+                        </div>
+                      </div>
+
+                      {selectedTeam.inviteCode && (
+                        <div className="space-y-4">
+                          <h3 className="text-md font-medium text-gray-900">
+                            Team Invite
+                          </h3>
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-sm text-gray-600">
+                                Invite Code
                               </p>
+                              <button
+                                onClick={() =>
+                                  copyInviteCode(selectedTeam.inviteCode!)
+                                }
+                                className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                              >
+                                <Copy className="w-3 h-3" />
+                                Copy Link
+                              </button>
                             </div>
-                            <p className="text-xs text-gray-500">
-                              {member.email}
+                            <p className="font-mono text-lg font-bold text-blue-600">
+                              {selectedTeam.inviteCode}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Share this code with people you want to invite to
+                              your team
                             </p>
                           </div>
                         </div>
-                        {/* Action buttons */}
-                        <div className="flex items-center gap-2">
-                          {/* Exit team button for current user (non-owners) */}
-                          {member.id === user?.id &&
-                            member.role !== "owner" && (
-                              <button
-                                onClick={() => {
-                                  const hasExitRequest =
-                                    selectedTeam?.exitRequests?.[user.id];
-                                  if (hasExitRequest?.status === "pending") {
-                                    if (
-                                      confirm(
-                                        "You have a pending exit request. Would you like to cancel it?"
-                                      )
-                                    ) {
-                                      cancelExitRequest();
-                                    }
-                                  } else {
-                                    setShowExitRequestModal(true);
-                                  }
-                                }}
-                                className={`p-1 rounded transition-colors text-sm px-2 py-1 ${
-                                  selectedTeam?.exitRequests?.[user.id]
-                                    ?.status === "pending"
-                                    ? "text-orange-600 hover:bg-orange-50 bg-orange-100"
-                                    : "text-gray-600 hover:bg-gray-50"
-                                }`}
-                                title={
-                                  selectedTeam?.exitRequests?.[user.id]
-                                    ?.status === "pending"
-                                    ? "Cancel exit request"
-                                    : "Request to exit team"
-                                }
-                              >
-                                {selectedTeam?.exitRequests?.[user.id]
-                                  ?.status === "pending"
-                                  ? "Cancel Exit"
-                                  : "Exit Team"}
-                              </button>
-                            )}
+                      )}
 
-                          {/* Remove member button for leaders */}
-                          {member.id !== user?.id &&
-                            member.role !== "owner" &&
-                            (getTeamMembers().find((m) => m.id === user?.id)
-                              ?.role === "owner" ||
-                              getTeamMembers().find((m) => m.id === user?.id)
-                                ?.role === "admin") && (
+                      {/* Danger Zone - Only for team owners */}
+                      {getTeamMembers().find((m) => m.id === user?.id)?.role ===
+                        "owner" && (
+                        <div className="space-y-4">
+                          <h3 className="text-md font-medium text-red-900">
+                            Danger Zone
+                          </h3>
+                          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-medium text-red-900">
+                                  Delete Team
+                                </h4>
+                                <p className="text-sm text-red-700 mt-1">
+                                  Permanently delete this team and all
+                                  associated data. This action cannot be undone.
+                                </p>
+                              </div>
                               <button
-                                onClick={() => confirmRemoveMember(member)}
-                                className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                title={`Remove ${member.name} from team`}
+                                onClick={() => setShowDeleteConfirmation(true)}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
                               >
                                 <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                        </div>
-                      </div>
-
-                      {/* Exit request indicator */}
-                      {selectedTeam?.exitRequests?.[member.id]?.status ===
-                        "pending" && (
-                        <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                          <p className="text-sm text-orange-800">
-                            <span className="font-medium">
-                              Exit request pending
-                            </span>
-                            {selectedTeam.exitRequests[member.id].reason && (
-                              <>
-                                <br />
-                                <span className="text-orange-600">
-                                  Reason:{" "}
-                                  {selectedTeam.exitRequests[member.id].reason}
-                                </span>
-                              </>
-                            )}
-                          </p>
-                          {(getTeamMembers().find((m) => m.id === user?.id)
-                            ?.role === "owner" ||
-                            getTeamMembers().find((m) => m.id === user?.id)
-                              ?.role === "admin") && (
-                            <div className="flex gap-2 mt-2">
-                              <button
-                                onClick={() => approveExitRequest(member.id)}
-                                className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => rejectExitRequest(member.id)}
-                                className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {member.skills.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-1">
-                          {member.skills.slice(0, 3).map((skill) => (
-                            <span
-                              key={skill}
-                              className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                          {member.skills.length > 3 && (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                              +{member.skills.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {activeTab === "files" && (
-              <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100">
-                    Team Files
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setCurrentFolderId(null); // Default to root folder
-                      setShowFileShareModal(true);
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm sm:text-base"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    Share File
-                  </button>
-                </div>
-
-                <TeamFileManager
-                  teamId={selectedTeam?.id || ""}
-                  teamMembers={getTeamMembers()}
-                  onFilePreview={(file) => {
-                    console.log("🔍 File preview requested for:", {
-                      name: file.name,
-                      type: file.type,
-                      storageType: file.storageType,
-                      hasContent: !!file.content,
-                      hasUrl: !!file.url,
-                      fileType: file.fileType,
-                    });
-
-                    // Convert TeamFolderItem to SharedFile format and use existing preview logic
-                    const sharedFile = {
-                      id: file.id,
-                      fileName: file.name,
-                      fileType: file.fileType,
-                      fileSize: file.fileSize,
-                      content: file.content,
-                      url: file.url,
-                      storageType: file.storageType,
-                      sharedAt: file.createdAt,
-                      sharedBy: file.createdBy,
-                    };
-
-                    // Use the existing handlePreviewFile function which has all the PDF logic
-                    handlePreviewFile(sharedFile);
-                  }}
-                  onFileShare={(file, event) => {
-                    const target = event.target as HTMLElement;
-                    if (target && target.getBoundingClientRect) {
-                      const rect = target.getBoundingClientRect();
-                      setShareMenuPosition({
-                        x: rect.left,
-                        y: rect.bottom + 5,
-                      });
-                    } else {
-                      // Fallback positioning if target is not available
-                      setShareMenuPosition({
-                        x: event.clientX || 100,
-                        y: event.clientY || 100,
-                      });
-                    }
-                    setSelectedFileForShare(file as any);
-                    setShowShareMenu(true);
-                  }}
-                  onShareFileClick={(folderId) => {
-                    setCurrentFolderId(folderId);
-                    setShowFileShareModal(true);
-                  }}
-                />
-              </div>
-            )}
-
-            {activeTab === "projects" && (
-              <div className="space-y-6">
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
-                  <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                      <Folder className="w-5 h-5 text-green-600" />
-                      Team Projects
-                    </h2>
-                    <button
-                      onClick={() => {
-                        setEditingProject(null);
-                        setShowCreateProjectModal(true);
-                      }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 text-sm sm:text-base"
-                    >
-                      <Plus className="w-4 h-4" />
-                      New Project
-                    </button>
-                  </div>
-                  <div className="p-4">
-                    {/* Project Statistics */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                      <div className="bg-green-50 rounded-lg p-4">
-                        <div className="flex items-center">
-                          <div className="p-2 bg-green-100 rounded-lg">
-                            <CheckCircle className="w-5 h-5 text-green-600" />
-                          </div>
-                          <div className="ml-3">
-                            <p className="text-sm font-medium text-green-900">
-                              Active Projects
-                            </p>
-                            <p className="text-2xl font-bold text-green-600">
-                              {projectStats.active}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-blue-50 rounded-lg p-4">
-                        <div className="flex items-center">
-                          <div className="p-2 bg-blue-100 rounded-lg">
-                            <Star className="w-5 h-5 text-blue-600" />
-                          </div>
-                          <div className="ml-3">
-                            <p className="text-sm font-medium text-blue-900">
-                              In Progress
-                            </p>
-                            <p className="text-2xl font-bold text-blue-600">
-                              {projectStats.inProgress}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-purple-50 rounded-lg p-4">
-                        <div className="flex items-center">
-                          <div className="p-2 bg-purple-100 rounded-lg">
-                            <Users className="w-5 h-5 text-purple-600" />
-                          </div>
-                          <div className="ml-3">
-                            <p className="text-sm font-medium text-purple-900">
-                              Team Members
-                            </p>
-                            <p className="text-2xl font-bold text-purple-600">
-                              {Object.keys(selectedTeam?.members || {}).length}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-orange-50 rounded-lg p-4">
-                        <div className="flex items-center">
-                          <div className="p-2 bg-orange-100 rounded-lg">
-                            <CheckCircle className="w-5 h-5 text-orange-600" />
-                          </div>
-                          <div className="ml-3">
-                            <p className="text-sm font-medium text-orange-900">
-                              Completed
-                            </p>
-                            <p className="text-2xl font-bold text-orange-600">
-                              {projectStats.completed}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Projects List */}
-                    <div className="space-y-4">
-                      {projects.length > 0 ? (
-                        projects.map((project) => {
-                          const getStatusColor = (
-                            status: TeamProject["status"]
-                          ) => {
-                            switch (status) {
-                              case "active":
-                                return "bg-green-100 text-green-800";
-                              case "in-progress":
-                                return "bg-blue-100 text-blue-800";
-                              case "completed":
-                                return "bg-gray-100 text-gray-800";
-                              case "on-hold":
-                                return "bg-yellow-100 text-yellow-800";
-                              case "cancelled":
-                                return "bg-red-100 text-red-800";
-                              case "planning":
-                                return "bg-purple-100 text-purple-800";
-                              default:
-                                return "bg-gray-100 text-gray-800";
-                            }
-                          };
-
-                          const getProgressColor = (progress: number) => {
-                            if (progress >= 80)
-                              return "bg-green-100 text-green-800";
-                            if (progress >= 50)
-                              return "bg-blue-100 text-blue-800";
-                            if (progress >= 25)
-                              return "bg-yellow-100 text-yellow-800";
-                            return "bg-red-100 text-red-800";
-                          };
-
-                          const getPriorityIcon = (
-                            priority: TeamProject["priority"]
-                          ) => {
-                            switch (priority) {
-                              case "urgent":
-                                return "🔥";
-                              case "high":
-                                return "⚡";
-                              case "medium":
-                                return "📋";
-                              case "low":
-                                return "📝";
-                              default:
-                                return "📋";
-                            }
-                          };
-
-                          return (
-                            <div
-                              key={project.id}
-                              className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                            >
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                    <Folder className="w-5 h-5 text-green-600" />
-                                  </div>
-                                  <div>
-                                    <div className="flex items-center gap-2">
-                                      <h3 className="font-medium text-gray-900">
-                                        {project.name}
-                                      </h3>
-                                      <span className="text-sm">
-                                        {getPriorityIcon(project.priority)}
-                                      </span>
-                                    </div>
-                                    <p className="text-sm text-gray-500">
-                                      Updated{" "}
-                                      {project.updatedAt.toLocaleDateString()}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className={`px-2 py-1 text-xs rounded-full capitalize ${getStatusColor(
-                                      project.status
-                                    )}`}
-                                  >
-                                    {project.status.replace("-", " ")}
-                                  </span>
-                                  <span
-                                    className={`px-2 py-1 text-xs rounded-full ${getProgressColor(
-                                      project.progress
-                                    )}`}
-                                  >
-                                    {project.progress}% Complete
-                                  </span>
-                                </div>
-                              </div>
-
-                              <p className="text-gray-600 text-sm mb-3">
-                                {project.description ||
-                                  "No description provided"}
-                              </p>
-
-                              {/* Tags */}
-                              {project.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mb-3">
-                                  {project.tags.slice(0, 3).map((tag) => (
-                                    <span
-                                      key={tag}
-                                      className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
-                                    >
-                                      <Hash className="w-3 h-3 mr-1" />
-                                      {tag}
-                                    </span>
-                                  ))}
-                                  {project.tags.length > 3 && (
-                                    <span className="text-xs text-gray-500">
-                                      +{project.tags.length - 3} more
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Tasks Summary */}
-                              <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                                <div className="flex items-center justify-between text-sm">
-                                  <span className="text-gray-600">Tasks:</span>
-                                  <span className="font-medium text-gray-900">
-                                    {project.stats.completedTasks}/
-                                    {project.stats.totalTasks} completed
-                                  </span>
-                                </div>
-                                {project.stats.totalTasks > 0 && (
-                                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                                    <div
-                                      className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                                      style={{
-                                        width: `${
-                                          (project.stats.completedTasks /
-                                            project.stats.totalTasks) *
-                                          100
-                                        }%`,
-                                      }}
-                                    ></div>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <div className="flex -space-x-2">
-                                    {project.assignedMembers
-                                      .slice(0, 3)
-                                      .map((memberId) => {
-                                        const member = getTeamMembers().find(
-                                          (m) => m.id === memberId
-                                        );
-                                        return member ? (
-                                          <div
-                                            key={member.id}
-                                            className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white"
-                                            title={member.name}
-                                          >
-                                            {member.name
-                                              .charAt(0)
-                                              .toUpperCase()}
-                                          </div>
-                                        ) : null;
-                                      })}
-                                  </div>
-                                  {project.assignedMembers.length > 3 && (
-                                    <span className="text-sm text-gray-500">
-                                      +{project.assignedMembers.length - 3} more
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() =>
-                                      handleAddTaskToProject(project)
-                                    }
-                                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
-                                    title="Add Task"
-                                  >
-                                    <Plus className="w-3 h-3" />
-                                    Task
-                                  </button>
-                                  <button
-                                    onClick={() => handleEditProject(project)}
-                                    className="text-gray-600 hover:text-gray-800 text-sm flex items-center gap-1"
-                                    title="Edit Project"
-                                  >
-                                    <Edit3 className="w-3 h-3" />
-                                    Edit
-                                  </button>
-                                  <div className="text-sm text-gray-500">
-                                    {project.dueDate
-                                      ? `Due: ${project.dueDate.toLocaleDateString()}`
-                                      : project.status === "completed" &&
-                                        project.completedDate
-                                      ? `Completed: ${project.completedDate.toLocaleDateString()}`
-                                      : "No due date"}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="text-center py-12">
-                          <Folder className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">
-                            No Projects Yet
-                          </h3>
-                          <p className="text-gray-500 mb-4">
-                            Create your first project to start collaborating
-                            with your team.
-                          </p>
-                          <button
-                            onClick={() => {
-                              setEditingProject(null);
-                              setShowCreateProjectModal(true);
-                            }}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 mx-auto"
-                          >
-                            <Plus className="w-4 h-4" />
-                            Create First Project
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "chat" && (
-              <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 h-full flex flex-col">
-                <div className="p-4 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Team Chat
-                  </h2>
-                </div>
-                <div className="flex-1 p-4 overflow-y-auto">
-                  {messages.length > 0 ? (
-                    <div className="space-y-3">
-                      {messages.map((message) => (
-                        <div key={message.id} className="flex gap-3">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-medium text-blue-600">
-                              {message.userName.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">
-                                {message.userName}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {message.timestamp.toLocaleTimeString()}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-900 mt-1">
-                              {message.message}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <p className="text-gray-500">
-                        No messages yet. Start the conversation!
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div className="p-4 border-t border-gray-200">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                      placeholder="Type a message..."
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
-                      onClick={sendMessage}
-                      disabled={!newMessage.trim()}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Send className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "study" && selectedTeam && (
-              <StudyTeam teamId={selectedTeam.id} />
-            )}
-
-            {activeTab === "settings" && selectedTeam && (
-              <div className="space-y-6">
-                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
-                  <div className="p-4 border-b border-gray-200">
-                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                      <Settings className="w-5 h-5 text-gray-600" />
-                      Team Settings
-                    </h2>
-                  </div>
-                  <div className="p-4 space-y-6">
-                    <div className="space-y-4">
-                      <h3 className="text-md font-medium text-gray-900">
-                        Team Information
-                      </h3>
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Team Name
-                          </label>
-                          <input
-                            type="text"
-                            value={selectedTeam.name}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            readOnly
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Team Size
-                          </label>
-                          <input
-                            type="text"
-                            value={selectedTeam.size}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            readOnly
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Description
-                        </label>
-                        <textarea
-                          value={selectedTeam.description}
-                          rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          readOnly
-                        />
-                      </div>
-                    </div>
-
-                    {selectedTeam.inviteCode && (
-                      <div className="space-y-4">
-                        <h3 className="text-md font-medium text-gray-900">
-                          Team Invite
-                        </h3>
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm text-gray-600">Invite Code</p>
-                            <button
-                              onClick={() =>
-                                copyInviteCode(selectedTeam.inviteCode!)
-                              }
-                              className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                            >
-                              <Copy className="w-3 h-3" />
-                              Copy Link
-                            </button>
-                          </div>
-                          <p className="font-mono text-lg font-bold text-blue-600">
-                            {selectedTeam.inviteCode}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-2">
-                            Share this code with people you want to invite to
-                            your team
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Danger Zone - Only for team owners */}
-                    {getTeamMembers().find((m) => m.id === user?.id)?.role ===
-                      "owner" && (
-                      <div className="space-y-4">
-                        <h3 className="text-md font-medium text-red-900">
-                          Danger Zone
-                        </h3>
-                        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h4 className="font-medium text-red-900">
                                 Delete Team
-                              </h4>
-                              <p className="text-sm text-red-700 mt-1">
-                                Permanently delete this team and all associated
-                                data. This action cannot be undone.
-                              </p>
+                              </button>
                             </div>
-                            <button
-                              onClick={() => setShowDeleteConfirmation(true)}
-                              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              Delete Team
-                            </button>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       ) : (

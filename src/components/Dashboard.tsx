@@ -160,12 +160,12 @@ export const Dashboard: React.FC = () => {
   return (
     <DashboardLayout>
       <div
-        className="min-h-screen overflow-auto scroll-area transition-colors duration-300"
+        className="min-h-screen overflow-auto scroll-area-mobile transition-colors duration-300"
         data-component="dashboard"
       >
         {/* Header */}
         <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 p-responsive transition-colors duration-300">
-          <div className="max-w-7xl mx-auto">
+          <div className="container-mobile">
             <h1 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               Welcome back, {user?.username}!
             </h1>
@@ -175,33 +175,33 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto container-safe py-responsive">
+        <div className="container-mobile py-responsive">
           {/* Stats Grid - Enhanced for all screen sizes */}
-          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 xs:gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-responsive mb-6 sm:mb-8">
             {statCards.map((stat, index) => {
               const Icon = stat.icon;
               return (
                 <button
                   key={index}
                   onClick={stat.action}
-                  className="card-responsive text-left touch-manipulation"
+                  className="card-responsive-compact text-left btn-touch"
                 >
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
+                      <p className="text-responsive-xs font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
                         {stat.title}
                       </p>
-                      <p className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
+                      <p className="text-responsive-lg sm:text-responsive-xl font-bold text-gray-900 dark:text-gray-100">
                         {stat.value}
                       </p>
                     </div>
                     <div
-                      className={`w-8 h-8 xs:w-10 xs:h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 ml-2 ${getColorClasses(
+                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ml-2 ${getColorClasses(
                         stat.color,
                         stat.urgent
                       )}`}
                     >
-                      <Icon className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6" />
+                      <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                   </div>
                 </button>
@@ -211,18 +211,18 @@ export const Dashboard: React.FC = () => {
 
           {/* Overdue Tasks Alert - Enhanced mobile layout */}
           {stats.overdueTasks > 0 && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
-              <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center">
-                <div className="flex items-start sm:items-center flex-1">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-responsive mb-6 sm:mb-8">
+              <div className="flex-responsive items-center">
+                <div className="flex items-start sm:items-center flex-1 min-w-0">
                   <div className="bg-red-100 dark:bg-red-900/30 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
                     <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-sm sm:text-base font-medium text-red-800 dark:text-red-200">
+                    <h3 className="text-responsive-sm font-medium text-red-800 dark:text-red-200">
                       {stats.overdueTasks} overdue task
                       {stats.overdueTasks > 1 ? "s" : ""}
                     </h3>
-                    <p className="text-xs sm:text-sm text-red-600 dark:text-red-300 mt-1">
+                    <p className="text-responsive-xs text-red-600 dark:text-red-300 mt-1">
                       You have tasks that are past their due date. Review them
                       to stay on track.
                     </p>
@@ -230,7 +230,7 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <button
                   onClick={() => navigate("/tasks")}
-                  className="btn-touch px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium self-start sm:self-auto"
+                  className="btn-touch px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-responsive-sm font-medium flex-shrink-0"
                 >
                   View Tasks
                 </button>

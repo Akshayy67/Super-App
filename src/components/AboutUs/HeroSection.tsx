@@ -68,19 +68,19 @@ export const HeroSection: React.FC<ParallaxSectionProps> = ({
       )}
 
       {/* Hero content */}
-      <div className="relative z-10 text-center text-gray-900 dark:text-white px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full">
+      <div className="relative z-10 text-center text-gray-900 dark:text-white container-mobile max-w-5xl mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold mb-6 text-shadow-premium">
+          <h1 className="text-responsive-2xl sm:text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6 text-shadow-premium">
             What if you could unlock your{" "}
             <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
               Academic Potential?
             </span>
           </h1>
-          <div className="text-xl sm:text-2xl mb-8 text-gray-600 dark:text-gray-300 max-w-3xl mx-auto font-body space-y-4">
+          <div className="text-responsive-lg sm:text-xl md:text-2xl mb-8 text-gray-600 dark:text-gray-300 max-w-3xl mx-auto font-body space-responsive">
             <p className="font-heading font-medium text-gray-800 dark:text-gray-200">
               🤔 What if one platform could revolutionize your entire academic
               journey?
@@ -94,28 +94,28 @@ export const HeroSection: React.FC<ParallaxSectionProps> = ({
             </p>
           </div>
           <motion.div
-            className="hero-buttons"
+            className="hero-buttons flex flex-col sm:flex-row gap-4 sm:gap-6 items-center justify-center"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
           >
             <button
               onClick={handleStartJourney}
-              className="w-full sm:w-auto bg-blue-600 text-white px-8 py-4 rounded-lg font-heading font-semibold text-lg hover:bg-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 premium-button premium-focus"
+              className="btn-touch w-full sm:w-auto bg-blue-600 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-lg font-heading font-semibold text-responsive-base hover:bg-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 premium-button premium-focus"
               aria-label="Start your academic success journey with Super Study App"
             >
               Start Your Success Journey
             </button>
             <button
               onClick={handleViewDemo}
-              className="w-full sm:w-auto bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:from-yellow-300 hover:to-orange-400 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 premium-button premium-focus text-premium-medium"
+              className="btn-touch w-full sm:w-auto bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-lg font-semibold text-responsive-base hover:from-yellow-300 hover:to-orange-400 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 premium-button premium-focus text-premium-medium"
               aria-label="Explore all platform features through an interactive demo"
             >
               Explore All Features
             </button>
             <button
               onClick={handleLearnMore}
-              className="w-full sm:w-auto border-2 border-gray-400 text-gray-700 dark:border-gray-300 dark:text-gray-300 px-8 py-4 rounded-lg font-heading font-semibold text-lg hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white transition-all duration-300 hover:shadow-lg transform hover:-translate-y-0.5 premium-button premium-focus"
+              className="btn-touch w-full sm:w-auto border-2 border-gray-400 text-gray-700 dark:border-gray-300 dark:text-gray-300 px-6 py-3 sm:px-8 sm:py-4 rounded-lg font-heading font-semibold text-responsive-base hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white transition-all duration-300 hover:shadow-lg transform hover:-translate-y-0.5 premium-button premium-focus"
               aria-label="Learn about all the powerful tools available to students"
             >
               Learn More

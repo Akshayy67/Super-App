@@ -2620,40 +2620,44 @@ Important:
 
   // Show the template selection interface
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="container-mobile space-responsive">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+      <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl sm:rounded-3xl p-responsive text-white shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24"></div>
+        <div className="absolute top-0 right-0 w-32 h-32 sm:w-64 sm:h-64 bg-white/10 rounded-full -translate-y-16 translate-x-16 sm:-translate-y-32 sm:translate-x-32"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-48 sm:h-48 bg-white/5 rounded-full translate-y-12 -translate-x-12 sm:translate-y-24 sm:-translate-x-24"></div>
 
-        <div className="relative z-10 flex items-start justify-between">
-          <div className="max-w-2xl">
-            <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
+        <div className="relative z-10 flex-responsive items-start">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-responsive-2xl sm:text-4xl font-bold mb-4 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
               Mock Interview Practice
             </h2>
-            <p className="text-xl text-purple-100 mb-6 leading-relaxed">
+            <p className="text-responsive-lg sm:text-xl text-purple-100 mb-6 leading-relaxed">
               Master your interview skills with AI-powered practice sessions,
               personalized questions, and real-time feedback
             </p>
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-                <Headphones className="w-5 h-5 text-yellow-300" />
-                <span className="text-sm font-medium">Voice AI</span>
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-3 py-2 sm:px-4">
+                <Headphones className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300 flex-shrink-0" />
+                <span className="text-responsive-sm font-medium">Voice AI</span>
               </div>
-              <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-                <Video className="w-5 h-5 text-green-300" />
-                <span className="text-sm font-medium">Video Practice</span>
+              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-3 py-2 sm:px-4">
+                <Video className="w-4 h-4 sm:w-5 sm:h-5 text-green-300 flex-shrink-0" />
+                <span className="text-responsive-sm font-medium">
+                  Video Practice
+                </span>
               </div>
-              <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-                <MessageSquare className="w-5 h-5 text-blue-300" />
-                <span className="text-sm font-medium">Text Practice</span>
+              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-3 py-2 sm:px-4">
+                <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-blue-300 flex-shrink-0" />
+                <span className="text-responsive-sm font-medium">
+                  Text Practice
+                </span>
               </div>
             </div>
           </div>
-          <div className="hidden lg:block">
-            <div className="w-32 h-32 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center">
-              <Video className="w-16 h-16 text-white/60" />
+          <div className="hidden lg:block flex-shrink-0">
+            <div className="w-24 h-24 sm:w-32 sm:h-32 bg-white/20 backdrop-blur-sm rounded-2xl sm:rounded-3xl flex items-center justify-center">
+              <Video className="w-12 h-12 sm:w-16 sm:h-16 text-white/60" />
             </div>
           </div>
         </div>
@@ -2661,19 +2665,19 @@ Important:
 
       {/* Error Display */}
       {error && (
-        <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-2xl p-6 shadow-lg">
-          <div className="flex items-start space-x-4">
+        <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-2xl p-responsive shadow-lg">
+          <div className="flex-responsive items-start">
             <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
               <AlertCircle className="w-5 h-5 text-red-600" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-red-900 mb-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-red-900 mb-2 text-responsive-base">
                 Something went wrong
               </h3>
-              <p className="text-red-700 text-sm mb-3">{error}</p>
+              <p className="text-red-700 text-responsive-sm mb-3">{error}</p>
               <button
                 onClick={() => setError(null)}
-                className="inline-flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                className="btn-touch inline-flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-responsive-sm font-medium"
               >
                 <span>Dismiss</span>
               </button>
@@ -2684,24 +2688,24 @@ Important:
 
       {/* Browser Compatibility Issues */}
       {browserIssues.length > 0 && (
-        <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-2xl p-6 shadow-lg">
-          <div className="flex items-start space-x-4">
+        <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-2xl p-responsive shadow-lg">
+          <div className="flex-responsive items-start">
             <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
               <AlertCircle className="w-5 h-5 text-orange-600" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-orange-900 mb-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-orange-900 mb-2 text-responsive-base">
                 Browser Compatibility Issues
               </h3>
-              <ul className="text-orange-700 text-sm space-y-1 mb-3">
+              <ul className="text-orange-700 text-responsive-sm space-y-1 mb-3">
                 {browserIssues.map((issue, index) => (
-                  <li key={index} className="flex items-center space-x-2">
-                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                    <span>{issue}</span>
+                  <li key={index} className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full flex-shrink-0"></div>
+                    <span className="break-words">{issue}</span>
                   </li>
                 ))}
               </ul>
-              <p className="text-orange-600 text-sm font-medium">
+              <p className="text-orange-600 text-responsive-sm font-medium">
                 💡 Try using Chrome, Edge, or Firefox for the best experience.
               </p>
             </div>
@@ -2711,22 +2715,22 @@ Important:
 
       {/* Interview Templates */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+        <h3 className="text-responsive-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
           Choose Interview Type
         </h3>
 
         {/* Camera Option */}
-        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-800 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Camera className="w-6 h-6 text-white" />
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-responsive border border-blue-200 dark:border-blue-800 shadow-lg">
+          <div className="flex-responsive items-center">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                <Camera className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-lg mb-1">
+              <div className="min-w-0 flex-1">
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-responsive-base mb-1">
                   Enable Camera Preview
                 </h4>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-gray-600 dark:text-gray-400 text-responsive-sm">
                   Practice while seeing yourself on screen during the interview
                   for better self-awareness
                 </p>
@@ -2734,7 +2738,7 @@ Important:
             </div>
             <button
               onClick={() => setShowCameraPreview(!showCameraPreview)}
-              className={`flex items-center space-x-3 px-6 py-3 rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 ${
+              className={`btn-touch flex items-center gap-2 sm:gap-3 px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-xl flex-shrink-0 ${
                 showCameraPreview
                   ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/25"
                   : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500"
@@ -2742,13 +2746,13 @@ Important:
             >
               {showCameraPreview ? (
                 <>
-                  <Video className="w-5 h-5" />
-                  <span>Enabled</span>
+                  <Video className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="text-responsive-sm">Enabled</span>
                 </>
               ) : (
                 <>
-                  <VideoOff className="w-5 h-5" />
-                  <span>Disabled</span>
+                  <VideoOff className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="text-responsive-sm">Disabled</span>
                 </>
               )}
             </button>
