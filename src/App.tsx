@@ -15,8 +15,11 @@ import { useGlobalCopyListener } from "./hooks/useGlobalCopyListener";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthWrapper } from "./components/AuthWrapper";
+import { FeedbackButton } from "./components/FeedbackButton";
 // Import the file permissions fixer to make it available in console
 import "./utils/fixExistingFilePermissions";
+// Import EmailJS test functions for console testing
+import "./utils/testEmailJS";
 // Test utilities removed for production
 
 // Component to handle authenticated app content
@@ -212,6 +215,14 @@ const AuthenticatedApp: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Global Feedback Button */}
+        <FeedbackButton
+          position="bottom-right"
+          variant="floating"
+          size="md"
+          showLabel={true}
+        />
       </div>
     </ErrorBoundary>
   );
