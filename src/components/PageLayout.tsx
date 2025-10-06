@@ -127,6 +127,7 @@ export const AboutLayout: React.FC<{ children: React.ReactNode }> = ({
     backgroundOpacity="medium"
     animated={true}
     gradient={true}
+    showBackground={false}
   >
     {children}
   </PageLayout>

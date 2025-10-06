@@ -43,7 +43,7 @@ import {
 } from "../utils/teamManagement";
 import { FileShareModal } from "./FileShareModal";
 import { JoinTeamModal } from "./JoinTeamModal";
-import { EmailTestPanel } from "./EmailTestPanel";
+// EmailTestPanel removed for production
 import { fileShareService } from "../utils/fileShareService";
 import { CreateProjectModal } from "./CreateProjectModal";
 import { AddProjectTaskModal } from "./AddProjectTaskModal";
@@ -147,7 +147,7 @@ export const TeamSpace: React.FC<{
   const [showJoinTeamModal, setShowJoinTeamModal] = useState(false);
   const [showFileShareModal, setShowFileShareModal] = useState(false);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  const [showEmailTestPanel, setShowEmailTestPanel] = useState(false);
+  // Email test panel removed for production
   const [activeTab, setActiveTab] = useState<
     | "overview"
     | "members"
@@ -1318,15 +1318,7 @@ export const TeamSpace: React.FC<{
                 >
                   <Settings className="w-5 h-5" />
                 </button>
-                {import.meta.env.VITE_DEBUG_MODE === "true" && (
-                  <button
-                    onClick={() => setShowEmailTestPanel(true)}
-                    className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                    title="Test Email Service"
-                  >
-                    <Mail className="w-5 h-5" />
-                  </button>
-                )}
+                {/* Email test panel removed for production */}
               </div>
             </div>
 
@@ -2695,8 +2687,7 @@ export const TeamSpace: React.FC<{
         }}
       />
 
-      {/* Email Test Panel */}
-      {showEmailTestPanel && <EmailTestPanel />}
+      {/* Email test panel removed for production */}
 
       {/* Create/Edit Project Modal */}
       <CreateProjectModal

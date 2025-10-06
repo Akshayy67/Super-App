@@ -62,13 +62,7 @@ body.about-us-page {
   overflow-y: visible !important;
 }
 
-/* Ensure fixed background text stays in place and is visible */
-.about-us-page .super-app-background {
-  position: fixed !important;
-  z-index: 15 !important;
-  pointer-events: none !important;
-  opacity: 0.6 !important; /* Override for better visibility */
-}
+/* Background text removed for About Us page */
 
 /* Ensure content sections have proper z-index to appear above background text */
 .about-us-page .parallax-section {

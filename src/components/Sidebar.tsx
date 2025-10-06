@@ -120,10 +120,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }}
             />
             <div>
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 truncate">
+              <h1 className="text-lg sm:text-xl font-display font-bold text-gray-900 dark:text-gray-100 truncate">
                 Super Study
               </h1>
-              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium">
+              <p className="text-xs sm:text-sm font-body text-gray-500 dark:text-gray-400 font-medium">
                 AI Powered Learning
               </p>
             </div>
@@ -153,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   }`}
                 >
                   <Icon className="w-5 h-5 mr-3 flex-shrink-0" />
-                  <span className="font-medium text-sm sm:text-base truncate">
+                  <span className="font-heading font-medium text-sm sm:text-base truncate">
                     {item.label}
                   </span>
                 </button>

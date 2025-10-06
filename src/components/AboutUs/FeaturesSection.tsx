@@ -80,16 +80,23 @@ export const FeaturesSection: React.FC<ParallaxSectionProps> = ({
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-6 font-playfair text-shadow-premium">
-            Complete Student Success Toolkit
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-gray-900 dark:text-gray-100 mb-6 text-shadow-premium">
+            What Tools Do Successful Students Use?
           </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto text-premium-light">
-            Discover an exquisitely crafted suite of academic and professional
-            tools, each designed with meticulous attention to detail and
-            engineered to accelerate your journey toward academic excellence,
-            career readiness, and lifelong success— all completely free for
-            early users.
-          </p>
+          <div className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto font-body space-y-4">
+            <p className="font-heading font-medium text-gray-800 dark:text-gray-200">
+              🛠️ What if you had access to every tool successful students use,
+              all in one place?
+            </p>
+            <p className="font-body">
+              🚀 <strong>Here's what we've built for you:</strong> An
+              exquisitely crafted suite of academic and professional tools, each
+              designed with meticulous attention to detail and engineered to
+              accelerate your journey toward academic excellence, career
+              readiness, and lifelong success—all completely free for early
+              users.
+            </p>
+          </div>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
@@ -102,20 +109,23 @@ export const FeaturesSection: React.FC<ParallaxSectionProps> = ({
               transition={{ duration: 0.6, delay: index * 0.1 }}
               viewport={{ once: true }}
               whileHover={prefersReducedMotion ? {} : { y: -5 }}
-              onClick={() =>
-                onOpenDemo && onOpenDemo(getFeatureDemoCategory(index))
-              }
+              onClick={() => {
+                if (onOpenDemo) {
+                  onOpenDemo(getFeatureDemoCategory(index));
+                }
+                // Could add fallback navigation here if needed
+              }}
             >
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <feature.icon className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex-shrink-0 font-playfair">
+              <h3 className="text-xl font-display font-bold text-gray-900 dark:text-gray-100 mb-4 flex-shrink-0">
                 {feature.title}
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 flex-grow mb-4 text-premium-body">
+              <p className="text-gray-600 dark:text-gray-400 flex-grow mb-4 font-body">
                 {feature.description}
               </p>
-              <div className="text-sm text-blue-600 dark:text-blue-400 font-medium group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+              <div className="text-sm text-blue-600 dark:text-blue-400 font-heading font-medium group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
                 Click to see demo →
               </div>
             </motion.div>

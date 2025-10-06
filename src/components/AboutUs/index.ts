@@ -4,10 +4,7 @@ export { FeaturesSection } from "./FeaturesSection";
 export { WhyChooseUsSection } from "./WhyChooseUsSection";
 export { ContactSection } from "./ContactSection";
 export { LazyImage } from "./LazyImage";
-export { DemoViewer } from "./DemoViewer";
-export { DemoContent } from "./DemoContent";
-export { LazyDemoContent } from "./LazyDemoContent";
-export { DemoErrorBoundary } from "./DemoErrorBoundary";
+// Demo components removed for production
 export {
   SkipToMainContent,
   ScreenReaderOnly,
@@ -21,7 +18,4 @@ export type {
   ContactInfo,
   SectionProps,
   ParallaxSectionProps,
-  DemoStep,
-  DemoCategory,
-  DemoViewerProps,
 } from "./types";

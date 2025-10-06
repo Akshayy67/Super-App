@@ -30,19 +30,24 @@ export const PlatformGuideSection: React.FC<ParallaxSectionProps> = ({
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-6 font-playfair text-shadow-premium">
-            The Future of Student Success
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold text-gray-900 dark:text-gray-100 mb-6 text-shadow-premium">
+            What Does Student Success Look Like?
           </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-400 max-w-4xl mx-auto text-premium-light">
-            Super Study App represents the convergence of artificial
-            intelligence and academic excellence. We've crafted a comprehensive
-            ecosystem where sophisticated AI meets intuitive design, delivering
-            everything students need: from interview preparation and study
-            assistance to video collaboration and performance analytics.
-            Experience the power of personalized learning, seamless teamwork,
-            and data-driven insights—all in one elegant platform, completely
-            free for early users.
-          </p>
+          <div className="text-xl text-gray-600 dark:text-gray-400 max-w-4xl mx-auto font-body space-y-4">
+            <p className="font-heading font-medium text-gray-800 dark:text-gray-200">
+              🎯 Ever wondered what happens when artificial intelligence meets
+              academic excellence?
+            </p>
+            <p className="font-body">
+              💡 <strong>The answer is Super Study App:</strong> A comprehensive
+              ecosystem where sophisticated AI meets intuitive design,
+              delivering everything students need. From interview preparation
+              and study assistance to video collaboration and performance
+              analytics—experience the power of personalized learning, seamless
+              teamwork, and data-driven insights, all in one elegant platform,
+              completely free for early users.
+            </p>
+          </div>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -52,7 +57,7 @@ export const PlatformGuideSection: React.FC<ParallaxSectionProps> = ({
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
           >
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 font-playfair">
+            <h3 className="text-2xl font-display font-bold text-gray-900 dark:text-gray-100 mb-6">
               Built for Every Student
             </h3>
             <ul className="space-y-4">
@@ -66,7 +71,7 @@ export const PlatformGuideSection: React.FC<ParallaxSectionProps> = ({
                   viewport={{ once: true }}
                 >
                   <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700 dark:text-gray-300">
+                  <span className="font-body text-gray-700 dark:text-gray-300">
                     {item}
                   </span>
                 </motion.li>

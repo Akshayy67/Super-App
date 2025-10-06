@@ -45,7 +45,7 @@ import {
   EyeContactStatus,
   FaceDetectionStats,
 } from "../FaceDetectionOverlay";
-import { FaceDetectionDebug } from "../FaceDetectionDebug";
+// Face detection debug component removed for production
 import { DetectedFace } from "../../utils/faceDetection";
 import {
   PerformanceAnalytics,
@@ -3465,13 +3465,7 @@ Important:
         />
       )}
 
-      {/* Face Detection Debug Panel */}
-      <FaceDetectionDebug
-        faces={detectedFaces}
-        isEnabled={enableFaceDetection && isCameraActive}
-        isProcessing={faceDetection.isProcessing}
-        stats={faceDetection.stats}
-      />
+      {/* Face detection debug panel removed for production */}
     </div>
   );
 };

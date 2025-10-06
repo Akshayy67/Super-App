@@ -32,31 +32,7 @@ export interface SectionProps {
 // Props for parallax sections
 export interface ParallaxSectionProps extends SectionProps {
   yTransform?: any; // framer-motion transform value
-  onOpenDemo?: (category?: string) => void;
+  onOpenDemo?: (category?: string) => void; // Optional for backward compatibility
 }
 
-// Demo viewer interfaces
-export interface DemoStep {
-  id: string;
-  title: string;
-  description: string;
-  image?: string;
-  video?: string;
-  features: string[];
-  category: "interview" | "video" | "study" | "analytics";
-}
-
-export interface DemoCategory {
-  id: string;
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  color: string;
-  steps: DemoStep[];
-}
-
-export interface DemoViewerProps {
-  isOpen: boolean;
-  onClose: () => void;
-  initialCategory?: string;
-}
+// Demo interfaces removed for production

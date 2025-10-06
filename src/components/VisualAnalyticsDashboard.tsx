@@ -65,7 +65,7 @@ import { useAnalyticsDataReadOnly } from "../hooks/useAnalyticsData";
 import { AnalyticsValidationBanner } from "./AnalyticsValidationBanner";
 import { InterviewDataManager } from "./InterviewDataManager";
 import { DetailedInterviewHistory } from "./DetailedInterviewHistory";
-import { DemoDataPopulator } from "./DemoDataPopulator";
+// Demo data populator removed for production
 
 interface VisualAnalyticsDashboardProps {
   currentPerformance?: InterviewPerformanceData;
@@ -690,15 +690,7 @@ export const VisualAnalyticsDashboard: React.FC<
                 </button>
               </div>
 
-              {/* Demo Data Populator */}
-              <div className="mt-6">
-                <DemoDataPopulator
-                  onDataPopulated={() => {
-                    // Force refresh of the analytics data
-                    window.location.reload();
-                  }}
-                />
-              </div>
+              {/* Demo data populator removed for production */}
 
               <p
                 className={`text-sm mt-4 ${

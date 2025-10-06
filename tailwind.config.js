@@ -4,6 +4,35 @@ export default {
   darkMode: "class", // Enable class-based dark mode
   theme: {
     extend: {
+      // Premium Zara-like font families
+      fontFamily: {
+        display: ["Playfair Display", "Georgia", "serif"],
+        heading: [
+          "Montserrat",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "sans-serif",
+        ],
+        body: [
+          "Inter",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "sans-serif",
+        ],
+        sans: [
+          "Montserrat",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Arial",
+          "sans-serif",
+        ],
+        serif: ["Playfair Display", "Georgia", "Times New Roman", "serif"],
+      },
       // Custom theme colors using CSS variables
       colors: {
         // Primary theme colors

@@ -155,10 +155,12 @@ export const EnhancedApp: React.FC = () => {
                 <Brain className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">
+                <h1 className="text-lg font-display font-bold text-gray-900">
                   AI Interview Pro
                 </h1>
-                <p className="text-xs text-gray-500">Enhanced Analysis Suite</p>
+                <p className="text-xs font-body text-gray-500">
+                  Enhanced Analysis Suite
+                </p>
               </div>
             </div>
           </div>
@@ -201,8 +203,8 @@ export const EnhancedApp: React.FC = () => {
                 >
                   <Icon className="w-5 h-5" />
                   <div className="flex-1">
-                    <div className="font-medium">{item.label}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="font-heading font-medium">{item.label}</div>
+                    <div className="text-xs font-body text-gray-500">
                       {item.description}
                     </div>
                   </div>
@@ -268,13 +270,13 @@ export const EnhancedApp: React.FC = () => {
                 </button>
 
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">
+                  <h2 className="text-xl font-heading font-semibold text-gray-900">
                     {
                       navigationItems.find((item) => item.id === currentView)
                         ?.label
                     }
                   </h2>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm font-body text-gray-500">
                     {
                       navigationItems.find((item) => item.id === currentView)
                         ?.description

@@ -7,7 +7,6 @@ import {
   FeaturesSection,
   WhyChooseUsSection,
   ContactSection,
-  DemoViewer,
 } from "./AboutUs/index";
 import { SkipToMainContent } from "./AboutUs/AccessibilityUtils";
 import { AboutLayout } from "./PageLayout";
@@ -17,8 +16,7 @@ export const AboutUs: React.FC = () => {
   const { resolvedTheme } = useThemeContext();
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isDemoOpen, setIsDemoOpen] = useState(false);
-  const [demoCategory, setDemoCategory] = useState<string>("interview");
+  // Demo functionality removed for production
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Add body class for About Us specific styles
@@ -89,17 +87,7 @@ export const AboutUs: React.FC = () => {
   const featuresYSpring = useSpring(featuresY, springConfig);
   const whyChooseYSpring = useSpring(whyChooseY, springConfig);
 
-  // Demo viewer handlers
-  const handleOpenDemo = (category?: string) => {
-    if (category) {
-      setDemoCategory(category);
-    }
-    setIsDemoOpen(true);
-  };
-
-  const handleCloseDemo = () => {
-    setIsDemoOpen(false);
-  };
+  // Demo handlers removed for production
 
   return (
     <AboutLayout>
@@ -114,7 +102,6 @@ export const AboutUs: React.FC = () => {
         <HeroSection
           prefersReducedMotion={prefersReducedMotion}
           yTransform={heroYSpring}
-          onOpenDemo={handleOpenDemo}
         />
 
         {/* Main content area */}
@@ -129,26 +116,19 @@ export const AboutUs: React.FC = () => {
           <FeaturesSection
             prefersReducedMotion={prefersReducedMotion}
             yTransform={featuresYSpring}
-            onOpenDemo={handleOpenDemo}
           />
 
           {/* Why Choose Us Section */}
           <WhyChooseUsSection
             prefersReducedMotion={prefersReducedMotion}
             yTransform={whyChooseYSpring}
-            onOpenDemo={handleOpenDemo}
           />
 
           {/* Contact Us Section */}
           <ContactSection prefersReducedMotion={prefersReducedMotion} />
         </main>
 
-        {/* Demo Viewer Modal */}
-        <DemoViewer
-          isOpen={isDemoOpen}
-          onClose={handleCloseDemo}
-          initialCategory={demoCategory}
-        />
+        {/* Demo viewer removed for production */}
       </div>
     </AboutLayout>
   );

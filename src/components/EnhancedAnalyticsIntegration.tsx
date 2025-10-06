@@ -27,8 +27,7 @@ import { VisualAnalyticsDashboard } from "./VisualAnalyticsDashboard";
 import { LoadingGlobe } from "./LoadingGlobe";
 import { AIInsightsPanel } from "./AIInsightsPanel";
 import { AnalyticsDataStatus } from "./AnalyticsDataStatus";
-import { IntegrationTestRunner } from "./IntegrationTestRunner";
-import AnalyticsDebugger from "./AnalyticsDebugger";
+// Test and debug components removed for production
 
 interface EnhancedAnalyticsIntegrationProps {
   currentInterview?: InterviewPerformanceData;
@@ -672,13 +671,13 @@ export const EnhancedAnalyticsIntegration: React.FC<
                 onDataChange={() => {}} // Data changes handled by useAnalyticsData hook
                 className="max-w-4xl mx-auto"
               />
-              <IntegrationTestRunner />
+              {/* Integration test runner removed for production */}
             </div>
           )}
 
           {activeTab === "debug" && (
             <div className="space-y-6">
-              <AnalyticsDebugger />
+              {/* Analytics debugger removed for production */}
             </div>
           )}
         </div>

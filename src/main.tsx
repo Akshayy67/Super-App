@@ -4,10 +4,7 @@ import App from "./App.tsx";
 import { EnhancedApp } from "./components/EnhancedApp.tsx";
 import "./index.css";
 
-// Import test utilities for development
-if (import.meta.env.DEV) {
-  import("./utils/testDemoData");
-}
+// Development utilities removed for production
 
 // Use EnhancedApp for the new features, or App for the original version
 const AppComponent =
