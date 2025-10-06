@@ -197,7 +197,6 @@ export const InterviewOverview: React.FC = () => {
           </div>
           <div className="text-responsive-sm text-gray-600 dark:text-gray-400">
             Questions
-            </div>
           </div>
         </div>
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
