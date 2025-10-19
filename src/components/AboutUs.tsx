@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useScroll, useTransform, useSpring } from "framer-motion";
-import { useThemeContext } from "./ThemeProvider";
+import { useThemeContext } from "./ui/ThemeProvider";
 import {
   HeroSection,
   PlatformGuideSection,
@@ -9,7 +9,7 @@ import {
   ContactSection,
 } from "./AboutUs/index";
 import { SkipToMainContent } from "./AboutUs/AccessibilityUtils";
-import { AboutLayout } from "./PageLayout";
+import { AboutLayout } from "./layout/PageLayout";
 import "./AboutUs/AboutUs.css";
 
 export const AboutUs: React.FC = () => {

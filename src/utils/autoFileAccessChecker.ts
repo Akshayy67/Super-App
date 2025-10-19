@@ -1,7 +1,7 @@
 // Auto File Access Checker
 // Automatically ensures users have access to team files when they visit team pages
 
-import { teamFilePermissionService } from "./teamFilePermissionService";
+import { teamFilePermissionService } from "../team/utils/teamFilePermissionService";
 import { realTimeAuth } from "./realTimeAuth";
 import {
   collection,

@@ -17,15 +17,15 @@ import {
   Award,
   TrendingUp,
 } from "lucide-react";
-import { EnhancedAIChat } from "./EnhancedAIChat";
+import { EnhancedAIChat } from "./ai/EnhancedAIChat";
 import { EnhancedMockInterview } from "./EnhancedMockInterview";
-import { PerformanceDashboard } from "./PerformanceDashboard";
+import { PerformanceDashboard } from "./dashboards/PerformanceDashboard";
 import { InterviewPerformanceData } from "../utils/performanceAnalytics";
-import { AuthForm } from "./AuthForm";
+import { AuthForm } from "./auth/AuthForm";
 import { realTimeAuth } from "../utils/realTimeAuth";
-import { ThemeProvider } from "./ThemeProvider";
-import { ThemeToggle } from "./ThemeToggle";
-import { AuthWrapper } from "./AuthWrapper";
+import { ThemeProvider } from "./ui/ThemeProvider";
+import { ThemeToggle } from "./ui/ThemeToggle";
+import { AuthWrapper } from "./auth/AuthWrapper";
 
 interface User {
   id: string;

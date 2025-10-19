@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AIChat } from "../AIChat";
+import { AIChat } from "../ai/AIChat";
 import {
   File,
   Folder,
@@ -11,7 +11,7 @@ import {
   Share2,
 } from "lucide-react";
 import { FileItem } from "../../types";
-import { ShareMenu } from "../ShareMenu";
+import { ShareMenu } from "../sharing/ShareMenu";
 
 interface FilePreviewModalProps {
   previewFile: (FileItem & { storageType?: string; url?: string }) | null;

@@ -23,7 +23,7 @@ import { FileUploadZone } from "./FileUploadZone";
 import { JobDescriptionInput } from "./JobDescriptionInput";
 import { ScoreDashboard } from "./ScoreDashboard";
 import { ScoreHistory } from "./ScoreHistory";
-import { LoadingSpinner } from "../../LoadingSpinner";
+import { LoadingSpinner } from "../../ui/LoadingSpinner";
 
 interface ATSScoreGeneratorProps {
   className?: string;

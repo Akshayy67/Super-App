@@ -8,7 +8,7 @@ import { MockInterview } from "./MockInterview";
 import { InterviewTips } from "./InterviewTips";
 import { EnhancedMockInterview } from "../EnhancedMockInterview";
 
-import { EnhancedAnalyticsIntegration } from "../EnhancedAnalyticsIntegration";
+import { EnhancedAnalyticsIntegration } from "../analytics/EnhancedAnalyticsIntegration";
 import { ATSScoreGenerator } from "./ATSScoreGenerator/ATSScoreGenerator";
 
 export const InterviewPrepRouter: React.FC = () => {

@@ -10,7 +10,7 @@ import {
   BarChart3,
   Brain,
 } from "lucide-react";
-import { InterviewLayout } from "../PageLayout";
+import { InterviewLayout } from "../layout/PageLayout";
 
 interface InterviewPrepLayoutProps {
   children: React.ReactNode;

@@ -4,18 +4,21 @@ import {
   useNavigate,
   useLocation,
 } from "react-router-dom";
-import { AuthForm } from "./components/AuthForm";
-import { Sidebar } from "./components/Sidebar";
-import { AppRouter } from "./components/AppRouter";
-import ErrorBoundary from "./components/ErrorBoundary";
+import { AuthForm } from "./components/auth/AuthForm";
+import { Sidebar } from "./components/layout/Sidebar";
+import { AppRouter } from "./components/router/AppRouter";
+import ErrorBoundary from "./components/ui/ErrorBoundary";
 import { realTimeAuth } from "./utils/realTimeAuth";
 import { Menu, X } from "lucide-react";
-import { GlobalNoteCreator } from "./components/GlobalNoteCreator";
+import { GlobalNoteCreator } from "./components/notes/GlobalNoteCreator";
 import { useGlobalCopyListener } from "./hooks/useGlobalCopyListener";
-import { ThemeToggle } from "./components/ThemeToggle";
-import { ThemeProvider } from "./components/ThemeProvider";
-import { AuthWrapper } from "./components/AuthWrapper";
-import { FeedbackButton } from "./components/FeedbackButton";
+import { ThemeToggle } from "./components/ui/ThemeToggle";
+import { ThemeProvider } from "./components/ui/ThemeProvider";
+import { AuthWrapper } from "./components/auth/AuthWrapper";
+import { FeedbackButton } from "./components/feedback/FeedbackButton";
+import { FeedbackProvider } from "./components/feedback/FeedbackContext";
+import { ContextualFeedback } from "./components/feedback/SmartFeedbackPrompt";
+import { DragInstructionTooltip } from "./components/feedback/DragInstructionTooltip";
 // Import the file permissions fixer to make it available in console
 import "./utils/fixExistingFilePermissions";
 // Import EmailJS test functions for console testing
@@ -217,12 +220,13 @@ const AuthenticatedApp: React.FC = () => {
         </div>
 
         {/* Global Feedback Button */}
-        <FeedbackButton
-          position="bottom-right"
-          variant="floating"
-          size="md"
-          showLabel={true}
-        />
+        <FeedbackButton position="draggable" />
+        
+        {/* Contextual Feedback Prompts */}
+        <ContextualFeedback />
+        
+        {/* Drag Instruction Tooltip */}
+        <DragInstructionTooltip />
       </div>
     </ErrorBoundary>
   );
@@ -263,9 +267,11 @@ function App() {
 
   return (
     <ThemeProvider>
-      <Router>
-        <AuthenticatedApp />
-      </Router>
+      <FeedbackProvider>
+        <Router>
+          <AuthenticatedApp />
+        </Router>
+      </FeedbackProvider>
     </ThemeProvider>
   );
 }
