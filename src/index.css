@@ -204,30 +204,30 @@
   --color-error: 248 113 113; /* red-400 */
   --color-success: 74 222 128; /* green-400 */
 
-  /* Background Colors - Rich dark palette */
-  --color-bg-primary: 15 23 42; /* slate-900 */
-  --color-bg-secondary: 30 41 59; /* slate-800 */
-  --color-bg-tertiary: 51 65 85; /* slate-700 */
-  --color-bg-quaternary: 71 85 105; /* slate-600 */
+  /* Background Colors - Minimal black palette matching landing page */
+  --color-bg-primary: 0 0 0; /* pure black */
+  --color-bg-secondary: 0 0 0; /* black */
+  --color-bg-tertiary: 20 20 20; /* very dark gray */
+  --color-bg-quaternary: 30 30 30; /* dark gray */
   --color-bg-overlay: 0 0 0; /* black for overlays */
 
   /* Surface Colors */
-  --color-surface: 30 41 59; /* slate-800 */
-  --color-surface-hover: 51 65 85; /* slate-700 */
-  --color-surface-active: 71 85 105; /* slate-600 */
-  --color-surface-border: 71 85 105; /* slate-600 */
+  --color-surface: 0 0 0; /* black */
+  --color-surface-hover: 20 20 20; /* very dark gray */
+  --color-surface-active: 30 30 30; /* dark gray */
+  --color-surface-border: 70 70 70; /* medium gray */
 
-  /* Text Colors - High contrast for readability */
-  --color-text-primary: 248 250 252; /* slate-50 */
-  --color-text-secondary: 203 213 225; /* slate-300 */
-  --color-text-tertiary: 148 163 184; /* slate-400 */
-  --color-text-quaternary: 100 116 139; /* slate-500 */
-  --color-text-inverse: 15 23 42; /* slate-900 */
-  --color-text-muted: 100 116 139; /* slate-500 */
+  /* Text Colors - Light gray matching landing page */
+  --color-text-primary: 176 176 176; /* #b0b0b0 */
+  --color-text-secondary: 176 176 176; /* #b0b0b0 */
+  --color-text-tertiary: 140 140 140; /* slightly darker gray */
+  --color-text-quaternary: 110 110 110; /* darker gray */
+  --color-text-inverse: 0 0 0; /* black */
+  --color-text-muted: 110 110 110; /* darker gray */
 
   /* Border Colors */
-  --color-border-primary: 71 85 105; /* slate-600 */
-  --color-border-secondary: 100 116 139; /* slate-500 */
+  --color-border-primary: 70 70 70; /* medium gray */
+  --color-border-secondary: 50 50 50; /* dark gray */
   --color-border-focus: 96 165 250; /* blue-400 */
   --color-border-error: 248 113 113; /* red-400 */
 
@@ -257,6 +257,101 @@
     rgb(var(--color-bg-primary)) 0%,
     rgb(var(--color-bg-secondary)) 100%
   );
+}
+
+/* === DARK THEME TAILWIND OVERRIDES === */
+/* Override Tailwind's default dark mode colors to match landing page minimal aesthetic */
+.dark,
+[data-theme="dark"] {
+  /* Override common Tailwind background classes */
+  --tw-color-slate-900: 0 0 0; /* black instead of slate-900 */
+  --tw-color-slate-800: 0 0 0; /* black instead of slate-800 */
+  --tw-color-slate-700: 20 20 20; /* very dark gray */
+  --tw-color-gray-900: 0 0 0; /* black */
+  --tw-color-gray-800: 0 0 0; /* black */
+  --tw-color-gray-700: 20 20 20; /* very dark gray */
+  
+  /* Override common Tailwind text classes */
+  --tw-color-gray-100: 176 176 176; /* light gray #b0b0b0 */
+  --tw-color-gray-200: 176 176 176; /* light gray */
+  --tw-color-gray-300: 176 176 176; /* light gray */
+  --tw-color-gray-400: 140 140 140; /* medium gray */
+  --tw-color-gray-500: 110 110 110; /* darker gray */
+  --tw-color-gray-600: 90 90 90; /* dark gray */
+  --tw-color-slate-100: 176 176 176; /* light gray */
+  --tw-color-slate-200: 176 176 176; /* light gray */
+  --tw-color-slate-300: 176 176 176; /* light gray */
+  --tw-color-slate-400: 140 140 140; /* medium gray */
+  --tw-color-slate-500: 110 110 110; /* darker gray */
+  --tw-color-slate-600: 70 70 70; /* medium gray */
+}
+
+/* Global dark mode background override */
+.dark body,
+.dark #root,
+[data-theme="dark"] body,
+[data-theme="dark"] #root {
+  background-color: #000000 !important;
+}
+
+/* Ensure light mode has proper backgrounds */
+body:not(.dark):not([data-theme="dark"]),
+#root:not(.dark):not([data-theme="dark"]) {
+  background-color: rgb(var(--color-bg-primary)) !important;
+}
+
+/* Override Tailwind's dark mode utility classes - using higher specificity */
+.dark .dark\:bg-slate-900,
+.dark .dark\:bg-slate-800,
+.dark .dark\:bg-gray-900,
+.dark .dark\:bg-gray-800,
+[data-theme="dark"] .dark\:bg-slate-900,
+[data-theme="dark"] .dark\:bg-slate-800,
+[data-theme="dark"] .dark\:bg-gray-900,
+[data-theme="dark"] .dark\:bg-gray-800 {
+  background-color: #000000 !important;
+}
+
+/* Override dark mode text colors to use light gray */
+.dark .dark\:text-gray-100,
+.dark .dark\:text-gray-200,
+.dark .dark\:text-slate-100,
+.dark .dark\:text-slate-200,
+.dark .dark\:text-gray-300,
+.dark .dark\:text-slate-300,
+[data-theme="dark"] .dark\:text-gray-100,
+[data-theme="dark"] .dark\:text-gray-200,
+[data-theme="dark"] .dark\:text-slate-100,
+[data-theme="dark"] .dark\:text-slate-200,
+[data-theme="dark"] .dark\:text-gray-300,
+[data-theme="dark"] .dark\:text-slate-300 {
+  color: #b0b0b0 !important;
+}
+
+.dark .dark\:text-gray-400,
+.dark .dark\:text-slate-400,
+[data-theme="dark"] .dark\:text-gray-400,
+[data-theme="dark"] .dark\:text-slate-400 {
+  color: #8c8c8c !important;
+}
+
+.dark .dark\:text-gray-500,
+.dark .dark\:text-slate-500,
+[data-theme="dark"] .dark\:text-gray-500,
+[data-theme="dark"] .dark\:text-slate-500 {
+  color: #6e6e6e !important;
+}
+
+/* Override border colors in dark mode */
+.dark .dark\:border-slate-700,
+.dark .dark\:border-slate-600,
+.dark .dark\:border-gray-700,
+.dark .dark\:border-gray-600,
+[data-theme="dark"] .dark\:border-slate-700,
+[data-theme="dark"] .dark\:border-slate-600,
+[data-theme="dark"] .dark\:border-gray-700,
+[data-theme="dark"] .dark\:border-gray-600 {
+  border-color: rgba(70, 70, 70, 1) !important;
 }
 
 /* === THEME TRANSITIONS === */
@@ -304,6 +399,17 @@
     min-height: -webkit-fill-available;
   }
 
+  /* Light mode specific styling to ensure proper backgrounds and text */
+  html:not(.dark):not([data-theme="dark"]),
+  body:not(.dark):not([data-theme="dark"]) {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  #root:not(.dark):not([data-theme="dark"]) {
+    background-color: #ffffff !important;
+  }
+
   /* Prevent text selection on interactive elements */
   button,
   [role="button"] {
@@ -340,7 +446,7 @@
   }
 
   .btn-secondary {
-    @apply border border-gray-300 hover:bg-gray-50 text-gray-700;
+    @apply border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-300;
     background-color: rgb(var(--color-surface));
     border-color: rgb(var(--color-border-primary));
     color: rgb(var(--color-text-primary));
@@ -526,14 +632,14 @@
 
   /* Enhanced Mobile-friendly cards */
   .card-responsive {
-    @apply bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700;
+    @apply bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-gray-700;
     @apply p-3 sm:p-4 md:p-6;
     @apply hover:shadow-md transition-shadow;
     @apply w-full;
   }
 
   .card-responsive-compact {
-    @apply bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700;
+    @apply bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-gray-700;
     @apply p-2 sm:p-3 md:p-4;
     @apply hover:shadow-md transition-shadow;
     @apply w-full;

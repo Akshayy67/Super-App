@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Sparkles,
 } from "lucide-react";
+import * as THREE from "three";
 import { unifiedAIService } from "../../utils/aiConfig";
 import { driveStorageUtils } from "../../utils/driveStorage";
 import { AIStatus } from "../notifications/AIStatus";
@@ -86,6 +87,7 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
   const [creatingTeam, setCreatingTeam] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Get chat type specific greeting
   const getChatTypeGreeting = (chatType?: ChatType): string => {
@@ -173,6 +175,116 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
       handleSendMessage(initialPrompt);
     }
   }, [initialPrompt, currentSessionId]);
+
+  // Initialize Three.js particles background - only in chat area
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const container = canvas.parentElement;
+    if (!container) return;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      container.clientWidth / container.clientHeight,
+      0.1,
+      3000
+    );
+    const renderer = new THREE.WebGLRenderer({
+      canvas: canvas,
+      alpha: true,
+      antialias: true,
+    });
+
+    const updateSize = () => {
+      if (!container) return;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    };
+
+    updateSize();
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0); // Transparent background
+
+    // Create particles cloud
+    const particleGeometry = new THREE.BufferGeometry();
+    const particleCount = 2000;
+    const initialPositions = new Float32Array(particleCount * 3);
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+
+    for (let i = 0; i < particleCount * 3; i += 3) {
+      const x = (Math.random() - 0.5) * 2000;
+      const y = (Math.random() - 0.5) * 2000;
+      const z = (Math.random() - 0.5) * 2000;
+      initialPositions[i] = x;
+      initialPositions[i + 1] = y;
+      initialPositions[i + 2] = z;
+      positions[i] = x;
+      positions[i + 1] = y;
+      positions[i + 2] = z;
+
+      const color = new THREE.Color();
+      color.setHSL(0.6, 0.8, 0.5 + Math.random() * 0.5);
+      colors[i] = color.r;
+      colors[i + 1] = color.g;
+      colors[i + 2] = color.b;
+    }
+
+    particleGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    particleGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+
+    const particleMaterial = new THREE.PointsMaterial({
+      size: 4,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending,
+    });
+
+    const particles = new THREE.Points(particleGeometry, particleMaterial);
+    scene.add(particles);
+
+    camera.position.set(0, 0, 800);
+
+    // Animation loop
+    let animationId: number;
+    const animate = () => {
+      animationId = requestAnimationFrame(animate);
+
+      const time = Date.now() * 0.001;
+      for (let i = 0; i < particleCount; i++) {
+        const i3 = i * 3;
+        positions[i3] = initialPositions[i3] + Math.sin(time + i * 0.01) * 50;
+        positions[i3 + 1] = initialPositions[i3 + 1] + Math.cos(time * 0.7 + i * 0.01) * 50;
+        positions[i3 + 2] = initialPositions[i3 + 2] + Math.sin(time * 0.5 + i * 0.01) * 30;
+      }
+      particleGeometry.attributes.position.needsUpdate = true;
+
+      renderer.render(scene, camera);
+    };
+
+    animate();
+
+    // Handle resize - use ResizeObserver to watch container size
+    const resizeObserver = new ResizeObserver(() => {
+      updateSize();
+    });
+    resizeObserver.observe(container);
+
+    // Cleanup
+    return () => {
+      resizeObserver.disconnect();
+      cancelAnimationFrame(animationId);
+      renderer.dispose();
+      particleGeometry.dispose();
+      particleMaterial.dispose();
+    };
+  }, []);
 
   const getCurrentSession = () => {
     return sessions.find((s) => s.id === currentSessionId);
@@ -855,7 +967,7 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
   const currentSession = getCurrentSession();
 
   return (
-    <div className="flex h-full w-full bg-white dark:bg-slate-900 overflow-hidden">
+    <div className="flex h-full w-full overflow-hidden relative">
       {/* Chat Type Selection Modal */}
       {showChatTypeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -890,7 +1002,7 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
       )}
 
       {/* Session Sidebar */}
-      <div className="w-64 bg-gray-50 dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col flex-shrink-0">
+      <div className="w-64 bg-gray-50 dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col flex-shrink-0 relative z-10">
         <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
           <button
             onClick={handleNewChatClick}
@@ -940,9 +1052,22 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative z-10">
+        {/* Three.js Background Canvas - Only in chat area */}
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          style={{ 
+            zIndex: 0, 
+            opacity: 0.6,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0
+          }}
+        />
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex-shrink-0">
+        <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex-shrink-0 relative z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Brain className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -1032,7 +1157,7 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-slate-800 min-h-0 max-h-full">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 dark:bg-slate-800/50 backdrop-blur-sm min-h-0 max-h-full relative z-10">
           {currentSession?.messages.map((message) => (
             <div
               key={message.id}
@@ -1153,7 +1278,7 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
         </div>
 
         {/* Input Area */}
-        <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex-shrink-0">
+        <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex-shrink-0 relative z-10">
           {uploadedImage && (
             <div className="mb-3 relative inline-block">
               <img

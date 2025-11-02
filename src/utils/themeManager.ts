@@ -58,7 +58,7 @@ class ThemeManager {
 
   private updateMetaThemeColor(theme: "light" | "dark") {
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-    const color = theme === "dark" ? "#0f172a" : "#ffffff";
+    const color = theme === "dark" ? "#000000" : "#ffffff";
 
     if (metaThemeColor) {
       metaThemeColor.setAttribute("content", color);

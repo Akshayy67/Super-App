@@ -192,10 +192,10 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
   // Base status/overdue classes (used when not actively swiping)
   const baseStateClasses =
     task.status === "completed"
-      ? "bg-gray-50 border-gray-200"
+      ? "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
       : isOverdue(task)
-      ? "bg-red-50 border-red-200"
-      : "bg-white border-gray-200";
+      ? "bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800"
+      : "bg-white dark:bg-black border-gray-200 dark:border-gray-700";
 
   // Date category caching
   const dueDateObj = new Date(task.dueDate);
@@ -299,8 +299,8 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
                 <h3
                   className={`font-medium text-sm sm:text-base ${
                     task.status === "completed"
-                      ? "text-gray-500 line-through"
-                      : "text-gray-900"
+                      ? "text-gray-500 dark:text-gray-500 line-through"
+                      : "text-gray-900 dark:text-gray-300"
                   }`}
                 >
                   {task.title}
@@ -312,8 +312,8 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
                   <p
                     className={`text-xs sm:text-sm mt-1 ${
                       task.status === "completed"
-                        ? "text-gray-400"
-                        : "text-gray-600"
+                        ? "text-gray-400 dark:text-gray-500"
+                        : "text-gray-600 dark:text-gray-400"
                     }`}
                   >
                     {task.description}
@@ -324,13 +324,13 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
               <div className="flex items-center space-x-1 sm:space-x-2 ml-2 sm:ml-4 flex-shrink-0">
                 <button
                   onClick={() => onEdit(task)}
-                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
                 >
                   <Edit3 className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
                 <button
                   onClick={() => onDelete(task.id)}
-                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                  className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                 >
                   <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
@@ -357,7 +357,7 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
                   </span>
                 )}
               {task.subject && (
-                <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full flex-shrink-0">
+                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs rounded-full flex-shrink-0">
                   {task.subject}
                 </span>
               )}
@@ -368,7 +368,7 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
               >
                 {task.priority} priority
               </span>
-              <div className="flex items-center text-xs text-gray-500 flex-shrink-0">
+              <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
                 <Calendar className="w-3 h-3 mr-1" />
                 <span className="hidden sm:inline">
                   {format(new Date(task.dueDate), "MMM dd, yyyy")}
@@ -403,7 +403,7 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
 
         {/* Completion Glow Effect */}
         {task.status === "completed" && (
-          <div className="absolute inset-0 bg-green-100 opacity-20 rounded-lg animate-pulse" />
+          <div className="absolute inset-0 bg-green-100 dark:bg-green-900/30 opacity-20 rounded-lg animate-pulse" />
         )}
       </div>
     </div>

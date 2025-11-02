@@ -164,7 +164,7 @@ export const Dashboard: React.FC = () => {
         data-component="dashboard"
       >
         {/* Header */}
-        <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 p-responsive transition-colors duration-300">
+        <div className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-700 p-responsive transition-colors duration-300">
           <div className="container-mobile">
             <h1 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               Welcome back, {user?.username}!
@@ -256,21 +256,21 @@ export const Dashboard: React.FC = () => {
                   </button>
                   <button
                     onClick={() => navigate("/tasks")}
-                    className="w-full flex items-center px-3 sm:px-4 py-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm btn-touch"
+                    className="w-full flex items-center px-3 sm:px-4 py-3 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors text-sm btn-touch"
                   >
                     <CheckSquare className="w-5 h-5 mr-3 flex-shrink-0" />
                     <span className="truncate">Add New Task</span>
                   </button>
                   <button
                     onClick={() => navigate("/notes")}
-                    className="w-full flex items-center px-3 sm:px-4 py-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors text-sm btn-touch"
+                    className="w-full flex items-center px-3 sm:px-4 py-3 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors text-sm btn-touch"
                   >
                     <StickyNote className="w-5 h-5 mr-3 flex-shrink-0" />
                     <span className="truncate">Create Note</span>
                   </button>
                   <button
                     onClick={() => navigate("/chat")}
-                    className="w-full flex items-center px-3 sm:px-4 py-3 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-sm btn-touch"
+                    className="w-full flex items-center px-3 sm:px-4 py-3 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/50 transition-colors text-sm btn-touch"
                   >
                     <Brain className="w-5 h-5 mr-3 flex-shrink-0" />
                     <span className="truncate">Ask AI Assistant</span>
@@ -284,14 +284,14 @@ export const Dashboard: React.FC = () => {
                   </button>
                   <button
                     onClick={() => navigate("/team")}
-                    className="w-full flex items-center px-3 sm:px-4 py-3 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors text-sm btn-touch"
+                    className="w-full flex items-center px-3 sm:px-4 py-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors text-sm btn-touch"
                   >
                     <Users className="w-5 h-5 mr-3 flex-shrink-0" />
                     <span className="truncate">Team Space</span>
                   </button>
                   <button
                     onClick={() => navigate("/settings")}
-                    className="w-full flex items-center px-3 sm:px-4 py-3 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm btn-touch"
+                    className="w-full flex items-center px-3 sm:px-4 py-3 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm btn-touch"
                   >
                     <Settings className="w-5 h-5 mr-3 flex-shrink-0" />
                     <span className="truncate">Settings</span>
@@ -316,7 +316,7 @@ export const Dashboard: React.FC = () => {
                   </h2>
                   <button
                     onClick={() => navigate("/tasks")}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium btn-touch"
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium btn-touch"
                   >
                     View All
                   </button>
@@ -348,10 +348,10 @@ export const Dashboard: React.FC = () => {
                           key={task.id}
                           className={`flex items-center space-x-3 p-3 sm:p-4 rounded-lg border transition-colors ${
                             isTaskOverdue
-                              ? "bg-red-50 border-red-200"
+                              ? "bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800"
                               : isTaskToday
-                              ? "bg-orange-50 border-orange-200"
-                              : "bg-gray-50 border-gray-200"
+                              ? "bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-800"
+                              : "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
                           }`}
                         >
                           <div
@@ -373,11 +373,11 @@ export const Dashboard: React.FC = () => {
                               <span
                                 className={`font-medium ${
                                   isTaskOverdue
-                                    ? "text-red-600"
+                                    ? "text-red-600 dark:text-red-400"
                                     : isTaskToday
-                                    ? "text-orange-600"
+                                    ? "text-orange-600 dark:text-orange-400"
                                     : isTaskTomorrow
-                                    ? "text-blue-600"
+                                    ? "text-blue-600 dark:text-blue-400"
                                     : ""
                                 }`}
                               >
@@ -394,10 +394,10 @@ export const Dashboard: React.FC = () => {
                           <span
                             className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
                               task.priority === "high"
-                                ? "bg-red-100 text-red-600"
+                                ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
                                 : task.priority === "medium"
-                                ? "bg-yellow-100 text-yellow-600"
-                                : "bg-green-100 text-green-600"
+                                ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400"
+                                : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
                             }`}
                           >
                             {task.priority}

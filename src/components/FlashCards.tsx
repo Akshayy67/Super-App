@@ -1292,21 +1292,21 @@ export const FlashCards: React.FC = () => {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case "easy":
-        return "text-green-600 bg-green-100";
+        return "text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30";
       case "medium":
-        return "text-yellow-600 bg-yellow-100";
+        return "text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30";
       case "hard":
-        return "text-red-600 bg-red-100";
+        return "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30";
       default:
-        return "text-gray-600 bg-gray-100";
+        return "text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-900";
     }
   };
 
   const getMasteryColor = (level: number) => {
-    if (level >= 80) return "text-green-600";
-    if (level >= 60) return "text-yellow-600";
-    if (level >= 40) return "text-orange-600";
-    return "text-red-600";
+    if (level >= 80) return "text-green-600 dark:text-green-400";
+    if (level >= 60) return "text-yellow-600 dark:text-yellow-400";
+    if (level >= 40) return "text-orange-600 dark:text-orange-400";
+    return "text-red-600 dark:text-red-400";
   };
 
   const Flashcard: React.FC<{ card: ParsedCard; idx: number }> = ({
@@ -1343,7 +1343,7 @@ export const FlashCards: React.FC = () => {
         >
           {/* Front of card */}
           <div
-            className="absolute inset-0 border-0 rounded-2xl bg-gradient-to-br from-white via-gray-50 to-gray-100 p-6 flex flex-col justify-between shadow-xl hover:shadow-2xl transition-all duration-500 backdrop-blur-sm"
+            className="absolute inset-0 border-0 rounded-2xl bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-black dark:via-black dark:to-black p-6 flex flex-col justify-between shadow-xl hover:shadow-2xl transition-all duration-500 backdrop-blur-sm border dark:border-gray-700"
             style={{ backfaceVisibility: "hidden" }}
           >
             {/* Header with card number and badges */}
@@ -1352,7 +1352,7 @@ export const FlashCards: React.FC = () => {
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
                   {idx + 1}
                 </div>
-                <div className="text-sm text-gray-600 font-medium">Card</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Card</div>
               </div>
               <div className="flex items-center space-x-2">
                 <span
@@ -1363,9 +1363,9 @@ export const FlashCards: React.FC = () => {
                   {card.difficulty || "medium"}
                 </span>
                 <div className="relative">
-                  <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center">
                     <div
-                      className="w-6 h-6 rounded-full border-2 border-gray-200 relative overflow-hidden"
+                      className="w-6 h-6 rounded-full border-2 border-gray-200 dark:border-gray-700 relative overflow-hidden"
                       style={{
                         background: `conic-gradient(${
                           getMasteryColor(card.masteryLevel || 0).includes(
@@ -1384,7 +1384,7 @@ export const FlashCards: React.FC = () => {
                         } ${(card.masteryLevel || 0) * 3.6}deg, #e5e7eb 0deg)`,
                       }}
                     />
-                    <span className="absolute text-xs font-bold text-gray-700">
+                    <span className="absolute text-xs font-bold text-gray-700 dark:text-gray-300">
                       {card.masteryLevel || 0}
                     </span>
                   </div>
@@ -1394,7 +1394,7 @@ export const FlashCards: React.FC = () => {
 
             {/* Question content */}
             <div className="flex-1 flex items-center justify-center text-center">
-              <div className="font-bold text-gray-800 text-lg leading-relaxed max-w-full">
+              <div className="font-bold text-gray-800 dark:text-gray-300 text-lg leading-relaxed max-w-full">
                 {card.question}
               </div>
             </div>
@@ -1461,7 +1461,7 @@ export const FlashCards: React.FC = () => {
                   </div>
                 ) : (
                   <div className="text-center">
-                    <span className="px-3 py-1.5 bg-gray-100 text-gray-500 text-xs rounded-full font-medium">
+                    <span className="px-3 py-1.5 bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400 text-xs rounded-full font-medium">
                       No tags
                     </span>
                   </div>
@@ -1476,7 +1476,7 @@ export const FlashCards: React.FC = () => {
                       e.stopPropagation();
                       setShowTagInput(true);
                     }}
-                    className="px-3 py-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-full transition-colors text-xs font-medium"
+                    className="px-3 py-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full transition-colors text-xs font-medium"
                   >
                     + Add Tag
                   </button>
@@ -1487,7 +1487,7 @@ export const FlashCards: React.FC = () => {
                       value={newTagInput}
                       onChange={(e) => setNewTagInput(e.target.value)}
                       placeholder="Enter tag..."
-                      className="px-2 py-1 text-xs border border-gray-200 dark:border-slate-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                      className="px-2 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-black text-gray-900 dark:text-gray-300 placeholder-gray-500 dark:placeholder-gray-500"
                       onKeyPress={(e) => e.key === "Enter" && handleAddTag()}
                       autoFocus
                     />
@@ -1502,7 +1502,7 @@ export const FlashCards: React.FC = () => {
                         setShowTagInput(false);
                         setNewTagInput("");
                       }}
-                      className="px-2 py-1 text-gray-500 text-xs rounded hover:bg-gray-100 transition-colors"
+                      className="px-2 py-1 text-gray-500 dark:text-gray-400 text-xs rounded hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
                     >
                       Cancel
                     </button>
@@ -1544,7 +1544,7 @@ export const FlashCards: React.FC = () => {
 
           {/* Back of card */}
           <div
-            className="absolute inset-0 border-0 rounded-2xl bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6 shadow-xl"
+            className="absolute inset-0 border-0 rounded-2xl bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-black dark:via-black dark:to-black p-6 shadow-xl border dark:border-gray-700"
             style={{
               backfaceVisibility: "hidden",
               transform: "rotateY(180deg)",
@@ -1559,28 +1559,28 @@ export const FlashCards: React.FC = () => {
 
             {/* Answer content */}
             <div className="flex-1 flex items-center justify-center text-center mb-4">
-              <div className="font-bold text-gray-800 text-lg leading-relaxed max-w-full">
+              <div className="font-bold text-gray-800 dark:text-gray-300 text-lg leading-relaxed max-w-full">
                 {card.answer}
               </div>
             </div>
 
             {/* Reasoning section */}
             {card.reasoning && (
-              <div className="mb-4 p-4 bg-white/70 backdrop-blur-sm rounded-xl border border-blue-200/50 shadow-sm">
+              <div className="mb-4 p-4 bg-white/70 dark:bg-gray-900/50 backdrop-blur-sm rounded-xl border border-blue-200/50 dark:border-gray-700 shadow-sm">
                 <div className="flex items-center space-x-2 mb-2">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="font-semibold text-blue-900 text-sm">
+                  <span className="font-semibold text-blue-900 dark:text-blue-300 text-sm">
                     Reasoning
                   </span>
                 </div>
-                <div className="text-gray-700 text-sm leading-relaxed">
+                <div className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
                   {card.reasoning}
                 </div>
               </div>
             )}
 
             {/* Footer info */}
-            <div className="flex items-center justify-between text-sm text-gray-600">
+            <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span>Click to flip back</span>
@@ -1616,12 +1616,12 @@ export const FlashCards: React.FC = () => {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-3 mb-4">
             <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-            <div className="text-lg font-semibold text-gray-700">
+            <div className="text-lg font-semibold text-gray-700 dark:text-gray-300">
               Card {currentCardIndex + 1} of {filteredCards.length}
             </div>
             <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
+          <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-3 shadow-inner">
             <div
               className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500 shadow-lg"
               style={{
@@ -1631,13 +1631,13 @@ export const FlashCards: React.FC = () => {
               }}
             />
           </div>
-          <div className="text-sm text-gray-500 mt-2">
+          <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
             {Math.round(((currentCardIndex + 1) / filteredCards.length) * 100)}%
             Complete
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-2xl p-8 mb-6 border border-gray-200/50 backdrop-blur-sm">
+        <div className="bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-black dark:via-black dark:to-black rounded-2xl shadow-2xl p-8 mb-6 border border-gray-200/50 dark:border-gray-700 backdrop-blur-sm">
           {showFeedback && (
             <div
               className={`text-center mb-6 p-4 rounded-2xl font-bold text-lg shadow-lg transform animate-bounce ${
@@ -1651,29 +1651,29 @@ export const FlashCards: React.FC = () => {
           )}
 
           <div className="text-center mb-8">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6 leading-relaxed">
+            <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-300 mb-6 leading-relaxed">
               {currentCard.question}
             </h3>
 
             {showAnswer && (
-              <div className="mt-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl border-2 border-blue-200/50 shadow-lg transform transition-all duration-300 hover:scale-105">
+              <div className="mt-8 p-6 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-900 rounded-2xl border-2 border-blue-200/50 dark:border-gray-700 shadow-lg transform transition-all duration-300 hover:scale-105">
                 <div className="flex items-center justify-center mb-4">
                   <div className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full">
                     <span className="text-white text-sm font-bold">ANSWER</span>
                   </div>
                 </div>
-                <div className="font-bold text-gray-800 text-xl mb-4">
+                <div className="font-bold text-gray-800 dark:text-gray-300 text-xl mb-4">
                   {currentCard.answer}
                 </div>
                 {currentCard.reasoning && (
-                  <div className="mt-4 pt-4 border-t border-blue-200/50">
+                  <div className="mt-4 pt-4 border-t border-blue-200/50 dark:border-gray-700">
                     <div className="flex items-center justify-center space-x-2 mb-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span className="font-semibold text-blue-900">
+                      <div className="w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
+                      <span className="font-semibold text-blue-900 dark:text-blue-300">
                         Reasoning
                       </span>
                     </div>
-                    <div className="text-gray-700 text-base leading-relaxed">
+                    <div className="text-gray-700 dark:text-gray-300 text-base leading-relaxed">
                       {currentCard.reasoning}
                     </div>
                   </div>
@@ -1728,35 +1728,35 @@ export const FlashCards: React.FC = () => {
           <button
             onClick={previousCard}
             disabled={currentCardIndex === 0}
-            className="px-6 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-200 dark:border-slate-600"
+            className="px-6 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-black hover:bg-gray-50 dark:hover:bg-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-200 dark:border-gray-700"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
 
-          <div className="text-center bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg border border-gray-200/50 dark:border-slate-600/50">
+          <div className="text-center bg-white dark:bg-black p-6 rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700">
             <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
               Session Progress
             </div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-300 mb-2">
               {sessionStats.correct + sessionStats.incorrect} /{" "}
               {filteredCards.length}
             </div>
             <div className="flex items-center justify-center space-x-4 mb-3">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
                   {sessionStats.correct} correct
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
                   {sessionStats.incorrect} incorrect
                 </span>
               </div>
             </div>
             {/* Debug info */}
-            <div className="text-xs text-gray-400 bg-gray-50 p-2 rounded-lg">
+            <div className="text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 p-2 rounded-lg">
               Session: {studySession?.id ? "Active" : "None"} | Mode:{" "}
               {studySession?.mode} | Card: {currentCardIndex + 1}
             </div>
@@ -1765,7 +1765,7 @@ export const FlashCards: React.FC = () => {
           <button
             onClick={nextCard}
             disabled={currentCardIndex === filteredCards.length - 1}
-            className="px-6 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-200 dark:border-slate-600"
+            className="px-6 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-black hover:bg-gray-50 dark:hover:bg-gray-900 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-200 dark:border-gray-700"
           >
             <ChevronRight className="w-5 h-5" />
           </button>

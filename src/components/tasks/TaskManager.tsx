@@ -68,10 +68,10 @@ export const TaskManager: React.FC = () => {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <h2 className="text-2xl font-bold mb-4">
+        <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-300">
           Please log in to access your tasks.
         </h2>
-        <p className="text-gray-600 mb-6">
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
           Sign in to create, view, and manage your personal cloud tasks.
         </p>
       </div>
@@ -533,13 +533,13 @@ export const TaskManager: React.FC = () => {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "text-red-600 bg-red-50";
+        return "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30";
       case "medium":
-        return "text-yellow-600 bg-yellow-50";
+        return "text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30";
       case "low":
-        return "text-green-600 bg-green-50";
+        return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30";
       default:
-        return "text-gray-600 bg-gray-50";
+        return "text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900";
     }
   };
 
@@ -666,13 +666,13 @@ export const TaskManager: React.FC = () => {
               <div className="relative dropdown-container">
                 <button
                   onClick={() => setShowSortOptions(!showSortOptions)}
-                  className="btn-touch flex items-center px-2 sm:px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors text-sm touch-manipulation"
+                  className="btn-touch flex items-center px-2 sm:px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors text-sm touch-manipulation"
                 >
                   <ArrowUpDown className="w-4 h-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Sort</span>
                 </button>
                 {showSortOptions && (
-                  <div className="absolute right-0 mt-2 w-44 sm:w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                  <div className="absolute right-0 mt-2 w-44 sm:w-48 bg-white dark:bg-black border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10">
                     <div className="py-1">
                       {[
                         { key: "smart", label: "Smart (Recommended)" },
@@ -687,10 +687,10 @@ export const TaskManager: React.FC = () => {
                             setSortBy(option.key as any);
                             setShowSortOptions(false);
                           }}
-                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-900 ${
                             sortBy === option.key
-                              ? "bg-blue-50 text-blue-600"
-                              : "text-gray-700"
+                              ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                              : "text-gray-700 dark:text-gray-300"
                           }`}
                         >
                           {option.label}
@@ -707,8 +707,8 @@ export const TaskManager: React.FC = () => {
                   onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                   className={`flex items-center px-2 sm:px-3 py-2 border rounded-lg transition-colors text-sm ${
                     showAdvancedFilters
-                      ? "bg-purple-50 text-purple-600 border-purple-200"
-                      : "text-gray-600 hover:text-gray-900 border-gray-200"
+                      ? "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-700"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 border-gray-200 dark:border-gray-700"
                   }`}
                 >
                   <Filter className="w-4 h-4 mr-1 sm:mr-2" />
@@ -725,7 +725,7 @@ export const TaskManager: React.FC = () => {
               {VibrationManager.isSupported() && (
                 <button
                   onClick={() => setShowVibrationSettings(true)}
-                  className="flex items-center px-2 sm:px-3 py-2 text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg transition-colors text-sm"
+                  className="flex items-center px-2 sm:px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors text-sm"
                   title="Vibration Settings"
                 >
                   <Smartphone className="w-4 h-4" />
@@ -758,13 +758,13 @@ export const TaskManager: React.FC = () => {
                 placeholder="Search tasks by title, description, subject, priority, or status..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-sm"
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-sm"
               />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -774,8 +774,8 @@ export const TaskManager: React.FC = () => {
               onClick={() => setShowSearchBar(!showSearchBar)}
               className={`px-3 py-2 text-sm border rounded-lg transition-colors ${
                 showSearchBar
-                  ? "bg-blue-50 text-blue-600 border-blue-200"
-                  : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700"
+                  : "bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >
               {showSearchBar ? "Hide" : "Search"}
@@ -784,8 +784,8 @@ export const TaskManager: React.FC = () => {
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
               className={`px-3 py-2 text-sm border rounded-lg transition-colors ${
                 showAdvancedFilters
-                  ? "bg-purple-50 text-purple-600 border-purple-200"
-                  : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  ? "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-700"
+                  : "bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
               }`}
             >
               Advanced Filters
@@ -806,7 +806,7 @@ export const TaskManager: React.FC = () => {
 
           {/* Advanced Filters Panel */}
           {showAdvancedFilters && (
-            <div className="mb-4 p-4 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg">
+            <div className="mb-4 p-4 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-700 rounded-lg">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Subject Filter */}
                 <div>
@@ -825,11 +825,11 @@ export const TaskManager: React.FC = () => {
                           onChange={() => toggleSubjectFilter(subject)}
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
-                        <span className="text-sm text-gray-700">{subject}</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{subject}</span>
                       </label>
                     ))}
                     {getAvailableSubjects().length === 0 && (
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
                         No subjects available
                       </span>
                     )}
@@ -838,7 +838,7 @@ export const TaskManager: React.FC = () => {
 
                 {/* Priority Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Priorities ({selectedPriorities.length} selected)
                   </label>
                   <div className="space-y-1">
@@ -867,7 +867,7 @@ export const TaskManager: React.FC = () => {
 
                 {/* Status Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Status ({selectedStatuses.length} selected)
                   </label>
                   <div className="space-y-1">
@@ -880,13 +880,13 @@ export const TaskManager: React.FC = () => {
                           type="checkbox"
                           checked={selectedStatuses.includes(status)}
                           onChange={() => toggleStatusFilter(status)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500"
                         />
                         <span
                           className={`text-sm capitalize ${
                             status === "completed"
-                              ? "text-green-600"
-                              : "text-orange-600"
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-orange-600 dark:text-orange-400"
                           }`}
                         >
                           {status}
@@ -898,7 +898,7 @@ export const TaskManager: React.FC = () => {
 
                 {/* Date Range Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Date Range
                   </label>
                   <div className="space-y-2">
@@ -911,7 +911,7 @@ export const TaskManager: React.FC = () => {
                           startDate: e.target.value,
                         }))
                       }
-                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-2 py-1 text-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Start Date"
                     />
                     <input
@@ -923,7 +923,7 @@ export const TaskManager: React.FC = () => {
                           endDate: e.target.value,
                         }))
                       }
-                      className="w-full px-2 py-1 text-sm border border-gray-200 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-2 py-1 text-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="End Date"
                     />
                   </div>
@@ -931,8 +931,8 @@ export const TaskManager: React.FC = () => {
               </div>
 
               {/* Advanced Filters Actions */}
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-                <div className="text-sm text-gray-600">
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
                   {getActiveFiltersCount() > 0 && (
                     <span>
                       {getActiveFiltersCount()} active filter
@@ -943,7 +943,7 @@ export const TaskManager: React.FC = () => {
                 <div className="flex space-x-2">
                   <button
                     onClick={clearAdvancedFilters}
-                    className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                    className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
                   >
                     Clear Advanced
                   </button>
@@ -959,26 +959,26 @@ export const TaskManager: React.FC = () => {
           )}
 
           {/* Quick Stats */}
-          <div className="flex space-x-1 bg-gray-100 p-3 rounded-lg">
-            <div className="flex items-center space-x-4 text-sm text-gray-600">
+          <div className="flex space-x-1 bg-gray-100 dark:bg-gray-900 p-3 rounded-lg">
+            <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
               <span>
-                Total: <strong className="text-gray-900">{tasks.length}</strong>
+                Total: <strong className="text-gray-900 dark:text-gray-300">{tasks.length}</strong>
               </span>
               <span>
                 Pending:{" "}
-                <strong className="text-orange-600">
+                <strong className="text-orange-600 dark:text-orange-400">
                   {tasks.filter((t) => t.status === "pending").length}
                 </strong>
               </span>
               <span>
                 Completed:{" "}
-                <strong className="text-green-600">
+                <strong className="text-green-600 dark:text-green-400">
                   {tasks.filter((t) => t.status === "completed").length}
                 </strong>
               </span>
               <span>
                 Overdue:{" "}
-                <strong className="text-red-600">
+                <strong className="text-red-600 dark:text-red-400">
                   {tasks.filter((t) => isOverdue(t)).length}
                 </strong>
               </span>
@@ -1043,7 +1043,7 @@ export const TaskManager: React.FC = () => {
               </div>
 
               {getFilteredTasks().length === 0 && (
-                <p className="text-xs text-blue-600">
+                <p className="text-xs text-blue-600 dark:text-blue-400">
                   Try adjusting your search terms or filters
                 </p>
               )}
@@ -1052,12 +1052,12 @@ export const TaskManager: React.FC = () => {
 
           {showSwipeTip && (
             <div className="mb-4 sm:mb-5 animate-fadeSlideIn relative">
-              <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-dashed border-gray-300 text-[11px] sm:text-xs text-gray-600 italic">
-                <ArrowLeftRight className="w-3.5 h-3.5 text-gray-400" />
+              <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-dashed border-gray-300 dark:border-gray-700 text-[11px] sm:text-xs text-gray-600 dark:text-gray-400 italic">
+                <ArrowLeftRight className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                 <span>Swipe right to complete, left to delete.</span>
                 <button
                   onClick={dismissSwipeTip}
-                  className="absolute top-1 right-1 p-1 text-gray-400 hover:text-gray-600"
+                  className="absolute top-1 right-1 p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
                   aria-label="Dismiss swipe tip"
                 >
                   <X className="w-3 h-3" />
