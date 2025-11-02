@@ -1,5 +1,6 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { LandingPage } from "../LandingPage";
 import { Dashboard } from "../dashboards/Dashboard";
 import { FileManager } from "../file/FileManager";
 import { TaskManager } from "../tasks/TaskManager";
@@ -29,7 +30,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
   return (
     <Routes>
       {/* Main Routes */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/landing" element={<LandingPage />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/files/*" element={<FileManager />} />
       <Route path="/tasks/*" element={<TaskManager />} />
@@ -54,7 +56,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
       <Route path="/admin/*" element={<AdminDashboard />} />
 
       {/* Catch all route */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };
