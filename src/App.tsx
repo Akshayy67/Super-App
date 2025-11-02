@@ -222,11 +222,9 @@ const AuthenticatedApp: React.FC = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col min-h-0 relative">
-          <div className="flex-1">
-            <div className="h-full">
-              <AppRouter invitationData={invitationData} />
-            </div>
+        <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
+          <div className="flex-1 overflow-auto">
+            <AppRouter invitationData={invitationData} />
           </div>
         </div>
 
