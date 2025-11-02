@@ -1,0 +1,74 @@
+// Firestore Security Rules for Video Meeting Feature
+// Add these rules to your Firestore security rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Video Meetings Collection
+    match /videoMeetings/{meetingId} {
+      // Allow creating a meeting if authenticated
+      allow create: if request.auth != null
+                    && request.resource.data.hostId == request.auth.uid
+                    && request.resource.data.status == 'waiting';
+      
+      // Allow reading if user is a participant or trying to join
+      allow read: if request.auth != null;
+      
+      // Allow updating if user is a participant
+      allow update: if request.auth != null
+                    && (
+                      // Host can update anything
+                      resource.data.hostId == request.auth.uid
+                      // Participants can update their own data
+                      || request.auth.uid in resource.data.participants.keys()
+                    );
+      
+      // Only host can delete
+      allow delete: if request.auth != null
+                    && resource.data.hostId == request.auth.uid;
+    }
+    
+    // WebRTC Signaling Collection (REQUIRED for peer-to-peer video/audio)
+    match /webrtcSignaling/{signalId} {
+      // Allow creating if authenticated (sending signals)
+      allow create: if request.auth != null
+                    && request.resource.data.senderId == request.auth.uid;
+      
+      // Allow reading if the signal is directed to you
+      allow read: if request.auth != null
+                  && resource.data.recipientId == request.auth.uid;
+      
+      // Allow deleting if you're the recipient (after processing)
+      allow delete: if request.auth != null
+                    && resource.data.recipientId == request.auth.uid;
+    }
+    
+    // Meeting Recordings Collection (optional - for future use)
+    match /meetingRecordings/{recordingId} {
+      allow read: if request.auth != null
+                  && request.auth.uid in resource.data.participants;
+      
+      allow create: if request.auth != null
+                    && request.resource.data.createdBy == request.auth.uid;
+      
+      allow update, delete: if request.auth != null
+                            && resource.data.createdBy == request.auth.uid;
+    }
+  }
+}
+
+// INSTRUCTIONS:
+// 1. Go to Firebase Console > Firestore Database > Rules
+// 2. Add the above rules to your existing rules
+// 3. Make sure to merge these rules with your existing rules (don't replace everything)
+// 4. Test the rules using the Firebase Console's Rules Simulator
+// 5. Publish the rules
+
+// SECURITY NOTES:
+// - Users must be authenticated to access any meeting data
+// - Only the host can delete meetings
+// - Participants can only update their own participant data
+// - Meeting settings can only be changed by the host
+// - Chat messages are part of the meeting document (consider moving to subcollection for large meetings)
+

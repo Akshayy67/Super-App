@@ -12,11 +12,17 @@ import {
   BookOpen,
   Briefcase,
   Users,
+  Video,
   Info,
+  MessageCircle,
+  Clock,
+  Calendar,
+  Sparkles,
 } from "lucide-react";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import { useCurrentRoute } from "../../hooks/useCurrentRoute";
 import { ThemeToggle } from "../ui/ThemeToggle";
+import { useGlobalPomodoro } from "../../contexts/GlobalPomodoroContext";
 
 interface SidebarProps {
   onLogout: () => void;
@@ -32,11 +38,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const user = realTimeAuth.getCurrentUser();
   const navigate = useNavigate();
   const { activeView } = useCurrentRoute();
+  const { showWidget, toggleEducation, currentSession } = useGlobalPomodoro();
 
   const menuItems = [
     { id: "files", label: "File Manager", icon: FolderOpen, path: "/files" },
     { id: "tasks", label: "To-Do List", icon: CheckSquare, path: "/tasks" },
     { id: "notes", label: "Short Notes", icon: StickyNote, path: "/notes" },
+    { id: "calendar", label: "Calendar", icon: Calendar, path: "/calendar" },
+    { id: "meetings", label: "Meetings", icon: Users, path: "/meetings" },
+    { id: "journal", label: "Journal", icon: Sparkles, path: "/journal" },
     { id: "chat", label: "AI Assistant", icon: MessageSquare, path: "/chat" },
     { id: "tools", label: "Study Tools", icon: Brain, path: "/tools" },
     {
@@ -52,13 +62,64 @@ export const Sidebar: React.FC<SidebarProps> = ({
       path: "/interview",
     },
     { id: "team", label: "Team Space", icon: Users, path: "/team" },
-    { id: "about", label: "About Us", icon: Info, path: "/about" },
+    { id: "community", label: "Community", icon: MessageCircle, path: "/community" },
+    // { id: "about", label: "About Us", icon: Info, path: "/about" },
   ];
 
   const handleNavigation = (path: string) => {
     navigate(path);
     if (onCloseMobile) {
       onCloseMobile();
+    }
+  };
+
+  const handlePomodoroClick = () => {
+    showWidget();
+    if (onCloseMobile) {
+      onCloseMobile();
+    }
+  };
+
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  const getSessionLabel = () => {
+    if (!currentSession || !currentSession.isActive) {
+      return "Pomodoro Timer 🍅";
+    }
+
+    const timeStr = formatTime(currentSession.timeRemaining);
+    const typeEmoji = 
+      currentSession.type === 'work' ? '🎯' : 
+      currentSession.type === 'shortBreak' ? '☕' : 
+      '🌟';
+    
+    return `${typeEmoji} ${timeStr}`;
+  };
+
+  const getButtonStyle = () => {
+    if (!currentSession || !currentSession.isActive) {
+      return "bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600";
+    }
+
+    if (currentSession.isPaused) {
+      return "bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 animate-pulse";
+    }
+
+    switch (currentSession.type) {
+      case 'work':
+        return "bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700";
+      case 'shortBreak':
+        return "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600";
+      case 'longBreak':
+        return "bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600";
+      default:
+        return "bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600";
     }
   };
 
@@ -161,6 +222,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
             );
           })}
         </ul>
+
+        {/* Pomodoro Timer Button */}
+        <div className="mt-4 px-1">
+          <button
+            onClick={handlePomodoroClick}
+            className={`btn-touch w-full flex items-center px-3 sm:px-4 py-3 text-left rounded-lg transition-all ${getButtonStyle()} text-white shadow-md hover:shadow-lg relative overflow-hidden`}
+          >
+            {/* Progress bar background */}
+            {currentSession && currentSession.isActive && (
+              <div 
+                className="absolute inset-0 bg-white/20 transition-all duration-1000"
+                style={{ 
+                  width: `${((currentSession.duration - currentSession.timeRemaining) / currentSession.duration) * 100}%` 
+                }}
+              />
+            )}
+            
+            <Clock className={`w-5 h-5 mr-3 flex-shrink-0 relative z-10 ${currentSession?.isActive && !currentSession.isPaused ? 'animate-spin' : ''}`} style={{ animationDuration: '3s' }} />
+            <span className="font-heading font-medium text-responsive-sm truncate relative z-10 font-mono">
+              {getSessionLabel()}
+            </span>
+            
+            {currentSession?.isPaused && (
+              <span className="ml-auto text-xs relative z-10">⏸</span>
+            )}
+          </button>
+        </div>
       </nav>
 
       <div className="p-responsive border-t border-gray-200 dark:border-slate-800">

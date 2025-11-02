@@ -23,6 +23,7 @@ import { VibrationSettings } from "../VibrationSettings";
 import { StreakTracker, Achievement, StreakData } from "../../utils/streakTracker";
 import { TaskFeedback } from "../../utils/soundEffects";
 import { VibrationManager } from "../../utils/vibrationSettings";
+import { TodoReminderButton } from "./TodoReminderButton";
 
 export const TaskManager: React.FC = () => {
   const user = realTimeAuth.getCurrentUser();
@@ -730,6 +731,13 @@ export const TaskManager: React.FC = () => {
                   <Smartphone className="w-4 h-4" />
                 </button>
               )}
+
+              {/* Todo Reminder Button */}
+              <TodoReminderButton
+                userId={user?.id}
+                userEmail={user?.email}
+                variant="icon"
+              />
 
               <button
                 onClick={() => setShowAddTask(true)}

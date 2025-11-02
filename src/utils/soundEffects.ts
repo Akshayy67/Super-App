@@ -135,6 +135,93 @@ export class SoundEffects {
     this.createTone(800, 0.1);
     setTimeout(() => this.createTone(1000, 0.1), 150);
   }
+
+  // Pomodoro session completion alarm (more prominent)
+  static playPomodoroComplete(sessionType: 'work' | 'shortBreak' | 'longBreak' = 'work'): void {
+    if (!this.isEnabled) return;
+
+    if (sessionType === 'work') {
+      // Work session complete - celebratory ascending melody
+      const melody = [
+        { freq: 523, duration: 0.15 },  // C5
+        { freq: 587, duration: 0.15 },  // D5
+        { freq: 659, duration: 0.15 },  // E5
+        { freq: 784, duration: 0.15 },  // G5
+        { freq: 1047, duration: 0.4 },  // C6 (hold)
+      ];
+      
+      let delay = 0;
+      melody.forEach(({ freq, duration }) => {
+        setTimeout(() => {
+          this.createTone(freq, duration, "triangle");
+        }, delay * 1000);
+        delay += duration * 0.9;
+      });
+    } else if (sessionType === 'shortBreak') {
+      // Short break complete - gentle reminder to get back to work
+      const melody = [
+        { freq: 659, duration: 0.2 },  // E5
+        { freq: 523, duration: 0.3 },  // C5
+      ];
+      
+      let delay = 0;
+      melody.forEach(({ freq, duration }) => {
+        setTimeout(() => {
+          this.createTone(freq, duration, "sine");
+        }, delay * 1000);
+        delay += duration * 0.95;
+      });
+    } else {
+      // Long break complete - energetic melody
+      const melody = [
+        { freq: 392, duration: 0.12 },  // G4
+        { freq: 523, duration: 0.12 },  // C5
+        { freq: 659, duration: 0.12 },  // E5
+        { freq: 784, duration: 0.12 },  // G5
+        { freq: 1047, duration: 0.12 }, // C6
+        { freq: 1319, duration: 0.5 },  // E6 (hold)
+      ];
+      
+      let delay = 0;
+      melody.forEach(({ freq, duration }) => {
+        setTimeout(() => {
+          this.createTone(freq, duration, "triangle");
+        }, delay * 1000);
+        delay += duration * 0.85;
+      });
+    }
+  }
+
+  // Pomodoro session start sound
+  static playPomodoroStart(): void {
+    if (!this.isEnabled) return;
+
+    // Quick upward chirp to indicate start
+    const startMelody = [
+      { freq: 523, duration: 0.08 },  // C5
+      { freq: 784, duration: 0.12 },  // G5
+    ];
+
+    let delay = 0;
+    startMelody.forEach(({ freq, duration }) => {
+      setTimeout(() => {
+        this.createTone(freq, duration, "sine");
+      }, delay * 1000);
+      delay += duration * 0.9;
+    });
+  }
+
+  // Alarm sound for when time is almost up (optional warning)
+  static playPomodoroWarning(): void {
+    if (!this.isEnabled) return;
+
+    // Three quick beeps as warning
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => {
+        this.createTone(880, 0.1, "square");
+      }, i * 200);
+    }
+  }
 }
 
 import { VibrationManager } from "./vibrationSettings";

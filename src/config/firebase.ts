@@ -62,6 +62,7 @@ try {
   googleProvider.addScope("https://www.googleapis.com/auth/userinfo.email");
   googleProvider.addScope("https://www.googleapis.com/auth/userinfo.profile");
   googleProvider.addScope("https://www.googleapis.com/auth/drive.file");
+  googleProvider.addScope("https://www.googleapis.com/auth/user.phonenumbers.read");
   console.log("✅ Google Auth Provider configured");
   
   // Set custom parameters for Google OAuth

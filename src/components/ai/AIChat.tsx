@@ -15,11 +15,14 @@ import {
   Download,
   Copy,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { unifiedAIService } from "../../utils/aiConfig";
 import { driveStorageUtils } from "../../utils/driveStorage";
 import { AIStatus } from "../notifications/AIStatus";
 import { extractTextFromPdfDataUrl } from "../../utils/pdfText";
+import { dreamToPlanService } from "../../utils/dreamToPlanService";
+import { CheckCircle2, Calendar, Users, Bell } from "lucide-react";
 
 type ChatMessage = {
   id: string;
@@ -31,12 +34,15 @@ type ChatMessage = {
   isImageGeneration?: boolean;
 };
 
+type ChatType = "study" | "research" | "general" | "creative" | "coding" | "business" | "dream-to-plan";
+
 type ChatSession = {
   id: string;
   name: string;
   messages: ChatMessage[];
   createdAt: string;
   lastUpdated: string;
+  chatType?: ChatType;
 };
 
 interface AIChatProps {
@@ -54,26 +60,51 @@ export const AIChat: React.FC<AIChatProps> = ({
   const [currentSessionId, setCurrentSessionId] = useState<string>("");
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const [aiConfigured, setAiConfigured] = useState<boolean>(false);
   const [fileContextText, setFileContextText] = useState<string>("");
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [showImageUpload, setShowImageUpload] = useState(false);
+  const [showChatTypeModal, setShowChatTypeModal] = useState(false);
+  const [extractedActions, setExtractedActions] = useState<any[]>([]);
+  const [showActionConfirmModal, setShowActionConfirmModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasSentInitialPromptRef = useRef<boolean>(false);
 
+  // Get chat type specific greeting
+  const getChatTypeGreeting = (chatType?: ChatType): string => {
+    switch (chatType) {
+      case "study":
+        return "Hello! I'm your AI Study Assistant. I specialize in helping you understand complex topics, create study materials, summarize content, and prepare for exams. I can also extract study plans, schedule study sessions, and create todos from your natural language. How can I help with your studies today?";
+      case "research":
+        return "Hello! I'm your AI Research Assistant. I can help you analyze information, organize research findings, generate hypotheses, and provide detailed explanations. What research topic are you working on?";
+      case "general":
+        return "Hello! I'm your AI General Assistant. I can help with questions, provide information, have conversations, and assist with various tasks. What can I help you with?";
+      case "creative":
+        return "Hello! I'm your AI Creative Assistant. I specialize in brainstorming ideas, creative writing, storytelling, and imaginative problem-solving. What creative project are you working on?";
+      case "coding":
+        return "Hello! I'm your AI Coding Assistant. I can help you understand code, debug issues, explain algorithms, and provide programming guidance. What coding challenge can I help with?";
+      case "business":
+        return "Hello! I'm your AI Business Assistant. I can help with strategy, analysis, planning, presentations, and professional communication. What business task can I assist with?";
+      case "dream-to-plan":
+        return "Hello! I'm your Dream-to-Plan Assistant. Share your morning journal entry, dreams, or plans in natural language, and I'll help you extract actionable goals, create todos, schedule meetings, and add items to your calendar. What would you like to plan today?";
+      default:
+        return "Hello! I'm your AI assistant. To provide you with the best experience, please select a chat type from the options above. What would you like help with today?";
+    }
+  };
+
   // Initialize sessions and AI configuration
   useEffect(() => {
-    // Initialize default session
+    // Initialize default session - will prompt for type
     const defaultSession: ChatSession = {
       id: "default",
-      name: "AI Study Assistant",
+      name: "AI Assistant",
       messages: [
         {
           id: "1",
           type: "ai",
-          content:
-            "Hello! I'm your enhanced AI study assistant. I can help you with questions about your uploaded documents, analyze images, generate summaries, create flashcards, and explain complex concepts. You can also upload images for analysis! What would you like to know?",
+          content: getChatTypeGreeting(),
           timestamp: new Date().toISOString(),
         },
       ],
@@ -82,6 +113,8 @@ export const AIChat: React.FC<AIChatProps> = ({
     };
     setSessions([defaultSession]);
     setCurrentSessionId("default");
+    // Show chat type selection for first time
+    setShowChatTypeModal(true);
 
     // Check AI configuration status
     const checkAIConfig = () => {
@@ -419,24 +452,80 @@ export const AIChat: React.FC<AIChatProps> = ({
     }
   };
 
-  const createNewSession = () => {
+  const createNewSession = (chatType?: ChatType) => {
     const newSession: ChatSession = {
       id: Date.now().toString(),
-      name: `Chat ${sessions.length + 1}`,
+      name: chatType ? `${chatType.charAt(0).toUpperCase() + chatType.slice(1)} Chat` : `Chat ${sessions.length + 1}`,
       messages: [
         {
           id: "1",
           type: "ai",
-          content:
-            "Hello! I'm your AI study assistant. How can I help you today?",
+          content: getChatTypeGreeting(chatType),
           timestamp: new Date().toISOString(),
         },
       ],
       createdAt: new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
+      chatType,
     };
     setSessions((prev) => [...prev, newSession]);
     setCurrentSessionId(newSession.id);
+    setShowChatTypeModal(false);
+  };
+
+  const handleNewChatClick = () => {
+    setShowChatTypeModal(true);
+  };
+
+  const selectChatType = (chatType: ChatType) => {
+    // Update current session if it's the default without messages
+    const currentSession = getCurrentSession();
+    if (currentSession && currentSession.id === "default" && currentSession.messages.length <= 1) {
+      setSessions((prev) =>
+        prev.map((session) =>
+          session.id === "default"
+            ? {
+                ...session,
+                chatType,
+                name: `${chatType.charAt(0).toUpperCase() + chatType.slice(1)} Chat`,
+                messages: [
+                  {
+                    id: "1",
+                    type: "ai",
+                    content: getChatTypeGreeting(chatType),
+                    timestamp: new Date().toISOString(),
+                  },
+                ],
+              }
+            : session
+        )
+      );
+      setShowChatTypeModal(false);
+    } else {
+      createNewSession(chatType);
+    }
+  };
+
+  // Get context-specific system prompt
+  const getContextPrompt = (chatType?: ChatType): string => {
+    switch (chatType) {
+      case "study":
+        return "You are a specialized study assistant. Focus on educational explanations, learning techniques, memory aids, and academic support. Break down complex topics into understandable parts. When users mention study plans, schedules, or tasks in natural language, identify actionable items that should be added to todos or scheduled as study sessions.";
+      case "research":
+        return "You are a research assistant. Provide detailed, analytical responses with focus on accuracy, citations when relevant, and thorough exploration of topics. Help organize and synthesize information.";
+      case "general":
+        return "You are a helpful general assistant. Provide clear, accurate, and friendly responses to a wide range of questions.";
+      case "creative":
+        return "You are a creative assistant. Think imaginatively, help brainstorm ideas, and provide creative solutions. Encourage artistic and innovative thinking.";
+      case "coding":
+        return "You are a coding assistant. Provide technical explanations, help debug code, explain algorithms clearly, and offer best practices in programming.";
+      case "business":
+        return "You are a business assistant. Focus on professional communication, strategic thinking, data analysis, and practical business solutions.";
+      case "dream-to-plan":
+        return "You are a Dream-to-Plan assistant. Analyze journal entries, dreams, and plans to extract actionable goals, todos, meetings, and calendar events. When users share their thoughts or plans, identify what should be added to todos, scheduled as meetings, or added to the calendar. Always ask for confirmation before creating items.";
+      default:
+        return "";
+    }
   };
 
   // Programmatically send a message with current file context
@@ -446,8 +535,12 @@ export const AIChat: React.FC<AIChatProps> = ({
     addMessage("user", text.trim());
     setIsLoading(true);
     try {
+      const currentSession = getCurrentSession();
+      const contextPrompt = getContextPrompt(currentSession?.chatType);
       const built = await ensureCurrentFileContext();
       const context = built ? built.toString().slice(0, 8000) : "";
+      const fullContext = contextPrompt ? `${contextPrompt}\n\n${context}` : context;
+      
       const wantsSummary =
         /\b(summarize|summary|summarise|summarization)\b/i.test(text);
       if (wantsSummary && context) {
@@ -464,7 +557,7 @@ export const AIChat: React.FC<AIChatProps> = ({
         }
         return;
       }
-      const response = await unifiedAIService.generateResponse(text, context);
+      const response = await unifiedAIService.generateResponse(text, fullContext);
       if (response.success) {
         addMessage(
           "ai",
@@ -502,6 +595,8 @@ export const AIChat: React.FC<AIChatProps> = ({
 
     const userMessage = inputMessage.trim();
     const imageToAnalyze = uploadedImage;
+    const currentSession = getCurrentSession();
+    const contextPrompt = getContextPrompt(currentSession?.chatType);
 
     setInputMessage("");
     setUploadedImage("");
@@ -542,6 +637,7 @@ export const AIChat: React.FC<AIChatProps> = ({
       // Use only the current file's context. If not ready, build it now.
       const built = await ensureCurrentFileContext();
       const context = built ? built.toString().slice(0, 8000) : "";
+      const fullContext = contextPrompt ? `${contextPrompt}\n\n${context}` : context;
 
       // If the user asks for a summary and we have context, call summarize API for higher quality
       const wantsSummary =
@@ -563,7 +659,7 @@ export const AIChat: React.FC<AIChatProps> = ({
 
       const response = await unifiedAIService.generateResponse(
         userMessage,
-        context
+        fullContext
       );
 
       if (response.success) {
@@ -572,6 +668,19 @@ export const AIChat: React.FC<AIChatProps> = ({
           response.data ?? "",
           context ? "Based on the current file preview" : undefined
         );
+
+        // Extract actions for dream-to-plan and study modes
+        if (currentSession?.chatType === "dream-to-plan" || currentSession?.chatType === "study") {
+          try {
+            const actions = await dreamToPlanService.extractActionsFromNaturalLanguage(userMessage);
+            if (actions.length > 0) {
+              setExtractedActions(actions);
+              setShowActionConfirmModal(true);
+            }
+          } catch (error) {
+            console.error("Error extracting actions:", error);
+          }
+        }
       } else {
         addMessage(
           "ai",
@@ -585,6 +694,32 @@ export const AIChat: React.FC<AIChatProps> = ({
       );
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleEnhancePrompt = async () => {
+    if (!inputMessage.trim() || isEnhancing || isLoading) return;
+    
+    setIsEnhancing(true);
+    try {
+      const enhancePrompt = `Please enhance and improve the following prompt to make it more clear, specific, and effective for getting better AI responses. Return only the enhanced prompt without any explanation or additional text:\n\n"${inputMessage}"`;
+      
+      const response = await unifiedAIService.generateResponse(enhancePrompt, "");
+      
+      if (response.success && response.data) {
+        // Clean up the response - remove quotes and extra formatting
+        let enhanced = response.data.trim();
+        // Remove surrounding quotes if present
+        enhanced = enhanced.replace(/^["'](.*)["']$/s, '$1');
+        setInputMessage(enhanced);
+      } else {
+        // Show error briefly in a subtle way
+        console.error("Failed to enhance prompt:", response.error);
+      }
+    } catch (error) {
+      console.error("Error enhancing prompt:", error);
+    } finally {
+      setIsEnhancing(false);
     }
   };
 
@@ -602,6 +737,32 @@ export const AIChat: React.FC<AIChatProps> = ({
     });
   };
 
+  const getChatTypeIcon = (chatType?: ChatType) => {
+    switch (chatType) {
+      case "study": return "📚";
+      case "research": return "🔬";
+      case "general": return "💬";
+      case "creative": return "🎨";
+      case "coding": return "💻";
+      case "business": return "💼";
+      case "dream-to-plan": return "✨";
+      default: return "🤖";
+    }
+  };
+
+  const getChatTypeColor = (chatType?: ChatType) => {
+    switch (chatType) {
+      case "study": return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
+      case "research": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
+      case "general": return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
+      case "creative": return "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300";
+      case "coding": return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300";
+      case "business": return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300";
+      case "dream-to-plan": return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
+    }
+  };
+
   const suggestedQuestions = file
     ? [
         "Summarize this file",
@@ -616,6 +777,16 @@ export const AIChat: React.FC<AIChatProps> = ({
         "Explain a complex topic I'm studying",
       ];
 
+  const chatTypes: Array<{ type: ChatType; icon: string; title: string; description: string }> = [
+    { type: "study", icon: "📚", title: "Study", description: "Learn, understand concepts, and prepare for exams" },
+    { type: "research", icon: "🔬", title: "Research", description: "Analyze information and organize findings" },
+    { type: "general", icon: "💬", title: "General", description: "Everyday questions and conversations" },
+    { type: "creative", icon: "🎨", title: "Creative", description: "Brainstorm ideas and creative writing" },
+    { type: "coding", icon: "💻", title: "Coding", description: "Programming help and code explanations" },
+    { type: "business", icon: "💼", title: "Business", description: "Strategy, analysis, and professional tasks" },
+    { type: "dream-to-plan", icon: "✨", title: "Dream-to-Plan", description: "Transform your journal entries and plans into actionable todos and calendar events" },
+  ];
+
   // Show file context if provided
   const fileContext = file ? (
     <div className="mb-4 p-2 bg-gray-50 dark:bg-slate-800 rounded-lg text-sm text-gray-700 dark:text-gray-300 flex items-center">
@@ -626,11 +797,127 @@ export const AIChat: React.FC<AIChatProps> = ({
     </div>
   ) : null;
 
+  const currentSession = getCurrentSession();
+
   return (
     <div
       className="bg-white dark:bg-slate-900 h-full flex flex-col scroll-area transition-colors duration-300"
       data-component="ai-chat"
     >
+      {/* Action Confirmation Modal */}
+      {showActionConfirmModal && extractedActions.length > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-slate-700">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-600" />
+                Extracted Action Items
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                I found the following actionable items. Would you like me to add them?
+              </p>
+            </div>
+            <div className="p-6 space-y-3">
+              {extractedActions.map((action, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600"
+                >
+                  <div className="mt-1">
+                    {action.type === "todo" && <CheckCircle2 className="w-5 h-5 text-blue-600" />}
+                    {action.type === "meeting" && <Users className="w-5 h-5 text-purple-600" />}
+                    {action.type === "reminder" && <Bell className="w-5 h-5 text-orange-600" />}
+                    {action.type === "event" && <Calendar className="w-5 h-5 text-green-600" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-900 dark:text-gray-100 font-medium">{action.text}</p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="px-2 py-1 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300 rounded text-xs">
+                        {action.type}
+                      </span>
+                      {action.suggestedDate && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(action.suggestedDate).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="p-6 border-t border-gray-200 dark:border-slate-700 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowActionConfirmModal(false);
+                  setExtractedActions([]);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"
+              >
+                Skip
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await dreamToPlanService.createTodosFromActions(
+                      extractedActions.filter((a) => a.type === "todo")
+                    );
+                    await dreamToPlanService.scheduleMeetingsFromActions(
+                      extractedActions.filter((a) => a.type === "meeting")
+                    );
+                    await dreamToPlanService.createRemindersFromActions(
+                      extractedActions.filter((a) => a.type === "reminder")
+                    );
+                    alert("Action items have been added!");
+                    setShowActionConfirmModal(false);
+                    setExtractedActions([]);
+                  } catch (error) {
+                    console.error("Error adding actions:", error);
+                    alert("Failed to add action items. Please try again.");
+                  }
+                }}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Add to Calendar & Todos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chat Type Selection Modal */}
+      {showChatTypeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-slate-700">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                Choose Your Chat Type
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                Select the type of assistance you need for the best experience
+              </p>
+            </div>
+            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {chatTypes.map((chatType) => (
+                <button
+                  key={chatType.type}
+                  onClick={() => selectChatType(chatType.type)}
+                  className="flex flex-col items-start p-4 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 rounded-lg transition-all border-2 border-transparent hover:border-blue-500 text-left group"
+                >
+                  <div className="text-4xl mb-3">{chatType.icon}</div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                    {chatType.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {chatType.description}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="border-b border-gray-200 dark:border-slate-700 p-responsive">
         <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
@@ -639,11 +926,18 @@ export const AIChat: React.FC<AIChatProps> = ({
               <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100">
-                AI Assistant
-              </h2>
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100">
+                  AI Assistant
+                </h2>
+                {currentSession?.chatType && (
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getChatTypeColor(currentSession.chatType)}`}>
+                    {getChatTypeIcon(currentSession.chatType)} {currentSession.chatType.charAt(0).toUpperCase() + currentSession.chatType.slice(1)}
+                  </span>
+                )}
+              </div>
               <p className="text-responsive-sm text-gray-600 dark:text-gray-400 truncate">
-                Ask questions about your study materials
+                {currentSession?.chatType ? `${currentSession.chatType.charAt(0).toUpperCase() + currentSession.chatType.slice(1)} mode` : "Ask questions about your study materials"}
               </p>
             </div>
           </div>
@@ -843,7 +1137,7 @@ export const AIChat: React.FC<AIChatProps> = ({
                 <ImageIcon className="w-5 h-5" />
               </button>
               <button
-                onClick={createNewSession}
+                onClick={handleNewChatClick}
                 className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
                 title="New Chat Session"
               >
@@ -865,6 +1159,20 @@ export const AIChat: React.FC<AIChatProps> = ({
                 style={{ minHeight: "44px", maxHeight: "120px" }}
               />
             </div>
+            <button
+              onClick={handleEnhancePrompt}
+              disabled={!inputMessage.trim() || isEnhancing || isLoading}
+              className="btn-touch px-3 sm:px-4 py-2 sm:py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 sm:gap-2 touch-manipulation"
+              aria-label="Enhance prompt"
+              title="Enhance this prompt"
+            >
+              {isEnhancing ? (
+                <Loader className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+              )}
+              <span className="text-xs sm:text-sm hidden sm:inline">Enhance</span>
+            </button>
             <button
               onClick={handleSendMessage}
               disabled={(!inputMessage.trim() && !uploadedImage) || isLoading}

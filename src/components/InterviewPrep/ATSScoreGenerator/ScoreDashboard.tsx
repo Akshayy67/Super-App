@@ -30,6 +30,16 @@ export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({
   const [showDebug, setShowDebug] = useState(false);
   const [copiedBullet, setCopiedBullet] = useState<number | null>(null);
 
+  if (!scoreResult) {
+    return (
+      <div className="text-center p-6">
+        <p className="text-gray-600 dark:text-gray-400">
+          No score data available. Please run an analysis first.
+        </p>
+      </div>
+    );
+  }
+
   const { overall, sections, gates, matches, missingKeywords, suggestions } =
     scoreResult;
 
@@ -64,8 +74,8 @@ export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({
     }
   };
 
-  const failedGates = gates.filter((gate) => !gate.passed);
-  const passedGates = gates.filter((gate) => gate.passed);
+  const failedGates = (gates || []).filter((gate) => !gate.passed);
+  const passedGates = (gates || []).filter((gate) => gate.passed);
 
   return (
     <div className="space-y-6">
@@ -73,12 +83,12 @@ export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({
       <div className="text-center">
         <div
           className={`inline-flex items-center justify-center w-32 h-32 rounded-full ${getScoreBgColor(
-            overall
+            overall || 0
           )} mb-4`}
         >
           <div className="text-center">
-            <div className={`text-4xl font-bold ${getScoreColor(overall)}`}>
-              {overall}
+            <div className={`text-4xl font-bold ${getScoreColor(overall || 0)}`}>
+              {overall || 0}
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">
               ATS Score
@@ -87,12 +97,12 @@ export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({
         </div>
 
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          {getScoreGrade(overall)} Match
+          {getScoreGrade(overall || 0)} Match
         </h2>
 
         <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
           Your resume has been analyzed against the job description.
-          {overall >= 70
+          {(overall || 0) >= 70
             ? " Great job! Your resume shows strong alignment with the requirements."
             : " There are opportunities to improve your resume for better ATS compatibility."}
         </p>
@@ -119,7 +129,7 @@ export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({
 
       {/* Section Scores */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {Object.entries(sections).map(([section, score]) => {
+        {Object.entries(sections || {}).map(([section, score]) => {
           const icons = {
             skills: Target,
             experience: TrendingUp,
@@ -149,7 +159,7 @@ export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({
       </div>
 
       {/* Requirements Gates */}
-      {gates.length > 0 && (
+      {gates && gates.length > 0 && (
         <div className="bg-white dark:bg-slate-700 p-6 rounded-lg border border-gray-200 dark:border-slate-600">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
             Requirements Check
@@ -199,7 +209,7 @@ export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({
       )}
 
       {/* Missing Keywords */}
-      {missingKeywords.length > 0 && (
+      {missingKeywords && missingKeywords.length > 0 && (
         <div className="bg-white dark:bg-slate-700 p-6 rounded-lg border border-gray-200 dark:border-slate-600">
           <div className="flex items-center space-x-2 mb-4">
             <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
@@ -235,7 +245,7 @@ export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({
         </div>
 
         {/* Top Actions */}
-        {suggestions.topActions.length > 0 && (
+        {suggestions?.topActions && suggestions.topActions.length > 0 && (
           <div className="mb-6">
             <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
               Priority Actions
@@ -254,7 +264,7 @@ export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({
         )}
 
         {/* Suggested Bullets */}
-        {suggestions.bullets.length > 0 && (
+        {suggestions?.bullets && suggestions.bullets.length > 0 && (
           <div>
             <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
               Suggested Bullet Points

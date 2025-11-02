@@ -14,6 +14,8 @@ import {
   Bell,
   BellOff,
   RotateCcw,
+  HelpCircle,
+  Maximize2,
 } from 'lucide-react';
 import { 
   pomodoroTimer, 
@@ -22,6 +24,7 @@ import {
   PomodoroStats,
   PomodoroEvent 
 } from '../utils/pomodoroTimer';
+import { useGlobalPomodoro } from '../contexts/GlobalPomodoroContext';
 
 interface PomodoroTimerProps {
   onSessionComplete?: (session: PomodoroSession) => void;
@@ -32,6 +35,7 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
   onSessionComplete, 
   className = '' 
 }) => {
+  const globalPomodoro = useGlobalPomodoro();
   const [currentSession, setCurrentSession] = useState<PomodoroSession | null>(null);
   const [settings, setSettings] = useState<PomodoroSettings>(pomodoroTimer.getSettings());
   const [stats, setStats] = useState<PomodoroStats>(pomodoroTimer.getStats());
@@ -132,6 +136,20 @@ export const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
           </h2>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={globalPomodoro.toggleEducation}
+            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+            title="Learn about Pomodoro"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
+          <button
+            onClick={globalPomodoro.showWidget}
+            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+            title="Open Floating Widget"
+          >
+            <Maximize2 className="w-5 h-5" />
+          </button>
           <button
             onClick={() => setShowStats(!showStats)}
             className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"

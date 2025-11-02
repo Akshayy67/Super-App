@@ -33,6 +33,7 @@ import {
   TrendingUp,
   Calendar,
   Brain,
+  Code,
 } from "lucide-react";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import {
@@ -55,6 +56,7 @@ import { extractTextFromPdfDataUrl } from "../../utils/pdfText";
 import { TeamFileManager } from "./TeamFileManager";
 import { StudyTeam } from "./StudyTeam";
 import { DoubtDiscussionComponent } from "./DoubtDiscussion";
+import { PairTasks } from "./PairTasks";
 import { autoFileAccessChecker } from "../../utils/autoFileAccessChecker";
 import { filePreviewService } from "../../utils/filePreviewService";
 
@@ -110,10 +112,10 @@ const getTabConfig = (teamType: "general" | "study") => {
   if (teamType === "study") {
     return [
       { key: "overview", label: "Dashboard", icon: TrendingUp },
-      { key: "study", label: "Study Team", icon: GraduationCap },
       { key: "members", label: "Study Groups", icon: Users },
       { key: "files", label: "Study Materials", icon: BookOpen },
       { key: "projects", label: "Study Sessions", icon: Clock },
+      { key: "pairtasks", label: "Pair Tasks", icon: Code },
       { key: "doubts", label: "Doubt Discussion", icon: Brain },
       { key: "chat", label: "General Chat", icon: MessageSquare },
       { key: "settings", label: "Settings", icon: Settings },
@@ -124,6 +126,7 @@ const getTabConfig = (teamType: "general" | "study") => {
     { key: "members", label: "Members", icon: Users },
     { key: "files", label: "Files", icon: FileText },
     { key: "projects", label: "Projects", icon: Folder },
+    { key: "pairtasks", label: "Pair Tasks", icon: Code },
     { key: "doubts", label: "Doubt Discussion", icon: Brain },
     { key: "chat", label: "Chat", icon: MessageSquare },
     { key: "settings", label: "Settings", icon: Settings },
@@ -158,8 +161,8 @@ export const TeamSpace: React.FC<{
     | "projects"
     | "chat"
     | "settings"
-    | "study"
     | "doubts"
+    | "pairtasks"
   >("overview");
   const [teamActivities, setTeamActivities] = useState<TeamActivity[]>([]);
   const [sharedResources, setSharedResources] = useState<SharedResource[]>([]);
@@ -2218,8 +2221,8 @@ export const TeamSpace: React.FC<{
                 />
               )}
 
-              {activeTab === "study" && selectedTeam && (
-                <StudyTeam teamId={selectedTeam.id} />
+              {activeTab === "pairtasks" && selectedTeam && (
+                <PairTasks teamId={selectedTeam.id} />
               )}
 
               {activeTab === "settings" && selectedTeam && (

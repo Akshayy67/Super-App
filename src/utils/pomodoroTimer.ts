@@ -148,11 +148,12 @@ class PomodoroTimerService {
     this.emit({ type: "sessionStart", session: this.currentSession });
 
     if (this.settings.soundEnabled) {
-      SoundEffects.playNotification();
+      SoundEffects.playPomodoroStart();
     }
 
     this.showNotification(
-      `${type === "work" ? "Work" : "Break"} session started!`
+      `${type === "work" ? "Work" : "Break"} session started!`,
+      `🚀 ${type === "work" ? "Focus time! Let's be productive!" : "Time to relax and recharge!"}`
     );
   }
 
@@ -215,14 +216,26 @@ class PomodoroTimerService {
     this.emit({ type: "sessionComplete", session: this.currentSession });
 
     if (this.settings.soundEnabled) {
-      SoundEffects.playTaskComplete("medium");
+      SoundEffects.playPomodoroComplete(this.currentSession.type);
     }
 
-    this.showNotification(
-      `${
-        this.currentSession.type === "work" ? "Work" : "Break"
-      } session completed!`
-    );
+    const messages = {
+      work: {
+        title: "🎉 Work Session Complete!",
+        body: "Great job! Time for a well-deserved break. You've earned it!"
+      },
+      shortBreak: {
+        title: "⏰ Short Break Over!",
+        body: "Feeling refreshed? Let's get back to work and maintain that momentum!"
+      },
+      longBreak: {
+        title: "✨ Long Break Complete!",
+        body: "You're doing amazing! Ready to start a new focus session?"
+      }
+    };
+
+    const message = messages[this.currentSession.type];
+    this.showNotification(message.title, message.body);
 
     // Auto-start next session if enabled
     if (this.shouldAutoStartNext()) {
@@ -328,14 +341,17 @@ class PomodoroTimerService {
       .padStart(2, "0")}`;
   }
 
-  private showNotification(message: string): void {
+  private showNotification(title: string, body?: string): void {
     if (!this.settings.notificationsEnabled) return;
 
     if ("Notification" in window && Notification.permission === "granted") {
-      new Notification("Pomodoro Timer", {
-        body: message,
+      new Notification(title, {
+        body: body || title,
         icon: "/favicon.svg",
         badge: "/favicon.svg",
+        tag: "pomodoro-timer",
+        requireInteraction: true, // Keep notification visible until user interacts
+        vibrate: [200, 100, 200], // Vibration pattern for mobile
       });
     }
   }

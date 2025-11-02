@@ -2,6 +2,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  phoneNumber?: string;
   createdAt: string;
   authProvider?: string;
   hasGoogleDriveAccess?: boolean;
@@ -49,6 +50,15 @@ export interface ShortNote {
   documentId?: string;
   pageNumber?: number;
   tags: string[];
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+  folderId?: string;
+}
+
+export interface NoteFolder {
+  id: string;
+  name: string;
   userId: string;
   createdAt: string;
   updatedAt: string;

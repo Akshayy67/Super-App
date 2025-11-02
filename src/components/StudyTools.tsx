@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Brain,
   FileText,
@@ -6,6 +6,10 @@ import {
   Zap,
   Loader,
   BookOpen,
+  Upload,
+  X,
+  File,
+  Image,
 } from "lucide-react";
 import { unifiedAIService } from "../utils/aiConfig";
 import { driveStorageUtils } from "../utils/driveStorage";
@@ -23,9 +27,14 @@ export const StudyTools: React.FC = () => {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [inputText, setInputText] = useState("");
   const [selectedDocument, setSelectedDocument] = useState("");
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedFileContent, setUploadedFileContent] = useState<string>("");
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const [results, setResults] = useState<ToolResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isExtractingText, setIsExtractingText] = useState(false);
   const [availableDocuments, setAvailableDocuments] = useState<any[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const user = realTimeAuth.getCurrentUser();
 
@@ -84,6 +93,128 @@ export const StudyTools: React.FC = () => {
       purple: "bg-purple-100 text-purple-600 border-purple-200",
     };
     return colors[color as keyof typeof colors] || colors.blue;
+  };
+
+  // Handle file upload and extract content
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadedFile(file);
+    setSelectedDocument(""); // Clear document selection when file is uploaded
+    setIsExtractingText(true);
+
+    try {
+      const fileType = file.type.toLowerCase();
+      const fileName = file.name.toLowerCase();
+      let content = "";
+
+      // Handle PDF files
+      if (fileType.includes("pdf") || fileName.endsWith(".pdf")) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const dataUrl = e.target?.result as string;
+            setFilePreview(dataUrl);
+            content = await extractTextFromPdfDataUrl(dataUrl);
+            setUploadedFileContent(content);
+            if (content && !inputText.trim()) {
+              setInputText(`[Content extracted from ${file.name}]\n\n${content.substring(0, 500)}...`);
+            }
+          } catch (error) {
+            console.error("Error extracting PDF text:", error);
+            alert("Failed to extract text from PDF. Please try another file.");
+            setUploadedFile(null);
+            setFilePreview(null);
+          } finally {
+            setIsExtractingText(false);
+          }
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      // Handle image files
+      if (fileType.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const dataUrl = e.target?.result as string;
+            setFilePreview(dataUrl);
+            // Extract text using OCR
+            const ocrResult = await unifiedAIService.extractTextFromImage(dataUrl);
+            if (ocrResult.success && ocrResult.data) {
+              content = ocrResult.data;
+              setUploadedFileContent(content);
+              if (content && !inputText.trim()) {
+                setInputText(`[Text extracted from ${file.name}]\n\n${content}`);
+              }
+            } else {
+              alert("Could not extract text from image. Try a clearer image or paste text manually.");
+              setUploadedFile(null);
+              setFilePreview(null);
+            }
+          } catch (error) {
+            console.error("Error extracting image text:", error);
+            alert("Failed to extract text from image. Please try again.");
+            setUploadedFile(null);
+            setFilePreview(null);
+          } finally {
+            setIsExtractingText(false);
+          }
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      // Handle text files
+      if (fileType.startsWith("text/") || fileName.match(/\.(txt|md|json|js|ts|html|css|csv|xml|yaml|yml)$/i)) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            content = e.target?.result as string;
+            setUploadedFileContent(content);
+            if (content && !inputText.trim()) {
+              setInputText(content);
+            }
+            setIsExtractingText(false);
+          } catch (error) {
+            console.error("Error reading text file:", error);
+            alert("Failed to read text file. Please try again.");
+            setUploadedFile(null);
+            setIsExtractingText(false);
+          }
+        };
+        reader.onerror = () => {
+          alert("Failed to read file. Please try again.");
+          setUploadedFile(null);
+          setIsExtractingText(false);
+        };
+        reader.readAsText(file);
+        return;
+      }
+
+      // Unsupported file type
+      alert("Unsupported file type. Please upload PDF, image, or text files.");
+      setUploadedFile(null);
+      setIsExtractingText(false);
+    } catch (error) {
+      console.error("Error processing file:", error);
+      alert("An error occurred while processing the file. Please try again.");
+      setUploadedFile(null);
+      setFilePreview(null);
+      setIsExtractingText(false);
+    }
+  };
+
+  // Remove uploaded file
+  const removeUploadedFile = () => {
+    setUploadedFile(null);
+    setUploadedFileContent("");
+    setFilePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const getDocumentContent = async (documentId: string): Promise<string> => {
@@ -189,7 +320,15 @@ export const StudyTools: React.FC = () => {
     if (!selectedTool || isLoading) return;
 
     let content = inputText;
-    if (selectedDocument) {
+    
+    // Prioritize uploaded file content
+    if (uploadedFileContent) {
+      content = uploadedFileContent;
+      // Append additional text input if provided
+      if (inputText.trim() && !inputText.includes("[Content extracted from")) {
+        content = `${content}\n\n${inputText}`;
+      }
+    } else if (selectedDocument) {
       content = await getDocumentContent(selectedDocument);
       if (!content) {
         alert(
@@ -197,10 +336,14 @@ export const StudyTools: React.FC = () => {
         );
         return;
       }
+      // Append additional text input if provided
+      if (inputText.trim()) {
+        content = `${content}\n\n${inputText}`;
+      }
     }
 
     if (!content.trim()) {
-      alert("Please provide some text to analyze.");
+      alert("Please provide some text to analyze, upload a file, or select a document.");
       return;
     }
 
@@ -233,8 +376,9 @@ export const StudyTools: React.FC = () => {
           timestamp: new Date().toISOString(),
         };
         setResults((prev) => [newResult, ...prev]);
-        setInputText("");
-        setSelectedDocument("");
+        // Don't clear uploaded file - user might want to use it again
+        // setInputText("");
+        // setSelectedDocument("");
       } else {
         alert("AI processing failed: " + (result.error || "Unknown error"));
       }
@@ -437,15 +581,72 @@ export const StudyTools: React.FC = () => {
           </h3>
 
           <div className="space-y-4">
+            {/* File Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Upload File (PDF, Image, or Text)
+              </label>
+              <div className="mt-1 flex items-center gap-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.txt,.md,.json,.js,.ts,.html,.css,.csv,.xml,.yaml,.yml,image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <label
+                  htmlFor="file-upload"
+                  className="flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors bg-white dark:bg-slate-800"
+                >
+                  <Upload className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Choose File</span>
+                </label>
+                {uploadedFile && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    {filePreview && filePreview.startsWith("data:image") ? (
+                      <Image className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    ) : (
+                      <File className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    )}
+                    <span className="text-sm text-blue-900 dark:text-blue-200 truncate max-w-xs">
+                      {uploadedFile.name}
+                    </span>
+                    {isExtractingText && (
+                      <Loader className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
+                    )}
+                    <button
+                      onClick={removeUploadedFile}
+                      className="ml-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+              {filePreview && filePreview.startsWith("data:image") && (
+                <div className="mt-3">
+                  <img
+                    src={filePreview}
+                    alt="Preview"
+                    className="max-w-xs max-h-48 rounded-lg border border-gray-200 dark:border-slate-700"
+                  />
+                </div>
+              )}
+            </div>
+
             {/* Document Selection */}
             {availableDocuments.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Select Document (Optional)
+                  Or Select from Saved Documents
                 </label>
                 <select
                   value={selectedDocument}
-                  onChange={(e) => setSelectedDocument(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedDocument(e.target.value);
+                    removeUploadedFile(); // Clear uploaded file when selecting document
+                  }}
                   className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
                 >
                   <option value="">Choose a document...</option>
@@ -482,13 +683,13 @@ export const StudyTools: React.FC = () => {
 
             <button
               onClick={runTool}
-              disabled={isLoading || (!inputText.trim() && !selectedDocument)}
+              disabled={isLoading || isExtractingText || (!inputText.trim() && !selectedDocument && !uploadedFile)}
               className="flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? (
+              {isLoading || isExtractingText ? (
                 <>
                   <Loader className="w-4 h-4 animate-spin mr-2" />
-                  Processing...
+                  {isExtractingText ? "Extracting text..." : "Processing..."}
                 </>
               ) : (
                 <>

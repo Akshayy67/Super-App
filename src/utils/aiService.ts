@@ -1,11 +1,24 @@
 // AI service for Google Gemini API
 const API_KEY = import.meta.env.VITE_GOOGLE_AI_API_KEY || "";
 
-// Debug: Log the API key being used
-console.log(
-  "🔑 API Key loaded:",
-  API_KEY ? `${API_KEY.substring(0, 20)}...` : "NOT FOUND"
-);
+// Debug: Log the API key being used with more details
+console.log("🔑 API Key Status:", {
+  hasKey: !!API_KEY,
+  keyPrefix: API_KEY ? `${API_KEY.substring(0, 20)}...` : "NOT FOUND",
+  keyLength: API_KEY?.length || 0,
+  envVarExists: !!import.meta.env.VITE_GOOGLE_AI_API_KEY,
+  envVarLength: import.meta.env.VITE_GOOGLE_AI_API_KEY?.length || 0,
+  mode: import.meta.env.MODE,
+});
+
+// Warn if using old suspended key
+if (API_KEY && API_KEY.startsWith("AIzaSyBAFT_Q2U-KuyKZm")) {
+  console.error(
+    "⚠️ WARNING: You are using the OLD SUSPENDED API key!",
+    "\nPlease update your .env file with a new API key and restart the server.",
+    "\nCurrent key prefix:", API_KEY.substring(0, 20)
+  );
+}
 
 // Rate limiting and caching configuration
 const RATE_LIMIT_CONFIG = {
@@ -263,9 +276,21 @@ export const aiService = {
       const result = await response.json();
 
       if (!response.ok) {
+        // Handle 403 Forbidden specifically
+        if (response.status === 403) {
+          const errorMessage = result.error?.message || response.statusText;
+          console.error("🔴 403 Forbidden Error (Image Generation):", {
+            status: response.status,
+            error: result.error,
+          });
+          return {
+            success: false,
+            error: `Access forbidden. ${errorMessage}. Please check: 1) API key is valid, 2) Generative Language API is enabled, 3) API key restrictions allow your domain/IP, 4) Billing is enabled.`,
+          };
+        }
         return {
           success: false,
-          error: `Image generation failed: ${
+          error: `Image generation failed (${response.status}): ${
             result.error?.message || response.statusText
           }`,
         };
@@ -336,9 +361,21 @@ export const aiService = {
       const result = await response.json();
 
       if (!response.ok) {
+        // Handle 403 Forbidden specifically
+        if (response.status === 403) {
+          const errorMessage = result.error?.message || response.statusText;
+          console.error("🔴 403 Forbidden Error (Image Analysis):", {
+            status: response.status,
+            error: result.error,
+          });
+          return {
+            success: false,
+            error: `Access forbidden. ${errorMessage}. Please check: 1) API key is valid, 2) Generative Language API is enabled, 3) API key restrictions allow your domain/IP, 4) Billing is enabled.`,
+          };
+        }
         return {
           success: false,
-          error: `Image analysis failed: ${
+          error: `Image analysis failed (${response.status}): ${
             result.error?.message || response.statusText
           }`,
         };
@@ -459,10 +496,80 @@ export const aiService = {
               throw error;
             }
 
-            // Check if it's an API key issue
+            // Handle 403 Forbidden errors specifically
+            if (response.status === 403) {
+              const errorMessage = apiResult.error?.message || response.statusText;
+              const errorCode = apiResult.error?.code || apiResult.error?.status || "UNKNOWN";
+              const errorDetails = apiResult.error?.details || [];
+              
+              // Check for suspended consumer
+              const isSuspended = errorDetails?.some((detail: any) => 
+                detail["@type"]?.includes("ErrorInfo") && 
+                detail.reason === "CONSUMER_SUSPENDED"
+              ) || errorMessage?.toLowerCase().includes("suspended");
+              
+              // Log comprehensive error details
+              console.error("🔴 403 Forbidden Error Details:", {
+                status: response.status,
+                statusText: response.statusText,
+                errorCode: errorCode,
+                errorMessage: errorMessage,
+                isSuspended: isSuspended,
+                fullError: apiResult.error,
+                apiKeyPrefix: API_KEY ? `${API_KEY.substring(0, 10)}...` : "NOT SET",
+                errorDetails: errorDetails,
+              });
+              
+              // Log the full error message as a string for easier reading
+              console.error("📋 Full Error Response:", JSON.stringify(apiResult, null, 2));
+              
+              // Handle suspended API key specifically
+              if (isSuspended) {
+                const suspendedMessage = `🚨 API Key Suspended\n\nYour API key has been suspended by Google. This typically happens when:\n\n• The API key was exposed publicly (e.g., in client-side code, GitHub, etc.)\n• Google detected security issues with the key\n• Terms of service violations\n• Billing issues with the associated project\n\n🔧 Solution:\n\n1. Go to Google Cloud Console: https://console.cloud.google.com/\n2. Navigate to "APIs & Services" > "Credentials"\n3. Delete the suspended API key (or check if it can be restored)\n4. Create a NEW API key\n5. Set appropriate restrictions:\n   - Application restrictions: "HTTP referrers" with your domains\n   - API restrictions: Select only "Generative Language API"\n6. Add the new key to your .env file as VITE_GOOGLE_AI_API_KEY\n7. NEVER commit API keys to version control (add .env to .gitignore)\n8. For production, consider using a backend proxy to hide your API key\n\n⚠️ Important: If this key is exposed in your code or repository, revoke it immediately for security.`;
+                
+                console.error("⚠️ SECURITY WARNING: API key has been suspended. It may be exposed publicly!");
+                
+                return {
+                  success: false,
+                  error: suspendedMessage,
+                };
+              }
+              
+              // Provide specific error messages based on common 403 causes
+              let userFriendlyMessage = "Access forbidden (403). ";
+              
+              // Check for specific Google API error codes and messages
+              if (errorMessage?.toLowerCase().includes("api key") || 
+                  errorMessage?.toLowerCase().includes("api_key") ||
+                  errorMessage?.toLowerCase().includes("invalid api key")) {
+                userFriendlyMessage += "❌ Invalid or restricted API key. ";
+              } else if (errorMessage?.toLowerCase().includes("permission denied") ||
+                         errorMessage?.toLowerCase().includes("access denied")) {
+                userFriendlyMessage += "❌ Permission denied. Check API key restrictions. ";
+              } else if (errorMessage?.toLowerCase().includes("billing") ||
+                         errorMessage?.toLowerCase().includes("quota")) {
+                userFriendlyMessage += "❌ Billing required or quota exceeded. ";
+              } else if (errorMessage?.toLowerCase().includes("not enabled") ||
+                         errorMessage?.toLowerCase().includes("api not enabled")) {
+                userFriendlyMessage += "❌ Generative Language API not enabled. ";
+              } else if (errorMessage?.toLowerCase().includes("restricted") ||
+                         errorMessage?.toLowerCase().includes("http referrer")) {
+                userFriendlyMessage += "❌ API key restrictions are blocking the request. ";
+              }
+              
+              userFriendlyMessage += `\n\nError Code: ${errorCode}\nError Message: ${errorMessage || "No specific message"}\n\n💡 Troubleshooting Steps:\n1. Verify API key is valid in Google Cloud Console\n2. Enable "Generative Language API" in APIs & Services\n3. Check API key restrictions (HTTP referrer/IP restrictions)\n4. Ensure billing is enabled for your project\n5. Check if you've exceeded quota limits`;
+              
+              return {
+                success: false,
+                error: userFriendlyMessage,
+              };
+            }
+
+            // Check if it's an API key issue (400)
             if (
               response.status === 400 &&
-              apiResult.error?.message?.includes("API key")
+              (apiResult.error?.message?.includes("API key") ||
+                apiResult.error?.message?.includes("invalid"))
             ) {
               return {
                 success: false,
@@ -473,7 +580,7 @@ export const aiService = {
 
             return {
               success: false,
-              error: `API Error: ${
+              error: `API Error (${response.status}): ${
                 apiResult.error?.message || response.statusText
               }`,
             };

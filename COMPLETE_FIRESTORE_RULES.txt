@@ -1,0 +1,103 @@
+// Complete Firestore Rules - Copy this ENTIRE file to Firebase Console
+// Replaces your existing rules
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Video Meetings Collection
+    match /videoMeetings/{meetingId} {
+      // Allow creating a meeting if authenticated
+      allow create: if request.auth != null
+                    && request.resource.data.hostId == request.auth.uid
+                    && request.resource.data.status == 'waiting';
+      
+      // Allow reading if user is authenticated
+      allow read: if request.auth != null;
+      
+      // Allow updating if user is a participant
+      allow update: if request.auth != null
+                    && (
+                      // Host can update anything
+                      resource.data.hostId == request.auth.uid
+                      // Participants can update their own data
+                      || request.auth.uid in resource.data.participants.keys()
+                    );
+      
+      // Only host can delete
+      allow delete: if request.auth != null
+                    && resource.data.hostId == request.auth.uid;
+    }
+    
+    // WebRTC Signaling Collection (REQUIRED for peer-to-peer video/audio)
+    match /webrtcSignaling/{signalId} {
+      // Allow creating if authenticated (sending signals)
+      allow create: if request.auth != null
+                    && request.resource.data.senderId == request.auth.uid;
+      
+      // Allow reading if the signal is directed to you
+      allow read: if request.auth != null
+                  && resource.data.recipientId == request.auth.uid;
+      
+      // Allow deleting if you're the recipient (after processing)
+      allow delete: if request.auth != null
+                    && resource.data.recipientId == request.auth.uid;
+    }
+    
+    // Pair Programming Sessions Collection
+    match /pairProgrammingSessions/{sessionId} {
+      // Allow creating if authenticated
+      allow create: if request.auth != null
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.status == 'active';
+      
+      // Allow reading if user is authenticated (to see available sessions)
+      allow read: if request.auth != null;
+      
+      // Allow updating if user is a participant
+      allow update: if request.auth != null
+                    && (
+                      // Creator can update anything
+                      resource.data.createdBy == request.auth.uid
+                      // Participants can update
+                      || request.auth.uid in resource.data.participants.keys()
+                    );
+      
+      // Only creator can delete
+      allow delete: if request.auth != null
+                    && resource.data.createdBy == request.auth.uid;
+    }
+    
+    // Pair Drawing Sessions Collection
+    match /pairDrawingSessions/{sessionId} {
+      // Allow creating if authenticated
+      allow create: if request.auth != null
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.status == 'active';
+      
+      // Allow reading if user is authenticated (to see available sessions)
+      allow read: if request.auth != null;
+      
+      // Allow updating if user is a participant
+      allow update: if request.auth != null
+                    && (
+                      // Creator can update anything
+                      resource.data.createdBy == request.auth.uid
+                      // Participants can update
+                      || request.auth.uid in resource.data.participants.keys()
+                    );
+      
+      // Only creator can delete
+      allow delete: if request.auth != null
+                    && resource.data.createdBy == request.auth.uid;
+    }
+    
+    // All other documents - maintain your existing open access
+    // This catches everything that doesn't match the specific rules above
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+

@@ -19,10 +19,18 @@ import { FeedbackButton } from "./components/feedback/FeedbackButton";
 import { FeedbackProvider } from "./components/feedback/FeedbackContext";
 import { ContextualFeedback } from "./components/feedback/SmartFeedbackPrompt";
 import { DragInstructionTooltip } from "./components/feedback/DragInstructionTooltip";
+import { useTodoReminders } from "./hooks/useTodoReminders";
+import { User } from "./types";
+import { GlobalPomodoroProvider } from "./contexts/GlobalPomodoroContext";
+import { GlobalPomodoroWidget } from "./components/pomodoro/GlobalPomodoroWidget";
+import { PomodoroEducation } from "./components/pomodoro/PomodoroEducation";
+import { useGlobalPomodoro } from "./contexts/GlobalPomodoroContext";
 // Import the file permissions fixer to make it available in console
 import "./utils/fixExistingFilePermissions";
 // Import EmailJS test functions for console testing
 import "./utils/testEmailJS";
+// Import phone number test function for console testing
+import "./utils/testPhoneNumber";
 // Test utilities removed for production
 
 // Component to handle authenticated app content
@@ -37,6 +45,9 @@ const AuthenticatedApp: React.FC = () => {
 
   // Global copy listener for note creation
   const { copyEvent, isModalVisible, closeModal } = useGlobalCopyListener();
+  
+  // Global Pomodoro state
+  const { isEducationVisible, hideEducation } = useGlobalPomodoro();
 
   // Handle URL parameters for team invitations
   useEffect(() => {
@@ -227,6 +238,15 @@ const AuthenticatedApp: React.FC = () => {
         
         {/* Drag Instruction Tooltip */}
         <DragInstructionTooltip />
+
+        {/* Global Pomodoro Widget */}
+        <GlobalPomodoroWidget />
+
+        {/* Pomodoro Education Modal */}
+        <PomodoroEducation 
+          isVisible={isEducationVisible} 
+          onClose={hideEducation} 
+        />
       </div>
     </ErrorBoundary>
   );
@@ -234,14 +254,19 @@ const AuthenticatedApp: React.FC = () => {
 
 // Main App component with authentication and routing
 function App() {
+  const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Initialize todo reminders for authenticated user
+  useTodoReminders(user);
 
   useEffect(() => {
     // Set up real-time auth state listener
     console.log("🔐 Setting up auth state listener...");
-    const unsubscribe = realTimeAuth.onAuthStateChange((user) => {
-      console.log("👤 Auth state changed:", { user: !!user, userId: user?.id });
-      setIsAuthenticated(!!user);
+    const unsubscribe = realTimeAuth.onAuthStateChange((currentUser) => {
+      console.log("👤 Auth state changed:", { user: !!currentUser, userId: currentUser?.id });
+      setUser(currentUser);
+      setIsAuthenticated(!!currentUser);
     });
 
     // Clean up listener on component unmount
@@ -268,9 +293,11 @@ function App() {
   return (
     <ThemeProvider>
       <FeedbackProvider>
-        <Router>
-          <AuthenticatedApp />
-        </Router>
+        <GlobalPomodoroProvider>
+          <Router>
+            <AuthenticatedApp />
+          </Router>
+        </GlobalPomodoroProvider>
       </FeedbackProvider>
     </ThemeProvider>
   );

@@ -1,4 +1,4 @@
-import { FileItem, Task, ShortNote, AIAnalysis } from "../types";
+import { FileItem, Task, ShortNote, AIAnalysis, NoteFolder } from "../types";
 import { googleDriveService, DriveFile } from "./googleDriveService";
 import { realTimeAuth } from "./realTimeAuth";
 
@@ -6,6 +6,7 @@ const FILES_KEY = "super_study_files";
 const TASKS_KEY = "super_study_tasks";
 const NOTES_KEY = "super_study_notes";
 const AI_ANALYSIS_KEY = "super_study_ai_analysis";
+const NOTE_FOLDERS_KEY = "super_study_note_folders";
 
 export const storageUtils = {
   generateId(): string {
@@ -97,6 +98,63 @@ export const storageUtils = {
   deleteShortNote(noteId: string): void {
     const notes = JSON.parse(localStorage.getItem(NOTES_KEY) || "[]");
     const filtered = notes.filter((n: ShortNote) => n.id !== noteId);
+    localStorage.setItem(NOTES_KEY, JSON.stringify(filtered));
+  },
+
+  // Note Folders Management
+  getNoteFolders(userId: string): NoteFolder[] {
+    const folders = localStorage.getItem(NOTE_FOLDERS_KEY);
+    const allFolders: NoteFolder[] = folders ? JSON.parse(folders) : [];
+    return allFolders.filter((folder) => folder.userId === userId);
+  },
+
+  storeNoteFolder(folder: NoteFolder): void {
+    const folders = JSON.parse(localStorage.getItem(NOTE_FOLDERS_KEY) || "[]");
+    folders.push(folder);
+    localStorage.setItem(NOTE_FOLDERS_KEY, JSON.stringify(folders));
+  },
+
+  updateNoteFolder(folderId: string, updates: Partial<NoteFolder>): void {
+    const folders = JSON.parse(localStorage.getItem(NOTE_FOLDERS_KEY) || "[]");
+    const index = folders.findIndex((f: NoteFolder) => f.id === folderId);
+    if (index !== -1) {
+      folders[index] = {
+        ...folders[index],
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(NOTE_FOLDERS_KEY, JSON.stringify(folders));
+    }
+  },
+
+  deleteNoteFolder(folderId: string): void {
+    const folders = JSON.parse(localStorage.getItem(NOTE_FOLDERS_KEY) || "[]");
+    const filtered = folders.filter((f: NoteFolder) => f.id !== folderId);
+    localStorage.setItem(NOTE_FOLDERS_KEY, JSON.stringify(filtered));
+    
+    // Move all notes in this folder to uncategorized (remove folderId)
+    const notes = JSON.parse(localStorage.getItem(NOTES_KEY) || "[]");
+    const updatedNotes = notes.map((note: ShortNote) =>
+      note.folderId === folderId ? { ...note, folderId: undefined } : note
+    );
+    localStorage.setItem(NOTES_KEY, JSON.stringify(updatedNotes));
+  },
+
+  // Move notes between folders
+  moveNotesToFolder(noteIds: string[], folderId: string | undefined): void {
+    const notes = JSON.parse(localStorage.getItem(NOTES_KEY) || "[]");
+    const updatedNotes = notes.map((note: ShortNote) =>
+      noteIds.includes(note.id)
+        ? { ...note, folderId, updatedAt: new Date().toISOString() }
+        : note
+    );
+    localStorage.setItem(NOTES_KEY, JSON.stringify(updatedNotes));
+  },
+
+  // Delete multiple notes at once
+  deleteMultipleNotes(noteIds: string[]): void {
+    const notes = JSON.parse(localStorage.getItem(NOTES_KEY) || "[]");
+    const filtered = notes.filter((note: ShortNote) => !noteIds.includes(note.id));
     localStorage.setItem(NOTES_KEY, JSON.stringify(filtered));
   },
 

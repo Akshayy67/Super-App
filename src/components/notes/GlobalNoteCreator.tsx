@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { X, FileText, Tag, Save, Copy, Check } from "lucide-react";
-import { ShortNote } from "../types";
+import { X, FileText, Tag, Save, Copy, Check, Folder } from "lucide-react";
+import { ShortNote, NoteFolder } from "../types";
 import { storageUtils } from "../../utils/storage";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 
@@ -21,12 +21,21 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
     title: "",
     content: "",
     tags: "",
+    folderId: "",
   });
+  const [folders, setFolders] = useState<NoteFolder[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showCopiedIndicator, setShowCopiedIndicator] = useState(false);
 
   const user = realTimeAuth.getCurrentUser();
+
+  useEffect(() => {
+    if (user) {
+      const userFolders = storageUtils.getNoteFolders(user.id);
+      setFolders(userFolders);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (isVisible && copiedText) {
@@ -35,6 +44,7 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
         title: `${sourceContext} - ${new Date().toLocaleDateString()}`,
         content: copiedText,
         tags: "",
+        folderId: "",
       });
       setSaveSuccess(false);
     }
@@ -59,6 +69,7 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
         content: noteForm.content.trim(),
         tags,
         userId: user.id,
+        folderId: noteForm.folderId || undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -103,7 +114,7 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
   const handleClose = () => {
     if (!isSaving) {
       onClose();
-      setNoteForm({ title: "", content: "", tags: "" });
+      setNoteForm({ title: "", content: "", tags: "", folderId: "" });
       setSaveSuccess(false);
     }
   };
@@ -172,6 +183,29 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
               placeholder="Enter note title..."
             />
           </div>
+
+          {/* Folder Selection */}
+          {folders.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Folder
+              </label>
+              <select
+                value={noteForm.folderId}
+                onChange={(e) =>
+                  setNoteForm({ ...noteForm, folderId: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="">Uncategorized</option>
+                {folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Content Input */}
           <div>

@@ -2,10 +2,10 @@ import emailjs from "@emailjs/browser";
 
 // EmailJS Configuration
 const EMAILJS_CONFIG = {
-  SERVICE_ID: "service_i4ksmkg", // Your EmailJS service ID
-  TEMPLATE_ID: "template_00lom57", // Your feedback template ID
-  TEMPLATE_URGENT_ID: "template_lhf0w0m", // Your urgent template ID
-  PUBLIC_KEY: "xKbkJUlAG_JHj3d9b", // Your EmailJS public key
+  SERVICE_ID: import.meta.env.VITE_EMAILJS_SERVICE_ID || "service_i4ksmkg",
+  TEMPLATE_ID: import.meta.env.VITE_EMAILJS_FEEDBACK_TEMPLATE_ID || "template_00lom57", // Feedback template ID
+  TEMPLATE_URGENT_ID: "template_lhf0w0m", // Your urgent template ID (if needed)
+  PUBLIC_KEY: import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "xKbkJUlAG_JHj3d9b",
 };
 
 // Initialize EmailJS

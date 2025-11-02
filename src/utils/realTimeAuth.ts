@@ -18,6 +18,58 @@ export interface AuthResult {
 class RealTimeAuthService {
   private googleAccessToken: string | null = null;
 
+  // Fetch phone number from Google People API
+  private async fetchPhoneNumberFromGoogle(accessToken: string): Promise<string | null> {
+    try {
+      console.log("📱 Attempting to fetch phone number from Google People API...");
+      const response = await fetch(
+        "https://people.googleapis.com/v1/people/me?personFields=phoneNumbers",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("❌ Failed to fetch phone number from Google People API:", {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
+        
+        if (response.status === 403) {
+          console.error("🔒 Permission denied. Possible issues:");
+          console.error("   1. Google People API is not enabled in Google Cloud Console");
+          console.error("   2. The phone number scope was not granted by the user");
+          console.error("   3. Check: https://console.cloud.google.com/apis/library/people.googleapis.com");
+        }
+        
+        return null;
+      }
+
+      const data = await response.json();
+      const phoneNumbers = data.phoneNumbers;
+
+      if (phoneNumbers && phoneNumbers.length > 0) {
+        // Get the first phone number (usually the primary one)
+        const phoneNumber = phoneNumbers[0].value;
+        console.log("✅ Successfully fetched phone number from Google People API");
+        return phoneNumber;
+      }
+
+      console.log("📱 No phone number found in Google profile");
+      console.log("💡 The user may not have added a phone number to their Google account");
+      return null;
+    } catch (error) {
+      console.error("❌ Error fetching phone number from Google People API:", error);
+      return null;
+    }
+  }
+
   async signInWithGoogle(): Promise<AuthResult> {
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -25,6 +77,8 @@ class RealTimeAuthService {
 
       // Get Google access token from credential
       const credential = GoogleAuthProvider.credentialFromResult(result);
+      let phoneNumber: string | null = null;
+      
       if (credential && credential.accessToken) {
         this.googleAccessToken = credential.accessToken;
         console.log(
@@ -34,9 +88,19 @@ class RealTimeAuthService {
 
         // Store token in localStorage for persistence
         localStorage.setItem("google_access_token", this.googleAccessToken);
+        
+        // Fetch phone number from Google People API
+        phoneNumber = await this.fetchPhoneNumberFromGoogle(this.googleAccessToken);
       } else {
         console.log("❌ No Google access token received");
         this.googleAccessToken = null;
+      }
+
+      // Log the fetched phone number
+      if (phoneNumber) {
+        console.log("📱 User's mobile number:", phoneNumber);
+      } else {
+        console.log("📱 No mobile number found in user's Google profile");
       }
 
       // Create or update user document in Firestore with additional security info
@@ -44,6 +108,7 @@ class RealTimeAuthService {
         id: firebaseUser.uid,
         username: firebaseUser.displayName || "Google User",
         email: firebaseUser.email || "",
+        phoneNumber: phoneNumber || undefined,
         createdAt: new Date().toISOString(),
       };
 
@@ -102,6 +167,58 @@ class RealTimeAuthService {
 
     console.log("❌ No Google access token found in memory or localStorage");
     return null;
+  }
+
+  // Manually fetch and update phone number from Google People API
+  async fetchAndUpdatePhoneNumber(): Promise<string | null> {
+    const user = this.getCurrentUser();
+    if (!user) {
+      console.error("❌ No user is currently logged in");
+      return null;
+    }
+
+    const accessToken = this.getGoogleAccessToken();
+    if (!accessToken) {
+      console.error("❌ No Google access token available");
+      return null;
+    }
+
+    try {
+      console.log("📱 Fetching phone number from Google People API...");
+      const phoneNumber = await this.fetchPhoneNumberFromGoogle(accessToken);
+
+      if (phoneNumber) {
+        // Update user data in Firestore
+        await setDoc(
+          doc(db, "users", user.id),
+          {
+            phoneNumber: phoneNumber,
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            merge: true,
+          }
+        );
+
+        // Update current user object
+        this.currentUser = {
+          ...user,
+          phoneNumber: phoneNumber,
+        };
+
+        // Notify all listeners about the update
+        this.authStateListeners.forEach((listener) => listener(this.currentUser));
+
+        console.log("✅ Phone number updated successfully:", phoneNumber);
+        return phoneNumber;
+      } else {
+        console.log("📱 No phone number found in Google profile");
+        return null;
+      }
+    } catch (error) {
+      console.error("❌ Error fetching phone number:", error);
+      return null;
+    }
   }
 
   // Clear Google access token when expired
@@ -229,7 +346,14 @@ class RealTimeAuthService {
     try {
       const userDoc = await getDoc(doc(db, "users", uid));
       if (userDoc.exists()) {
-        return userDoc.data() as User;
+        const userData = userDoc.data() as User;
+        // Log phone number if it exists in Firestore
+        if (userData.phoneNumber) {
+          console.log("📱 User's mobile number from Firestore:", userData.phoneNumber);
+        } else {
+          console.log("📱 No mobile number found in Firestore user data");
+        }
+        return userData;
       }
       throw new Error("User data not found");
     } catch (error) {

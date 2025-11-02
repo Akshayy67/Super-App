@@ -19,7 +19,9 @@ export const useCurrentRoute = () => {
       'flashcards': 'flashcards',
       'interview': 'interview',
       'team': 'team',
-      'about': 'about'
+      'meeting': 'meeting',
+      'community': 'community',
+      // 'about': 'about'
     };
     
     return routeMap[segments[0]] || 'dashboard';

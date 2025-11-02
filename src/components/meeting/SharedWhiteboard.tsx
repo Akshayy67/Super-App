@@ -14,6 +14,8 @@ import {
   MousePointer,
   Minus,
 } from 'lucide-react';
+import { meetingWhiteboardService } from '../../services/meetingWhiteboardService';
+import { realTimeAuth } from '../../utils/realTimeAuth';
 
 interface DrawingPoint {
   x: number;
@@ -79,11 +81,103 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
 
   const sizes = [1, 2, 3, 5, 8, 12, 16, 20];
 
-  // Mock user data - in real implementation, get from auth service
-  const currentUser = {
+  // Get current user from auth
+  const [currentUser, setCurrentUser] = React.useState<{ id: string; name: string }>({
     id: 'user_123',
     name: 'Current User',
-  };
+  });
+  
+  // Track if we're syncing from remote to avoid infinite loops
+  const [isSyncingFromRemote, setIsSyncingFromRemote] = useState(false);
+  const [isHost, setIsHost] = useState(false);
+  // Track the last path ID we sent to avoid processing our own updates
+  const lastSentPathIdRef = useRef<string | null>(null);
+
+  React.useEffect(() => {
+    const user = realTimeAuth.getCurrentUser();
+    if (user) {
+      setCurrentUser({
+        id: user.id,
+        name: user.displayName || user.email || 'User',
+      });
+    }
+  }, []);
+
+  // Subscribe to whiteboard updates when sessionId is provided
+  useEffect(() => {
+    if (!sessionId) return;
+
+    let isProcessing = false;
+
+    // Subscribe to whiteboard updates
+    const unsubscribe = meetingWhiteboardService.subscribeToWhiteboard(
+      sessionId,
+      (whiteboardState) => {
+        if (whiteboardState && !isSyncingFromRemote && !isProcessing) {
+          // Check if this update is from our own action (ignore if the last path matches what we sent)
+          if (whiteboardState.paths.length > 0) {
+            const lastPath = whiteboardState.paths[whiteboardState.paths.length - 1];
+            const isOurUpdate = lastPath && lastPath.id === lastSentPathIdRef.current;
+            
+            // If it's our update, reset the ref and don't process (we already have it locally)
+            if (isOurUpdate) {
+              lastSentPathIdRef.current = null;
+              return;
+            }
+          }
+          
+          isProcessing = true;
+          setIsSyncingFromRemote(true);
+          
+          console.log('📝 Receiving whiteboard update:', whiteboardState.paths.length, 'paths');
+          
+          setWhiteboardState(prev => {
+            // Only update if paths are actually different to avoid unnecessary redraws
+            const pathsChanged = JSON.stringify(prev.paths) !== JSON.stringify(whiteboardState.paths);
+            const backgroundChanged = prev.background !== whiteboardState.background;
+            
+            if (pathsChanged || backgroundChanged) {
+              console.log('✅ Updating whiteboard state with', whiteboardState.paths.length, 'paths');
+              return {
+                ...prev,
+                paths: whiteboardState.paths,
+                background: whiteboardState.background,
+              };
+            }
+            return prev;
+          });
+          
+          setTimeout(() => {
+            setIsSyncingFromRemote(false);
+            isProcessing = false;
+          }, 100);
+        }
+      }
+    );
+
+    // Check if user is host for undo permissions
+    if (sessionId) {
+      import('firebase/firestore').then(({ doc, getDoc }) => {
+        import('../../config/firebase').then(({ db }) => {
+          const meetingRef = doc(db, 'videoMeetings', sessionId);
+          getDoc(meetingRef).then((snapshot) => {
+            if (snapshot.exists()) {
+              const data = snapshot.data();
+              const user = realTimeAuth.getCurrentUser();
+              setIsHost(data.hostId === user?.id);
+            }
+          }).catch((error) => {
+            console.error('Error checking host status:', error);
+          });
+        });
+      });
+    }
+
+    return () => {
+      unsubscribe();
+      meetingWhiteboardService.unsubscribeFromWhiteboard(sessionId);
+    };
+  }, [sessionId]);
 
   useEffect(() => {
     redrawCanvas();
@@ -242,21 +336,34 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
     }
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = async () => {
     if (!isDrawing || !currentPath) return;
 
     setIsDrawing(false);
     
-    // Add completed path to whiteboard state
+    // Add completed path to whiteboard state locally first
     setWhiteboardState(prev => ({
       ...prev,
       paths: [...prev.paths, currentPath],
     }));
 
+    // Sync to Firestore if sessionId is provided
+    if (sessionId && !isReadOnly) {
+      try {
+        lastSentPathIdRef.current = currentPath.id;
+        console.log('📤 Sending path to whiteboard:', currentPath.id);
+        await meetingWhiteboardService.addPath(sessionId, currentPath);
+        console.log('✅ Path sent successfully');
+      } catch (error) {
+        console.error('❌ Error syncing path to whiteboard:', error);
+        lastSentPathIdRef.current = null;
+      }
+    }
+
     setCurrentPath(null);
   };
 
-  const handleTextSubmit = () => {
+  const handleTextSubmit = async () => {
     if (!textInput.trim() || !textPosition) return;
 
     const textPath: DrawingPath = {
@@ -272,28 +379,76 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
       textPosition,
     };
 
+    // Add text path locally first
     setWhiteboardState(prev => ({
       ...prev,
       paths: [...prev.paths, textPath],
     }));
+
+    // Sync to Firestore if sessionId is provided
+    if (sessionId && !isReadOnly) {
+      try {
+        lastSentPathIdRef.current = textPath.id;
+        await meetingWhiteboardService.addPath(sessionId, textPath);
+      } catch (error) {
+        console.error('Error syncing text path to whiteboard:', error);
+        lastSentPathIdRef.current = null;
+      }
+    }
 
     setTextInput('');
     setTextPosition(null);
     setShowTextInput(false);
   };
 
-  const clearCanvas = () => {
+  const clearCanvas = async () => {
+    // Clear locally first
     setWhiteboardState(prev => ({
       ...prev,
       paths: [],
     }));
+
+    // Sync to Firestore if sessionId is provided
+    if (sessionId && !isReadOnly) {
+      try {
+        await meetingWhiteboardService.clearCanvas(sessionId);
+      } catch (error) {
+        console.error('Error clearing whiteboard:', error);
+      }
+    }
   };
 
-  const undo = () => {
+  const undo = async () => {
+    if (whiteboardState.paths.length === 0) return;
+
+    const lastPath = whiteboardState.paths[whiteboardState.paths.length - 1];
+    const isLastPathOwner = lastPath.userId === currentUser.id;
+
+    // Only allow undo if user is host or drew the last path
+    if (!isHost && !isLastPathOwner) {
+      alert('You can only undo your own drawings');
+      return;
+    }
+
+    // Undo locally first
     setWhiteboardState(prev => ({
       ...prev,
       paths: prev.paths.slice(0, -1),
     }));
+
+    // Sync to Firestore if sessionId is provided
+    if (sessionId && !isReadOnly) {
+      try {
+        await meetingWhiteboardService.undoLastPath(sessionId);
+      } catch (error) {
+        console.error('Error undoing path:', error);
+        // Revert local state on error
+        setWhiteboardState(prev => ({
+          ...prev,
+          paths: [...prev.paths, lastPath],
+        }));
+      }
+    }
   };
 
   const exportCanvas = () => {
@@ -329,7 +484,8 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
 
   return (
     <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden ${className}`}>
-      {/* Toolbar */}
+      {/* Toolbar - Hidden in read-only mode */}
+      {!isReadOnly && (
       <div className="p-4 border-b border-gray-200 dark:border-slate-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -504,6 +660,7 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
           </div>
         </div>
       </div>
+      )}
 
       {/* Canvas */}
       <div className="relative">
@@ -511,11 +668,12 @@ export const SharedWhiteboard: React.FC<SharedWhiteboardProps> = ({
           ref={canvasRef}
           width={800}
           height={600}
-          className="w-full h-96 cursor-crosshair"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          className="w-full h-96"
+          style={{ cursor: isReadOnly ? 'default' : 'crosshair' }}
+          onMouseDown={!isReadOnly ? handleMouseDown : undefined}
+          onMouseMove={!isReadOnly ? handleMouseMove : undefined}
+          onMouseUp={!isReadOnly ? handleMouseUp : undefined}
+          onMouseLeave={!isReadOnly ? handleMouseUp : undefined}
         />
 
         {/* Text Input Modal */}

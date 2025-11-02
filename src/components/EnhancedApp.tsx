@@ -26,6 +26,7 @@ import { realTimeAuth } from "../utils/realTimeAuth";
 import { ThemeProvider } from "./ui/ThemeProvider";
 import { ThemeToggle } from "./ui/ThemeToggle";
 import { AuthWrapper } from "./auth/AuthWrapper";
+import { useTodoReminders } from "../hooks/useTodoReminders";
 
 interface User {
   id: string;
@@ -49,6 +50,9 @@ export const EnhancedApp: React.FC = () => {
     difficulty: "medium" as "easy" | "medium" | "hard",
     interviewType: "mixed" as "technical" | "behavioral" | "mixed",
   });
+
+  // Initialize todo reminders for authenticated user
+  const { sendManualReminder } = useTodoReminders(user);
 
   useEffect(() => {
     const initializeAuth = async () => {
