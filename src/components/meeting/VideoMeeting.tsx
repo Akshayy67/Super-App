@@ -449,6 +449,15 @@ export const VideoMeeting: React.FC = () => {
       
       // Check if we're in the right signaling state to accept an answer
       const signalingState = existingPC.signalingState;
+      const connectionState = existingPC.connectionState;
+      
+      // If connection is already connected/connecting and stable, we likely already processed this
+      if (signalingState === 'stable' && 
+          (connectionState === 'connected' || connectionState === 'connecting')) {
+        console.log('✅ Connection already stable and active - answer may have been processed');
+        return;
+      }
+      
       if (signalingState !== 'have-local-offer') {
         console.warn(`⚠️ Unexpected signaling state when handling answer from ${senderId}: ${signalingState}`);
         
@@ -459,10 +468,14 @@ export const VideoMeeting: React.FC = () => {
         }
         
         // If we're waiting for an offer but got an answer, we might be in a race condition
+        // In this case, we should wait for the offer/answer exchange to complete naturally
         if (signalingState === 'have-remote-offer') {
-          console.log('⚠️ Received answer but we\'re waiting for offer - ignoring answer');
+          console.log('⚠️ Received answer but we\'re waiting for offer - ignoring answer (will be handled by offer flow)');
           return;
         }
+        
+        // For other states, log but don't fail - might be in transition
+        console.log(`ℹ️ Signaling state is ${signalingState}, attempting to set answer anyway`);
       }
       
       await webRTCService.setRemoteDescription(senderId, answer);

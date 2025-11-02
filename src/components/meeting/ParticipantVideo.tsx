@@ -89,10 +89,22 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
       });
 
       // Monitor stream active state changes
-      const onActive = () => {
+      const onActive = async () => {
         console.log('✅ Stream became active');
-        if (videoRef.current && videoRef.current.paused) {
-          videoRef.current.play().catch(err => console.warn('Play failed:', err));
+        const video = videoRef.current;
+        if (video) {
+          try {
+            if (video.paused) {
+              await video.play();
+              console.log('✅ Video started playing after stream became active');
+            }
+            // Ensure video is ready
+            if (video.readyState < 2) {
+              video.load();
+            }
+          } catch (err) {
+            console.warn('⚠️ Play failed on stream active:', err);
+          }
         }
       };
 
@@ -105,14 +117,23 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
 
       // Monitor track unmute events to ensure playback
       const trackUnmuteHandlers: Map<MediaStreamTrack, () => void> = new Map();
-      const handleTrackUnmute = (track: MediaStreamTrack) => {
+      const handleTrackUnmute = async (track: MediaStreamTrack) => {
         console.log(`🔊 Track ${track.kind} unmuted, checking video playback`);
-        if (videoRef.current && videoRef.current.paused) {
-          videoRef.current.play().catch(err => console.warn('Play failed on unmute:', err));
-        }
-        // If it's a video track, ensure it's playing
-        if (track.kind === 'video' && videoRef.current) {
-          videoRef.current.play().catch(err => console.warn('Video play failed on unmute:', err));
+        const video = videoRef.current;
+        if (video) {
+          // Force playback when track unmutes - this is critical for video/audio to work
+          try {
+            if (video.paused) {
+              await video.play();
+              console.log(`✅ Video started playing after ${track.kind} track unmute`);
+            }
+            // Also try to reload if stuck
+            if (video.readyState < 2) {
+              video.load();
+            }
+          } catch (err) {
+            console.warn(`⚠️ Play failed on ${track.kind} unmute:`, err);
+          }
         }
       };
 
@@ -127,31 +148,61 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
       // Set stream on video element - keep it simple
       const video = videoRef.current;
       if (video) {
+        // Important: Set muted only for local stream to prevent echo
+        video.muted = isLocal;
         video.srcObject = stream;
         
-        // Simple play function
+        // Force play - critical for video/audio to work
         const playVideo = async () => {
-          if (video && video.paused) {
+          if (video && stream) {
             try {
-              await video.play();
+              // Check if we have tracks before playing
+              const hasVideo = stream.getVideoTracks().length > 0;
+              const hasAudio = stream.getAudioTracks().length > 0;
+              
+              if (hasVideo || hasAudio) {
+                await video.play();
+                console.log(`✅ Video playing for ${participant.name}`, {
+                  hasVideo,
+                  hasAudio,
+                  muted: video.muted,
+                  isLocal
+                });
+              }
             } catch (err) {
-              // Will play when ready
+              console.warn('⚠️ Initial play failed (will retry):', err);
             }
           }
         };
 
         // Play when ready
-        const onCanPlay = () => {
-          playVideo();
+        const onCanPlay = async () => {
+          console.log(`✅ Video can play for ${participant.name}`);
+          await playVideo();
+        };
+
+        // Play when loaded
+        const onLoadedMetadata = async () => {
+          console.log(`📹 Video metadata loaded for ${participant.name}`);
+          await playVideo();
         };
 
         video.addEventListener('canplay', onCanPlay);
+        video.addEventListener('loadedmetadata', onLoadedMetadata);
         
         // Try immediately
         playVideo();
+        
+        // Also try after a short delay to handle timing issues
+        setTimeout(() => {
+          playVideo();
+        }, 500);
 
         return () => {
-          video.removeEventListener('canplay', onCanPlay);
+          if (video) {
+            video.removeEventListener('canplay', onCanPlay);
+            video.removeEventListener('loadedmetadata', onLoadedMetadata);
+          }
           stream.removeEventListener('active', onActive);
           stream.removeEventListener('inactive', onInactive);
           // Remove track unmute listeners

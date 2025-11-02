@@ -24,6 +24,9 @@ class MeetingTranscriptionService {
   private restartTimeout: NodeJS.Timeout | null = null;
   private lastResultTime = Date.now();
   private qualityCheckInterval: NodeJS.Timeout | null = null;
+  private lastError: string | null = null;
+  private consecutiveNoSpeechCount = 0;
+  private maxConsecutiveNoSpeech = 5;
 
   async startTranscription(
     meetingId: string,
@@ -81,12 +84,17 @@ class MeetingTranscriptionService {
 
     this.recognition.onstart = () => {
       console.log('🎤 Speech recognition started');
+      // Reset retry counter and consecutive no-speech count on successful start
       this.retryAttempts = 0;
+      this.consecutiveNoSpeechCount = 0;
+      this.lastError = null;
       this.lastResultTime = Date.now();
     };
 
     this.recognition.onresult = (event: any) => {
       this.lastResultTime = Date.now();
+      // Reset consecutive no-speech count when we get results
+      this.consecutiveNoSpeechCount = 0;
       let interimTranscript = '';
       let finalTranscript = '';
 
@@ -136,16 +144,25 @@ class MeetingTranscriptionService {
 
     this.recognition.onerror = (event: any) => {
       const error = event.error;
+      this.lastError = error;
       console.log(`🔍 Speech recognition event: ${error}`);
 
       // Handle different error types
       switch (error) {
         case 'no-speech':
+          // Track consecutive no-speech events
+          this.consecutiveNoSpeechCount++;
+          // If we get many consecutive no-speech events, it might indicate an issue
+          // but don't restart immediately - let onend handle it if needed
+          if (this.consecutiveNoSpeechCount >= this.maxConsecutiveNoSpeech) {
+            console.warn(`⚠️ Multiple consecutive no-speech events (${this.consecutiveNoSpeechCount}). This might indicate microphone issues.`);
+          }
           // Silent handling - user might be listening
           break;
         case 'audio-capture':
           console.error('❌ Microphone not accessible');
           this.handleError('Microphone not accessible. Please check your permissions.');
+          this.consecutiveNoSpeechCount = 0; // Reset on actual error
           break;
         case 'not-allowed':
           console.error('❌ Microphone permission denied');
@@ -155,13 +172,16 @@ class MeetingTranscriptionService {
         case 'network':
           console.error('❌ Network error');
           this.handleError('Network error. Please check your internet connection.');
+          this.consecutiveNoSpeechCount = 0;
           this.restartAfterDelay();
           break;
         case 'aborted':
-          // Handled in onend
+          // Aborted is often intentional (e.g., switching tabs, browser throttling)
+          // Don't treat as error, let onend handle gracefully
           break;
         default:
           console.error(`❌ Unknown error: ${error}`);
+          this.consecutiveNoSpeechCount = 0;
           if (error !== 'no-speech' && error !== 'audio-capture') {
             this.restartAfterDelay();
           }
@@ -172,26 +192,58 @@ class MeetingTranscriptionService {
       console.log('🔴 Speech recognition ended');
       
       if (this.isTranscribing) {
-        // Auto-restart with exponential backoff
-        this.retryAttempts++;
+        // Don't restart immediately if it was just "no-speech" - that's normal
+        // Only restart if it was an actual error or after many consecutive no-speech events
+        const shouldRestart = 
+          this.lastError !== 'no-speech' && 
+          this.lastError !== 'aborted' &&
+          this.lastError !== null;
         
-        if (this.retryAttempts < this.maxRetries) {
-          const delay = Math.min(1000 * Math.pow(2, this.retryAttempts), 10000);
-          console.log(`⏳ Restarting transcription in ${delay}ms (attempt ${this.retryAttempts}/${this.maxRetries})`);
+        // Also restart if we've had too many consecutive no-speech events
+        const tooManyNoSpeech = this.consecutiveNoSpeechCount >= this.maxConsecutiveNoSpeech;
+        
+        if (shouldRestart || tooManyNoSpeech) {
+          // Auto-restart with exponential backoff
+          this.retryAttempts++;
           
+          if (this.retryAttempts < this.maxRetries) {
+            const delay = Math.min(1000 * Math.pow(2, this.retryAttempts), 10000);
+            const reason = tooManyNoSpeech ? 'multiple no-speech events' : `error: ${this.lastError}`;
+            console.log(`⏳ Restarting transcription in ${delay}ms (attempt ${this.retryAttempts}/${this.maxRetries}) - reason: ${reason}`);
+            
+            this.restartTimeout = setTimeout(() => {
+              if (this.isTranscribing && this.recognition) {
+                try {
+                  this.recognition.start();
+                } catch (e) {
+                  console.error('Failed to restart recognition:', e);
+                }
+              }
+            }, delay);
+          } else {
+            console.error('❌ Max retries reached. Stopping transcription.');
+            this.handleError('Transcription stopped after multiple failures. Please try again.');
+            this.stopTranscription();
+          }
+        } else if (this.lastError === 'no-speech' || this.lastError === 'aborted') {
+          // For no-speech and aborted, restart more quietly after a short delay
+          // This handles browser throttling and normal pauses
           this.restartTimeout = setTimeout(() => {
             if (this.isTranscribing && this.recognition) {
               try {
+                // Reset consecutive count on restart
+                this.consecutiveNoSpeechCount = 0;
                 this.recognition.start();
               } catch (e) {
-                console.error('Failed to restart recognition:', e);
+                // If restart fails, increment retry counter
+                this.retryAttempts++;
+                if (this.retryAttempts >= this.maxRetries) {
+                  console.error('❌ Max retries reached. Stopping transcription.');
+                  this.stopTranscription();
+                }
               }
             }
-          }, delay);
-        } else {
-          console.error('❌ Max retries reached. Stopping transcription.');
-          this.handleError('Transcription stopped after multiple failures. Please try again.');
-          this.stopTranscription();
+          }, 2000); // Shorter delay for normal restarts
         }
       }
     };

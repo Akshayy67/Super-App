@@ -9,6 +9,9 @@ class WebRTCService {
   private pendingIceCandidates: Map<string, RTCIceCandidateInit[]> = new Map();
   private remoteTracks: Map<string, Map<string, MediaStreamTrack>> = new Map(); // userId -> trackKind -> track
   private remoteStreamsMap: Map<string, MediaStream> = new Map(); // userId -> combined stream
+  private unmuteCallbackTimeouts: Map<string, NodeJS.Timeout> = new Map(); // Debounce unmute callbacks
+  private reconnectionAttempts: Map<string, number> = new Map(); // Track reconnection attempts per user
+  private maxReconnectionAttempts = 3;
   private configuration: RTCConfiguration = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
@@ -271,12 +274,25 @@ class WebRTCService {
         
         event.track.onunmute = () => {
           console.log(`🔊 Track ${event.track.kind} unmuted for ${userId}`);
-          // When track unmutes, trigger stream callback update
+          // Debounce unmute callbacks to avoid excessive updates
+          // Only call callback if stream actually exists and we haven't called recently
           if (this.onRemoteStreamCallback && userTracks.size > 0) {
             const existingStream = this.remoteStreamsMap.get(userId);
             if (existingStream) {
-              console.log(`🔄 Re-calling callback due to ${event.track.kind} track unmute`);
-              this.onRemoteStreamCallback(userId, existingStream);
+              // Clear existing timeout for this user
+              const existingTimeout = this.unmuteCallbackTimeouts.get(userId);
+              if (existingTimeout) {
+                clearTimeout(existingTimeout);
+              }
+              
+              // Debounce callback - only call after 300ms of no unmute events
+              const timeout = setTimeout(() => {
+                console.log(`🔄 Re-calling callback due to ${event.track.kind} track unmute (debounced)`);
+                this.onRemoteStreamCallback!(userId, existingStream);
+                this.unmuteCallbackTimeouts.delete(userId);
+              }, 300);
+              
+              this.unmuteCallbackTimeouts.set(userId, timeout);
             }
           }
         };
@@ -331,12 +347,27 @@ class WebRTCService {
           tracks: streamToUse.getTracks().length,
           active: streamToUse.active,
           videoTracks: streamToUse.getVideoTracks().length,
-          audioTracks: streamToUse.getAudioTracks().length
+          audioTracks: streamToUse.getAudioTracks().length,
+          videoTrackStates: streamToUse.getVideoTracks().map(t => ({
+            id: t.id,
+            enabled: t.enabled,
+            muted: t.muted,
+            readyState: t.readyState
+          })),
+          audioTrackStates: streamToUse.getAudioTracks().map(t => ({
+            id: t.id,
+            enabled: t.enabled,
+            muted: t.muted,
+            readyState: t.readyState
+          }))
         });
         
         // Call callback immediately - don't wait for tracks to be live
         // The video element will handle track state changes
         this.onRemoteStreamCallback(userId, streamToUse);
+        
+        // Also call again after tracks unmute (debounced in onunmute handler)
+        // This ensures UI updates when tracks become available
       } else {
         console.warn('⚠️ Cannot create stream callback:', {
           hasStream: !!streamToUse,
@@ -365,18 +396,42 @@ class WebRTCService {
       // Log when connection is established
       if (state === 'connected' && iceState === 'connected') {
         console.log('✅ Peer connection fully established with', userId);
+        // Reset reconnection attempts on successful connection
+        this.reconnectionAttempts.delete(userId);
+      } else if (state === 'failed' || state === 'disconnected') {
+        // Attempt reconnection for failed/disconnected connections
+        this.attemptReconnection(userId);
       }
     };
     
     // Handle ICE connection state changes
     peerConnection.oniceconnectionstatechange = () => {
       const iceState = peerConnection.iceConnectionState;
+      const connectionState = peerConnection.connectionState;
       console.log(`🧊 ICE connection state for ${userId}:`, iceState);
       
       if (iceState === 'connected' || iceState === 'completed') {
         console.log(`✅ ICE connection established with ${userId}`);
-      } else if (iceState === 'failed' || iceState === 'disconnected') {
-        console.warn(`⚠️ ICE connection ${iceState} with ${userId}`);
+        // Reset reconnection attempts on successful connection
+        this.reconnectionAttempts.delete(userId);
+      } else if (iceState === 'failed') {
+        console.warn(`⚠️ ICE connection failed with ${userId}`);
+        // Attempt reconnection for failed ICE connections
+        this.attemptReconnection(userId);
+      } else if (iceState === 'disconnected') {
+        console.warn(`⚠️ ICE connection disconnected with ${userId}`);
+        // Wait a bit before attempting reconnection - might reconnect on its own
+        setTimeout(() => {
+          const currentIceState = peerConnection.iceConnectionState;
+          const currentConnState = peerConnection.connectionState;
+          // Only attempt reconnection if still disconnected and not closing/closed
+          if (currentIceState === 'disconnected' && 
+              currentConnState !== 'closed' && 
+              currentConnState !== 'closing') {
+            console.log(`🔄 ICE still disconnected after delay, attempting reconnection for ${userId}`);
+            this.attemptReconnection(userId);
+          }
+        }, 3000); // Wait 3 seconds
       }
     };
 
@@ -690,6 +745,59 @@ class WebRTCService {
     } catch (error) {
       return 0;
     }
+  }
+
+  // Attempt to reconnect a failed peer connection
+  private attemptReconnection(userId: string): void {
+    const attempts = this.reconnectionAttempts.get(userId) || 0;
+    
+    if (attempts >= this.maxReconnectionAttempts) {
+      console.error(`❌ Max reconnection attempts (${this.maxReconnectionAttempts}) reached for ${userId}`);
+      return;
+    }
+    
+    const peerConnection = this.peerConnections.get(userId);
+    if (!peerConnection) {
+      console.warn(`⚠️ No peer connection found for ${userId}, cannot reconnect`);
+      return;
+    }
+    
+    // Check if connection is already closed or closing
+    if (peerConnection.connectionState === 'closed' || 
+        peerConnection.connectionState === 'closing') {
+      console.log(`⚠️ Peer connection for ${userId} is closing/closed, cannot reconnect`);
+      return;
+    }
+    
+    this.reconnectionAttempts.set(userId, attempts + 1);
+    console.log(`🔄 Attempting reconnection ${attempts + 1}/${this.maxReconnectionAttempts} for ${userId}`);
+    
+    // Restart ICE gathering - this can help recover from connection issues
+    try {
+      // Create a new offer/answer to restart ICE
+      if (peerConnection.signalingState === 'stable') {
+        // We're stable, create a new offer to restart ICE
+        peerConnection.createOffer({ iceRestart: true })
+          .then(offer => {
+            return peerConnection.setLocalDescription(offer);
+          })
+          .then(() => {
+            console.log('✅ ICE restart offer created for', userId);
+            // Note: The actual offer sending needs to be handled by the signaling service
+            // This is just to trigger ICE restart - the component should handle sending the offer
+          })
+          .catch(err => {
+            console.error('❌ Error restarting ICE for', userId, ':', err);
+          });
+      }
+    } catch (err) {
+      console.error('❌ Error attempting reconnection for', userId, ':', err);
+    }
+  }
+
+  // Get reconnection attempt count for a user
+  getReconnectionAttempts(userId: string): number {
+    return this.reconnectionAttempts.get(userId) || 0;
   }
 }
 
