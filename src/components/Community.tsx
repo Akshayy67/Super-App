@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { 
+import { useNavigate } from "react-router-dom";
+import {
   MessageCircle, 
   Heart, 
   Share2, 
@@ -23,7 +24,8 @@ import {
   Trash2,
   MoreVertical,
   Edit,
-  Globe
+  Globe,
+  ClipboardList
 } from "lucide-react";
 import { PageLayout } from "./layout/PageLayout";
 import { 
@@ -37,11 +39,16 @@ import { realTimeAuth } from "../utils/realTimeAuth";
 import { Timestamp } from "firebase/firestore";
 import { Comment } from "../services/communityService";
 import { FriendsCommunity } from "./FriendsCommunity";
+import { CommunityQuiz } from "./CommunityQuiz";
+import { ProfileService } from "../services/profileService";
+import { UserAvatar } from "./ui/UserAvatar";
+import { isAdmin } from "../utils/adminUtils";
 
 // Comments Section Component
-const CommentsSection: React.FC<{ postId: string }> = ({ postId }) => {
+const CommentsSection: React.FC<{ postId: string; onAuthorClick?: (authorId: string) => void }> = ({ postId, onAuthorClick }) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [commentAuthorPhotos, setCommentAuthorPhotos] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const unsubscribe = communityService.subscribeToComments(postId, (newComments) => {
@@ -51,6 +58,30 @@ const CommentsSection: React.FC<{ postId: string }> = ({ postId }) => {
 
     return () => unsubscribe();
   }, [postId]);
+
+  // Fetch profile photos for comments
+  useEffect(() => {
+    const fetchCommentAuthorPhotos = async () => {
+      const photoMap: Record<string, string> = {};
+      for (const comment of comments) {
+        if (comment.authorId && !photoMap[comment.authorId]) {
+          try {
+            const profile = await ProfileService.getProfileByUserId(comment.authorId);
+            if (profile?.photoURL) {
+              photoMap[comment.authorId] = profile.photoURL;
+            }
+          } catch (error) {
+            console.error("Error fetching profile photo for comment author:", error);
+          }
+        }
+      }
+      setCommentAuthorPhotos(photoMap);
+    };
+
+    if (comments.length > 0) {
+      fetchCommentAuthorPhotos();
+    }
+  }, [comments]);
 
   const formatCommentTime = (timestamp: Timestamp): string => {
     const date = timestamp.toDate();
@@ -85,22 +116,25 @@ const CommentsSection: React.FC<{ postId: string }> = ({ postId }) => {
   return (
     <div className="space-y-3">
       {comments.map((comment) => {
-        const avatar = comment.author
-          .split(" ")
-          .map((n) => n[0])
-          .join("")
-          .toUpperCase()
-          .slice(0, 2);
-
         return (
           <div key={comment.id} className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              {avatar}
-            </div>
+            <UserAvatar
+              photoURL={commentAuthorPhotos[comment.authorId || ""]}
+              name={comment.author}
+              size="sm"
+            />
             <div className="flex-1">
               <div className="bg-gray-100 dark:bg-slate-700 rounded-lg px-3 py-2">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <span 
+                    className="text-sm font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onAuthorClick && comment.authorId) {
+                        onAuthorClick(comment.authorId);
+                      }
+                    }}
+                  >
                     {comment.author}
                   </span>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -120,8 +154,9 @@ const CommentsSection: React.FC<{ postId: string }> = ({ postId }) => {
 };
 
 export const Community: React.FC = () => {
+  const navigate = useNavigate();
   const [communityMode, setCommunityMode] = useState<"global" | "friends">("global");
-  const [activeTab, setActiveTab] = useState<"feed" | "events" | "leaderboard" | "resources">("feed");
+  const [activeTab, setActiveTab] = useState<"feed" | "events" | "leaderboard" | "resources" | "quiz">("feed");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
   
@@ -165,6 +200,10 @@ export const Community: React.FC = () => {
   const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   
+  // Profile photos cache for posts and leaderboard
+  const [postAuthorPhotos, setPostAuthorPhotos] = useState<Record<string, string>>({});
+  const [leaderboardUserPhotos, setLeaderboardUserPhotos] = useState<Record<string, string>>({});
+  
   const user = realTimeAuth.getCurrentUser();
 
   // Initialize user leaderboard on mount
@@ -174,6 +213,30 @@ export const Community: React.FC = () => {
       communityService.updateUserStreak(user.id);
     }
   }, [user]);
+
+  // Fetch profile photos for posts
+  useEffect(() => {
+    const fetchPostAuthorPhotos = async () => {
+      const photoMap: Record<string, string> = {};
+      for (const post of posts) {
+        if (post.authorId && !photoMap[post.authorId]) {
+          try {
+            const profile = await ProfileService.getProfileByUserId(post.authorId);
+            if (profile?.photoURL) {
+              photoMap[post.authorId] = profile.photoURL;
+            }
+          } catch (error) {
+            console.error("Error fetching profile photo for post author:", error);
+          }
+        }
+      }
+      setPostAuthorPhotos(photoMap);
+    };
+
+    if (posts.length > 0) {
+      fetchPostAuthorPhotos();
+    }
+  }, [posts]);
 
   // Subscribe to feed
   useEffect(() => {
@@ -208,6 +271,30 @@ export const Community: React.FC = () => {
 
     return () => unsubscribe();
   }, [user]);
+
+  // Fetch profile photos for leaderboard users
+  useEffect(() => {
+    const fetchLeaderboardUserPhotos = async () => {
+      const photoMap: Record<string, string> = {};
+      for (const lbUser of leaderboard) {
+        if (lbUser.userId && !photoMap[lbUser.userId]) {
+          try {
+            const profile = await ProfileService.getProfileByUserId(lbUser.userId);
+            if (profile?.photoURL) {
+              photoMap[lbUser.userId] = profile.photoURL;
+            }
+          } catch (error) {
+            console.error("Error fetching profile photo for leaderboard user:", error);
+          }
+        }
+      }
+      setLeaderboardUserPhotos(photoMap);
+    };
+
+    if (leaderboard.length > 0) {
+      fetchLeaderboardUserPhotos();
+    }
+  }, [leaderboard]);
 
   // Subscribe to resources
   useEffect(() => {
@@ -263,6 +350,21 @@ export const Community: React.FC = () => {
       await communityService.likePost(postId, user.id);
     } catch (error) {
       console.error("Error liking post:", error);
+    }
+  };
+
+  const handleAuthorClick = async (authorId: string) => {
+    try {
+      // Get profile by userId to get email
+      const profile = await ProfileService.getProfileByUserId(authorId);
+      if (profile && profile.email) {
+        navigate(`/profile/${encodeURIComponent(profile.email)}`);
+      } else {
+        // Fallback: try to get from user document if profile doesn't exist
+        console.warn("Profile not found for authorId:", authorId);
+      }
+    } catch (error) {
+      console.error("Error navigating to profile:", error);
     }
   };
 
@@ -378,7 +480,9 @@ export const Community: React.FC = () => {
   };
 
   const handleDeletePost = async (postId: string, authorId: string) => {
-    if (!user || user.id !== authorId) {
+    if (!user) return;
+    // Allow admin to delete any post, or user to delete their own posts
+    if (!isAdmin() && user.id !== authorId) {
       alert("You can only delete your own posts.");
       return;
     }
@@ -444,6 +548,7 @@ export const Community: React.FC = () => {
   const tabs = [
     { id: "feed", label: "Community Feed", icon: MessageCircle },
     { id: "events", label: "Events", icon: Calendar },
+    { id: "quiz", label: "Quiz", icon: ClipboardList },
     { id: "leaderboard", label: "Leaderboard", icon: Trophy },
     { id: "resources", label: "Resources", icon: BookOpen }
   ];
@@ -671,12 +776,22 @@ export const Community: React.FC = () => {
                   {/* Post Header */}
                   <div className="p-6">
                     <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center flex-1" onClick={() => handleViewPost(post.id)}>
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
-                          {post.avatar}
-                        </div>
-                        <div className="ml-3">
-                          <p className="font-semibold text-gray-900 dark:text-white">
+                      <div className="flex items-center flex-1">
+                        <UserAvatar
+                          photoURL={postAuthorPhotos[post.authorId]}
+                          name={post.author}
+                          size="md"
+                        />
+                        <div className="ml-3 flex-1">
+                          <p 
+                            className="font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (user && post.authorId !== user.id) {
+                                handleAuthorClick(post.authorId);
+                              }
+                            }}
+                          >
                             {post.author}
                             {user && post.authorId === user.id && (
                               <span className="ml-2 text-xs text-blue-500">(You)</span>
@@ -686,8 +801,8 @@ export const Community: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Post Menu (Only for post author) */}
-                      {user && post.authorId === user.id && (
+                      {/* Post Menu (Only for post author or admin) */}
+                      {user && (post.authorId === user.id || isAdmin()) && (
                         <div className="relative">
                           <button
                             onClick={() => togglePostMenu(post.id)}
@@ -830,7 +945,7 @@ export const Community: React.FC = () => {
                         </div>
 
                         {/* Comments List */}
-                        <CommentsSection postId={post.id} />
+                        <CommentsSection postId={post.id} onAuthorClick={handleAuthorClick} />
                       </div>
                     )}
                   </div>
@@ -997,11 +1112,21 @@ export const Community: React.FC = () => {
                         <div className={`text-2xl font-bold w-8 ${getRankColor(index + 1)}`}>
                           #{index + 1}
                         </div>
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold">
-                          {lbUser.avatar}
-                        </div>
+                        <UserAvatar
+                          photoURL={leaderboardUserPhotos[lbUser.userId]}
+                          name={lbUser.name}
+                          size="md"
+                        />
                         <div>
-                          <p className="font-semibold text-gray-900 dark:text-white">
+                          <p 
+                            className="font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (user && lbUser.userId !== user.id) {
+                                handleAuthorClick(lbUser.userId);
+                              }
+                            }}
+                          >
                             {lbUser.name}
                             {user && lbUser.userId === user.id && (
                               <span className="ml-2 text-xs text-blue-500">(You)</span>
@@ -1045,6 +1170,11 @@ export const Community: React.FC = () => {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Quiz Tab */}
+          {activeTab === "quiz" && (
+            <CommunityQuiz />
           )}
 
           {/* Resources Tab */}

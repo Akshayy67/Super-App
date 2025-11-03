@@ -24,7 +24,6 @@ interface FirebaseUser {
   id: string;
   username: string;
   email: string;
-  phoneNumber?: string;
   createdAt: string;
   lastLoginAt?: string;
   authProvider?: string;

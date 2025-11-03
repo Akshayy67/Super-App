@@ -60,6 +60,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
   const [showPrivacyNotice, setShowPrivacyNotice] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Add animation styles to document
   useEffect(() => {
@@ -83,11 +84,17 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
+    setError(null);
     try {
-      await realTimeAuth.signInWithGoogle();
-      onAuthSuccess();
-    } catch (error) {
+      const result = await realTimeAuth.signInWithGoogle();
+      if (result.success) {
+        onAuthSuccess();
+      } else {
+        setError(result.message || "Sign-in failed. Please try again.");
+      }
+    } catch (error: any) {
       console.error("Google sign-in failed:", error);
+      setError(error.message || "Sign-in failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -175,6 +182,15 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
 
       {/* Subtle overlay for better text readability */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/50 z-0"></div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-30 max-w-md w-full mx-4">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 shadow-lg">
+            <p className="text-sm text-red-800 dark:text-red-200 text-center">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Top Right - Sign In Button */}
       <div className="absolute top-8 right-8 z-20">

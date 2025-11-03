@@ -29,8 +29,6 @@ import { useGlobalPomodoro } from "./contexts/GlobalPomodoroContext";
 import "./utils/fixExistingFilePermissions";
 // Import EmailJS test functions for console testing
 import "./utils/testEmailJS";
-// Import phone number test function for console testing
-import "./utils/testPhoneNumber";
 // Test utilities removed for production
 
 // Component to handle authenticated app content

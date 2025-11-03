@@ -85,18 +85,13 @@ export const LandingPage: React.FC = () => {
 
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-    // Scene configurations for each section
-    const sceneConfigs: {
-      objects: THREE.Mesh[];
-      particles?: THREE.Points;
-      lights: THREE.Light[];
-      helpers?: any[];
-      update?: () => void;
-    }[] = [];
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.5;
 
     // Function to create different scene types
-    const createSceneType = (type: string, sectionIndex: number) => {
+    const createSceneType = (type: string) => {
       const config: {
         objects: THREE.Mesh[];
         particles?: THREE.Points;
@@ -175,7 +170,7 @@ export const LandingPage: React.FC = () => {
             opacity: 0.4,
           });
 
-          centralNodes.forEach((node, nodeIndex) => {
+          centralNodes.forEach((node) => {
             for (let i = 0; i < 3; i++) {
               const orbitRadius = 80 + i * 60;
               const points: THREE.Vector3[] = [];
@@ -300,7 +295,6 @@ export const LandingPage: React.FC = () => {
             config.objects.forEach((wave, i) => {
               const positions = wave.geometry.attributes.position;
               for (let j = 0; j < positions.count; j++) {
-                const y = positions.getY(j);
                 positions.setY(
                   j,
                   Math.sin((time + i * 0.5) * 2 + positions.getX(j) * 0.01) * 30
@@ -519,32 +513,563 @@ export const LandingPage: React.FC = () => {
             });
           };
           break;
+
+        case "interactive-grid":
+          // Mouse-reactive grid system
+          const gridSize = 20;
+          const gridSpacing = 60;
+          const gridPoints: THREE.Mesh[] = [];
+          const gridLines: THREE.Line[] = [];
+          
+          // Create grid points
+          for (let i = 0; i < gridSize; i++) {
+            for (let j = 0; j < gridSize; j++) {
+              const pointGeometry = new THREE.SphereGeometry(3, 8, 8);
+              const pointMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                emissive: 0xffffff,
+                emissiveIntensity: 0.8,
+                metalness: 0.9,
+                roughness: 0.1,
+              });
+              const point = new THREE.Mesh(pointGeometry, pointMaterial);
+              
+              point.position.set(
+                (i - gridSize / 2) * gridSpacing,
+                (j - gridSize / 2) * gridSpacing,
+                0
+              );
+              
+              scene.add(point);
+              config.objects.push(point);
+              gridPoints.push(point);
+              (point as any).basePosition = point.position.clone();
+            }
+          }
+          
+          // Create grid lines
+          const gridLineMaterial = new THREE.LineBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.3,
+          });
+          
+          // Horizontal lines
+          for (let i = 0; i < gridSize; i++) {
+            const points: THREE.Vector3[] = [];
+            for (let j = 0; j < gridSize; j++) {
+              points.push(new THREE.Vector3(
+                (j - gridSize / 2) * gridSpacing,
+                (i - gridSize / 2) * gridSpacing,
+                0
+              ));
+            }
+            const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(lineGeometry, gridLineMaterial);
+            scene.add(line);
+            config.helpers?.push(line);
+            gridLines.push(line);
+          }
+          
+          // Vertical lines
+          for (let i = 0; i < gridSize; i++) {
+            const points: THREE.Vector3[] = [];
+            for (let j = 0; j < gridSize; j++) {
+              points.push(new THREE.Vector3(
+                (i - gridSize / 2) * gridSpacing,
+                (j - gridSize / 2) * gridSpacing,
+                0
+              ));
+            }
+            const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(lineGeometry, gridLineMaterial);
+            scene.add(line);
+            config.helpers?.push(line);
+            gridLines.push(line);
+          }
+          
+          if (!config.helpers) config.helpers = [];
+          
+          config.update = () => {
+            const time = Date.now() * 0.001;
+            const mouseWorldX = mouseX * 400;
+            const mouseWorldY = mouseY * 300;
+            
+            gridPoints.forEach((point, i) => {
+              const basePos = (point as any).basePosition;
+              const dx = mouseWorldX - basePos.x;
+              const dy = mouseWorldY - basePos.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              const maxDist = 200;
+              const influence = Math.max(0, 1 - distance / maxDist);
+              
+              // Z displacement based on mouse proximity
+              const zOffset = influence * 80 * Math.sin(time * 2 + i * 0.1);
+              
+              point.position.x = basePos.x;
+              point.position.y = basePos.y;
+              point.position.z = basePos.z + zOffset;
+              
+              // Scale based on distance
+              const scale = 1 + influence * 2;
+              point.scale.setScalar(scale);
+              
+              // Glow intensity
+              if (point.material instanceof THREE.MeshStandardMaterial) {
+                point.material.emissiveIntensity = 0.5 + influence * 0.8;
+              }
+            });
+            
+            // Update grid lines
+            let lineIndex = 0;
+            gridLines.forEach(line => {
+              const positions = line.geometry.attributes.position;
+              for (let i = 0; i < positions.count; i++) {
+                const x = positions.getX(i);
+                const y = positions.getY(i);
+                const dx = mouseWorldX - x;
+                const dy = mouseWorldY - y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const influence = Math.max(0, 1 - distance / 200);
+                positions.setZ(i, influence * 60 * Math.sin(time * 2 + lineIndex * 0.05));
+              }
+              positions.needsUpdate = true;
+              lineIndex++;
+            });
+          };
+          break;
+
+        case "particle-trail":
+          // Interactive particle trail that follows mouse
+          const trailParticleCount = 150;
+          const trailParticles: THREE.Mesh[] = [];
+          
+          for (let i = 0; i < trailParticleCount; i++) {
+            const trailGeometry = new THREE.SphereGeometry(4, 8, 8);
+            const trailMaterial = new THREE.MeshStandardMaterial({
+              color: 0xffffff,
+              emissive: 0xffffff,
+              emissiveIntensity: 0.9,
+              metalness: 0.8,
+              roughness: 0.2,
+              transparent: true,
+              opacity: 0.8,
+            });
+            const particle = new THREE.Mesh(trailGeometry, trailMaterial);
+            
+            particle.position.set(
+              (Math.random() - 0.5) * 1000,
+              (Math.random() - 0.5) * 800,
+              (Math.random() - 0.5) * 500
+            );
+            
+            scene.add(particle);
+            config.objects.push(particle);
+            trailParticles.push(particle);
+            (particle as any).targetPos = particle.position.clone();
+            (particle as any).prevPos = particle.position.clone();
+            (particle as any).trailIndex = i;
+          }
+          
+          config.update = () => {
+            const time = Date.now() * 0.001;
+            const mouseWorldX = mouseX * 400;
+            const mouseWorldY = mouseY * 300;
+            
+            trailParticles.forEach((particle, i) => {
+              const targetIndex = (i + 1) % trailParticleCount;
+              const targetParticle = trailParticles[targetIndex];
+              
+              // Follow the previous particle in chain (chain reaction)
+              if (i === 0) {
+                // First particle follows mouse
+                (particle as any).targetPos.set(mouseWorldX, mouseWorldY, 0);
+              } else {
+                (particle as any).targetPos.copy(targetParticle.position);
+              }
+              
+              // Smooth movement towards target
+              const currentPos = particle.position;
+              const targetPos = (particle as any).targetPos;
+              currentPos.x += (targetPos.x - currentPos.x) * 0.15;
+              currentPos.y += (targetPos.y - currentPos.y) * 0.15;
+              currentPos.z += (targetPos.z - currentPos.z) * 0.15 + Math.sin(time * 2 + i * 0.1) * 5;
+              
+              // Pulsing scale
+              const scale = 0.6 + Math.sin(time * 3 + i * 0.2) * 0.4;
+              particle.scale.setScalar(scale);
+              
+              // Rotate
+              particle.rotation.x += 0.02;
+              particle.rotation.y += 0.03;
+              
+              // Glow effect
+              if (particle.material instanceof THREE.MeshStandardMaterial) {
+                const intensity = 0.6 + Math.sin(time * 4 + i * 0.3) * 0.4;
+                particle.material.emissiveIntensity = intensity;
+                particle.material.opacity = 0.6 + Math.sin(time * 2 + i) * 0.3;
+              }
+            });
+          };
+          break;
+
+        case "geometric-morph":
+          // Dynamic geometric structures that morph and react to mouse
+          const morphShapes: THREE.Mesh[] = [];
+          const shapeTypes = [
+            () => new THREE.OctahedronGeometry(50, 0),
+            () => new THREE.IcosahedronGeometry(50, 0),
+            () => new THREE.TetrahedronGeometry(50, 0),
+            () => new THREE.DodecahedronGeometry(50, 0),
+          ];
+          
+          for (let i = 0; i < 12; i++) {
+            const geometry = shapeTypes[i % shapeTypes.length]();
+            const material = new THREE.MeshStandardMaterial({
+              color: 0xffffff,
+              metalness: 0.9,
+              roughness: 0.1,
+              transparent: true,
+              opacity: 0.7,
+              emissive: 0xffffff,
+              emissiveIntensity: 0.3,
+            });
+            const shape = new THREE.Mesh(geometry, material);
+            
+            const angle = (i / 12) * Math.PI * 2;
+            const radius = 250;
+            shape.position.set(
+              Math.cos(angle) * radius,
+              Math.sin(angle * 1.5) * radius * 0.7,
+              Math.sin(angle) * radius * 0.5
+            );
+            
+            scene.add(shape);
+            config.objects.push(shape);
+            morphShapes.push(shape);
+            (shape as any).basePosition = shape.position.clone();
+            (shape as any).baseRotation = { x: Math.random(), y: Math.random(), z: Math.random() };
+          }
+          
+          config.update = () => {
+            const time = Date.now() * 0.001;
+            const mouseWorldX = mouseX * 350;
+            const mouseWorldY = mouseY * 250;
+            
+            morphShapes.forEach((shape, i) => {
+              const basePos = (shape as any).basePosition;
+              const dx = mouseWorldX - basePos.x;
+              const dy = mouseWorldY - basePos.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              const maxDist = 300;
+              const influence = Math.max(0, 1 - distance / maxDist);
+              
+              // Position morphing
+              shape.position.x = basePos.x + Math.sin(time + i * 0.5) * 30 * (1 - influence);
+              shape.position.y = basePos.y + Math.cos(time * 1.3 + i) * 25 * (1 - influence);
+              shape.position.z = basePos.z + Math.sin(time * 0.7) * 20 + influence * 100;
+              
+              // Rotation
+              shape.rotation.x += 0.01 + influence * 0.02;
+              shape.rotation.y += 0.015 + influence * 0.025;
+              shape.rotation.z += 0.008;
+              
+              // Scale morphing
+              const scale = 0.8 + Math.sin(time * 2 + i) * 0.3 + influence * 0.5;
+              shape.scale.setScalar(scale);
+              
+              // Material morphing
+              if (shape.material instanceof THREE.MeshStandardMaterial) {
+                shape.material.emissiveIntensity = 0.3 + Math.sin(time * 3 + i) * 0.3 + influence * 0.4;
+                shape.material.opacity = 0.6 + Math.sin(time * 2 + i) * 0.2 + influence * 0.2;
+              }
+            });
+          };
+          break;
+
+        case "energy-particles":
+          // Magnetic particle system
+          const energyParticleCount = 2000;
+          const energyParticleGeometry = new THREE.BufferGeometry();
+          const energyPositions = new Float32Array(energyParticleCount * 3);
+          const energyVelocities = new Float32Array(energyParticleCount * 3);
+          const energyColors = new Float32Array(energyParticleCount * 3);
+          
+          // Attractors (mouse magnetic points)
+          const attractors = [
+            { x: 0, y: 0, z: 0, power: 0.8 },
+          ];
+          
+          for (let i = 0; i < energyParticleCount; i++) {
+            const i3 = i * 3;
+            
+            // Random initial position
+            energyPositions[i3] = (Math.random() - 0.5) * 2000;
+            energyPositions[i3 + 1] = (Math.random() - 0.5) * 1500;
+            energyPositions[i3 + 2] = (Math.random() - 0.5) * 1000;
+            
+            // Random velocity
+            energyVelocities[i3] = (Math.random() - 0.5) * 0.5;
+            energyVelocities[i3 + 1] = (Math.random() - 0.5) * 0.5;
+            energyVelocities[i3 + 2] = (Math.random() - 0.5) * 0.5;
+            
+            // Gradient colors
+            const hue = (i / energyParticleCount) * 0.3 + 0.5;
+            const color = new THREE.Color().setHSL(hue, 0.8, 0.6);
+            energyColors[i3] = color.r;
+            energyColors[i3 + 1] = color.g;
+            energyColors[i3 + 2] = color.b;
+          }
+          
+          energyParticleGeometry.setAttribute('position', new THREE.BufferAttribute(energyPositions, 3));
+          energyParticleGeometry.setAttribute('color', new THREE.BufferAttribute(energyColors, 3));
+          
+          const energyParticleMaterial = new THREE.PointsMaterial({
+            size: 4,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending,
+          });
+          
+          const particleSystem = new THREE.Points(energyParticleGeometry, energyParticleMaterial);
+          scene.add(particleSystem);
+          config.particles = particleSystem;
+          
+          config.update = () => {
+            const time = Date.now() * 0.001;
+            
+            // Update attractors based on time
+            attractors[0].x = Math.sin(time) * 300;
+            attractors[0].y = Math.cos(time * 1.3) * 200;
+            attractors[0].z = Math.sin(time * 0.7) * 200;
+            
+            for (let i = 0; i < energyParticleCount; i++) {
+              const i3 = i * 3;
+              let fx = 0, fy = 0, fz = 0;
+              
+              // Magnetic attraction to attractors
+              attractors.forEach(attractor => {
+                const dx = attractor.x - energyPositions[i3];
+                const dy = attractor.y - energyPositions[i3 + 1];
+                const dz = attractor.z - energyPositions[i3 + 2];
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+                const force = attractor.power / (dist * dist) * 0.1;
+                fx += dx / dist * force;
+                fy += dy / dist * force;
+                fz += dz / dist * force;
+              });
+              
+              // Apply forces
+              energyVelocities[i3] += fx;
+              energyVelocities[i3 + 1] += fy;
+              energyVelocities[i3 + 2] += fz;
+              
+              // Damping
+              energyVelocities[i3] *= 0.95;
+              energyVelocities[i3 + 1] *= 0.95;
+              energyVelocities[i3 + 2] *= 0.95;
+              
+              // Update positions
+              energyPositions[i3] += energyVelocities[i3];
+              energyPositions[i3 + 1] += energyVelocities[i3 + 1];
+              energyPositions[i3 + 2] += energyVelocities[i3 + 2];
+              
+              // Boundary wrapping
+              if (Math.abs(energyPositions[i3]) > 1000) energyVelocities[i3] *= -1;
+              if (Math.abs(energyPositions[i3 + 1]) > 750) energyVelocities[i3 + 1] *= -1;
+              if (Math.abs(energyPositions[i3 + 2]) > 500) energyVelocities[i3 + 2] *= -1;
+            }
+            
+            energyParticleGeometry.attributes.position.needsUpdate = true;
+            
+            // Rotate the system
+            particleSystem.rotation.y += 0.001;
+          };
+          break;
+
+        case "fluid-morph":
+          // Fluid morphing planes
+          const morphPlaneCount = 4;
+          const morphPlanes: THREE.Mesh[] = [];
+          
+          for (let i = 0; i < morphPlaneCount; i++) {
+            const planeGeometry = new THREE.PlaneGeometry(1200, 800, 80, 80);
+            const planeMaterial = new THREE.MeshStandardMaterial({
+              color: 0xffffff,
+              wireframe: true,
+              transparent: true,
+              opacity: 0.3,
+              metalness: 0.7,
+              roughness: 0.3,
+            });
+            const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+            plane.rotation.x = -Math.PI / 2;
+            plane.position.y = (i - morphPlaneCount / 2) * 150;
+            scene.add(plane);
+            config.objects.push(plane);
+            morphPlanes.push(plane);
+          }
+          
+          config.update = () => {
+            const time = Date.now() * 0.001;
+            morphPlanes.forEach((plane, i) => {
+              const positions = plane.geometry.attributes.position;
+              const morphTime = time + i * 0.3;
+              
+              for (let j = 0; j < positions.count; j++) {
+                const x = positions.getX(j);
+                const y = positions.getY(j);
+                const dist = Math.sqrt(x * x + y * y);
+                
+                // Create fluid morphing effect
+                const wave1 = Math.sin(x * 0.02 + morphTime) * 20;
+                const wave2 = Math.cos(y * 0.015 + morphTime * 1.3) * 15;
+                const radial = Math.sin(dist * 0.01 + morphTime * 2) * 10;
+                
+                positions.setZ(j, wave1 + wave2 + radial);
+              }
+              
+              positions.needsUpdate = true;
+              
+              // Rotate slowly
+              plane.rotation.z += 0.0005 * (i % 2 === 0 ? 1 : -1);
+              
+              // Pulse opacity
+              if (plane.material instanceof THREE.MeshStandardMaterial) {
+                plane.material.opacity = 0.2 + Math.sin(morphTime) * 0.3;
+              }
+            });
+          };
+          break;
+
+        case "neural-network":
+          // Neural network with connecting nodes
+          const nodeCount = 30;
+          const nodes: THREE.Mesh[] = [];
+          const nodeConnections: Array<{from: number, to: number}> = [];
+          
+          // Create nodes
+          for (let i = 0; i < nodeCount; i++) {
+            const nodeGeometry = new THREE.SphereGeometry(8, 16, 16);
+            const nodeMaterial = new THREE.MeshStandardMaterial({
+              color: 0xffffff,
+              emissive: 0xffffff,
+              emissiveIntensity: 0.8,
+              metalness: 0.9,
+              roughness: 0.1,
+            });
+            const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
+            
+            node.position.set(
+              (Math.random() - 0.5) * 1200,
+              (Math.random() - 0.5) * 800,
+              (Math.random() - 0.5) * 600
+            );
+            
+            scene.add(node);
+            config.objects.push(node);
+            nodes.push(node);
+            (node as any).initialPos = node.position.clone();
+          }
+          
+          // Create connections (nearby nodes)
+          nodes.forEach((node1, i) => {
+            nodes.slice(i + 1).forEach((node2, j) => {
+              const distance = node1.position.distanceTo(node2.position);
+              if (distance < 250 && Math.random() > 0.7) {
+                nodeConnections.push({ from: i, to: i + 1 + j });
+              }
+            });
+          });
+          
+          // Create line geometry for connections
+          const connectionGeometry = new THREE.BufferGeometry();
+          const connectionMaterial = new THREE.LineBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.3,
+          });
+          
+          const updateConnections = () => {
+            const points: number[] = [];
+            nodeConnections.forEach(conn => {
+              const fromNode = nodes[conn.from];
+              const toNode = nodes[conn.to];
+              points.push(fromNode.position.x, fromNode.position.y, fromNode.position.z);
+              points.push(toNode.position.x, toNode.position.y, toNode.position.z);
+            });
+            connectionGeometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
+          };
+          
+          updateConnections();
+          const connectionLines = new THREE.LineSegments(connectionGeometry, connectionMaterial);
+          scene.add(connectionLines);
+          config.helpers = [connectionLines];
+          
+          config.update = () => {
+            const time = Date.now() * 0.001;
+            nodes.forEach((node, i) => {
+              const morphTime = time + i * 0.2;
+              
+              // Morph position around initial
+              node.position.x = (node as any).initialPos.x + Math.sin(morphTime) * 30;
+              node.position.y = (node as any).initialPos.y + Math.cos(morphTime * 1.3) * 25;
+              node.position.z = (node as any).initialPos.z + Math.sin(morphTime * 0.7) * 20;
+              
+              // Pulsing scale and glow
+              const pulse = Math.sin(morphTime * 2) * 0.3 + 1;
+              node.scale.setScalar(pulse);
+              
+              if (node.material instanceof THREE.MeshStandardMaterial) {
+                node.material.emissiveIntensity = 0.5 + Math.sin(morphTime * 3) * 0.5;
+              }
+            });
+            
+            updateConnections();
+            connectionGeometry.attributes.position.needsUpdate = true;
+          };
+          break;
       }
 
-      // Add lighting
+      // Add enhanced lighting
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
       scene.add(ambientLight);
       config.lights.push(ambientLight);
 
       const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
       directionalLight.position.set(1, 1, 1);
+      directionalLight.castShadow = true;
+      directionalLight.shadow.camera.near = 0.1;
+      directionalLight.shadow.camera.far = 1000;
       scene.add(directionalLight);
       config.lights.push(directionalLight);
+
+      // Add point lights for more dynamic lighting
+      const pointLight1 = new THREE.PointLight(0xffffff, 0.5, 1000);
+      pointLight1.position.set(100, 100, 100);
+      scene.add(pointLight1);
+      config.lights.push(pointLight1);
+
+      const pointLight2 = new THREE.PointLight(0xffffff, 0.3, 800);
+      pointLight2.position.set(-100, -100, 100);
+      scene.add(pointLight2);
+      config.lights.push(pointLight2);
 
       return config;
     };
 
     // Define scene types for each section
     const sceneTypes = [
-      "particles-cloud",        // WELCOME TO THE WORLD'S FIRST...
-      "connecting-dots",        // DREAM TO PLAN: FROM THOUGHTS TO ACTION
-      "solar-system",           // INTERVIEW ANALYTICS: COMPARE, SIMULATE, IMPROVE
-      "waves",                  // FRAGMENTED TO ONE: EVERYTHING CONNECTED
+      "energy-particles",       // WELCOME TO THE WORLD'S FIRST...
+      "interactive-grid",       // DREAM TO PLAN: FROM THOUGHTS TO ACTION
+      "neural-network",         // INTERVIEW ANALYTICS: COMPARE, SIMULATE, IMPROVE
+      "particle-trail",         // FRAGMENTED TO ONE: EVERYTHING CONNECTED
       "particles-cloud",        // AI SCRIBE: MEETINGS NEVER DISAPPEAR
-      "geometric-shapes",       // HD VIDEO COLLABORATION: ENTERPRISE-GRADE, FREE
-      "connecting-dots",       // PAIR PROGRAMMING & DRAWING: CREATE TOGETHER
+      "geometric-morph",        // HD VIDEO COLLABORATION: ENTERPRISE-GRADE, FREE
+      "connecting-dots",        // PAIR PROGRAMMING & DRAWING: CREATE TOGETHER
       "solar-system",           // SMART LEARNING: REMEMBER FOR LIFE
-      "waves",                  // THE FUTURE OF LEARNING BEGINS NOW
+      "interactive-grid",       // THE FUTURE OF LEARNING BEGINS NOW
     ];
 
     // Current active scene config
@@ -591,7 +1116,7 @@ export const LandingPage: React.FC = () => {
       clearScene();
 
       const sceneType = sceneTypes[sectionIndex] || "geometric-shapes";
-      currentSceneConfig = createSceneType(sceneType, sectionIndex);
+      currentSceneConfig = createSceneType(sceneType);
 
       // Animate scene in
       currentSceneConfig.objects.forEach((obj, i) => {
@@ -751,7 +1276,6 @@ export const LandingPage: React.FC = () => {
         // Add letter-by-letter animation effect (only if not already animated)
         if (!title.hasAttribute("data-animated")) {
           const text = title.textContent || "";
-          const originalText = text;
           title.textContent = "";
           title.setAttribute("data-animated", "true");
           
@@ -916,13 +1440,6 @@ export const LandingPage: React.FC = () => {
   useEffect(() => {
     setIsLoaded(true);
   }, []);
-
-  // Navigate to dashboard on last section click
-  const handleLastSectionClick = () => {
-    if (currentSection === sections.length - 1) {
-      navigate("/dashboard");
-    }
-  };
 
   return (
     <div

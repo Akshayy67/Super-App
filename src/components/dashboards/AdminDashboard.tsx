@@ -24,6 +24,13 @@ import {
   Database,
 } from "lucide-react";
 import { realTimeAuth } from "../../utils/realTimeAuth";
+import { 
+  blockUser, 
+  unblockUser, 
+  getAllBlockedUsers, 
+  isUserBlocked,
+  BlockedUser 
+} from "../../services/blockedUsersService";
 import { ATSService } from "../../utils/atsService";
 import {
   adminService,
@@ -42,7 +49,7 @@ import { GeneralLayout } from "../layout/PageLayout";
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("firebase"); // Start with Firebase tab (no ATS required)
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<UsersResponse | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -54,6 +61,8 @@ export const AdminDashboard: React.FC = () => {
   const [teams, setTeams] = useState<TeamData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+  const [blockingUser, setBlockingUser] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isATSAuthenticated, setIsATSAuthenticated] = useState(false);
@@ -74,16 +83,79 @@ export const AdminDashboard: React.FC = () => {
 
   // Load admin data
   useEffect(() => {
-    if (user?.email === "akshayjuluri6704@gmail.com" && isATSAuthenticated) {
-      loadAdminData();
+    if (user?.email === "akshayjuluri6704@gmail.com") {
+      // Always load Firebase admin features (blocked users, Firebase users, etc.)
+      loadBlockedUsers();
+      
+      // Load Firebase tab data (doesn't require ATS)
+      if (activeTab === "firebase") {
+        loadFirebaseData();
+        return; // Don't load any ATS data when on Firebase tab
+      }
+      
+      // Only load ATS backend data if authenticated AND not on Firebase tab
+      if (isATSAuthenticated && activeTab !== "firebase") {
+        loadAdminData();
+      } else {
+        // Clear ATS-related state if not authenticated
+        setStats(null);
+        setUsers(null);
+        setAnalytics(null);
+        setSystemHealth(null);
+      }
     }
   }, [user, activeTab, currentPage, searchTerm, isATSAuthenticated]);
 
+  // Load Firebase data separately (doesn't require ATS)
+  const loadFirebaseData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const firebaseStatsData = await firebaseAdminService.getFirebaseStats();
+      setFirebaseStats(firebaseStatsData);
+
+      const firebaseUsersData = await firebaseAdminService.getFirebaseUsers(20);
+      setFirebaseUsers(firebaseUsersData.users);
+
+      const teamsData = await firebaseAdminService.getTeams();
+      setTeams(teamsData);
+    } catch (firebaseError) {
+      console.warn("Firebase admin access not available:", firebaseError);
+      setError("Failed to load Firebase data. Please check your Firebase configuration.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load blocked users
+  const loadBlockedUsers = async () => {
+    try {
+      const blocked = await getAllBlockedUsers();
+      setBlockedUsers(blocked);
+    } catch (error) {
+      console.error("Error loading blocked users:", error);
+    }
+  };
+
   const loadAdminData = async () => {
+    // STRICT CHECK: Don't load ATS backend data if not authenticated
+    if (!isATSAuthenticated) {
+      console.log("🚫 Skipping ATS backend data load - not authenticated");
+      return;
+    }
+
+    // Double-check: Don't load if on Firebase tab
+    if (activeTab === "firebase") {
+      console.log("🚫 Skipping ATS backend data load - on Firebase tab");
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
+      // All these calls require ATS authentication
       if (activeTab === "overview") {
         const statsData = await adminService.getStats();
         setStats(statsData);
@@ -100,49 +172,55 @@ export const AdminDashboard: React.FC = () => {
       } else if (activeTab === "settings") {
         const healthData = await adminService.getSystemHealth();
         setSystemHealth(healthData);
-      } else if (activeTab === "firebase") {
-        try {
-          const firebaseStatsData =
-            await firebaseAdminService.getFirebaseStats();
-          setFirebaseStats(firebaseStatsData);
-
-          const firebaseUsersData = await firebaseAdminService.getFirebaseUsers(
-            20
-          );
-          setFirebaseUsers(firebaseUsersData.users);
-
-          const teamsData = await firebaseAdminService.getTeams();
-          setTeams(teamsData);
-        } catch (firebaseError) {
-          console.warn("Firebase admin access not available:", firebaseError);
-          // Set empty data for Firebase tab if not accessible
-          setFirebaseStats({
-            users: {
-              total: 0,
-              activeLastWeek: 0,
-              activeLastMonth: 0,
-              newThisWeek: 0,
-            },
-            teams: { total: 0, activeTeams: 0, averageTeamSize: 0 },
-            content: { flashcards: 0, interviewSessions: 0, notes: 0 },
-            activity: { recentLogins: 0, recentInterviews: 0 },
-          });
-          setFirebaseUsers([]);
-          setTeams([]);
-        }
       }
+      // Firebase tab is handled separately in loadFirebaseData() - doesn't require ATS
     } catch (err) {
       console.error("Admin data loading error:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to load admin data"
-      );
+      const errorMessage = err instanceof Error ? err.message : "Failed to load admin data";
+      // Don't show ATS auth errors if user hasn't authenticated
+      if (errorMessage.includes("authentication token") || errorMessage.includes("ATS backend")) {
+        setError("ATS backend authentication required. Please authenticate or use Firebase Admin features.");
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const formatDate = adminService.formatDate;
-  const formatNumber = adminService.formatNumber;
+  // Utility functions (don't require ATS)
+  const formatDate = (date: string | Date): string => {
+    if (!date) return "N/A";
+    try {
+      const d = typeof date === "string" ? new Date(date) : date;
+      return d.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    } catch {
+      return "Invalid Date";
+    }
+  };
+
+  const formatNumber = (num: number): string => {
+    if (num === null || num === undefined) return "0";
+    return new Intl.NumberFormat("en-US").format(num);
+  };
+
+  const formatUptime = (seconds: number): string => {
+    if (!seconds || seconds === 0) return "0s";
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    const parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
+    return parts.join(" ");
+  };
 
   // Handle ATS authentication
   const handleATSAuth = async () => {
@@ -182,7 +260,7 @@ export const AdminDashboard: React.FC = () => {
     );
   }
 
-  // Show ATS authentication prompt if not authenticated
+  // Show ATS authentication prompt if not authenticated (optional - can skip)
   if (!isATSAuthenticated) {
     return (
       <GeneralLayout>
@@ -191,41 +269,55 @@ export const AdminDashboard: React.FC = () => {
             <div className="text-center">
               <Shield className="w-16 h-16 text-blue-600 dark:text-blue-400 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                Admin Authentication Required
+                ATS Backend Authentication (Optional)
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                You need to authenticate with the ATS backend system to access
-                the admin dashboard.
+                Some features require ATS backend authentication. You can skip this to access Firebase admin features.
               </p>
 
               {error && (
-                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <p className="text-sm text-red-600 dark:text-red-400">
+                <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400">
                     {error}
+                  </p>
+                  <p className="text-xs text-yellow-500 dark:text-yellow-500 mt-1">
+                    ATS backend may not be running. You can skip authentication to access Firebase admin features.
                   </p>
                 </div>
               )}
 
-              <button
-                onClick={handleATSAuth}
-                disabled={atsAuthLoading}
-                className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {atsAuthLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Authenticating...
-                  </>
-                ) : (
-                  <>
-                    <Shield className="w-4 h-4 mr-2" />
-                    Authenticate with ATS Backend
-                  </>
-                )}
-              </button>
+              <div className="space-y-3">
+                <button
+                  onClick={handleATSAuth}
+                  disabled={atsAuthLoading}
+                  className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {atsAuthLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Authenticating...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="w-4 h-4 mr-2" />
+                      Authenticate with ATS Backend
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsATSAuthenticated(true);
+                    setActiveTab("firebase"); // Switch to Firebase tab which doesn't require ATS
+                  }}
+                  className="w-full flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Skip Authentication (Use Firebase Admin Only)
+                </button>
+              </div>
 
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-                This will send a magic link to {user?.email}
+                Note: ATS features require backend authentication. Firebase admin features (blocking users, viewing users, etc.) work without ATS.
               </p>
             </div>
           </div>
@@ -235,12 +327,12 @@ export const AdminDashboard: React.FC = () => {
   }
 
   const tabs = [
-    { id: "overview", label: "Overview", icon: BarChart3 },
-    { id: "users", label: "User Management", icon: Users },
-    { id: "analytics", label: "Analytics", icon: TrendingUp },
-    { id: "firebase", label: "Firebase Data", icon: Database },
-    { id: "content", label: "Content Management", icon: FileText },
-    { id: "settings", label: "System Settings", icon: Settings },
+    { id: "firebase", label: "Firebase Admin", icon: Database, requiresATS: false },
+    { id: "overview", label: "Overview", icon: BarChart3, requiresATS: true },
+    { id: "users", label: "User Management", icon: Users, requiresATS: true },
+    { id: "analytics", label: "Analytics", icon: TrendingUp, requiresATS: true },
+    { id: "content", label: "Content Management", icon: FileText, requiresATS: true },
+    { id: "settings", label: "System Settings", icon: Settings, requiresATS: true },
   ];
 
   return (
@@ -271,7 +363,16 @@ export const AdminDashboard: React.FC = () => {
                   </p>
                 </div>
                 <button
-                  onClick={loadAdminData}
+                  onClick={() => {
+                    if (!isATSAuthenticated) {
+                      // Only refresh Firebase data if not authenticated
+                      if (activeTab === "firebase") {
+                        loadFirebaseData();
+                      }
+                      return;
+                    }
+                    loadAdminData();
+                  }}
                   className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                   title="Refresh"
                 >
@@ -291,21 +392,34 @@ export const AdminDashboard: React.FC = () => {
             <nav className="flex space-x-8">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
+                const requiresATS = tab.requiresATS !== false;
+                const isDisabled = requiresATS && !isATSAuthenticated;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => {
+                      if (isDisabled) {
+                        alert("This tab requires ATS backend authentication. Please authenticate first.");
+                        return;
+                      }
                       setActiveTab(tab.id);
                       setCurrentPage(1);
                     }}
+                    disabled={isDisabled}
                     className={`flex items-center px-3 py-4 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === tab.id
                         ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                        : isDisabled
+                        ? "border-transparent text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
                         : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                     }`}
+                    title={isDisabled ? "Requires ATS backend authentication" : ""}
                   >
                     <Icon className="w-4 h-4 mr-2" />
                     {tab.label}
+                    {requiresATS && !isATSAuthenticated && (
+                      <span className="ml-1 text-xs">(ATS)</span>
+                    )}
                   </button>
                 );
               })}
@@ -464,7 +578,14 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => loadAdminData()}
+                    onClick={() => {
+                      if (!isATSAuthenticated) {
+                        alert("This feature requires ATS backend authentication.");
+                        return;
+                      }
+                      loadAdminData();
+                    }}
+                    disabled={!isATSAuthenticated}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
                   >
                     <Search className="w-4 h-4 mr-2" />
@@ -699,7 +820,7 @@ export const AdminDashboard: React.FC = () => {
                           Uptime:
                         </span>
                         <span className="text-sm font-medium">
-                          {adminService.formatUptime(
+                          {formatUptime(
                             systemHealth.server.uptime
                           )}
                         </span>
@@ -740,6 +861,10 @@ export const AdminDashboard: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <button
                     onClick={async () => {
+                      if (!isATSAuthenticated) {
+                        alert("This feature requires ATS backend authentication.");
+                        return;
+                      }
                       try {
                         const blob = await adminService.exportData("users");
                         adminService.downloadBlob(
@@ -750,15 +875,21 @@ export const AdminDashboard: React.FC = () => {
                         );
                       } catch (error) {
                         console.error("Export failed:", error);
+                        alert("Export failed. Please ensure ATS backend is running and authenticated.");
                       }
                     }}
-                    className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    disabled={!isATSAuthenticated}
+                    className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export Users
                   </button>
                   <button
                     onClick={async () => {
+                      if (!isATSAuthenticated) {
+                        alert("This feature requires ATS backend authentication.");
+                        return;
+                      }
                       try {
                         const blob = await adminService.exportData("scoreRuns");
                         adminService.downloadBlob(
@@ -769,15 +900,21 @@ export const AdminDashboard: React.FC = () => {
                         );
                       } catch (error) {
                         console.error("Export failed:", error);
+                        alert("Export failed. Please ensure ATS backend is running and authenticated.");
                       }
                     }}
-                    className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    disabled={!isATSAuthenticated}
+                    className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export Score Runs
                   </button>
                   <button
                     onClick={async () => {
+                      if (!isATSAuthenticated) {
+                        alert("This feature requires ATS backend authentication.");
+                        return;
+                      }
                       try {
                         const blob = await adminService.exportData("analytics");
                         adminService.downloadBlob(
@@ -788,9 +925,11 @@ export const AdminDashboard: React.FC = () => {
                         );
                       } catch (error) {
                         console.error("Export failed:", error);
+                        alert("Export failed. Please ensure ATS backend is running and authenticated.");
                       }
                     }}
-                    className="flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    disabled={!isATSAuthenticated}
+                    className="flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export Analytics
@@ -921,36 +1060,94 @@ export const AdminDashboard: React.FC = () => {
                         <th className="px-4 py-2 text-left">Created</th>
                         <th className="px-4 py-2 text-left">Last Login</th>
                         <th className="px-4 py-2 text-left">Drive Access</th>
+                        <th className="px-4 py-2 text-left">Status</th>
+                        <th className="px-4 py-2 text-left">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-slate-600">
-                      {firebaseUsers.map((user) => (
-                        <tr key={user.id}>
-                          <td className="px-4 py-2 font-medium">
-                            {user.username}
-                          </td>
-                          <td className="px-4 py-2">{user.email}</td>
-                          <td className="px-4 py-2">
-                            {formatDate(user.createdAt)}
-                          </td>
-                          <td className="px-4 py-2">
-                            {user.lastLoginAt
-                              ? formatDate(user.lastLoginAt)
-                              : "Never"}
-                          </td>
-                          <td className="px-4 py-2">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs ${
-                                user.hasGoogleDriveAccess
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                  : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                              }`}
-                            >
-                              {user.hasGoogleDriveAccess ? "Yes" : "No"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {firebaseUsers.map((user) => {
+                        const isBlockedUser = blockedUsers.some(bu => bu.userId === user.id || bu.email === user.email);
+                        return (
+                          <tr key={user.id}>
+                            <td className="px-4 py-2 font-medium">
+                              {user.username}
+                            </td>
+                            <td className="px-4 py-2">{user.email}</td>
+                            <td className="px-4 py-2">
+                              {formatDate(user.createdAt)}
+                            </td>
+                            <td className="px-4 py-2">
+                              {user.lastLoginAt
+                                ? formatDate(user.lastLoginAt)
+                                : "Never"}
+                            </td>
+                            <td className="px-4 py-2">
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs ${
+                                  user.hasGoogleDriveAccess
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                    : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                                }`}
+                              >
+                                {user.hasGoogleDriveAccess ? "Yes" : "No"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2">
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs ${
+                                  isBlockedUser
+                                    ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                                    : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                }`}
+                              >
+                                {isBlockedUser ? "Blocked" : "Active"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2">
+                              {isBlockedUser ? (
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      setBlockingUser(user.id);
+                                      await unblockUser(user.id);
+                                      await loadBlockedUsers();
+                                      setBlockingUser(null);
+                                    } catch (error: any) {
+                                      console.error("Error unblocking user:", error);
+                                      alert(error.message || "Failed to unblock user");
+                                      setBlockingUser(null);
+                                    }
+                                  }}
+                                  disabled={blockingUser === user.id}
+                                  className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
+                                >
+                                  {blockingUser === user.id ? "Unblocking..." : "Unblock"}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={async () => {
+                                    const reason = window.prompt("Enter reason for blocking (optional):");
+                                    try {
+                                      setBlockingUser(user.id);
+                                      await blockUser(user.id, user.email, reason || undefined);
+                                      await loadBlockedUsers();
+                                      setBlockingUser(null);
+                                    } catch (error: any) {
+                                      console.error("Error blocking user:", error);
+                                      alert(error.message || "Failed to block user");
+                                      setBlockingUser(null);
+                                    }
+                                  }}
+                                  disabled={blockingUser === user.id}
+                                  className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                                >
+                                  {blockingUser === user.id ? "Blocking..." : "Block"}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

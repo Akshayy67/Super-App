@@ -337,44 +337,95 @@ class TeamManagementService {
 
     console.log("🔍 Searching for team with invite code:", inviteCode);
 
-    const teamsQuery = query(
-      collection(db, "teams"),
-      where("inviteCode", "==", inviteCode)
+    // First, check teamInvites collection (for email-based invites)
+    const invitesQuery = query(
+      collection(db, "teamInvites"),
+      where("inviteCode", "==", inviteCode),
+      where("status", "==", "pending")
     );
 
-    const teamsSnapshot = await getDocs(teamsQuery);
+    const invitesSnapshot = await getDocs(invitesQuery);
+    let teamId: string | null = null;
+    let inviteData: any = null;
+    let inviteDocId: string | null = null;
 
-    console.log("🔍 Query results:", {
-      empty: teamsSnapshot.empty,
-      size: teamsSnapshot.size,
-      docs: teamsSnapshot.docs.length,
-    });
+    if (!invitesSnapshot.empty) {
+      const inviteDoc = invitesSnapshot.docs[0];
+      inviteData = inviteDoc.data();
+      inviteDocId = inviteDoc.id;
+      teamId = inviteData.teamId;
+      console.log("✅ Found invite in teamInvites collection:", {
+        inviteId: inviteDoc.id,
+        teamId: inviteData.teamId,
+        teamName: inviteData.teamName,
+        status: inviteData.status,
+      });
 
-    if (teamsSnapshot.empty) {
-      console.log("❌ No teams found with invite code:", inviteCode);
-      throw new Error("Invalid invite code");
+      // Check if invite is expired
+      const expiresAt = inviteData.expiresAt?.toDate();
+      if (expiresAt && expiresAt < new Date()) {
+        console.log("❌ Invite has expired");
+        throw new Error("This invitation has expired");
+      }
     }
 
-    const teamDoc = teamsSnapshot.docs[0];
+    // If not found in teamInvites, fall back to searching teams collection (for direct team codes)
+    if (!teamId) {
+      console.log("🔍 Invite not found in teamInvites, searching teams collection...");
+      const teamsQuery = query(
+        collection(db, "teams"),
+        where("inviteCode", "==", inviteCode)
+      );
+
+      const teamsSnapshot = await getDocs(teamsQuery);
+
+      console.log("🔍 Teams query results:", {
+        empty: teamsSnapshot.empty,
+        size: teamsSnapshot.size,
+        docs: teamsSnapshot.docs.length,
+      });
+
+      if (teamsSnapshot.empty) {
+        console.log("❌ No teams found with invite code:", inviteCode);
+        throw new Error("Invalid invite code");
+      }
+
+      const teamDoc = teamsSnapshot.docs[0];
+      teamId = teamDoc.id;
+    }
+
+    // Get the team document
+    const teamDoc = await getDoc(doc(db, "teams", teamId));
+    if (!teamDoc.exists()) {
+      console.log("❌ Team not found:", teamId);
+      throw new Error("Team not found");
+    }
+
     const team = teamDoc.data() as Team;
 
     console.log("✅ Found team:", {
       id: teamDoc.id,
       name: team.name,
       inviteCode: team.inviteCode,
-      memberCount: Object.keys(team.members).length,
+      memberCount: Object.keys(team.members || {}).length,
     });
 
-    if (team.members[user.id]) {
+    if (team.members?.[user.id]) {
       console.log("ℹ️ User is already a member of this team");
       throw new Error("You are already a member of this team");
+    }
+
+    // If this was from a teamInvite, get the role from the invite
+    let memberRole = team.settings?.defaultRole || "member";
+    if (inviteData && inviteData.role) {
+      memberRole = inviteData.role;
     }
 
     const newMember: TeamMember = {
       id: user.id,
       name: user.username || user.email,
       email: user.email,
-      role: team.settings.defaultRole,
+      role: memberRole,
       joinedAt: new Date(),
       lastActive: new Date(),
       isOnline: true,
@@ -391,6 +442,16 @@ class TeamManagementService {
       [`members.${user.id}`]: newMember,
       updatedAt: serverTimestamp(),
     });
+
+    // Mark invite as accepted if it was from teamInvites
+    if (inviteDocId) {
+      await updateDoc(doc(db, "teamInvites", inviteDocId), {
+        status: "accepted",
+        acceptedAt: serverTimestamp(),
+        acceptedBy: user.id,
+      });
+      console.log("✅ Marked invite as accepted");
+    }
 
     // Grant access to all existing team files for the new member
     try {

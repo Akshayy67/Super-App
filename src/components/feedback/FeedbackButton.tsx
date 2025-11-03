@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Heart, Sparkles } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, animate } from "framer-motion";
+import { MessageSquare, Sparkles } from "lucide-react";
 import { FeedbackSystem } from "./FeedbackSystem";
 import { useFeedbackSettings } from "./FeedbackContext";
 
@@ -13,6 +13,58 @@ interface FeedbackButtonProps {
   customOffset?: { x?: number; y?: number };
   draggable?: boolean;
 }
+
+// Component to render eye tracking with motion values
+const EyeTracking: React.FC<{
+  highlightX: any;
+  highlightY: any;
+  pupilX: any;
+  pupilY: any;
+}> = ({ highlightX, highlightY, pupilX, pupilY }) => {
+  const [highlightPos, setHighlightPos] = React.useState({ x: 19, y: 15 });
+  const [pupilPos, setPupilPos] = React.useState({ x: 18.5, y: 15.5 });
+
+  React.useEffect(() => {
+    const unsubscribeHighlightX = highlightX.on("change", (latest: number) => {
+      setHighlightPos(prev => ({ ...prev, x: latest }));
+    });
+    const unsubscribeHighlightY = highlightY.on("change", (latest: number) => {
+      setHighlightPos(prev => ({ ...prev, y: latest }));
+    });
+    const unsubscribePupilX = pupilX.on("change", (latest: number) => {
+      setPupilPos(prev => ({ ...prev, x: latest }));
+    });
+    const unsubscribePupilY = pupilY.on("change", (latest: number) => {
+      setPupilPos(prev => ({ ...prev, y: latest }));
+    });
+
+    return () => {
+      unsubscribeHighlightX();
+      unsubscribeHighlightY();
+      unsubscribePupilX();
+      unsubscribePupilY();
+    };
+  }, [highlightX, highlightY, pupilX, pupilY]);
+
+  return (
+    <>
+      {/* Eye white highlight - moves with eye tracking */}
+      <circle
+        cx={highlightPos.x}
+        cy={highlightPos.y}
+        r="1.2"
+        fill="#FFF"
+      />
+      {/* Eye pupil (blue) - tracks mouse cursor */}
+      <circle
+        cx={pupilPos.x}
+        cy={pupilPos.y}
+        r="0.5"
+        fill="#4A90E2"
+      />
+    </>
+  );
+};
 
 export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
   position,
@@ -30,6 +82,67 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  
+  // Smooth bird position tracking
+  const birdX = useMotionValue(0);
+  const birdY = useMotionValue(0);
+  const smoothBirdX = useSpring(birdX, { stiffness: 150, damping: 20 });
+  const smoothBirdY = useSpring(birdY, { stiffness: 150, damping: 20 });
+  
+  // Eye tracking - position of pupils looking at cursor
+  const eyeX = useMotionValue(0);
+  const eyeY = useMotionValue(0);
+  const smoothEyeX = useSpring(eyeX, { stiffness: 200, damping: 25 });
+  const smoothEyeY = useSpring(eyeY, { stiffness: 200, damping: 25 });
+  
+  // Transform eye positions for SVG attributes (base position + offset)
+  const eyeHighlightX = useTransform(smoothEyeX, (x) => 19 + x);
+  const eyeHighlightY = useTransform(smoothEyeY, (y) => 15 + y);
+  const eyePupilX = useTransform(smoothEyeX, (x) => 18.5 + x);
+  const eyePupilY = useTransform(smoothEyeY, (y) => 15.5 + y);
+  
+  // Wing animation motion values - ensure rx/ry are always defined
+  const wingRx = useMotionValue(7);
+  const wingRy = useMotionValue(12);
+  const wingDetailRx = useMotionValue(4);
+  const wingDetailRy = useMotionValue(8);
+  
+  // Animate wing values
+  useEffect(() => {
+    const controls = {
+      wingRx: animate(wingRx, [7, 6, 7], {
+        duration: 0.7,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }),
+      wingRy: animate(wingRy, [12, 9, 12], {
+        duration: 0.7,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }),
+      wingDetailRy: animate(wingDetailRy, [8, 6, 8], {
+        duration: 0.7,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }),
+    };
+    
+    return () => {
+      controls.wingRx.stop();
+      controls.wingRy.stop();
+      controls.wingDetailRy.stop();
+    };
+  }, [wingRx, wingRy, wingDetailRy]);
+  
+  // Unique gradient IDs for each button instance (generated once)
+  const gradientIdRef = useRef<string | null>(null);
+  const wingGradientIdRef = useRef<string | null>(null);
+  
+  if (!gradientIdRef.current) {
+    gradientIdRef.current = `bird-gradient-${Math.random().toString(36).substr(2, 9)}`;
+    wingGradientIdRef.current = `wing-gradient-${Math.random().toString(36).substr(2, 9)}`;
+  }
 
   // Use props if provided, otherwise use context settings
   const finalPosition = position ?? settings.position;
@@ -148,6 +261,87 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
     }
   }, [isDragging, dragStart, dragPosition]);
 
+  // Track mouse position when hovering over button
+  useEffect(() => {
+    if (!isHovered || !buttonRef.current) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const buttonRect = buttonRef.current?.getBoundingClientRect();
+      if (!buttonRect) return;
+
+      // Calculate relative position from button center
+      const centerX = buttonRect.left + buttonRect.width / 2;
+      const centerY = buttonRect.top + buttonRect.height / 2;
+      
+      const relativeX = e.clientX - centerX;
+      const relativeY = e.clientY - centerY;
+
+      // Clamp the bird position to stay near the button area
+      const maxDistance = 60;
+      const distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
+      
+      let targetX = relativeX - 20; // Offset to make bird look natural
+      let targetY = relativeY - 25;
+      
+      // If cursor is too far, keep bird at max distance
+      if (distance > maxDistance) {
+        const angle = Math.atan2(relativeY, relativeX);
+        targetX = Math.cos(angle) * maxDistance - 20;
+        targetY = Math.sin(angle) * maxDistance - 25;
+      }
+
+      // Update bird position with smooth tracking
+      birdX.set(targetX);
+      birdY.set(targetY);
+
+      // Calculate eye direction
+      // Bird position in SVG: center is around (20, 17), eye is at (18, 16)
+      // Scale factor based on bird size
+      const birdScale = finalSize === "sm" ? 36/48 : finalSize === "lg" ? 44/48 : 40/48;
+      
+      // Calculate eye position in screen coordinates
+      // Eye offset from bird center in SVG: (18-20, 16-17) = (-2, -1)
+      const eyeOffsetX = -2 * birdScale;
+      const eyeOffsetY = -1 * birdScale;
+      const eyeScreenX = centerX + targetX + eyeOffsetX;
+      const eyeScreenY = centerY + targetY + eyeOffsetY;
+      
+      // Vector from eye to cursor
+      const eyeToCursorX = e.clientX - eyeScreenX;
+      const eyeToCursorY = e.clientY - eyeScreenY;
+      const eyeToCursorDistance = Math.sqrt(eyeToCursorX * eyeToCursorX + eyeToCursorY * eyeToCursorY);
+      
+      // Eye pupil max movement radius (eye radius is 3 in SVG, pupil should move within ~1.2 units)
+      const maxEyeMovement = 1.2;
+      
+      if (eyeToCursorDistance > 5) { // Only track if cursor is not too close
+        // Normalize direction vector
+        const normalizedX = eyeToCursorX / eyeToCursorDistance;
+        const normalizedY = eyeToCursorY / eyeToCursorDistance;
+        
+        // Calculate movement amount (further away = more movement, but clamped to max)
+        // Scale by distance but keep within eye bounds
+        const movementAmount = Math.min(eyeToCursorDistance * 0.015, maxEyeMovement);
+        
+        eyeX.set(normalizedX * movementAmount);
+        eyeY.set(normalizedY * movementAmount);
+      } else {
+        // Center the eye when cursor is very close
+        eyeX.set(0);
+        eyeY.set(0);
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    
+    // Reset eye position when not hovering
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      eyeX.set(0);
+      eyeY.set(0);
+    };
+  }, [isHovered, birdX, birdY, eyeX, eyeY, finalSize]);
+
   // Get the actual position for rendering
   const getButtonPosition = () => {
     if (finalPosition === "draggable" && dragPosition) {
@@ -219,10 +413,23 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
 
           {/* Main button */}
           <motion.button
+            ref={buttonRef}
             onClick={() => !isDragging && setIsOpen(true)}
             onMouseDown={handleMouseDown}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
+            onMouseEnter={() => {
+              setIsHovered(true);
+              birdX.set(0);
+              birdY.set(0);
+              eyeX.set(0);
+              eyeY.set(0);
+            }}
+            onMouseLeave={() => {
+              setIsHovered(false);
+              birdX.set(0);
+              birdY.set(0);
+              eyeX.set(0);
+              eyeY.set(0);
+            }}
             className={`relative ${sizeClasses[finalSize]} bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group ${isDragging ? "shadow-2xl" : ""}`}
             whileHover={{ scale: isDragging ? 1.1 : 1.1 }}
             whileTap={{ scale: 0.95 }}
@@ -250,12 +457,198 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
               ))}
             </div>
 
-            {/* Icon with rotation animation */}
+            {/* Cute Bird - replaces Heart icon, follows mouse cursor on hover */}
             <motion.div
-              animate={{ rotate: isHovered ? 360 : 0 }}
-              transition={{ duration: 0.5 }}
+              style={{
+                position: isHovered && !isDragging ? "absolute" : "relative",
+                x: isHovered && !isDragging ? smoothBirdX : 0,
+                y: isHovered && !isDragging ? smoothBirdY : 0,
+                pointerEvents: "none",
+                zIndex: 50,
+              }}
+              animate={{
+                scale: isHovered ? 1.1 : 1,
+              }}
+              transition={{ 
+                scale: { duration: 0.3 }
+              }}
             >
-              <Heart className={`${iconSizes[finalSize]} fill-current`} />
+                  <motion.svg
+                    width={finalSize === "sm" ? "36" : finalSize === "lg" ? "44" : "40"}
+                    height={finalSize === "sm" ? "36" : finalSize === "lg" ? "44" : "40"}
+                    viewBox="0 0 48 48"
+                    className="drop-shadow-xl"
+                    style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.2))" }}
+                    animate={{
+                      y: [0, -4, 0],
+                      rotate: [0, 8, -8, 0],
+                    }}
+                    transition={{
+                      duration: 1.8,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    <defs>
+                      <linearGradient id={gradientIdRef.current!} x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#FFE8A0" />
+                        <stop offset="100%" stopColor="#FFD700" />
+                      </linearGradient>
+                      <linearGradient id={wingGradientIdRef.current!} x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#FFC107" />
+                        <stop offset="100%" stopColor="#FF8C00" />
+                      </linearGradient>
+                    </defs>
+                    
+                    {/* Tail feathers - Adds charm */}
+                    <path
+                      d="M 32 28 Q 38 22 42 26 Q 38 28 36 32 Z"
+                      fill={`url(#${wingGradientIdRef.current!})`}
+                      opacity="0.9"
+                    />
+                    
+                    {/* Bird Body - Cute rounded body with gradient */}
+                    <ellipse
+                      cx="22"
+                      cy="26"
+                      rx="11"
+                      ry="9"
+                      fill={`url(#${gradientIdRef.current!})`}
+                      stroke="#FFC107"
+                      strokeWidth="2"
+                    />
+                    
+                    {/* Bird Head - Round and cute */}
+                    <circle
+                      cx="20"
+                      cy="17"
+                      r="9"
+                      fill={`url(#${gradientIdRef.current!})`}
+                      stroke="#FFC107"
+                      strokeWidth="2"
+                    />
+                    
+                    {/* Wing - Flapping animation with gradient */}
+                    <motion.ellipse
+                      cx="24"
+                      cy="26"
+                      rx={wingRx}
+                      ry={wingRy}
+                      fill={`url(#${wingGradientIdRef.current!})`}
+                      opacity="0.85"
+                      initial={{ rotate: 0 }}
+                      animate={{
+                        rotate: [0, 5, 0],
+                      }}
+                      transition={{
+                        duration: 0.7,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                    />
+                    
+                    {/* Wing detail */}
+                    <motion.ellipse
+                      cx="24"
+                      cy="26"
+                      rx={wingDetailRx}
+                      ry={wingDetailRy}
+                      fill="#FFA500"
+                      opacity="0.6"
+                    />
+                    
+                    {/* Eye - Cute and expressive, tracks mouse cursor */}
+                    <circle
+                      cx="18"
+                      cy="16"
+                      r="3"
+                      fill="#1A1A1A"
+                    />
+                    {/* Eye white highlight and pupil - moves with eye tracking */}
+                    <EyeTracking 
+                      highlightX={eyeHighlightX}
+                      highlightY={eyeHighlightY}
+                      pupilX={eyePupilX}
+                      pupilY={eyePupilY}
+                    />
+                    
+                    {/* Beak - Small and cute */}
+                    <path
+                      d="M 14 18 L 10 19.5 L 14 21 Z"
+                      fill="#FF6B35"
+                    />
+                    <path
+                      d="M 14 18 L 10 19.5 L 14 19.2 Z"
+                      fill="#FF8C42"
+                    />
+                    
+                    {/* Cheek blush - Makes it cuter */}
+                    <ellipse
+                      cx="16"
+                      cy="19"
+                      rx="2.5"
+                      ry="2"
+                      fill="#FFB6C1"
+                      opacity="0.7"
+                    />
+                    <ellipse
+                      cx="16"
+                      cy="19"
+                      rx="1.5"
+                      ry="1"
+                      fill="#FF9DB0"
+                      opacity="0.5"
+                    />
+                    
+                    {/* Tiny sparkles for extra cuteness */}
+                    <motion.circle
+                      cx="23"
+                      cy="13"
+                      r="2"
+                      fill="#FFF"
+                      animate={{
+                        opacity: [0.4, 1, 0.4],
+                        scale: [1, 1.4, 1],
+                      }}
+                      transition={{
+                        duration: 1.2,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                    />
+                    <motion.circle
+                      cx="26"
+                      cy="15"
+                      r="1.2"
+                      fill="#FFF"
+                      animate={{
+                        opacity: [0.3, 0.9, 0.3],
+                        scale: [1, 1.3, 1],
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        delay: 0.3,
+                      }}
+                    />
+                    
+                    {/* Feet - Tiny and cute */}
+                    <path
+                      d="M 18 32 L 19 35 L 20 32"
+                      stroke="#FF6B35"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      fill="none"
+                    />
+                    <path
+                      d="M 24 32 L 25 35 L 26 32"
+                      stroke="#FF6B35"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      fill="none"
+                    />
+                  </motion.svg>
             </motion.div>
 
             {/* Tooltip */}

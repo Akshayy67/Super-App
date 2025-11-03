@@ -65,10 +65,8 @@ export const JoinTeamModal: React.FC<JoinTeamModalProps> = ({
 
       // Use the team management service to properly join the team
       // This will automatically grant file access to the new member
+      // Note: joinTeamByInviteCode now handles marking the invite as accepted
       await teamManagementService.joinTeamByInviteCode(inviteCode);
-
-      // Mark invite as accepted
-      await emailService.acceptInvite(invite.id, user.id);
 
       setSuccess(`Successfully joined team "${invite.teamName}"!`);
       setInviteDetails(invite);

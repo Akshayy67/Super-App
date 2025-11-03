@@ -2,7 +2,6 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  phoneNumber?: string;
   createdAt: string;
   authProvider?: string;
   hasGoogleDriveAccess?: boolean;
@@ -73,4 +72,19 @@ export interface AIAnalysis {
   summary: string;
   userId: string;
   createdAt: string;
+}
+
+export interface UserProfile {
+  id: string;
+  userId: string;
+  username: string;
+  email: string;
+  photoURL?: string; // URL or base64 data URL
+  photoBase64?: string; // Base64 encoded photo (for free storage in Firestore)
+  phoneNumber?: string;
+  bio?: string;
+  location?: string;
+  website?: string;
+  createdAt: string;
+  updatedAt: string;
 }

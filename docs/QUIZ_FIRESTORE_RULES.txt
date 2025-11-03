@@ -1,0 +1,114 @@
+// Firestore Security Rules for Quiz Feature
+// 
+// NOTE: This file contains ONLY the quiz-related rules.
+// For complete rules including Video Meetings and WebRTC Signaling,
+// see docs/COMPLETE_FIRESTORE_RULES.txt
+//
+// Add these rules to your Firebase Console > Firestore Database > Rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is admin (for community quizzes)
+    function isAdmin() {
+      return request.auth != null && 
+        (request.auth.token.email == 'akshayjuluri6704@gmail.com' ||
+         request.auth.token.email == '22311a05l5@cse.sreenidhi.edu.in');
+    }
+    
+    // ==================== TEAM QUIZZES ====================
+    
+    // Team quizzes collection
+    match /team_quizzes/{quizId} {
+      // Allow read if user is authenticated and is a member of the team
+      allow read: if isAuthenticated() && 
+        (resource.data.participants.hasAny([request.auth.uid]) ||
+         resource.data.createdBy == request.auth.uid ||
+         request.auth.uid in resource.data.participants);
+      
+      // Allow create if user is authenticated
+      allow create: if isAuthenticated() && 
+        request.resource.data.createdBy == request.auth.uid;
+      
+      // Allow update if user is the creator
+      allow update: if isAuthenticated() && 
+        resource.data.createdBy == request.auth.uid &&
+        request.resource.data.createdBy == resource.data.createdBy;
+      
+      // Allow delete if user is the creator
+      allow delete: if isAuthenticated() && 
+        resource.data.createdBy == request.auth.uid;
+    }
+    
+    // Team quiz attempts collection
+    match /team_quiz_attempts/{attemptId} {
+      // Allow read if user is the owner of the attempt or creator of the quiz
+      allow read: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid ||
+         (exists(/databases/$(database)/documents/team_quizzes/$(resource.data.quizId)) &&
+          get(/databases/$(database)/documents/team_quizzes/$(resource.data.quizId)).data.createdBy == request.auth.uid));
+      
+      // Allow create if user is authenticated
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      // Allow update if user is the owner of the attempt
+      allow update: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId;
+      
+      // Allow delete only by the creator of the quiz or admin
+      allow delete: if isAuthenticated() && (
+        (exists(/databases/$(database)/documents/team_quizzes/$(resource.data.quizId)) &&
+         get(/databases/$(database)/documents/team_quizzes/$(resource.data.quizId)).data.createdBy == request.auth.uid) ||
+        isAdmin()
+      );
+    }
+    
+    // ==================== COMMUNITY QUIZZES ====================
+    
+    // Community quizzes collection
+    match /community_quizzes/{quizId} {
+      // Allow read if user is authenticated
+      allow read: if isAuthenticated();
+      
+      // Allow create only if user is admin
+      allow create: if isAuthenticated() && isAdmin() &&
+        request.resource.data.createdBy == request.auth.uid;
+      
+      // Allow update only if user is admin and creator
+      allow update: if isAuthenticated() && isAdmin() &&
+        resource.data.createdBy == request.auth.uid &&
+        request.resource.data.createdBy == resource.data.createdBy;
+      
+      // Allow delete only if user is admin and creator
+      allow delete: if isAuthenticated() && isAdmin() &&
+        resource.data.createdBy == request.auth.uid;
+    }
+    
+    // Community quiz attempts collection
+    match /community_quiz_attempts/{attemptId} {
+      // Allow read if user is the owner of the attempt or admin
+      allow read: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Allow create if user is authenticated
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      // Allow update if user is the owner of the attempt
+      allow update: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId;
+      
+      // Allow delete only by admin
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+  }
+}

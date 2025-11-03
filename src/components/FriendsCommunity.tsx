@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Users,
   UserPlus,
@@ -40,6 +41,7 @@ interface FriendsCommunityProps {
 }
 
 export const FriendsCommunity: React.FC<FriendsCommunityProps> = ({ onSwitchToGlobal }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<FriendsTab>("friends");
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
@@ -431,7 +433,13 @@ export const FriendsCommunity: React.FC<FriendsCommunityProps> = ({ onSwitchToGl
                     <div
                       key={friend.id}
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer group"
-                      onClick={() => handleStartChat(friend.friendId)}
+                      onClick={(e) => {
+                        // Navigate to profile on click, but allow remove button to work
+                        const target = e.target as HTMLElement;
+                        if (!target.closest('button')) {
+                          navigate(`/profile/${encodeURIComponent(friend.friendEmail)}`);
+                        }
+                      }}
                     >
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
                         {friend.friendAvatar ? (
@@ -486,7 +494,10 @@ export const FriendsCommunity: React.FC<FriendsCommunityProps> = ({ onSwitchToGl
                           key={request.id}
                           className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700"
                         >
-                          <div className="flex items-center gap-3 mb-2">
+                          <div 
+                            className="flex items-center gap-3 mb-2 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => navigate(`/profile/${encodeURIComponent(request.fromUserEmail)}`)}
+                          >
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs">
                               {request.fromUserAvatar ? (
                                 <img
@@ -545,7 +556,10 @@ export const FriendsCommunity: React.FC<FriendsCommunityProps> = ({ onSwitchToGl
                           key={request.id}
                           className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700"
                         >
-                          <div className="flex items-center gap-3">
+                          <div 
+                            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => navigate(`/profile/${encodeURIComponent(request.toUserEmail)}`)}
+                          >
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs">
                               {getAvatarInitials(request.toUserEmail.split("@")[0] || "User")}
                             </div>
@@ -581,14 +595,23 @@ export const FriendsCommunity: React.FC<FriendsCommunityProps> = ({ onSwitchToGl
                       chat.type === "group"
                         ? chat.name
                         : chat.participantNames[otherParticipants[0]] || "Unknown";
+                    const otherParticipantEmail = chat.type === "personal" && chat.participantEmails 
+                      ? chat.participantEmails[otherParticipants[0]] 
+                      : null;
                     const unreadCount = chat.unreadCount[user?.id || ""] || 0;
 
                     return (
                       <div
                         key={chat.id}
-                        onClick={() => {
-                          setSelectedChat(chat.id);
-                          setSelectedGroup(null);
+                        onClick={(e) => {
+                          // If personal chat, allow clicking on name to view profile
+                          const target = e.target as HTMLElement;
+                          if (chat.type === "personal" && otherParticipantEmail && target.closest('.chat-name')) {
+                            navigate(`/profile/${encodeURIComponent(otherParticipantEmail)}`);
+                          } else {
+                            setSelectedChat(chat.id);
+                            setSelectedGroup(null);
+                          }
                         }}
                         className={`p-3 rounded-lg cursor-pointer transition-colors ${
                           selectedChat === chat.id
@@ -606,7 +629,13 @@ export const FriendsCommunity: React.FC<FriendsCommunityProps> = ({ onSwitchToGl
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-1">
-                              <p className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm">
+                              <p 
+                                className={`font-medium text-gray-900 dark:text-gray-100 truncate text-sm ${
+                                  chat.type === "personal" && otherParticipantEmail 
+                                    ? "chat-name hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer" 
+                                    : ""
+                                }`}
+                              >
                                 {chatName}
                               </p>
                               {chat.lastMessage && chat.lastMessage.timestamp && (

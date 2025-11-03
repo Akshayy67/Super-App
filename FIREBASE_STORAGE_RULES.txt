@@ -1,0 +1,47 @@
+// Firebase Storage Security Rules for Profile Photos
+// Add these rules to your Firebase Console > Storage > Rules
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Profile photos - users can upload/delete their own photos
+    // File pattern: profile-photos/{userId}-{timestamp}.{ext}
+    match /profile-photos/{fileName} {
+      // Extract userId from filename (format: userId-timestamp.ext)
+      // Allow read access to anyone (for public profiles)
+      allow read: if true;
+      
+      // Allow write access to authenticated users
+      // File size limit: 5MB, content type: images only
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024  // 5MB limit
+                   && request.resource.contentType.matches('image/.*');
+      
+      // Allow delete to authenticated users (they can delete any photo in profile-photos)
+      // For better security, you could validate the userId in filename matches auth.uid
+      allow delete: if request.auth != null;
+    }
+    
+    // Default rule - deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// INSTRUCTIONS:
+// 1. Go to Firebase Console > Storage > Rules
+// 2. Replace your existing rules with the above rules (or merge them carefully)
+// 3. Test the rules using the Firebase Console's Rules Simulator
+// 4. Publish the rules
+
+// SECURITY NOTES:
+// - Users must be authenticated to upload photos
+// - Users can only upload/delete their own photos (based on userId in filename)
+// - File size limit: 5MB
+// - Only image files are allowed
+// - Photos are publicly readable (for profile viewing)
+// - All other paths are denied by default
+

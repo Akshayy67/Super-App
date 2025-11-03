@@ -59,6 +59,7 @@ import { DoubtDiscussionComponent } from "./DoubtDiscussion";
 import { PairTasks } from "./PairTasks";
 import { autoFileAccessChecker } from "../../utils/autoFileAccessChecker";
 import { filePreviewService } from "../../utils/filePreviewService";
+import { TeamQuiz } from "./TeamQuiz";
 
 // Study motivational quotes
 const STUDY_QUOTES = [
@@ -115,6 +116,7 @@ const getTabConfig = (teamType: "general" | "study") => {
       { key: "members", label: "Study Groups", icon: Users },
       { key: "files", label: "Study Materials", icon: BookOpen },
       { key: "projects", label: "Study Sessions", icon: Clock },
+      { key: "quiz", label: "Quiz", icon: Target },
       { key: "pairtasks", label: "Pair Tasks", icon: Code },
       { key: "doubts", label: "Doubt Discussion", icon: Brain },
       { key: "chat", label: "General Chat", icon: MessageSquare },
@@ -126,6 +128,7 @@ const getTabConfig = (teamType: "general" | "study") => {
     { key: "members", label: "Members", icon: Users },
     { key: "files", label: "Files", icon: FileText },
     { key: "projects", label: "Projects", icon: Folder },
+    { key: "quiz", label: "Quiz", icon: Target },
     { key: "pairtasks", label: "Pair Tasks", icon: Code },
     { key: "doubts", label: "Doubt Discussion", icon: Brain },
     { key: "chat", label: "Chat", icon: MessageSquare },
@@ -163,6 +166,7 @@ export const TeamSpace: React.FC<{
     | "settings"
     | "doubts"
     | "pairtasks"
+    | "quiz"
   >("overview");
   const [teamActivities, setTeamActivities] = useState<TeamActivity[]>([]);
   const [sharedResources, setSharedResources] = useState<SharedResource[]>([]);
@@ -1552,19 +1556,19 @@ export const TeamSpace: React.FC<{
                           {teamActivities.slice(0, 5).map((activity) => (
                             <div
                               key={activity.id}
-                              className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                              className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg"
                             >
-                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                <Activity className="w-4 h-4 text-blue-600" />
+                              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                                <Activity className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                               </div>
                               <div className="flex-1">
-                                <p className="text-sm text-gray-900">
+                                <p className="text-sm text-gray-900 dark:text-gray-100">
                                   <span className="font-medium">
                                     {activity.userName}
                                   </span>{" "}
                                   {activity.action} {activity.target}
                                 </p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
                                   {activity.timestamp.toLocaleString()}
                                 </p>
                               </div>
@@ -1572,7 +1576,7 @@ export const TeamSpace: React.FC<{
                           ))}
                         </div>
                       ) : (
-                        <p className="text-center text-gray-500">
+                        <p className="text-center text-gray-500 dark:text-gray-400">
                           No recent activity
                         </p>
                       )}
@@ -1684,15 +1688,15 @@ export const TeamSpace: React.FC<{
                         {/* Exit request indicator */}
                         {selectedTeam?.exitRequests?.[member.id]?.status ===
                           "pending" && (
-                          <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                            <p className="text-sm text-orange-800">
+                          <div className="mt-3 p-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                            <p className="text-sm text-orange-800 dark:text-orange-300">
                               <span className="font-medium">
                                 Exit request pending
                               </span>
                               {selectedTeam.exitRequests[member.id].reason && (
                                 <>
                                   <br />
-                                  <span className="text-orange-600">
+                                  <span className="text-orange-600 dark:text-orange-400">
                                     Reason:{" "}
                                     {
                                       selectedTeam.exitRequests[member.id]
@@ -1728,13 +1732,13 @@ export const TeamSpace: React.FC<{
                             {member.skills.slice(0, 3).map((skill) => (
                               <span
                                 key={skill}
-                                className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded"
+                                className="px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-xs rounded"
                               >
                                 {skill}
                               </span>
                             ))}
                             {member.skills.length > 3 && (
-                              <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                              <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 text-xs rounded">
                                 +{member.skills.length - 3} more
                               </span>
                             )}
@@ -1894,16 +1898,16 @@ export const TeamSpace: React.FC<{
                           </div>
                         </div>
 
-                        <div className="bg-orange-50 rounded-lg p-4">
+                        <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
                           <div className="flex items-center">
-                            <div className="p-2 bg-orange-100 rounded-lg">
-                              <CheckCircle className="w-5 h-5 text-orange-600" />
+                            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                              <CheckCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                             </div>
                             <div className="ml-3">
-                              <p className="text-sm font-medium text-orange-900">
+                              <p className="text-sm font-medium text-orange-900 dark:text-orange-100">
                                 Completed
                               </p>
-                              <p className="text-2xl font-bold text-orange-600">
+                              <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                                 {projectStats.completed}
                               </p>
                             </div>
@@ -1920,30 +1924,30 @@ export const TeamSpace: React.FC<{
                             ) => {
                               switch (status) {
                                 case "active":
-                                  return "bg-green-100 text-green-800";
+                                  return "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400";
                                 case "in-progress":
-                                  return "bg-blue-100 text-blue-800";
+                                  return "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400";
                                 case "completed":
-                                  return "bg-gray-100 text-gray-800";
+                                  return "bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-300";
                                 case "on-hold":
-                                  return "bg-yellow-100 text-yellow-800";
+                                  return "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400";
                                 case "cancelled":
-                                  return "bg-red-100 text-red-800";
+                                  return "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400";
                                 case "planning":
-                                  return "bg-purple-100 text-purple-800";
+                                  return "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400";
                                 default:
-                                  return "bg-gray-100 text-gray-800";
+                                  return "bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-300";
                               }
                             };
 
                             const getProgressColor = (progress: number) => {
                               if (progress >= 80)
-                                return "bg-green-100 text-green-800";
+                                return "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400";
                               if (progress >= 50)
-                                return "bg-blue-100 text-blue-800";
+                                return "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400";
                               if (progress >= 25)
-                                return "bg-yellow-100 text-yellow-800";
-                              return "bg-red-100 text-red-800";
+                                return "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400";
+                              return "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400";
                             };
 
                             const getPriorityIcon = (
@@ -1966,23 +1970,23 @@ export const TeamSpace: React.FC<{
                             return (
                               <div
                                 key={project.id}
-                                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                                className="border border-gray-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-slate-900/20 transition-shadow bg-white dark:bg-slate-800"
                               >
                                 <div className="flex items-center justify-between mb-3">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                      <Folder className="w-5 h-5 text-green-600" />
+                                    <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                                      <Folder className="w-5 h-5 text-green-600 dark:text-green-400" />
                                     </div>
                                     <div>
                                       <div className="flex items-center gap-2">
-                                        <h3 className="font-medium text-gray-900">
+                                        <h3 className="font-medium text-gray-900 dark:text-gray-100">
                                           {project.name}
                                         </h3>
                                         <span className="text-sm">
                                           {getPriorityIcon(project.priority)}
                                         </span>
                                       </div>
-                                      <p className="text-sm text-gray-500">
+                                      <p className="text-sm text-gray-500 dark:text-gray-400">
                                         Updated{" "}
                                         {project.updatedAt.toLocaleDateString()}
                                       </p>
@@ -2006,7 +2010,7 @@ export const TeamSpace: React.FC<{
                                   </div>
                                 </div>
 
-                                <p className="text-gray-600 text-sm mb-3">
+                                <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
                                   {project.description ||
                                     "No description provided"}
                                 </p>
@@ -2017,14 +2021,14 @@ export const TeamSpace: React.FC<{
                                     {project.tags.slice(0, 3).map((tag) => (
                                       <span
                                         key={tag}
-                                        className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
+                                        className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400"
                                       >
                                         <Hash className="w-3 h-3 mr-1" />
                                         {tag}
                                       </span>
                                     ))}
                                     {project.tags.length > 3 && (
-                                      <span className="text-xs text-gray-500">
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">
                                         +{project.tags.length - 3} more
                                       </span>
                                     )}
@@ -2032,18 +2036,18 @@ export const TeamSpace: React.FC<{
                                 )}
 
                                 {/* Tasks Summary */}
-                                <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                                <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-3 mb-3">
                                   <div className="flex items-center justify-between text-sm">
-                                    <span className="text-gray-600">
+                                    <span className="text-gray-600 dark:text-gray-300">
                                       Tasks:
                                     </span>
-                                    <span className="font-medium text-gray-900">
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">
                                       {project.stats.completedTasks}/
                                       {project.stats.totalTasks} completed
                                     </span>
                                   </div>
                                   {project.stats.totalTasks > 0 && (
-                                    <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                    <div className="w-full bg-gray-200 dark:bg-slate-600 rounded-full h-2 mt-2">
                                       <div
                                         className="bg-green-600 h-2 rounded-full transition-all duration-300"
                                         style={{
@@ -2070,7 +2074,7 @@ export const TeamSpace: React.FC<{
                                           return member ? (
                                             <div
                                               key={member.id}
-                                              className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 border-2 border-white"
+                                              className="w-8 h-8 bg-gray-300 dark:bg-slate-600 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300 border-2 border-white dark:border-slate-800"
                                               title={member.name}
                                             >
                                               {member.name
@@ -2081,7 +2085,7 @@ export const TeamSpace: React.FC<{
                                         })}
                                     </div>
                                     {project.assignedMembers.length > 3 && (
-                                      <span className="text-sm text-gray-500">
+                                      <span className="text-sm text-gray-500 dark:text-gray-400">
                                         +{project.assignedMembers.length - 3}{" "}
                                         more
                                       </span>
@@ -2093,7 +2097,7 @@ export const TeamSpace: React.FC<{
                                       onClick={() =>
                                         handleAddTaskToProject(project)
                                       }
-                                      className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm flex items-center gap-1"
                                       title="Add Task"
                                     >
                                       <Plus className="w-3 h-3" />
@@ -2101,13 +2105,13 @@ export const TeamSpace: React.FC<{
                                     </button>
                                     <button
                                       onClick={() => handleEditProject(project)}
-                                      className="text-gray-600 hover:text-gray-800 text-sm flex items-center gap-1"
+                                      className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 text-sm flex items-center gap-1"
                                       title="Edit Project"
                                     >
                                       <Edit3 className="w-3 h-3" />
                                       Edit
                                     </button>
-                                    <div className="text-sm text-gray-500">
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">
                                       {project.dueDate
                                         ? `Due: ${project.dueDate.toLocaleDateString()}`
                                         : project.status === "completed" &&
@@ -2122,11 +2126,11 @@ export const TeamSpace: React.FC<{
                           })
                         ) : (
                           <div className="text-center py-12">
-                            <Folder className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            <Folder className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                               No Projects Yet
                             </h3>
-                            <p className="text-gray-500 mb-4">
+                            <p className="text-gray-500 dark:text-gray-400 mb-4">
                               Create your first project to start collaborating
                               with your team.
                             </p>
@@ -2219,6 +2223,10 @@ export const TeamSpace: React.FC<{
                   userRole={selectedTeam.members[user.id]?.role || 'member'}
                   className="h-full"
                 />
+              )}
+
+              {activeTab === "quiz" && selectedTeam && (
+                <TeamQuiz teamId={selectedTeam.id} />
               )}
 
               {activeTab === "pairtasks" && selectedTeam && (
@@ -2761,31 +2769,31 @@ export const TeamSpace: React.FC<{
       {/* Delete Team Confirmation Modal */}
       {showDeleteConfirmation && selectedTeam && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="w-6 h-6 text-red-600" />
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                   Delete Team
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   This action cannot be undone
                 </p>
               </div>
             </div>
 
             <div className="mb-6">
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
                 Are you sure you want to delete{" "}
                 <strong>"{selectedTeam.name}"</strong>?
               </p>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-800">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                <p className="text-sm text-red-800 dark:text-red-300">
                   This will permanently delete:
                 </p>
-                <ul className="text-sm text-red-700 mt-2 space-y-1">
+                <ul className="text-sm text-red-700 dark:text-red-400 mt-2 space-y-1">
                   <li>• All team data and settings</li>
                   <li>• All shared files and messages</li>
                   <li>• All team activities and projects</li>
@@ -2797,7 +2805,7 @@ export const TeamSpace: React.FC<{
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowDeleteConfirmation(false)}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
                 disabled={loading}
               >
                 Cancel
@@ -2827,43 +2835,43 @@ export const TeamSpace: React.FC<{
       {/* Exit Request Modal */}
       {showExitRequestModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                <XCircle className="w-6 h-6 text-orange-600" />
+              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
+                <XCircle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                   Request to Exit Team
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   Request approval from team leaders
                 </p>
               </div>
             </div>
 
             <div className="mb-6">
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
                 You are requesting to leave{" "}
                 <strong>"{selectedTeam?.name}"</strong>. Team leaders will
                 review your request.
               </p>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Reason (optional)
                 </label>
                 <textarea
                   value={exitReason}
                   onChange={(e) => setExitReason(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
                   placeholder="Why do you want to leave this team?"
                 />
               </div>
 
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                <p className="text-sm text-orange-800">
+              <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
+                <p className="text-sm text-orange-800 dark:text-orange-300">
                   <strong>Note:</strong> You will remain in the team until a
                   team leader approves your exit request.
                 </p>
@@ -2876,7 +2884,7 @@ export const TeamSpace: React.FC<{
                   setShowExitRequestModal(false);
                   setExitReason("");
                 }}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
                 disabled={loading}
               >
                 Cancel
@@ -2906,29 +2914,29 @@ export const TeamSpace: React.FC<{
       {/* Remove Member Confirmation Modal */}
       {memberToRemove && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="w-6 h-6 text-red-600" />
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                   Remove Team Member
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   This action cannot be undone
                 </p>
               </div>
             </div>
 
             <div className="mb-6">
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
                 Are you sure you want to remove{" "}
                 <strong>"{memberToRemove.name}"</strong> from the team?
               </p>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-800">This member will:</p>
-                <ul className="text-sm text-red-700 mt-2 space-y-1">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                <p className="text-sm text-red-800 dark:text-red-300">This member will:</p>
+                <ul className="text-sm text-red-700 dark:text-red-400 mt-2 space-y-1">
                   <li>• Lose access to all team resources</li>
                   <li>• Be removed from all team projects</li>
                   <li>• No longer receive team notifications</li>
@@ -2940,7 +2948,7 @@ export const TeamSpace: React.FC<{
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setMemberToRemove(null)}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
                 disabled={loading}
               >
                 Cancel
@@ -3001,7 +3009,7 @@ export const TeamSpace: React.FC<{
                   {publicTeams.map((team) => (
                     <div
                       key={team.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
+                      className="border border-gray-200 dark:border-slate-700 rounded-lg p-4 hover:border-blue-300 dark:hover:border-blue-600 transition-colors bg-white dark:bg-slate-800"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -3010,18 +3018,18 @@ export const TeamSpace: React.FC<{
                               <Users className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                              <h4 className="font-medium text-gray-900">
+                              <h4 className="font-medium text-gray-900 dark:text-gray-100">
                                 {team.name}
                               </h4>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
                                 {team.size}
                               </p>
                             </div>
                           </div>
-                          <p className="text-sm text-gray-600 mb-3">
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
                             {team.description}
                           </p>
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                          <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                             <div className="flex items-center">
                               <Users className="w-4 h-4 mr-1" />
                               {Object.keys(team.members).length || 0} members
@@ -3030,7 +3038,7 @@ export const TeamSpace: React.FC<{
                               <Hash className="w-4 h-4 mr-1" />
                               {team.inviteCode}
                             </div>
-                            <div className="flex items-center text-green-600">
+                            <div className="flex items-center text-green-600 dark:text-green-400">
                               <CheckCircle className="w-4 h-4 mr-1" />
                               Public
                             </div>
@@ -3054,17 +3062,17 @@ export const TeamSpace: React.FC<{
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h4 className="text-lg font-medium text-gray-900 mb-2">
+                  <Search className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                  <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                     No Public Teams Found
                   </h4>
-                  <p className="text-gray-600 mb-4">
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
                     There are no public teams available right now. Try creating
                     your own team or joining with an invite code.
                   </p>
                   <button
                     onClick={() => setShowDiscoverTeams(false)}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
                   >
                     Close
                   </button>

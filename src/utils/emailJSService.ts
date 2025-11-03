@@ -65,11 +65,31 @@ export class EmailJSService {
     this.emailjsTemplateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || '';
     this.emailjsPublicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '';
     
+    // Log configuration status (mask sensitive values)
+    console.log('📧 EmailJS Configuration Status:', {
+      serviceId: this.emailjsServiceId ? `${this.emailjsServiceId.substring(0, 4)}...${this.emailjsServiceId.substring(this.emailjsServiceId.length - 4)}` : 'NOT SET',
+      templateId: this.emailjsTemplateId || 'NOT SET',
+      publicKey: this.emailjsPublicKey ? `${this.emailjsPublicKey.substring(0, 4)}...${this.emailjsPublicKey.substring(this.emailjsPublicKey.length - 4)}` : 'NOT SET',
+      hasServiceId: !!this.emailjsServiceId,
+      hasTemplateId: !!this.emailjsTemplateId,
+      hasPublicKey: !!this.emailjsPublicKey,
+    });
+    
     if (this.emailjsServiceId && this.emailjsTemplateId && this.emailjsPublicKey) {
       this.isInitialized = true;
       console.log('✅ EmailJS service initialized successfully');
+      console.log('💡 Using Service ID:', this.emailjsServiceId);
+      console.log('💡 Using Template ID:', this.emailjsTemplateId);
     } else {
-      console.warn('⚠️ EmailJS configuration incomplete. Please set VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, and VITE_EMAILJS_PUBLIC_KEY in your .env file');
+      console.warn('⚠️ EmailJS configuration incomplete!');
+      console.warn('   Missing:', {
+        serviceId: !this.emailjsServiceId ? 'VITE_EMAILJS_SERVICE_ID' : '',
+        templateId: !this.emailjsTemplateId ? 'VITE_EMAILJS_TEMPLATE_ID' : '',
+        publicKey: !this.emailjsPublicKey ? 'VITE_EMAILJS_PUBLIC_KEY' : '',
+      });
+      console.warn('   Please set these in your .env file and restart the dev server.');
+      console.warn('   For Vite projects, environment variables must start with VITE_');
+      console.warn('   After updating .env file, you MUST restart the dev server!');
     }
   }
 
@@ -142,6 +162,10 @@ export class EmailJSService {
         reply_to: 'noreply@yourdomain.com'
       };
 
+      // Log the service ID being used for debugging
+      console.log('🔍 Using EmailJS Service ID:', this.emailjsServiceId);
+      console.log('🔍 Using EmailJS Template ID:', this.emailjsTemplateId);
+      
       // Send email using EmailJS
       const result = await window.emailjs.send(
         this.emailjsServiceId,
@@ -170,8 +194,19 @@ export class EmailJSService {
       localStorage.setItem('emailLog', JSON.stringify(existingEmails));
 
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ EmailJS error:', error);
+      console.error('🔍 Service ID used:', this.emailjsServiceId);
+      console.error('🔍 Template ID used:', this.emailjsTemplateId);
+      
+      // Provide helpful error messages
+      if (error?.text?.includes('service ID not found')) {
+        console.error('💡 SOLUTION: The Service ID does not exist in your EmailJS dashboard.');
+        console.error('   1. Go to https://dashboard.emailjs.com/admin/integration');
+        console.error('   2. Check that your Service ID matches:', this.emailjsServiceId);
+        console.error('   3. Make sure the service ID in your .env file is correct');
+        console.error('   4. Restart your dev server after updating .env file');
+      }
       
       // Store error log
       const errorLog = {

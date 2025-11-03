@@ -7,11 +7,7 @@ import {
   ChevronRight,
   Star,
   Video,
-  Lightbulb,
-  Code,
-  ExternalLink,
   Brain,
-  Zap,
   FileText,
 } from "lucide-react";
 
@@ -45,24 +41,6 @@ export const InterviewOverview: React.FC = () => {
       icon: BookOpen,
       color: "blue",
       path: "/interview/question-bank",
-    },
-    {
-      id: "code",
-      title: "Code Solutions",
-      description:
-        "Working code solutions in Python, TypeScript, and Java with complexity analysis",
-      icon: Code,
-      color: "purple",
-      path: "/interview/view-code",
-    },
-    {
-      id: "references",
-      title: "References & Resources",
-      description:
-        "Curated collection of study materials, documentation, and external resources",
-      icon: ExternalLink,
-      color: "orange",
-      path: "/interview/references",
     },
     {
       id: "mock-interview",
