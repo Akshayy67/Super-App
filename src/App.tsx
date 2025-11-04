@@ -166,22 +166,30 @@ const AuthenticatedApp: React.FC = () => {
   const handleLogout = async () => {
     try {
       console.log("🔄 Starting logout process...");
+      
+      // Close mobile menu if open
+      setIsMobileMenuOpen(false);
+      
       await realTimeAuth.logout();
       console.log("✅ Logout successful");
 
-      // Close mobile menu if open
-      setIsMobileMenuOpen(false);
-
-      // Navigate to dashboard after logout
-      navigate("/dashboard");
+      // Use window.location for a hard redirect to ensure proper navigation
+      // This ensures the app state resets and user goes to landing page
+      window.location.href = "/";
     } catch (error) {
       console.error("❌ Logout failed:", error);
+      // Even if logout fails, redirect to landing page
+      window.location.href = "/";
     }
   };
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
+
+  // Routes where sidebar should not be shown (auth pages)
+  const authRoutes = ["/", "/landing", "/signup", "/blocked", "/payment", "/about"];
+  const isAuthPage = authRoutes.includes(location.pathname);
 
   return (
     <ErrorBoundary>
@@ -196,7 +204,8 @@ const AuthenticatedApp: React.FC = () => {
       )}
 
       <div className="h-screen bg-gray-50 dark:bg-slate-900 flex flex-col lg:flex-row landscape-compact transition-colors duration-300">
-        {/* Mobile Header */}
+        {/* Mobile Header - Only show on non-auth pages */}
+        {!isAuthPage && (
         <div className="mobile-header lg:hidden bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 p-3 sm:p-4 flex items-center justify-between relative z-30">
           <button
             onClick={() => navigate("/dashboard")}
@@ -231,9 +240,10 @@ const AuthenticatedApp: React.FC = () => {
             </button>
           </div>
         </div>
+        )}
 
-        {/* Mobile Menu Overlay */}
-        {isMobileMenuOpen && (
+        {/* Mobile Menu Overlay - Only show on non-auth pages */}
+        {!isAuthPage && isMobileMenuOpen && (
           <div
             className="mobile-nav-overlay"
             onClick={() => setIsMobileMenuOpen(false)}
@@ -241,7 +251,8 @@ const AuthenticatedApp: React.FC = () => {
           />
         )}
 
-        {/* Sidebar - Desktop & Mobile */}
+        {/* Sidebar - Desktop & Mobile - Only show on non-auth pages */}
+        {!isAuthPage && (
         <div
           className={`
             ${isMobileMenuOpen ? "mobile-nav-panel" : "hidden"}
@@ -261,34 +272,37 @@ const AuthenticatedApp: React.FC = () => {
             />
           </div>
         </div>
+        )}
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col relative min-w-0 overflow-hidden">
+        <div className={`flex-1 flex flex-col relative min-w-0 overflow-hidden ${isAuthPage ? 'w-full' : ''}`}>
           <div className="flex-1 overflow-y-auto overflow-x-hidden">
             <AppRouter invitationData={invitationData} />
           </div>
         </div>
 
-        {/* Global Feedback Button */}
-        <FeedbackButton position="draggable" />
+        {/* Global Feedback Button - Only show on non-auth pages */}
+        {!isAuthPage && <FeedbackButton position="draggable" />}
         
-        {/* Contextual Feedback Prompts */}
-        <ContextualFeedback />
+        {/* Contextual Feedback Prompts - Only show on non-auth pages */}
+        {!isAuthPage && <ContextualFeedback />}
         
-        {/* Drag Instruction Tooltip */}
-        <DragInstructionTooltip />
+        {/* Drag Instruction Tooltip - Only show on non-auth pages */}
+        {!isAuthPage && <DragInstructionTooltip />}
 
-        {/* Global Pomodoro Widget */}
-        <GlobalPomodoroWidget />
+        {/* Global Pomodoro Widget - Only show on non-auth pages */}
+        {!isAuthPage && <GlobalPomodoroWidget />}
 
-        {/* Pomodoro Education Modal */}
-        <PomodoroEducation 
-          isVisible={isEducationVisible} 
-          onClose={hideEducation} 
-        />
+        {/* Pomodoro Education Modal - Only show on non-auth pages */}
+        {!isAuthPage && (
+          <PomodoroEducation 
+            isVisible={isEducationVisible} 
+            onClose={hideEducation} 
+          />
+        )}
 
-        {/* Global Call Manager */}
-        <CallManager />
+        {/* Global Call Manager - Only show on non-auth pages */}
+        {!isAuthPage && <CallManager />}
       </div>
     </ErrorBoundary>
   );
