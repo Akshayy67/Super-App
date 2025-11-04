@@ -19,8 +19,6 @@ export const BlockedUserGuard: React.FC<BlockedUserGuardProps> = ({ children }) 
     const checkBlockedStatus = async () => {
       if (!user || !user.email) {
         setIsChecking(false);
-        // If no user, they'll be redirected by the main App component
-        // But we can also redirect here to be safe
         return;
       }
 
@@ -37,11 +35,6 @@ export const BlockedUserGuard: React.FC<BlockedUserGuardProps> = ({ children }) 
 
     checkBlockedStatus();
   }, [user]);
-
-  // If no user, redirect to landing page
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
 
   // Show loading state while checking
   if (isChecking) {

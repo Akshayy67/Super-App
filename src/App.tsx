@@ -166,10 +166,10 @@ const AuthenticatedApp: React.FC = () => {
   const handleLogout = async () => {
     try {
       console.log("🔄 Starting logout process...");
-      
+
       // Close mobile menu if open
       setIsMobileMenuOpen(false);
-      
+
       await realTimeAuth.logout();
       console.log("✅ Logout successful");
 
@@ -295,10 +295,10 @@ const AuthenticatedApp: React.FC = () => {
 
         {/* Pomodoro Education Modal - Only show on non-auth pages */}
         {!isAuthPage && (
-          <PomodoroEducation 
-            isVisible={isEducationVisible} 
-            onClose={hideEducation} 
-          />
+        <PomodoroEducation 
+          isVisible={isEducationVisible} 
+          onClose={hideEducation} 
+        />
         )}
 
         {/* Global Call Manager - Only show on non-auth pages */}

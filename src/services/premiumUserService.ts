@@ -4,7 +4,7 @@
  */
 
 import { db } from "../config/firebase";
-import { collection, doc, getDoc, setDoc, updateDoc, query, where, getDocs } from "firebase/firestore";
+import { collection, doc, getDoc, setDoc, updateDoc, query, where, getDocs, deleteField } from "firebase/firestore";
 
 const PREMIUM_USERS_COLLECTION = "premium_users";
 
@@ -112,21 +112,24 @@ export async function createPremiumUser(
   studentVerified?: boolean
 ): Promise<void> {
   try {
-    const premiumUser: PremiumUser = {
+    // Build premium user object - don't include subscriptionEndDate for lifetime subscriptions
+    const premiumUser: any = {
       userId,
       email: email.toLowerCase(),
       isPremium: true,
       subscriptionType,
       subscriptionStartDate: new Date().toISOString(),
-      subscriptionEndDate: subscriptionType === "lifetime" 
-        ? undefined 
-        : subscriptionType === "monthly"
-        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-        : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
       studentVerified: studentVerified || false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    // Only add subscriptionEndDate if it's not a lifetime subscription
+    if (subscriptionType !== "lifetime") {
+      premiumUser.subscriptionEndDate = subscriptionType === "monthly"
+        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+    }
 
     await setDoc(doc(db, PREMIUM_USERS_COLLECTION, userId), premiumUser);
     console.log(`✅ User ${email} upgraded to premium`);
@@ -151,7 +154,11 @@ export async function updatePremiumSubscription(
       updatedAt: new Date().toISOString(),
     };
 
-    if (subscriptionType !== "lifetime") {
+    if (subscriptionType === "lifetime") {
+      // Remove subscriptionEndDate for lifetime subscriptions
+      updates.subscriptionEndDate = deleteField();
+    } else {
+      // Set subscriptionEndDate for non-lifetime subscriptions
       updates.subscriptionEndDate = subscriptionType === "monthly"
         ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
         : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
@@ -190,14 +197,13 @@ async function ensureCreatorPremium(userId: string, email: string): Promise<void
     const premiumDoc = await getDoc(doc(db, PREMIUM_USERS_COLLECTION, userId));
     
     if (!premiumDoc.exists()) {
-      // Create premium record for creator
-      const premiumUser: PremiumUser = {
+      // Create premium record for creator - don't include subscriptionEndDate for lifetime
+      const premiumUser: any = {
         userId,
         email: email.toLowerCase(),
         isPremium: true,
         subscriptionType: "lifetime",
         subscriptionStartDate: new Date().toISOString(),
-        subscriptionEndDate: undefined, // Lifetime subscription
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -208,12 +214,15 @@ async function ensureCreatorPremium(userId: string, email: string): Promise<void
       // Update existing record to ensure premium status
       const data = premiumDoc.data();
       if (!data.isPremium || data.subscriptionType !== "lifetime") {
-        await updateDoc(doc(db, PREMIUM_USERS_COLLECTION, userId), {
+        // Remove subscriptionEndDate if it exists (for lifetime subscriptions)
+        const updates: any = {
           isPremium: true,
           subscriptionType: "lifetime",
-          subscriptionEndDate: undefined,
+          subscriptionEndDate: deleteField(), // Remove the field for lifetime subscriptions
           updatedAt: new Date().toISOString(),
-        });
+        };
+        
+        await updateDoc(doc(db, PREMIUM_USERS_COLLECTION, userId), updates);
         console.log(`✅ Creator premium access updated: ${email}`);
       }
     }

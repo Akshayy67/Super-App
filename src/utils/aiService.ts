@@ -15,14 +15,8 @@ console.log("🔑 API Key Status:", {
 if (API_KEY && API_KEY.startsWith("AIzaSyBAFT_Q2U-KuyKZm")) {
   console.error(
     "⚠️ WARNING: You are using the OLD SUSPENDED API key!",
-    "\n\n🔧 TO FIX:",
-    "\n1. Go to Google Cloud Console: https://console.cloud.google.com/",
-    "\n2. Navigate to APIs & Services > Credentials",
-    "\n3. Create a NEW API key",
-    "\n4. Update VITE_GOOGLE_AI_API_KEY in your .env file",
-    "\n5. Restart your development server",
-    "\n\n📖 See API_KEY_FIX_GUIDE.md for detailed instructions",
-    "\n\nCurrent key prefix:", API_KEY.substring(0, 20)
+    "\nPlease update your .env file with a new API key and restart the server.",
+    "\nCurrent key prefix:", API_KEY.substring(0, 20)
   );
 }
 

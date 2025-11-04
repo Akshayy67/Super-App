@@ -54,28 +54,17 @@ class RealTimeAuthService {
       const credential = GoogleAuthProvider.credentialFromResult(result);
       
       if (credential && credential.accessToken) {
-        // Only store access token if user is premium
-        if (isPremium) {
-          this.googleAccessToken = credential.accessToken;
-          console.log(
-            "✅ Google OAuth successful with access token (premium user):",
-            !!this.googleAccessToken
-          );
+        this.googleAccessToken = credential.accessToken;
+        console.log(
+          "✅ Google OAuth successful with access token:",
+          !!this.googleAccessToken
+        );
 
-          // Store token in localStorage for persistence (only for premium users)
-          localStorage.setItem("google_access_token", this.googleAccessToken);
-        } else {
-          // Don't store token for non-premium users
-          console.log("⚠️ Access token received but user is not premium - not storing token");
-          this.googleAccessToken = null;
-          // Clear any existing token from localStorage
-          localStorage.removeItem("google_access_token");
-        }
+        // Store token in localStorage for persistence
+        localStorage.setItem("google_access_token", this.googleAccessToken);
       } else {
         console.log("❌ No Google access token received");
         this.googleAccessToken = null;
-        // Clear any existing token from localStorage
-        localStorage.removeItem("google_access_token");
       }
 
       // Create or update user document in Firestore with additional security info
@@ -133,13 +122,11 @@ class RealTimeAuthService {
     }
   }
 
-  // Get Google access token for Drive API (only for premium users)
-  // Note: Premium status is verified during sign-in and auth state changes
-  // This method assumes token is only present for premium users
+  // Get Google access token for Drive API
   getGoogleAccessToken(): string | null {
     // Check memory first
     if (this.googleAccessToken) {
-      console.log("✅ Found Google access token in memory (premium user)");
+      console.log("✅ Found Google access token in memory");
       return this.googleAccessToken;
     }
 
@@ -147,7 +134,7 @@ class RealTimeAuthService {
     const storedToken = localStorage.getItem("google_access_token");
     if (storedToken) {
       console.log(
-        "✅ Found Google access token in localStorage, restoring to memory (premium user)"
+        "✅ Found Google access token in localStorage, restoring to memory"
       );
       this.googleAccessToken = storedToken;
       return storedToken;
@@ -195,8 +182,12 @@ class RealTimeAuthService {
   private authStateListeners: ((user: User | null) => void)[] = [];
 
   constructor() {
-    // Don't restore token here - wait for auth state change to verify premium status
-    // The onAuthStateChanged listener will restore it if user is premium
+    // Initialize Google access token from localStorage
+    const storedToken = localStorage.getItem("google_access_token");
+    if (storedToken) {
+      this.googleAccessToken = storedToken;
+      console.log("🔄 Restored Google access token from localStorage");
+    }
 
     // Set up real-time auth state listener
     onAuthStateChanged(auth, async (firebaseUser) => {
@@ -207,39 +198,6 @@ class RealTimeAuthService {
         
         const userData = await this.getUserData(firebaseUser.uid);
         this.currentUser = userData;
-
-        // Check if user is premium and clear token if not
-        try {
-          const { isPremiumUserByEmail, isCreatorEmail } = await import("../services/premiumUserService");
-          const userEmail = firebaseUser.email || "";
-          
-          // Check premium status
-          let isPremium = false;
-          if (isCreatorEmail(userEmail)) {
-            isPremium = true;
-          } else {
-            isPremium = await isPremiumUserByEmail(userEmail);
-          }
-
-          // If user is not premium, clear any stored access token
-          if (!isPremium) {
-            console.log("⚠️ User is not premium - clearing access token");
-            this.googleAccessToken = null;
-            localStorage.removeItem("google_access_token");
-          } else {
-            // Restore token from localStorage if user is premium and token exists
-            const storedToken = localStorage.getItem("google_access_token");
-            if (storedToken) {
-              this.googleAccessToken = storedToken;
-              console.log("✅ Restored access token for premium user");
-            }
-          }
-        } catch (error) {
-          console.error("Error checking premium status in auth state change:", error);
-          // On error, clear token to be safe
-          this.googleAccessToken = null;
-          localStorage.removeItem("google_access_token");
-        }
       } else {
         this.currentUser = null;
         // Clear Google token when user signs out
