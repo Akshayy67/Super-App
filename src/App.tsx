@@ -54,8 +54,13 @@ const AuthenticatedApp: React.FC = () => {
       const user = realTimeAuth.getCurrentUser();
       if (!user || !user.email) return;
 
-      // Don't check if already on blocked, payment, or about page
-      if (location.pathname === "/blocked" || location.pathname === "/payment" || location.pathname === "/about") return;
+      // Don't check if already on blocked, payment, about, or admin page
+      if (location.pathname === "/blocked" || 
+          location.pathname === "/payment" || 
+          location.pathname === "/about" ||
+          location.pathname.startsWith("/admin")) {
+        return;
+      }
 
       try {
         const { isUserBlockedByEmail } = await import("./services/blockedUsersService");
@@ -65,17 +70,20 @@ const AuthenticatedApp: React.FC = () => {
           return;
         }
 
-        // Check premium status
-        const { isPremiumUserByEmail, isCreatorEmail } = await import("./services/premiumUserService");
+        // Check if user is admin/creator - they should have access to admin routes
+        const { isCreatorEmail } = await import("./services/premiumUserService");
+        const { isAdminEmail } = await import("./utils/adminUtils");
+        const isAdmin = isCreatorEmail(user.email) || isAdminEmail(user.email);
         
-        // Creator email always has premium access
-        let isPremium = false;
-        if (isCreatorEmail(user.email)) {
-          isPremium = true;
-          console.log("✅ Creator email - premium access granted");
-        } else {
-          isPremium = await isPremiumUserByEmail(user.email);
+        // If user is admin, skip premium check
+        if (isAdmin) {
+          console.log("✅ Admin/Creator user - premium access granted");
+          return;
         }
+
+        // Check premium status for non-admin users
+        const { isPremiumUserByEmail } = await import("./services/premiumUserService");
+        const isPremium = await isPremiumUserByEmail(user.email);
         
         // Redirect to payment if not premium
         if (!isPremium) {
