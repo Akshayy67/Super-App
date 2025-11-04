@@ -13,6 +13,8 @@ export interface AuthResult {
   success: boolean;
   message: string;
   user?: User;
+  isBlocked?: boolean;
+  isPremium?: boolean;
 }
 
 class RealTimeAuthService {
@@ -23,16 +25,29 @@ class RealTimeAuthService {
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
 
-      // Check if user is blocked before proceeding
+      // Check if user is blocked - but don't sign them out yet
+      // Let them authenticate, then redirect to blocked page
       const { isUserBlockedByEmail } = await import("../services/blockedUsersService");
       const isBlocked = await isUserBlockedByEmail(firebaseUser.email || "");
-      if (isBlocked) {
-        // Sign out immediately if blocked
-        await signOut(auth);
-        return { 
-          success: false, 
-          message: "Your account has been blocked. Please contact support if you believe this is an error." 
-        };
+
+      // Check if user is premium
+      const { isPremiumUserByEmail, isCreatorEmail } = await import("../services/premiumUserService");
+      const userEmail = firebaseUser.email || "";
+      
+      // Creator gets automatic premium access
+      let isPremium = false;
+      if (isCreatorEmail(userEmail)) {
+        isPremium = true;
+        console.log("✅ Creator email detected - premium access granted");
+        // Ensure creator has premium record in database
+        try {
+          const { createPremiumUser } = await import("../services/premiumUserService");
+          await createPremiumUser(firebaseUser.uid, userEmail, "lifetime");
+        } catch (error) {
+          console.error("Error creating creator premium record:", error);
+        }
+      } else {
+        isPremium = await isPremiumUserByEmail(userEmail);
       }
 
       // Get Google access token from credential
@@ -74,8 +89,8 @@ class RealTimeAuthService {
         }
       );
 
-      // Initialize Google Drive app folder if user has access
-      if (this.googleAccessToken) {
+      // Initialize Google Drive app folder if user has access (only if not blocked)
+      if (this.googleAccessToken && !isBlocked) {
         try {
           await googleDriveService.getAppFolder();
           console.log("Google Drive app folder initialized");
@@ -84,10 +99,22 @@ class RealTimeAuthService {
         }
       }
 
+      // If blocked, return success but with a flag to redirect
+      if (isBlocked) {
+        return {
+          success: true,
+          message: "Your account has been blocked. Please contact support if you believe this is an error.",
+          user: userData,
+          isBlocked: true,
+          isPremium: false,
+        };
+      }
+
       return {
         success: true,
         message: "Google sign-in successful",
         user: userData,
+        isPremium: isPremium,
       };
     } catch (error: any) {
       console.error("Google sign-in error:", error);
@@ -165,21 +192,10 @@ class RealTimeAuthService {
     // Set up real-time auth state listener
     onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Check if user is blocked before allowing access
-        try {
-          const { isUserBlockedByEmail } = await import("../services/blockedUsersService");
-          const isBlocked = await isUserBlockedByEmail(firebaseUser.email || "");
-          if (isBlocked) {
-            // Sign out blocked user immediately
-            await signOut(auth);
-            this.currentUser = null;
-            this.authStateListeners.forEach((listener) => listener(null));
-            return;
-          }
-        } catch (error) {
-          console.error("Error checking if user is blocked:", error);
-        }
-
+        // Note: We don't sign out blocked users here anymore
+        // They will be redirected to /blocked page by AuthenticatedApp or BlockedUserGuard
+        // This allows them to see the blocked page with proper authentication
+        
         const userData = await this.getUserData(firebaseUser.uid);
         this.currentUser = userData;
       } else {

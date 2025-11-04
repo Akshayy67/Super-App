@@ -13,11 +13,11 @@ import {
   Briefcase,
   Users,
   Video,
-  Info,
   MessageCircle,
   Clock,
   Calendar,
   Sparkles,
+  Info,
 } from "lucide-react";
 import { gsap } from "gsap";
 import * as THREE from "three";
@@ -86,7 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     { id: "team", label: "Team Space", icon: Users, path: "/team" },
     { id: "community", label: "Community", icon: MessageCircle, path: "/community" },
-    // { id: "about", label: "About Us", icon: Info, path: "/about" },
+    { id: "about", label: "About Us", icon: Info, path: "/about" },
   ];
 
   const handleNavigation = (path: string) => {

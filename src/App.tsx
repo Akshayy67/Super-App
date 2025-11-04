@@ -25,6 +25,7 @@ import { GlobalPomodoroProvider } from "./contexts/GlobalPomodoroContext";
 import { GlobalPomodoroWidget } from "./components/pomodoro/GlobalPomodoroWidget";
 import { PomodoroEducation } from "./components/pomodoro/PomodoroEducation";
 import { useGlobalPomodoro } from "./contexts/GlobalPomodoroContext";
+import { CallManager } from "./components/calls/CallManager";
 // Import the file permissions fixer to make it available in console
 import "./utils/fixExistingFilePermissions";
 // Import EmailJS test functions for console testing
@@ -46,6 +47,54 @@ const AuthenticatedApp: React.FC = () => {
   
   // Global Pomodoro state
   const { isEducationVisible, hideEducation } = useGlobalPomodoro();
+
+  // Check if user is blocked or premium and redirect
+  useEffect(() => {
+    const checkUserStatus = async () => {
+      const user = realTimeAuth.getCurrentUser();
+      if (!user || !user.email) return;
+
+      // Don't check if already on blocked, payment, or about page
+      if (location.pathname === "/blocked" || location.pathname === "/payment" || location.pathname === "/about") return;
+
+      try {
+        const { isUserBlockedByEmail } = await import("./services/blockedUsersService");
+        const isBlocked = await isUserBlockedByEmail(user.email);
+        if (isBlocked) {
+          navigate("/blocked", { replace: true });
+          return;
+        }
+
+        // Check premium status
+        const { isPremiumUserByEmail, isCreatorEmail } = await import("./services/premiumUserService");
+        
+        // Creator email always has premium access
+        let isPremium = false;
+        if (isCreatorEmail(user.email)) {
+          isPremium = true;
+          console.log("✅ Creator email - premium access granted");
+        } else {
+          isPremium = await isPremiumUserByEmail(user.email);
+        }
+        
+        // Only redirect to payment if user has skipped the landing page
+        if (!isPremium) {
+          const landingPageSkipped = localStorage.getItem("landingPageSkipped");
+          if (landingPageSkipped === "true") {
+            navigate("/payment", { replace: true });
+          } else {
+            // Redirect to landing page first
+            navigate("/", { replace: true });
+          }
+          return;
+        }
+      } catch (error) {
+        console.error("Error checking user status:", error);
+      }
+    };
+
+    checkUserStatus();
+  }, [navigate, location.pathname]);
 
   // Handle URL parameters for team invitations
   useEffect(() => {
@@ -220,8 +269,8 @@ const AuthenticatedApp: React.FC = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
-          <div className="flex-1 overflow-auto">
+        <div className="flex-1 flex flex-col relative min-w-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden">
             <AppRouter invitationData={invitationData} />
           </div>
         </div>
@@ -243,6 +292,9 @@ const AuthenticatedApp: React.FC = () => {
           isVisible={isEducationVisible} 
           onClose={hideEducation} 
         />
+
+        {/* Global Call Manager */}
+        <CallManager />
       </div>
     </ErrorBoundary>
   );
@@ -269,9 +321,58 @@ function App() {
     return unsubscribe;
   }, []);
 
-  const handleAuthSuccess = () => {
+  const handleAuthSuccess = async () => {
     console.log("🎉 Auth success handler called");
     setIsAuthenticated(true);
+    
+    // Check if user is blocked or premium after authentication
+    // Small delay to ensure auth state is updated
+    setTimeout(async () => {
+      const currentUser = realTimeAuth.getCurrentUser();
+      if (currentUser?.email) {
+        try {
+          const { isUserBlockedByEmail } = await import("./services/blockedUsersService");
+          const isBlocked = await isUserBlockedByEmail(currentUser.email);
+          if (isBlocked) {
+            window.location.href = "/blocked";
+            return;
+          }
+
+          // Check premium status
+          const { isPremiumUserByEmail, isCreatorEmail } = await import("./services/premiumUserService");
+          
+          // Creator email always has premium access
+          let isPremium = false;
+          if (isCreatorEmail(currentUser.email)) {
+            isPremium = true;
+            console.log("✅ Creator email - premium access granted");
+            // Ensure creator has premium record
+            try {
+              const { createPremiumUser } = await import("./services/premiumUserService");
+              await createPremiumUser(currentUser.id, currentUser.email, "lifetime");
+            } catch (error) {
+              console.error("Error creating creator premium record:", error);
+            }
+          } else {
+            isPremium = await isPremiumUserByEmail(currentUser.email);
+          }
+          
+          // Only redirect to payment if user has skipped the landing page
+          if (!isPremium) {
+            const landingPageSkipped = localStorage.getItem("landingPageSkipped");
+            if (landingPageSkipped === "true") {
+              window.location.href = "/payment";
+            } else {
+              // Redirect to landing page first
+              window.location.href = "/";
+            }
+            return;
+          }
+        } catch (error) {
+          console.error("Error checking user status:", error);
+        }
+      }
+    }, 200);
   };
 
   if (!isAuthenticated) {

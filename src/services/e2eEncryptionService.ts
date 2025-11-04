@@ -1,0 +1,223 @@
+// End-to-End Encryption Service for Secure Calls
+// Uses Web Crypto API for enterprise-grade encryption
+
+interface EncryptionKey {
+  key: CryptoKey;
+  iv: Uint8Array;
+}
+
+class E2EEncryptionService {
+  private keyCache: Map<string, EncryptionKey> = new Map();
+  private readonly algorithm = 'AES-GCM';
+  private readonly keyLength = 256;
+  private readonly ivLength = 12; // 96 bits for GCM
+
+  /**
+   * Generate a new encryption key pair for a call
+   */
+  async generateKeyPair(): Promise<{ publicKey: string; privateKey: CryptoKey }> {
+    try {
+      // Generate a key for encryption
+      const key = await crypto.subtle.generateKey(
+        {
+          name: this.algorithm,
+          length: this.keyLength,
+        },
+        true, // extractable
+        ['encrypt', 'decrypt']
+      );
+
+      // Export the key for sharing
+      const exportedKey = await crypto.subtle.exportKey('raw', key);
+      const publicKey = this.arrayBufferToBase64(exportedKey);
+
+      return { publicKey, privateKey: key };
+    } catch (error) {
+      console.error('Error generating encryption key pair:', error);
+      throw new Error('Failed to generate encryption keys');
+    }
+  }
+
+  /**
+   * Import a public key from base64 string
+   */
+  async importKey(keyData: string): Promise<CryptoKey> {
+    try {
+      const keyBuffer = this.base64ToArrayBuffer(keyData);
+      return await crypto.subtle.importKey(
+        'raw',
+        keyBuffer,
+        {
+          name: this.algorithm,
+          length: this.keyLength,
+        },
+        false, // not extractable
+        ['encrypt', 'decrypt']
+      );
+    } catch (error) {
+      console.error('Error importing encryption key:', error);
+      throw new Error('Failed to import encryption key');
+    }
+  }
+
+  /**
+   * Encrypt data with a key
+   */
+  async encrypt(data: string, key: CryptoKey): Promise<string> {
+    try {
+      // Generate a random IV for each encryption
+      const iv = crypto.getRandomValues(new Uint8Array(this.ivLength));
+      
+      // Convert string to ArrayBuffer
+      const dataBuffer = new TextEncoder().encode(data);
+
+      // Encrypt the data
+      const encryptedBuffer = await crypto.subtle.encrypt(
+        {
+          name: this.algorithm,
+          iv: iv,
+          tagLength: 128, // 128-bit tag for authentication
+        },
+        key,
+        dataBuffer
+      );
+
+      // Combine IV and encrypted data
+      const combined = new Uint8Array(iv.length + encryptedBuffer.byteLength);
+      combined.set(iv, 0);
+      combined.set(new Uint8Array(encryptedBuffer), iv.length);
+
+      // Return as base64 string
+      return this.arrayBufferToBase64(combined.buffer);
+    } catch (error) {
+      console.error('Error encrypting data:', error);
+      throw new Error('Failed to encrypt data');
+    }
+  }
+
+  /**
+   * Decrypt data with a key
+   */
+  async decrypt(encryptedData: string, key: CryptoKey): Promise<string> {
+    try {
+      // Convert base64 to ArrayBuffer
+      const combinedBuffer = this.base64ToArrayBuffer(encryptedData);
+      const combined = new Uint8Array(combinedBuffer);
+
+      // Extract IV and encrypted data
+      const iv = combined.slice(0, this.ivLength);
+      const encrypted = combined.slice(this.ivLength);
+
+      // Decrypt the data
+      const decryptedBuffer = await crypto.subtle.decrypt(
+        {
+          name: this.algorithm,
+          iv: iv,
+          tagLength: 128,
+        },
+        key,
+        encrypted
+      );
+
+      // Convert back to string
+      return new TextDecoder().decode(decryptedBuffer);
+    } catch (error) {
+      console.error('Error decrypting data:', error);
+      throw new Error('Failed to decrypt data');
+    }
+  }
+
+  /**
+   * Encrypt SDP offer/answer for secure signaling
+   */
+  async encryptSDP(sdp: RTCSessionDescriptionInit, key: CryptoKey): Promise<string> {
+    const sdpString = JSON.stringify(sdp);
+    return await this.encrypt(sdpString, key);
+  }
+
+  /**
+   * Decrypt SDP offer/answer
+   */
+  async decryptSDP(encryptedSDP: string, key: CryptoKey): Promise<RTCSessionDescriptionInit> {
+    const decryptedString = await this.decrypt(encryptedSDP, key);
+    return JSON.parse(decryptedString) as RTCSessionDescriptionInit;
+  }
+
+  /**
+   * Encrypt ICE candidate for secure signaling
+   */
+  async encryptICECandidate(candidate: RTCIceCandidateInit, key: CryptoKey): Promise<string> {
+    const candidateString = JSON.stringify(candidate);
+    return await this.encrypt(candidateString, key);
+  }
+
+  /**
+   * Decrypt ICE candidate
+   */
+  async decryptICECandidate(encryptedCandidate: string, key: CryptoKey): Promise<RTCIceCandidateInit> {
+    const decryptedString = await this.decrypt(encryptedCandidate, key);
+    return JSON.parse(decryptedString) as RTCIceCandidateInit;
+  }
+
+  /**
+   * Generate shared secret for a call (Diffie-Hellman style key exchange)
+   * In production, this would use actual ECDH, but for simplicity we'll use
+   * a shared key generated by the caller and securely exchanged
+   */
+  async generateSharedSecret(): Promise<string> {
+    const { publicKey } = await this.generateKeyPair();
+    return publicKey;
+  }
+
+  /**
+   * Helper: ArrayBuffer to Base64
+   */
+  private arrayBufferToBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  /**
+   * Helper: Base64 to ArrayBuffer
+   */
+  private base64ToArrayBuffer(base64: string): ArrayBuffer {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  /**
+   * Cache a key for a call session
+   */
+  cacheKey(callId: string, key: CryptoKey): void {
+    // Store key in memory (not extractable, so we can't serialize it)
+    // For this implementation, we'll generate and cache the IV
+    const iv = crypto.getRandomValues(new Uint8Array(this.ivLength));
+    this.keyCache.set(callId, { key, iv });
+  }
+
+  /**
+   * Get cached key for a call session
+   */
+  getCachedKey(callId: string): CryptoKey | null {
+    const cached = this.keyCache.get(callId);
+    return cached?.key || null;
+  }
+
+  /**
+   * Clear cached key for a call session
+   */
+  clearCachedKey(callId: string): void {
+    this.keyCache.delete(callId);
+  }
+}
+
+export const e2eEncryptionService = new E2EEncryptionService();
+

@@ -6,6 +6,8 @@ export interface User {
   authProvider?: string;
   hasGoogleDriveAccess?: boolean;
   lastLoginAt?: string;
+  isPremium?: boolean;
+  subscriptionType?: "monthly" | "yearly" | "student" | "lifetime";
 }
 
 export interface AuthToken {

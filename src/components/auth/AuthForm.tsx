@@ -88,6 +88,32 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
     try {
       const result = await realTimeAuth.signInWithGoogle();
       if (result.success) {
+        // If user is blocked, redirect to blocked page after authentication
+        if (result.isBlocked) {
+          onAuthSuccess(); // Authenticate first
+          // Small delay to ensure auth state is updated, then redirect
+          setTimeout(() => {
+            window.location.href = "/blocked";
+          }, 100);
+          return;
+        }
+        
+        // If user is not premium, check if landing page was skipped
+        if (!result.isPremium) {
+          onAuthSuccess(); // Authenticate first
+          // Small delay to ensure auth state is updated, then redirect
+          setTimeout(() => {
+            const landingPageSkipped = localStorage.getItem("landingPageSkipped");
+            if (landingPageSkipped === "true") {
+              window.location.href = "/payment";
+            } else {
+              // Redirect to landing page first
+              window.location.href = "/";
+            }
+          }, 100);
+          return;
+        }
+        
         onAuthSuccess();
       } else {
         setError(result.message || "Sign-in failed. Please try again.");

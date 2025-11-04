@@ -24,7 +24,7 @@ export const useCurrentRoute = () => {
       'team': 'team',
       'meeting': 'meeting',
       'community': 'community',
-      // 'about': 'about'
+      'about': 'about'
     };
     
     return routeMap[segments[0]] || 'dashboard';

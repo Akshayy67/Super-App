@@ -1,0 +1,89 @@
+BUSINESS MODEL FOR RAZORPAY MERCHANT APPLICATION
+==================================================
+
+BUSINESS NAME:
+Super Study App
+
+BUSINESS TYPE:
+Software as a Service (SaaS) - Educational Technology Platform
+
+BUSINESS DESCRIPTION:
+Super Study App is a unified academic ecosystem platform that consolidates 15+ fragmented student productivity tools into a single, integrated application. We provide AI-powered learning assistance, video collaboration, interview preparation analytics, task management, team collaboration, pair programming, and study tools - all in one platform.
+
+PRIMARY PRODUCT/SERVICE:
+Subscription-based premium access to our educational technology platform with features including:
+- AI-powered tutoring and chat
+- HD video meetings and collaboration
+- Interview preparation with real-time analytics
+- Task and note management systems
+- Team collaboration and pair programming tools
+- Study tools including flashcards and spaced repetition
+
+TARGET CUSTOMERS:
+- University and college students in India
+- Graduates preparing for job interviews
+- Study groups and academic teams
+- Educational institutions (for bulk licenses)
+
+BUSINESS MODEL:
+Freemium SaaS (Software as a Service) with monthly and yearly subscription plans:
+- Student Plan: ₹50/month (90% discount for verified students)
+- Monthly Plan: ₹249/month (standard pricing)
+- Yearly Plan: ₹2,399/year (80% discount)
+
+REVENUE MODEL:
+Recurring subscription revenue from premium users. Revenue is generated through:
+1. Monthly and yearly subscription payments
+2. Student discount subscriptions
+3. Enterprise/institutional bulk licenses (future)
+
+TYPICAL TRANSACTION VALUE:
+- ₹50 - ₹249 per transaction (monthly subscriptions)
+- ₹2,399 per transaction (yearly subscriptions)
+- Average transaction: ₹249
+
+EXPECTED MONTHLY TRANSACTION VOLUME:
+- Month 1-3: 500-1,000 transactions
+- Month 4-6: 2,000-5,000 transactions
+- Month 7-12: 5,000-10,000 transactions
+
+WEBSITE/APP URL:
+[Your website URL here]
+[Your app store links here]
+
+LEGAL ENTITY TYPE:
+[Select: Private Limited / LLP / Partnership / Proprietorship]
+
+REGISTRATION NUMBER:
+[Your company registration number - GSTIN/CIN if applicable]
+
+ADDRESS:
+[Your registered business address]
+
+CONTACT INFORMATION:
+Email: [Your business email]
+Phone: [Your business phone number]
+
+BUSINESS CATEGORY:
+Education Technology / EdTech / Software Services
+
+NATURE OF BUSINESS:
+Online subscription-based educational platform providing integrated study and productivity tools for students.
+
+WHY RAZORPAY:
+Razorpay provides seamless payment integration for Indian customers with support for UPI, cards, net banking, and wallets. Essential for recurring subscription payments and student-friendly payment options.
+
+---
+
+CONCISE VERSION (For Short Forms):
+===================================
+
+Super Study App is a SaaS-based educational technology platform offering subscription access to unified academic tools including AI tutoring, video collaboration, interview prep, and study management. Target customers are students and educational institutions in India. Revenue model: Monthly (₹249) and yearly (₹2,399) subscriptions. Expected monthly transactions: 500-10,000 based on growth phase.
+
+---
+
+ONE-LINE VERSION (For Very Short Forms):
+=========================================
+
+SaaS EdTech platform providing subscription-based access to integrated academic productivity tools (AI tutoring, video collaboration, interview prep) for students in India. Monthly subscriptions ₹249-₹2,399.
+

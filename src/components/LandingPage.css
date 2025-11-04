@@ -26,6 +26,22 @@
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
+  background: transparent !important;
+}
+
+/* Ensure sections container is transparent */
+.landing-page-container > div:not(canvas) {
+  background: transparent !important;
+}
+
+/* Ensure all section children are transparent */
+.section > * {
+  background: transparent !important;
+}
+
+/* Ensure absolutely positioned elements in sections are transparent */
+.section [class*="absolute"] {
+  background: transparent !important;
 }
 
 .section-content {
@@ -34,6 +50,7 @@
   text-align: center;
   padding: 0 2rem;
   pointer-events: none;
+  background: transparent !important;
 }
 
 .section-title {
@@ -145,11 +162,7 @@
 
 /* Loading section specific */
 .section.loading {
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.9) 0%,
-    rgba(0, 0, 0, 1) 100%
-  );
+  background: transparent;
 }
 
 /* Click areas for navigation */

@@ -13,7 +13,6 @@ import { InterviewPrep } from "../InterviewPrep/InterviewPrep";
 import { TeamSpace } from "../../team/components/TeamSpace";
 import { VideoMeeting } from "../meeting/VideoMeeting";
 import { Community } from "../Community";
-// import { AboutUs } from "../AboutUs";
 import { AdminDashboard } from "../dashboards/AdminDashboard";
 import { AdminRouteGuard } from "./AdminRouteGuard";
 import { SettingsPage } from "../SettingsPage";
@@ -22,6 +21,10 @@ import { JournalManager } from "../journal/JournalManager";
 import { MeetingsTimeline } from "../meeting/MeetingsTimeline";
 import { ProfileEditPage } from "../profile/ProfileEditPage";
 import { ProfileViewPage } from "../profile/ProfileViewPage";
+import { BlockedUsersPage } from "../BlockedUsersPage";
+import { BlockedUserGuard } from "./BlockedUserGuard";
+import { PaymentPage } from "../PaymentPage";
+import { AboutUsPage } from "../AboutUsPage";
 
 interface AppRouterProps {
   invitationData: {
@@ -58,14 +61,12 @@ const PageTransitionWrapper: React.FC<{ children: React.ReactNode }> = ({ childr
         y: 40,
         scale: 0.96,
         filter: "blur(12px)",
-        clipPath: "polygon(0 0, 100% 0, 100% 0, 0 0)",
       },
       {
         opacity: 1,
         y: 0,
         scale: 1,
         filter: "blur(0px)",
-        clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)",
         duration: 0.8,
         ease: "power3.out",
       }
@@ -87,7 +88,7 @@ const PageTransitionWrapper: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [location.pathname]);
 
   return (
-    <div ref={containerRef} className="page-transition-wrapper" style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}>
+    <div ref={containerRef} className="page-transition-wrapper" style={{ transformStyle: 'preserve-3d', perspective: '1000px', width: '100%', minHeight: '100%' }}>
       {children}
     </div>
   );
@@ -99,29 +100,12 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
       {/* Main Routes */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/landing" element={<LandingPage />} />
-      <Route path="/dashboard" element={<PageTransitionWrapper><Dashboard /></PageTransitionWrapper>} />
-      <Route path="/files/*" element={<PageTransitionWrapper><FileManager /></PageTransitionWrapper>} />
-      <Route path="/tasks/*" element={<PageTransitionWrapper><TaskManager /></PageTransitionWrapper>} />
-      <Route path="/notes/*" element={<PageTransitionWrapper><NotesManager /></PageTransitionWrapper>} />
-      <Route path="/chat/*" element={<PageTransitionWrapper><EnhancedAIChat /></PageTransitionWrapper>} />
-      <Route path="/tools/*" element={<PageTransitionWrapper><StudyTools /></PageTransitionWrapper>} />
-      <Route path="/flashcards/*" element={<PageTransitionWrapper><FlashCards /></PageTransitionWrapper>} />
-      <Route path="/interview/*" element={<PageTransitionWrapper><InterviewPrep /></PageTransitionWrapper>} />
-      <Route
-        path="/team/*"
-        element={<PageTransitionWrapper><TeamSpace invitationData={invitationData} /></PageTransitionWrapper>}
-      />
-      <Route path="/meeting" element={<PageTransitionWrapper><VideoMeeting /></PageTransitionWrapper>} />
-      <Route path="/meetings" element={<PageTransitionWrapper><MeetingsTimeline /></PageTransitionWrapper>} />
-      <Route path="/community" element={<PageTransitionWrapper><Community /></PageTransitionWrapper>} />
-      {/* <Route path="/about" element={<PageTransitionWrapper><AboutUs /></PageTransitionWrapper>} /> */}
-      <Route path="/settings" element={<PageTransitionWrapper><SettingsPage /></PageTransitionWrapper>} />
-      <Route path="/calendar" element={<PageTransitionWrapper><Calendar /></PageTransitionWrapper>} />
-      <Route path="/journal" element={<PageTransitionWrapper><JournalManager /></PageTransitionWrapper>} />
-
-      {/* Profile Routes */}
-      <Route path="/profile/edit" element={<PageTransitionWrapper><ProfileEditPage /></PageTransitionWrapper>} />
-      <Route path="/profile/:useremail" element={<PageTransitionWrapper><ProfileViewPage /></PageTransitionWrapper>} />
+      
+      {/* Blocked Users Page */}
+      <Route path="/blocked" element={<BlockedUsersPage />} />
+      
+      {/* Payment Page */}
+      <Route path="/payment" element={<PaymentPage />} />
 
       {/* Admin Routes - Protected */}
       <Route 
@@ -133,6 +117,151 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
             </PageTransitionWrapper>
           </AdminRouteGuard>
         } 
+      />
+
+      {/* Blocked Users Page */}
+      <Route path="/blocked" element={<BlockedUsersPage />} />
+
+      {/* Protected Routes - Check if user is blocked */}
+      <Route 
+        path="/dashboard" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><Dashboard /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/files/*" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><FileManager /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/tasks/*" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><TaskManager /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/notes/*" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><NotesManager /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/chat/*" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><EnhancedAIChat /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/tools/*" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><StudyTools /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/flashcards/*" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><FlashCards /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/interview/*" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><InterviewPrep /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route
+        path="/team/*"
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><TeamSpace invitationData={invitationData} /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        }
+      />
+      <Route 
+        path="/meeting" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><VideoMeeting /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/meetings" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><MeetingsTimeline /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/community" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><Community /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/settings" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><SettingsPage /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/calendar" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><Calendar /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/journal" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><JournalManager /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/profile/edit" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><ProfileEditPage /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/profile/:useremail" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><ProfileViewPage /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/about" 
+        element={<AboutUsPage />}
       />
 
       {/* Catch all route */}

@@ -17,21 +17,7 @@ export const SuperAppBackground: React.FC<SuperAppBackgroundProps> = ({
 }) => {
   const location = useLocation();
   const getOpacityClass = () => {
-    // Special handling for About page with white text - much higher opacity
-    if (location.pathname === "/about") {
-      switch (opacity) {
-        case "light":
-          return "opacity-30 dark:opacity-25";
-        case "medium":
-          return "opacity-40 dark:opacity-35";
-        case "heavy":
-          return "opacity-50 dark:opacity-45";
-        default:
-          return "opacity-30 dark:opacity-25";
-      }
-    }
-
-    // Default opacity for other pages - increased for better visibility
+    // Default opacity for pages - increased for better visibility
     switch (opacity) {
       case "light":
         return "opacity-10 dark:opacity-8";
@@ -100,12 +86,11 @@ export const SuperAppBackground: React.FC<SuperAppBackgroundProps> = ({
 
   return (
     <div
-      className={`${
-        location.pathname === "/about" ? "fixed" : "absolute"
-      } inset-0 flex items-center ${getOpacityClass()} ${className} pointer-events-none super-app-background`}
+      className={`absolute inset-0 flex items-center ${getOpacityClass()} ${className} pointer-events-none super-app-background`}
       aria-hidden="true"
       style={{
-        zIndex: location.pathname === "/about" ? 15 : 1,
+        zIndex: 1,
+        height: "100%",
       }}
     >
       {animated ? (

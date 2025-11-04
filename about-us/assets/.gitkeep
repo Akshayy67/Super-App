@@ -1,0 +1,7 @@
+# Assets Directory
+
+Place your assets here:
+- `models/` - GLTF/GLB files with morph targets
+- `images/` - Image assets
+- `fonts/` - Custom font files (optional)
+

@@ -22,6 +22,9 @@ import {
   UserX,
   UserCheck,
   Database,
+  Gift,
+  Copy,
+  Check,
 } from "lucide-react";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import { 
@@ -46,6 +49,11 @@ import {
   TeamData,
 } from "../../utils/firebaseAdminService";
 import { GeneralLayout } from "../layout/PageLayout";
+import {
+  createReferralCode,
+  getAllReferralCodes,
+  ReferralCode,
+} from "../../services/referralCodeService";
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -67,6 +75,9 @@ export const AdminDashboard: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isATSAuthenticated, setIsATSAuthenticated] = useState(false);
   const [atsAuthLoading, setATSAuthLoading] = useState(false);
+  const [referralCodes, setReferralCodes] = useState<ReferralCode[]>([]);
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const user = realTimeAuth.getCurrentUser();
 
@@ -120,11 +131,58 @@ export const AdminDashboard: React.FC = () => {
 
       const teamsData = await firebaseAdminService.getTeams();
       setTeams(teamsData);
+
+      // Load referral codes
+      await loadReferralCodes();
     } catch (firebaseError) {
       console.warn("Firebase admin access not available:", firebaseError);
       setError("Failed to load Firebase data. Please check your Firebase configuration.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load referral codes
+  const loadReferralCodes = async () => {
+    try {
+      const codes = await getAllReferralCodes();
+      // Sort by created date (newest first)
+      codes.sort((a, b) => {
+        const aTime = a.createdAt?.toMillis?.() || (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+        const bTime = b.createdAt?.toMillis?.() || (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+        return bTime - aTime;
+      });
+      setReferralCodes(codes);
+    } catch (error) {
+      console.error("Error loading referral codes:", error);
+    }
+  };
+
+  // Generate new referral code
+  const handleGenerateCode = async () => {
+    if (!user) return;
+    
+    try {
+      setGeneratingCode(true);
+      const newCode = await createReferralCode(user.id, 1); // 1 month premium
+      await loadReferralCodes(); // Reload codes to show the new one
+      alert(`Referral code generated: ${newCode}`);
+    } catch (error: any) {
+      console.error("Error generating referral code:", error);
+      alert(error.message || "Failed to generate referral code");
+    } finally {
+      setGeneratingCode(false);
+    }
+  };
+
+  // Copy code to clipboard
+  const handleCopyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+    } catch (error) {
+      console.error("Failed to copy code:", error);
     }
   };
 
@@ -1187,6 +1245,126 @@ export const AdminDashboard: React.FC = () => {
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
                     And {teams.length - 6} more teams...
                   </p>
+                )}
+              </div>
+
+              {/* Referral Codes Section */}
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Gift className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                      Referral Codes
+                    </h3>
+                  </div>
+                  <button
+                    onClick={handleGenerateCode}
+                    disabled={generatingCode}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {generatingCode ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Gift className="w-4 h-4" />
+                        Generate Code
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Generate one-time referral codes that grant 1 month of premium access when redeemed.
+                </p>
+
+                {referralCodes.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <Gift className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No referral codes generated yet.</p>
+                    <p className="text-sm mt-1">Click "Generate Code" to create one.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 dark:bg-slate-700">
+                        <tr>
+                          <th className="px-4 py-2 text-left">Code</th>
+                          <th className="px-4 py-2 text-left">Status</th>
+                          <th className="px-4 py-2 text-left">Premium Months</th>
+                          <th className="px-4 py-2 text-left">Created</th>
+                          <th className="px-4 py-2 text-left">Used By</th>
+                          <th className="px-4 py-2 text-left">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-slate-600">
+                        {referralCodes.map((code) => {
+                          const createdDate = code.createdAt?.toDate?.() 
+                            ? formatDate(code.createdAt.toDate().toISOString())
+                            : code.createdAt 
+                            ? formatDate(new Date(code.createdAt).toISOString())
+                            : "Unknown";
+                          
+                          const usedDate = code.usedAt?.toDate?.()
+                            ? formatDate(code.usedAt.toDate().toISOString())
+                            : code.usedAt
+                            ? formatDate(new Date(code.usedAt).toISOString())
+                            : null;
+
+                          return (
+                            <tr key={code.code}>
+                              <td className="px-4 py-2">
+                                <code className="font-mono text-sm font-bold text-purple-600 dark:text-purple-400">
+                                  {code.code}
+                                </code>
+                              </td>
+                              <td className="px-4 py-2">
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs ${
+                                    code.isUsed
+                                      ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                                      : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                  }`}
+                                >
+                                  {code.isUsed ? "Used" : "Available"}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 text-gray-600 dark:text-gray-400">
+                                {code.premiumMonths || 1} month{code.premiumMonths !== 1 ? "s" : ""}
+                              </td>
+                              <td className="px-4 py-2 text-gray-600 dark:text-gray-400">
+                                {createdDate}
+                              </td>
+                              <td className="px-4 py-2 text-gray-600 dark:text-gray-400">
+                                {code.isUsed ? (code.usedBy || "Unknown") : "-"}
+                              </td>
+                              <td className="px-4 py-2">
+                                <button
+                                  onClick={() => handleCopyCode(code.code)}
+                                  className="flex items-center gap-1 px-2 py-1 text-xs text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded transition-colors"
+                                  title="Copy code"
+                                >
+                                  {copiedCode === code.code ? (
+                                    <>
+                                      <Check className="w-3 h-3" />
+                                      Copied
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-3 h-3" />
+                                      Copy
+                                    </>
+                                  )}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
             </div>

@@ -1464,7 +1464,10 @@ export const LandingPage: React.FC = () => {
       <div
         ref={containerRef}
         className="relative w-full h-full overflow-hidden"
-        style={{ zIndex: 1 }}
+        style={{ 
+          zIndex: 1,
+          background: 'transparent'
+        }}
       >
         {sections.map((section, index) => (
           <div
@@ -1473,6 +1476,8 @@ export const LandingPage: React.FC = () => {
             onClick={() => {
               if (index === sections.length - 1) {
                 // Last section - navigate to dashboard
+                // Mark landing page as skipped
+                localStorage.setItem("landingPageSkipped", "true");
                 navigate("/dashboard");
               } else {
                 scrollToSection(index + 1);
@@ -1481,11 +1486,13 @@ export const LandingPage: React.FC = () => {
             style={{
               scrollSnapAlign: "start",
               scrollSnapStop: "always",
+              background: 'transparent',
             }}
           >
             {/* Bottom half click area for next section */}
             <div
               className="absolute bottom-0 left-0 right-0 h-1/2 cursor-pointer z-10"
+              style={{ background: 'transparent' }}
               onClick={(e) => {
                 e.stopPropagation();
                 if (index < sections.length - 1) {
@@ -1497,6 +1504,7 @@ export const LandingPage: React.FC = () => {
             {/* Top half click area for previous section */}
             <div
               className="absolute top-0 left-0 right-0 h-1/2 cursor-pointer z-10"
+              style={{ background: 'transparent' }}
               onClick={(e) => {
                 e.stopPropagation();
                 if (index > 0) {
@@ -1567,7 +1575,11 @@ export const LandingPage: React.FC = () => {
       {/* Control Buttons */}
       <div className="fixed top-8 right-8 z-40 flex gap-4">
         <button
-          onClick={() => navigate("/dashboard")}
+          onClick={() => {
+            // Mark landing page as skipped
+            localStorage.setItem("landingPageSkipped", "true");
+            navigate("/dashboard");
+          }}
           className="text-xs font-medium hover:opacity-70 transition-opacity px-4 py-2 border rounded uppercase tracking-wider"
           style={{ 
             fontFamily: '"Inter", sans-serif',

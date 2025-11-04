@@ -842,15 +842,6 @@ body:not(.dark):not([data-theme="dark"]),
   @apply transform transition-transform duration-300 ease-in-out;
 }
 
-/* Enhanced z-index for About page navigation */
-.about-us-page .mobile-nav-overlay {
-  z-index: 55 !important;
-}
-
-.about-us-page .mobile-nav-panel {
-  z-index: 60 !important;
-}
-
 /* Touch-friendly buttons */
 .btn-touch {
   @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
@@ -1390,7 +1381,7 @@ body:not(.dark):not([data-theme="dark"]),
 .page-transition-wrapper {
   position: relative;
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   transform-style: preserve-3d;
   perspective: 1000px;
   backface-visibility: hidden;

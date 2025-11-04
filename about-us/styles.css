@@ -1,0 +1,538 @@
+/* ============================================
+   CSS Variables & Base Styles
+   ============================================ */
+
+:root {
+  --color-bg: #000000;
+  --color-text: #ffffff;
+  --color-accent: #00ff88;
+  --color-text-muted: #888888;
+  
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Space Grotesk', sans-serif;
+  
+  --spacing-xs: clamp(0.5rem, 1vw, 1rem);
+  --spacing-sm: clamp(1rem, 2vw, 2rem);
+  --spacing-md: clamp(2rem, 4vw, 4rem);
+  --spacing-lg: clamp(4rem, 8vw, 8rem);
+  --spacing-xl: clamp(6rem, 12vw, 12rem);
+  
+  --transition-smooth: cubic-bezier(0.8, 0, 0.2, 1);
+  --transition-snappy: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+   Reset & Base
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-primary);
+  background: var(--color-bg);
+  color: var(--color-text);
+  overflow-x: hidden;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure parent containers maintain black background when about page is active */
+body:has(.about-us-page),
+html:has(.about-us-page) {
+  background: #000000 !important;
+  background-color: #000000 !important;
+}
+
+/* Fix for parent containers that might wrap the about page */
+.flex-1:has(.about-us-page),
+.flex.flex-col:has(.about-us-page),
+.page-transition-wrapper:has(.about-us-page) {
+  background: #000000 !important;
+  background-color: #000000 !important;
+}
+
+/* ============================================
+   About Us Page Container
+   ============================================ */
+
+.about-us-page {
+  background: var(--color-bg, #000000) !important;
+  background-color: var(--color-bg, #000000) !important;
+}
+
+:root:not(.dark):not([data-theme="dark"]) .about-us-page {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+:root:not(.dark):not([data-theme="dark"]) .about-us-page .hero-section,
+:root:not(.dark):not([data-theme="dark"]) .about-us-page .content-section,
+:root:not(.dark):not([data-theme="dark"]) .about-us-page .footer {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.about-us-page * {
+  background-color: inherit;
+}
+
+/* ============================================
+   Canvas Container
+   ============================================ */
+
+.canvas-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 1;
+  pointer-events: none;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.canvas-container canvas {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* ============================================
+   Main Content
+   ============================================ */
+
+#main-content {
+  position: relative;
+  z-index: 2;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* ============================================
+   Hero Section
+   ============================================ */
+
+.hero-section {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md);
+  position: relative;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.hero-content {
+  max-width: 1400px;
+  width: 100%;
+  text-align: left;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 12vw, 12rem);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--spacing-sm);
+}
+
+.hero-title .line {
+  display: block;
+  opacity: 0;
+  transform: translateY(2rem);
+  transition: opacity 0.8s var(--transition-smooth), 
+              transform 0.8s var(--transition-smooth);
+}
+
+.hero-title .line.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hero-title .accent {
+  color: var(--color-accent);
+}
+
+.hero-subtitle {
+  font-size: clamp(0.875rem, 1.5vw, 1.25rem);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-top: var(--spacing-md);
+  opacity: 0;
+  transform: translateY(1rem);
+  transition: opacity 0.8s var(--transition-smooth) 0.3s,
+              transform 0.8s var(--transition-smooth) 0.3s;
+}
+
+.hero-subtitle.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.scroll-hint {
+  position: absolute;
+  bottom: var(--spacing-md);
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--color-text-muted);
+  animation: bounce 2s infinite;
+  opacity: 0;
+  transition: opacity 0.8s var(--transition-smooth) 0.6s;
+}
+
+.scroll-hint.visible {
+  opacity: 1;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(10px);
+  }
+}
+
+/* ============================================
+   Content Sections
+   ============================================ */
+
+.content-section {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg) var(--spacing-md);
+  position: relative;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.section-content {
+  max-width: 1200px;
+  width: 100%;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 8vw, 6rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--spacing-md);
+  opacity: 0;
+  transform: translateY(2rem);
+}
+
+.section-title.visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.8s var(--transition-smooth),
+              transform 0.8s var(--transition-smooth);
+}
+
+.section-text {
+  font-size: clamp(1rem, 2vw, 1.5rem);
+  line-height: 1.8;
+  color: var(--color-text-muted);
+  max-width: 800px;
+  opacity: 0;
+  transform: translateY(1rem);
+}
+
+.section-text.visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.8s var(--transition-smooth) 0.2s,
+              transform 0.8s var(--transition-smooth) 0.2s;
+}
+
+/* ============================================
+   Team Section
+   ============================================ */
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+}
+
+.team-member {
+  opacity: 0;
+  transform: translateY(2rem);
+  transition: opacity 0.8s var(--transition-smooth),
+              transform 0.8s var(--transition-smooth);
+}
+
+.team-member.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.team-member:nth-child(1) { transition-delay: 0.1s; }
+.team-member:nth-child(2) { transition-delay: 0.2s; }
+.team-member:nth-child(3) { transition-delay: 0.3s; }
+
+.member-name {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+}
+
+.member-role {
+  font-size: clamp(0.875rem, 1.5vw, 1.125rem);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ============================================
+   Values Section
+   ============================================ */
+
+.values-list {
+  margin-top: var(--spacing-lg);
+}
+
+.value-item {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  opacity: 0;
+  transform: translateX(-2rem);
+  transition: opacity 0.8s var(--transition-smooth),
+              transform 0.8s var(--transition-smooth);
+}
+
+.value-item.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.value-item:nth-child(1) { transition-delay: 0.1s; }
+.value-item:nth-child(2) { transition-delay: 0.2s; }
+.value-item:nth-child(3) { transition-delay: 0.3s; }
+
+.value-number {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 4rem);
+  font-weight: 700;
+  color: var(--color-accent);
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.value-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2.5vw, 2rem);
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+}
+
+.value-description {
+  font-size: clamp(1rem, 1.5vw, 1.25rem);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+/* ============================================
+   Contact Section
+   ============================================ */
+
+.contact-section {
+  min-height: 80vh;
+}
+
+.contact-info {
+  margin-top: var(--spacing-lg);
+}
+
+.contact-link {
+  display: inline-block;
+  font-size: clamp(1.5rem, 3vw, 3rem);
+  font-weight: 600;
+  color: var(--color-text);
+  text-decoration: none;
+  margin-bottom: var(--spacing-md);
+  transition: color 0.3s var(--transition-snappy);
+  opacity: 0;
+  transform: translateY(1rem);
+}
+
+.contact-link.visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.8s var(--transition-smooth),
+              transform 0.8s var(--transition-smooth),
+              color 0.3s var(--transition-snappy);
+}
+
+.contact-link:hover,
+.contact-link:focus {
+  color: var(--color-accent);
+  outline: none;
+}
+
+.social-links {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+.social-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--color-text-muted);
+  border-radius: 50%;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: all 0.3s var(--transition-snappy);
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.social-link.visible {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.8s var(--transition-smooth),
+              transform 0.8s var(--transition-smooth),
+              all 0.3s var(--transition-snappy);
+}
+
+.social-link:nth-child(1) { transition-delay: 0.1s; }
+.social-link:nth-child(2) { transition-delay: 0.2s; }
+.social-link:nth-child(3) { transition-delay: 0.3s; }
+
+.social-link:hover,
+.social-link:focus {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: scale(1.1);
+  outline: none;
+}
+
+/* ============================================
+   Footer
+   ============================================ */
+
+.footer {
+  padding: var(--spacing-lg) var(--spacing-md);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: clamp(0.875rem, 1.5vw, 1rem);
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.footer-hint {
+  margin-top: var(--spacing-sm);
+  font-size: 0.875em;
+}
+
+.footer-hint kbd {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.25em 0.5em;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+/* ============================================
+   Accessibility
+   ============================================ */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Focus styles */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .scroll-hint {
+    animation: none;
+  }
+}
+
+/* ============================================
+   Responsive Design
+   ============================================ */
+
+@media (max-width: 768px) {
+  .hero-content {
+    text-align: center;
+  }
+  
+  .team-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .value-item {
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+  
+  .social-links {
+    justify-content: center;
+  }
+}
+
+/* ============================================
+   Presentation Mode (fullscreen canvas)
+   ============================================ */
+
+body.presentation-mode .canvas-container {
+  z-index: 10;
+}
+
+body.presentation-mode #main-content {
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+body.presentation-mode .hero-section {
+  min-height: 100vh;
+}
+

@@ -6,6 +6,7 @@ import { realTimeAuth } from "../../utils/realTimeAuth";
 import { UserProfile } from "../../types";
 import { friendsService } from "../../services/friends/friendsService";
 import { friendRequestsService } from "../../services/friends/friendRequestsService";
+import { CallButton } from "../calls/CallButton";
 
 export const ProfileViewPage: React.FC = () => {
   const { useremail } = useParams<{ useremail: string }>();
@@ -176,6 +177,18 @@ export const ProfileViewPage: React.FC = () => {
                 </button>
               ) : (
                 <>
+                  <div className="flex items-center gap-2">
+                    <CallButton
+                      recipientId={profile.userId}
+                      variant="compact"
+                      callType="video"
+                    />
+                    <CallButton
+                      recipientId={profile.userId}
+                      variant="compact"
+                      callType="audio"
+                    />
+                  </div>
                   {isFriend ? (
                     <div className="px-4 py-2 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 font-medium rounded-lg flex items-center gap-2">
                       <Users className="w-4 h-4" />

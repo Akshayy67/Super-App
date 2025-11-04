@@ -170,8 +170,9 @@ export const Dashboard: React.FC = () => {
   return (
     <DashboardLayout>
       <div
-        className="min-h-screen transition-colors duration-300 bg-white dark:bg-black"
+        className="w-full transition-colors duration-300 bg-white dark:bg-black"
         data-component="dashboard"
+        style={{ paddingBottom: '2rem' }}
       >
         {/* Futuristic 3D Component at the top */}
         <div className="relative w-full bg-white dark:bg-black overflow-hidden">

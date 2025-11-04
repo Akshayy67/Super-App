@@ -27,8 +27,6 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   // Determine background variant based on route
   const getBackgroundVariant = () => {
     switch (location.pathname) {
-      case "/about":
-        return "hero";
       case "/dashboard":
         return "subtle";
       case "/interview":
@@ -43,8 +41,6 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   // Determine background opacity based on route
   const getBackgroundOpacity = () => {
     switch (location.pathname) {
-      case "/about":
-        return "medium";
       case "/dashboard":
         return "light";
       case "/interview":
@@ -57,12 +53,12 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
 
   // Determine if gradient should be applied
   const shouldShowGradient = () => {
-    return location.pathname === "/about" || gradient;
+    return gradient;
   };
 
   // Get container classes based on route
   const getContainerClasses = () => {
-    const baseClasses = `relative min-h-screen ${themeClasses.container} ${className}`;
+    const baseClasses = `relative ${themeClasses.container} ${className}`;
 
     if (shouldShowGradient()) {
       return `${baseClasses} ${themeClasses.gradient}`;
@@ -72,7 +68,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   };
 
   return (
-    <div className={getContainerClasses()}>
+    <div className={getContainerClasses()} style={{ width: '100%' }}>
       {/* Background Text (removed) */}
       {showBackground && (
         <SuperAppBackground
@@ -83,11 +79,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
       )}
 
       {/* Page Content */}
-      <div
-        className={`relative ${
-          location.pathname === "/about" ? "z-20" : "z-10"
-        }`}
-      >
+      <div className="relative z-10" style={{ width: '100%' }}>
         {children}
       </div>
     </div>
@@ -119,19 +111,6 @@ export const InterviewLayout: React.FC<{ children: React.ReactNode }> = ({
   </PageLayout>
 );
 
-export const AboutLayout: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => (
-  <PageLayout
-    backgroundVariant="hero"
-    backgroundOpacity="medium"
-    animated={true}
-    gradient={true}
-    showBackground={false}
-  >
-    {children}
-  </PageLayout>
-);
 
 export const GeneralLayout: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -165,17 +144,6 @@ export const pageColors = {
     muted: "text-gray-600 dark:text-gray-400",
   },
 
-  about: {
-    background:
-      "bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700 dark:from-blue-700 dark:via-indigo-800 dark:to-purple-900",
-    surface: "bg-white/10 dark:bg-black/50 backdrop-blur-sm",
-    accent: "bg-white/20 dark:bg-gray-900/50 backdrop-blur-sm",
-    text: "text-white dark:text-gray-300",
-    muted: "text-blue-100 dark:text-gray-400",
-    gradient:
-      "bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700 dark:from-blue-700 dark:via-indigo-800 dark:to-purple-900",
-  },
-
   general: {
     background: "bg-white dark:bg-black",
     surface: "bg-gray-50 dark:bg-black",
@@ -187,7 +155,6 @@ export const pageColors = {
 
 // Utility function to get page-specific colors
 export const getPageColors = (pathname: string) => {
-  if (pathname === "/about") return pageColors.about;
   if (pathname === "/dashboard") return pageColors.dashboard;
   if (pathname.startsWith("/interview")) return pageColors.interview;
   return pageColors.general;

@@ -346,6 +346,45 @@ service cloud.firestore {
       allow create, update, delete: if isAuthenticated() && isAdmin();
     }
 
+    // ==================== CALLS ====================
+
+    // Calls collection (1-to-1 calls)
+    match /calls/{callId} {
+      // Allow creating a call if authenticated and you're the caller
+      allow create: if request.auth != null
+                    && request.resource.data.callerId == request.auth.uid;
+
+      // Allow reading if you're the caller or recipient
+      allow read: if request.auth != null
+                  && (resource.data.callerId == request.auth.uid
+                      || resource.data.recipientId == request.auth.uid);
+
+      // Allow updating if you're the caller or recipient
+      allow update: if request.auth != null
+                    && (resource.data.callerId == request.auth.uid
+                        || resource.data.recipientId == request.auth.uid);
+
+      // Allow deleting if you're the caller or recipient
+      allow delete: if request.auth != null
+                    && (resource.data.callerId == request.auth.uid
+                        || resource.data.recipientId == request.auth.uid);
+    }
+
+    // Call signals collection (encrypted WebRTC signaling)
+    match /callSignals/{signalId} {
+      // Allow creating if authenticated (sending signals)
+      allow create: if request.auth != null
+                    && request.resource.data.senderId == request.auth.uid;
+
+      // Allow reading if the signal is directed to you
+      allow read: if request.auth != null
+                  && resource.data.recipientId == request.auth.uid;
+
+      // Allow deleting if you're the recipient (after processing)
+      allow delete: if request.auth != null
+                    && resource.data.recipientId == request.auth.uid;
+    }
+
     // ==================== OTHER COLLECTIONS ====================
 
     
