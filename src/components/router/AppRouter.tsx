@@ -25,6 +25,7 @@ import { BlockedUsersPage } from "../BlockedUsersPage";
 import { BlockedUserGuard } from "./BlockedUserGuard";
 import { PaymentPage } from "../PaymentPage";
 import { AboutUsPage } from "../AboutUsPage";
+import { SignupPage } from "../auth/SignupPage";
 
 interface AppRouterProps {
   invitationData: {
@@ -88,7 +89,7 @@ const PageTransitionWrapper: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [location.pathname]);
 
   return (
-    <div ref={containerRef} className="page-transition-wrapper" style={{ transformStyle: 'preserve-3d', perspective: '1000px', width: '100%', minHeight: '100%' }}>
+    <div ref={containerRef} className="page-transition-wrapper" style={{ transformStyle: 'preserve-3d', perspective: '1000px', width: '100%', height: '100%', minHeight: '100%' }}>
       {children}
     </div>
   );
@@ -100,6 +101,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
       {/* Main Routes */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/landing" element={<LandingPage />} />
+      
+      {/* Signup Page */}
+      <Route path="/signup" element={<SignupPage />} />
       
       {/* Blocked Users Page */}
       <Route path="/blocked" element={<BlockedUsersPage />} />

@@ -27,8 +27,10 @@ export const ActiveCallInterface: React.FC<ActiveCallInterfaceProps> = ({
 }) => {
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isRemoteMuted, setIsRemoteMuted] = useState(false);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null); // For audio-only calls
 
   // Update video elements when streams change
   useEffect(() => {
@@ -37,9 +39,129 @@ export const ActiveCallInterface: React.FC<ActiveCallInterfaceProps> = ({
     }
 
     if (remoteVideoRef.current && callState.remoteStream) {
-      remoteVideoRef.current.srcObject = callState.remoteStream;
+      const videoElement = remoteVideoRef.current;
+      const audioTracks = callState.remoteStream.getAudioTracks();
+      
+      // Ensure audio tracks are enabled for video calls
+      audioTracks.forEach(track => {
+        if (!track.enabled) {
+          console.log('✅ Enabling audio track in video element:', track.id);
+          track.enabled = true;
+        }
+      });
+      
+      videoElement.srcObject = callState.remoteStream;
+      
+      // Ensure video plays (which also plays audio)
+      videoElement.play().catch((error) => {
+        console.error('❌ Error playing remote video/audio:', error);
+      });
     }
-  }, [callState.localStream, callState.remoteStream]);
+
+    // For audio-only calls, attach stream to audio element
+    if (remoteAudioRef.current && callState.remoteStream && callState.callType === 'audio') {
+      const audioElement = remoteAudioRef.current;
+      const audioTracks = callState.remoteStream.getAudioTracks();
+      
+      console.log('🔊 Setting up audio element for audio call:', {
+        hasStream: !!callState.remoteStream,
+        audioTracks: audioTracks.length,
+        trackStates: audioTracks.map(t => ({
+          id: t.id,
+          enabled: t.enabled,
+          muted: t.muted,
+          readyState: t.readyState
+        }))
+      });
+      
+      // Ensure audio tracks are enabled
+      audioTracks.forEach(track => {
+        if (!track.enabled) {
+          console.log('✅ Enabling audio track:', track.id);
+          track.enabled = true;
+        }
+      });
+      
+      audioElement.srcObject = callState.remoteStream;
+      
+      // Ensure audio plays
+      audioElement.play().catch((error) => {
+        console.error('❌ Error playing remote audio:', error);
+        // Retry after a short delay
+        setTimeout(() => {
+          audioElement.play().catch(err => {
+            console.error('❌ Retry failed to play remote audio:', err);
+          });
+        }, 500);
+      });
+    }
+  }, [callState.localStream, callState.remoteStream, callState.callType]);
+
+  // Monitor remote audio mute state
+  useEffect(() => {
+    if (!callState.remoteStream) {
+      setIsRemoteMuted(false);
+      return;
+    }
+
+    const audioTracks = callState.remoteStream.getAudioTracks();
+    
+    if (audioTracks.length === 0) {
+      setIsRemoteMuted(true);
+      return;
+    }
+
+    // Check initial mute state
+    const checkMuteState = () => {
+      const allMuted = audioTracks.every(track => !track.enabled || track.muted);
+      setIsRemoteMuted(allMuted);
+      console.log('🔇 Remote mute state:', allMuted, {
+        tracks: audioTracks.map(t => ({
+          enabled: t.enabled,
+          muted: t.muted,
+          readyState: t.readyState
+        }))
+      });
+    };
+
+    // Check initial state
+    checkMuteState();
+
+    // Listen to mute/unmute events on all audio tracks
+    const muteHandlers: Array<() => void> = [];
+    
+    audioTracks.forEach(track => {
+      const onMute = () => {
+        console.log('🔇 Remote audio track muted:', track.id);
+        checkMuteState();
+      };
+      
+      const onUnmute = () => {
+        console.log('🔊 Remote audio track unmuted:', track.id);
+        checkMuteState();
+      };
+
+      const onEnded = () => {
+        console.log('⚠️ Remote audio track ended:', track.id);
+        checkMuteState();
+      };
+
+      track.addEventListener('mute', onMute);
+      track.addEventListener('unmute', onUnmute);
+      track.addEventListener('ended', onEnded);
+      
+      muteHandlers.push(() => {
+        track.removeEventListener('mute', onMute);
+        track.removeEventListener('unmute', onUnmute);
+        track.removeEventListener('ended', onEnded);
+      });
+    });
+
+    // Cleanup
+    return () => {
+      muteHandlers.forEach(cleanup => cleanup());
+    };
+  }, [callState.remoteStream]);
 
   const handleToggleAudio = () => {
     const newState = !isAudioMuted;
@@ -62,6 +184,16 @@ export const ActiveCallInterface: React.FC<ActiveCallInterfaceProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
+      {/* Hidden audio element for audio-only calls */}
+      {callState.callType === 'audio' && (
+        <audio
+          ref={remoteAudioRef}
+          autoPlay
+          playsInline
+          className="hidden"
+        />
+      )}
+      
       {/* Remote Video/Profile */}
       <div className="flex-1 relative flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
         {isVideoCall && callState.remoteStream ? (
@@ -104,9 +236,31 @@ export const ActiveCallInterface: React.FC<ActiveCallInterfaceProps> = ({
 
         {/* Connection Status Badge */}
         {callState.connectionState === 'connected' && (
-          <div className="absolute top-4 right-4 bg-green-500/80 text-white px-3 py-1 rounded-full text-sm flex items-center gap-2">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            Connected
+          <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+            <div className="bg-green-500/80 text-white px-3 py-1 rounded-full text-sm flex items-center gap-2">
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+              Connected
+            </div>
+            {/* Remote Mute Indicator */}
+            {callState.remoteStream && (
+              <div className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 ${
+                isRemoteMuted 
+                  ? 'bg-orange-500/80 text-white' 
+                  : 'bg-blue-500/80 text-white'
+              }`}>
+                {isRemoteMuted ? (
+                  <>
+                    <MicOff className="w-4 h-4" />
+                    <span>Muted</span>
+                  </>
+                ) : (
+                  <>
+                    <Mic className="w-4 h-4" />
+                    <span>Speaking</span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -129,7 +283,28 @@ export const ActiveCallInterface: React.FC<ActiveCallInterfaceProps> = ({
         <div className="max-w-md mx-auto">
           {/* User Info */}
           <div className="text-center mb-6">
-            <h3 className="text-xl font-semibold text-white mb-1">{displayName}</h3>
+            <h3 className="text-xl font-semibold text-white mb-1 flex items-center justify-center gap-2">
+              {displayName}
+              {callState.remoteStream && (
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
+                  isRemoteMuted 
+                    ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' 
+                    : 'bg-green-500/20 text-green-300 border border-green-500/30'
+                }`}>
+                  {isRemoteMuted ? (
+                    <>
+                      <MicOff className="w-3 h-3" />
+                      <span>Muted</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-3 h-3" />
+                      <span>Speaking</span>
+                    </>
+                  )}
+                </span>
+              )}
+            </h3>
             <p className="text-gray-400 text-sm">
               {callState.callType === 'video' ? 'Video Call' : 'Audio Call'}
             </p>
@@ -190,4 +365,5 @@ export const ActiveCallInterface: React.FC<ActiveCallInterfaceProps> = ({
 
 // Import callService for controls
 import { callService } from '../../services/callService';
+
 

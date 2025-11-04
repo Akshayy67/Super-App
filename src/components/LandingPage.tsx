@@ -1475,10 +1475,8 @@ export const LandingPage: React.FC = () => {
             className="section w-full h-screen flex items-center justify-center relative cursor-pointer"
             onClick={() => {
               if (index === sections.length - 1) {
-                // Last section - navigate to dashboard
-                // Mark landing page as skipped
-                localStorage.setItem("landingPageSkipped", "true");
-                navigate("/dashboard");
+                // Last section - navigate to signup
+                navigate("/signup");
               } else {
                 scrollToSection(index + 1);
               }
@@ -1514,7 +1512,7 @@ export const LandingPage: React.FC = () => {
             />
 
             {/* Section Content */}
-            <div className="section-content text-center px-4 relative z-20">
+            <div className="section-content text-center px-4 relative z-20" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
               <h1
                 className="section-title font-bold leading-tight"
                 style={{
@@ -1526,13 +1524,38 @@ export const LandingPage: React.FC = () => {
                   textTransform: "uppercase",
                   opacity: 0,
                   maxWidth: index === 0 ? "90%" : "95%",
+                  width: "100%",
                   margin: "0 auto",
                   lineHeight: index === 0 ? "1.3" : "1.2",
                   fontWeight: 700,
                   color: "#b0b0b0",
+                  wordBreak: "normal",
+                  overflowWrap: "normal",
+                  wordWrap: "normal",
+                  whiteSpace: "normal",
+                  hyphens: "none",
+                  boxSizing: "border-box",
+                  overflow: "hidden",
                 }}
               >
-                {section.title}
+                {section.title
+                  .replace(/-/g, '\u2011') // Replace hyphens with non-breaking hyphens
+                  .split(/\s+/) // Split by whitespace
+                  .filter(word => word.length > 0) // Remove empty strings
+                  .map((word, wordIndex, words) => (
+                    <React.Fragment key={wordIndex}>
+                      <span
+                        className="no-break-word"
+                        style={{
+                          whiteSpace: "nowrap",
+                          display: "inline",
+                        }}
+                      >
+                        {word}
+                      </span>
+                      {wordIndex < words.length - 1 && ' '}
+                    </React.Fragment>
+                  ))}
               </h1>
               {section.subtitle && (
                 <p
@@ -1576,15 +1599,22 @@ export const LandingPage: React.FC = () => {
       <div className="fixed top-8 right-8 z-40 flex gap-4">
         <button
           onClick={() => {
-            // Mark landing page as skipped
-            localStorage.setItem("landingPageSkipped", "true");
-            navigate("/dashboard");
+            navigate("/signup");
           }}
-          className="text-xs font-medium hover:opacity-70 transition-opacity px-4 py-2 border rounded uppercase tracking-wider"
+          className="text-xs font-medium px-4 py-2 border rounded uppercase tracking-wider transition-all duration-300 ease-in-out hover:scale-110 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20"
           style={{ 
             fontFamily: '"Inter", sans-serif',
             color: "#b0b0b0",
             borderColor: "rgba(176, 176, 176, 0.3)",
+            transition: "all 0.3s ease-in-out",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "scale(1.1)";
+            e.currentTarget.style.color = "#ffffff";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "scale(1)";
+            e.currentTarget.style.color = "#b0b0b0";
           }}
         >
           SKIP
@@ -1600,6 +1630,44 @@ export const LandingPage: React.FC = () => {
           Scroll or use ↑ ↓ keys
         </div>
       </div>
+
+      {/* Back to Top Button - Only show on last section */}
+      {currentSection === sections.length - 1 && (
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40">
+          <button
+            onClick={() => scrollToSection(0)}
+            className="text-xs font-medium px-6 py-3 border rounded-full uppercase tracking-wider transition-all duration-300 ease-in-out hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center gap-2"
+            style={{ 
+              fontFamily: '"Inter", sans-serif',
+              color: "#b0b0b0",
+              borderColor: "rgba(176, 176, 176, 0.3)",
+              transition: "all 0.3s ease-in-out",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "scale(1.1)";
+              e.currentTarget.style.color = "#ffffff";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.color = "#b0b0b0";
+            }}
+          >
+            <svg 
+              width="16" 
+              height="16" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <path d="M18 15l-6-6-6 6" />
+            </svg>
+            Back to Top
+          </button>
+        </div>
+      )}
     </div>
   );
 };

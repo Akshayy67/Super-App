@@ -65,6 +65,8 @@ import { useAnalyticsDataReadOnly } from "../../hooks/useAnalyticsData";
 import { AnalyticsValidationBanner } from "../analytics/AnalyticsValidationBanner";
 import { InterviewDataManager } from "../InterviewDataManager";
 import { DetailedInterviewHistory } from "../DetailedInterviewHistory";
+import { aspectScoresManager, AspectScoreHistory } from "../../utils/interviewAspectScores";
+import { useTheme } from "../../utils/themeManager";
 // Demo data populator removed for production
 
 interface VisualAnalyticsDashboardProps {
@@ -150,13 +152,10 @@ export const VisualAnalyticsDashboard: React.FC<
     | "data-management"
     | "detailed-history"
   >("overview");
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  useEffect(() => {
-    // Check for dark mode preference
-    const darkMode = localStorage.getItem("darkMode") === "true";
-    setIsDarkMode(darkMode);
-  }, []);
+  
+  // Use the global theme system instead of local state
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === "dark";
 
   // Handle sample data display when no real data exists
   const shouldShowSampleData = () => {
@@ -316,23 +315,81 @@ export const VisualAnalyticsDashboard: React.FC<
     return data.filter((item) => new Date(item.timestamp) >= cutoffDate);
   };
 
-  // Generate trend data for line charts
+  // Generate trend data for line charts - enhanced with aspect scores
   const trendData = useMemo(() => {
     const filteredData = filterDataByTimeRange(displayData, selectedTimeRange);
-    return filteredData.map((performance, index) => ({
-      interview: index + 1,
-      date: new Date(performance.timestamp).toLocaleDateString(),
-      overall: performance.overallScore,
-      technical: performance.technicalScore,
-      communication: performance.communicationScore,
-      behavioral: performance.behavioralScore,
-      confidence: performance.detailedMetrics.confidence,
-      clarity: performance.detailedMetrics.clarity,
-      professionalism: performance.detailedMetrics.professionalism,
-      engagement: performance.detailedMetrics.engagement,
-      adaptability: performance.detailedMetrics.adaptability,
-    }));
+    
+    // Get aspect scores time series data
+    const aspectTimeSeries = aspectScoresManager.getTimeSeriesData(
+      ["Communication", "Technical Skills", "Behavioral", "Overall"],
+      selectedTimeRange
+    );
+    
+    // Merge performance data with aspect scores
+    const mergedData = filteredData.map((performance, index) => {
+      const dateKey = new Date(performance.timestamp).toISOString().split("T")[0];
+      const aspectData = aspectTimeSeries.find(d => d.timestamp === dateKey);
+      
+      return {
+        interview: index + 1,
+        date: new Date(performance.timestamp).toLocaleDateString(),
+        timestamp: dateKey,
+        overall: aspectData?.Overall || performance.overallScore,
+        technical: aspectData?.["Technical Skills"] || performance.technicalScore,
+        communication: aspectData?.Communication || performance.communicationScore,
+        behavioral: aspectData?.Behavioral || performance.behavioralScore,
+        confidence: performance.detailedMetrics.confidence,
+        clarity: performance.detailedMetrics.clarity,
+        professionalism: performance.detailedMetrics.professionalism,
+        engagement: performance.detailedMetrics.engagement,
+        adaptability: performance.detailedMetrics.adaptability,
+      };
+    });
+    
+    // If we have aspect scores but no performance data for those dates, add them
+    aspectTimeSeries.forEach((aspectData) => {
+      if (!mergedData.find(d => d.timestamp === aspectData.timestamp)) {
+        mergedData.push({
+          interview: mergedData.length + 1,
+          date: aspectData.date,
+          timestamp: aspectData.timestamp,
+          overall: aspectData.Overall || 0,
+          technical: aspectData["Technical Skills"] || 0,
+          communication: aspectData.Communication || 0,
+          behavioral: aspectData.Behavioral || 0,
+          confidence: 0,
+          clarity: 0,
+          professionalism: 0,
+          engagement: 0,
+          adaptability: 0,
+        });
+      }
+    });
+    
+    return mergedData.sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
   }, [displayData, selectedTimeRange]);
+  
+  // Get aspect score statistics for prominent display
+  const aspectStatistics = useMemo(() => {
+    return aspectScoresManager.getStatistics();
+  }, [displayData]);
+  
+  // Get aspect histories for trend analysis
+  const aspectHistories = useMemo(() => {
+    return aspectScoresManager.getAllAspectHistories();
+  }, [displayData]);
+  
+  // Get radar chart data from aspect scores
+  const aspectRadarData = useMemo(() => {
+    return aspectScoresManager.getRadarChartData();
+  }, [displayData]);
+  
+  // Get category comparison data
+  const categoryComparisonData = useMemo(() => {
+    return aspectScoresManager.getCategoryComparisonData();
+  }, [displayData]);
 
   // Helper function to calculate improvement
   const calculateImprovement = (metric: string): number => {
@@ -373,8 +430,62 @@ export const VisualAnalyticsDashboard: React.FC<
     return ((recentAvg - olderAvg) / olderAvg) * 100;
   };
 
-  // Generate skill breakdown for radar chart
+  // Generate skill breakdown for radar chart using aspect scores
   const skillBreakdownData = useMemo((): SkillBreakdown[] => {
+    // Use aspect scores if available, otherwise fall back to performance data
+    const latestScores = aspectScoresManager.getLatestScores();
+    
+    if (latestScores.length > 0) {
+      // Create a map of aspect names to scores
+      const aspectMap = new Map<string, number>();
+      latestScores.forEach(score => {
+        aspectMap.set(score.aspectName, score.score);
+      });
+
+      // Get aspect histories for trend calculation
+      const aspectHistories = aspectScoresManager.getAllAspectHistories();
+      const historyMap = new Map<string, AspectScoreHistory>();
+      aspectHistories.forEach(history => {
+        historyMap.set(history.aspectName, history);
+      });
+
+      return [
+        {
+          skill: "Communication",
+          current: aspectMap.get("Communication") || 0,
+          target: 90,
+          improvement: historyMap.get("Communication")?.trend === "improving" ? 5 : 
+                       historyMap.get("Communication")?.trend === "declining" ? -5 : 0,
+          category: "communication",
+        },
+        {
+          skill: "Technical Skills",
+          current: aspectMap.get("Technical Skills") || 0,
+          target: 85,
+          improvement: historyMap.get("Technical Skills")?.trend === "improving" ? 5 : 
+                       historyMap.get("Technical Skills")?.trend === "declining" ? -5 : 0,
+          category: "technical",
+        },
+        {
+          skill: "Behavioral",
+          current: aspectMap.get("Behavioral") || 0,
+          target: 88,
+          improvement: historyMap.get("Behavioral")?.trend === "improving" ? 5 : 
+                       historyMap.get("Behavioral")?.trend === "declining" ? -5 : 0,
+          category: "behavioral",
+        },
+        {
+          skill: "Overall",
+          current: aspectMap.get("Overall") || 0,
+          target: 90,
+          improvement: historyMap.get("Overall")?.trend === "improving" ? 5 : 
+                       historyMap.get("Overall")?.trend === "declining" ? -5 : 0,
+          category: "confidence",
+        },
+      ];
+    }
+
+    // Fallback to performance data if no aspect scores
     if (!displayPerformance) return [];
 
     return [
@@ -416,8 +527,53 @@ export const VisualAnalyticsDashboard: React.FC<
     ];
   }, [displayPerformance, displayData]);
 
-  // Generate heat map data for question categories
+  // Generate heat map data for question categories using aspect scores
   const heatMapData = useMemo((): HeatMapData[] => {
+    // Use category comparison data from aspect scores
+    const categoryData = categoryComparisonData;
+    
+    if (categoryData.length > 0) {
+      // Map aspect categories to heat map categories
+      const categoryMapping: Record<string, string> = {
+        "Technical": "technical",
+        "Behavioral": "behavioral",
+        "Situational": "communication", // Use communication for situational
+      };
+
+      const difficulties = ["Easy", "Medium", "Hard"];
+      const data: HeatMapData[] = [];
+
+      Object.entries(categoryMapping).forEach(([heatMapCategory, aspectCategory]) => {
+        // Find matching aspect category scores
+        const matchingCategory = categoryData.find(cat => 
+          cat.category.toLowerCase() === aspectCategory.toLowerCase()
+        );
+
+        // Get all scores for this category
+        const categoryScores = aspectScoresManager.getScoresByCategory(
+          aspectCategory as any
+        );
+
+        // Calculate average if we have scores
+        const avgScore = categoryScores.length > 0
+          ? categoryScores.reduce((sum, s) => sum + s.score, 0) / categoryScores.length
+          : (matchingCategory?.averageScore || 0);
+
+        // For each difficulty, use the average (we don't have difficulty-specific aspect scores yet)
+        difficulties.forEach((difficulty) => {
+          data.push({
+            category: heatMapCategory,
+            difficulty,
+            performance: Math.round(avgScore),
+            count: categoryScores.length || matchingCategory?.count || 0,
+          });
+        });
+      });
+
+      return data;
+    }
+
+    // Fallback to original logic if no aspect scores
     const categories = ["Technical", "Behavioral", "Situational"];
     const difficulties = ["Easy", "Medium", "Hard"];
     const data: HeatMapData[] = [];
@@ -434,7 +590,7 @@ export const VisualAnalyticsDashboard: React.FC<
           relevantInterviews.length > 0
             ? relevantInterviews.reduce((sum, p) => sum + p.overallScore, 0) /
               relevantInterviews.length
-            : 0; // No fallback - only show real data
+            : 0;
 
         data.push({
           category,
@@ -446,7 +602,7 @@ export const VisualAnalyticsDashboard: React.FC<
     });
 
     return data;
-  }, [displayData]);
+  }, [displayData, categoryComparisonData]);
 
   // Helper functions for generating exercises and resources
   const generateExercises = (category: string): string[] => {
@@ -509,15 +665,16 @@ export const VisualAnalyticsDashboard: React.FC<
     return resourceMap[category as keyof typeof resourceMap] || [];
   };
 
-  // Generate improvement roadmap
+  // Generate improvement roadmap using aspect scores
   const improvementRoadmap = useMemo((): ImprovementRoadmap => {
-    if (!currentPerformance) {
+    // Use skillBreakdownData which now uses aspect scores
+    if (skillBreakdownData.length === 0) {
       return { timeframe: "30", milestones: [] };
     }
 
     const weakAreas = skillBreakdownData
       .filter((skill) => skill.current < skill.target - 10)
-      .sort((a, b) => a.target - a.current - (b.target - b.current));
+      .sort((a, b) => (a.target - a.current) - (b.target - b.current));
 
     const milestones = weakAreas.slice(0, 3).map((skill, index) => ({
       id: `milestone-${index}`,
@@ -538,15 +695,15 @@ export const VisualAnalyticsDashboard: React.FC<
   }, [displayPerformance, skillBreakdownData]);
 
   const getScoreColor = (score: number): string => {
-    if (score >= 80) return "text-green-600";
-    if (score >= 60) return "text-yellow-600";
-    return "text-red-600";
+    if (score >= 80) return isDarkMode ? "text-green-400" : "text-green-600";
+    if (score >= 60) return isDarkMode ? "text-yellow-400" : "text-yellow-600";
+    return isDarkMode ? "text-red-400" : "text-red-600";
   };
 
   const getScoreBgColor = (score: number): string => {
-    if (score >= 80) return "bg-green-50 border-green-200";
-    if (score >= 60) return "bg-yellow-50 border-yellow-200";
-    return "bg-red-50 border-red-200";
+    if (score >= 80) return isDarkMode ? "bg-green-900/20 border-green-700" : "bg-green-50 border-green-200";
+    if (score >= 60) return isDarkMode ? "bg-yellow-900/20 border-yellow-700" : "bg-yellow-50 border-yellow-200";
+    return isDarkMode ? "bg-red-900/20 border-red-700" : "bg-red-50 border-red-200";
   };
 
   return (
@@ -559,7 +716,7 @@ export const VisualAnalyticsDashboard: React.FC<
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold mb-2">
+            <h1 className={`text-3xl font-bold mb-2 ${isDarkMode ? "text-white" : "text-gray-900"}`}>
               Visual Analytics Dashboard
             </h1>
             <p
@@ -593,17 +750,6 @@ export const VisualAnalyticsDashboard: React.FC<
             >
               <Download className="w-4 h-4" />
               Export PDF
-            </button>
-
-            <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-2 rounded-lg transition-colors ${
-                isDarkMode
-                  ? "bg-gray-800 hover:bg-gray-700"
-                  : "bg-white hover:bg-gray-100"
-              }`}
-            >
-              <Settings className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -652,7 +798,7 @@ export const VisualAnalyticsDashboard: React.FC<
                   isDarkMode ? "text-gray-400" : "text-gray-300"
                 }`}
               />
-              <h3 className="text-xl font-semibold mb-2">
+              <h3 className={`text-xl font-semibold mb-2 ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                 No Interview Data Yet
               </h3>
               <p
@@ -715,8 +861,8 @@ export const VisualAnalyticsDashboard: React.FC<
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5" />
-                <span className="font-medium">Sample Data Mode</span>
+                <AlertTriangle className={`w-5 h-5 ${isDarkMode ? "text-yellow-400" : "text-yellow-600"}`} />
+                <span className={`font-medium ${isDarkMode ? "text-yellow-200" : "text-yellow-800"}`}>Sample Data Mode</span>
               </div>
               <button
                 onClick={() => {
@@ -733,7 +879,7 @@ export const VisualAnalyticsDashboard: React.FC<
                 Hide Sample Data
               </button>
             </div>
-            <p className="text-sm mt-1">
+            <p className={`text-sm mt-1 ${isDarkMode ? "text-yellow-200/80" : "text-yellow-800"}`}>
               You're viewing sample analytics data. Complete a real interview to
               see your actual performance metrics.
             </p>
@@ -741,179 +887,177 @@ export const VisualAnalyticsDashboard: React.FC<
         )}
 
         {/* Data Quality Validation Banner */}
-        <AnalyticsValidationBanner className="mb-6" showDetails={true} />
+        <AnalyticsValidationBanner className="mb-6" showDetails={true} isDarkMode={isDarkMode} />
 
         {/* Tab Content */}
         {(displayData.length > 0 || displayPerformance) &&
           activeTab === "overview" && (
             <div className="space-y-6">
-              {/* Current Performance Summary */}
-              {displayPerformance && (
+              {/* AI Aspect Scores Analysis - Prominent Display */}
+              {/* Only show when there are actual completed interviews (not sample data) */}
+              {aspectStatistics.totalScores > 0 && performanceHistory.length > 0 && !shouldShowSampleData() && (
                 <div
-                  className={`rounded-lg shadow-lg p-6 ${
+                  className={`rounded-lg shadow-lg p-6 border-2 border-blue-500 ${
                     isDarkMode ? "bg-gray-800" : "bg-white"
                   }`}
                 >
-                  <h2 className="text-xl font-semibold mb-4">
-                    Latest Interview Results
-                  </h2>
-
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    {[
-                      {
-                        label: "Overall Score",
-                        value: displayPerformance.overallScore,
-                        icon: Award,
-                      },
-                      {
-                        label: "Technical",
-                        value: displayPerformance.technicalScore,
-                        icon: Brain,
-                      },
-                      {
-                        label: "Communication",
-                        value: displayPerformance.communicationScore,
-                        icon: Volume2,
-                      },
-                      {
-                        label: "Behavioral",
-                        value: displayPerformance.behavioralScore,
-                        icon: Users,
-                      },
-                    ].map((metric, index) => (
-                      <div
-                        key={index}
-                        className={`p-4 rounded-lg border ${getScoreBgColor(
-                          metric.value
-                        )}`}
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <metric.icon className="w-5 h-5" />
-                          <span className="font-medium">{metric.label}</span>
-                        </div>
-                        <div
-                          className={`text-2xl font-bold ${getScoreColor(
-                            metric.value
-                          )}`}
-                        >
-                          {metric.value}
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                          <div
-                            className={`h-2 rounded-full ${
-                              metric.value >= 80
-                                ? "bg-green-500"
-                                : metric.value >= 60
-                                ? "bg-yellow-500"
-                                : "bg-red-500"
-                            }`}
-                            style={{ width: `${metric.value}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex items-center gap-2 mb-4">
+                    <Brain className={`w-6 h-6 ${isDarkMode ? "text-blue-400" : "text-blue-600"}`} />
+                    <h2 className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                      AI-Generated Aspect Scores Analysis
+                    </h2>
                   </div>
-
-                  {/* Percentile Rankings */}
-                  <div
-                    className={`rounded-lg p-4 ${
-                      isDarkMode ? "bg-gray-700" : "bg-blue-50"
-                    }`}
-                  >
-                    <h3 className="font-semibold mb-3 flex items-center gap-2">
-                      <Target className="w-5 h-5" />
-                      Percentile Rankings
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {[
-                        { skill: "Overall", percentile: 78 },
-                        { skill: "Technical", percentile: 65 },
-                        { skill: "Communication", percentile: 82 },
-                        { skill: "Behavioral", percentile: 71 },
-                      ].map((item, index) => (
-                        <div key={index} className="text-center">
-                          <div className="text-2xl font-bold text-blue-600">
-                            {item.percentile}%
-                          </div>
-                          <div
-                            className={`text-sm ${
-                              isDarkMode ? "text-gray-300" : "text-gray-600"
-                            }`}
-                          >
-                            {item.skill}
-                          </div>
-                        </div>
-                      ))}
+                  <p className={`mb-6 ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
+                    Comprehensive AI analysis of interview performance across multiple aspects
+                  </p>
+                  
+                  {/* Statistics Summary */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className={`p-4 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-blue-50"}`}>
+                      <div className={`text-sm font-medium mb-1 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>Total Scores</div>
+                      <div className={`text-2xl font-bold ${isDarkMode ? "text-blue-400" : "text-blue-600"}`}>{aspectStatistics.totalScores}</div>
+                    </div>
+                    <div className={`p-4 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-green-50"}`}>
+                      <div className={`text-sm font-medium mb-1 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>Interviews Analyzed</div>
+                      <div className={`text-2xl font-bold ${isDarkMode ? "text-green-400" : "text-green-600"}`}>{aspectStatistics.totalInterviews}</div>
+                    </div>
+                    <div className={`p-4 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-purple-50"}`}>
+                      <div className={`text-sm font-medium mb-1 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>Aspects Tracked</div>
+                      <div className={`text-2xl font-bold ${isDarkMode ? "text-purple-400" : "text-purple-600"}`}>{aspectStatistics.aspectsTracked}</div>
+                    </div>
+                    <div className={`p-4 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-orange-50"}`}>
+                      <div className={`text-sm font-medium mb-1 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>Average Score</div>
+                      <div className={`text-2xl font-bold ${isDarkMode ? "text-orange-400" : "text-orange-600"}`}>{aspectStatistics.averageScore.toFixed(1)}</div>
                     </div>
                   </div>
+
+                  {/* Aspect Histories */}
+                  {aspectHistories.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? "text-white" : "text-gray-900"}`}>Aspect Performance Trends</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {aspectHistories.map((history) => (
+                          <div
+                            key={history.aspectName}
+                            className={`p-4 rounded-lg border ${isDarkMode ? "bg-gray-700 border-gray-600" : "bg-gray-50 border-gray-200"}`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className={`font-medium text-sm ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>{history.aspectName}</span>
+                              {history.trend === "improving" && <TrendingUp className={`w-4 h-4 ${isDarkMode ? "text-green-400" : "text-green-500"}`} />}
+                              {history.trend === "declining" && <TrendingDown className={`w-4 h-4 ${isDarkMode ? "text-red-400" : "text-red-500"}`} />}
+                              {history.trend === "stable" && <Activity className={`w-4 h-4 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`} />}
+                            </div>
+                            <div className={`text-2xl font-bold ${getScoreColor(history.latestScore)}`}>
+                              {history.latestScore}
+                            </div>
+                            <div className={`text-xs mt-1 ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
+                              Avg: {history.averageScore.toFixed(1)} | Trend: {history.trend}
+                            </div>
+                            <div className={`text-xs mt-1 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+                              {history.scores.length} score{history.scores.length !== 1 ? 's' : ''}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Best and Worst Aspects */}
+                  {aspectStatistics.bestAspect && aspectStatistics.worstAspect && (
+                    <div className={`p-4 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-50"}`}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <CheckCircle className={`w-5 h-5 ${isDarkMode ? "text-green-400" : "text-green-500"}`} />
+                            <span className={`font-semibold ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>Strongest Aspect</span>
+                          </div>
+                          <div className={`text-lg font-bold ${isDarkMode ? "text-green-400" : "text-green-600"}`}>{aspectStatistics.bestAspect}</div>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <AlertTriangle className={`w-5 h-5 ${isDarkMode ? "text-orange-400" : "text-orange-500"}`} />
+                            <span className={`font-semibold ${isDarkMode ? "text-gray-200" : "text-gray-800"}`}>Area for Improvement</span>
+                          </div>
+                          <div className={`text-lg font-bold ${isDarkMode ? "text-orange-400" : "text-orange-600"}`}>{aspectStatistics.worstAspect}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Quick Insights */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div
-                  className={`rounded-lg shadow-lg p-6 ${
-                    isDarkMode ? "bg-gray-800" : "bg-white"
-                  }`}
-                >
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-green-500" />
-                    Strengths
-                  </h3>
-                  <div className="space-y-2">
-                    {currentPerformance?.strengths
-                      .slice(0, 3)
-                      .map((strength, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                          <span
-                            className={
-                              isDarkMode ? "text-gray-300" : "text-gray-700"
-                            }
-                          >
-                            {strength}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
 
-                <div
-                  className={`rounded-lg shadow-lg p-6 ${
-                    isDarkMode ? "bg-gray-800" : "bg-white"
-                  }`}
-                >
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-yellow-500" />
-                    Areas for Improvement
-                  </h3>
-                  <div className="space-y-2">
-                    {currentPerformance?.weaknesses
-                      .slice(0, 3)
-                      .map((weakness, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-yellow-500" />
-                          <span
-                            className={
-                              isDarkMode ? "text-gray-300" : "text-gray-700"
-                            }
-                          >
-                            {weakness}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
+              {/* Quick Insights - Only show if there's actual performance data */}
+              {currentPerformance && (currentPerformance.strengths?.length > 0 || currentPerformance.weaknesses?.length > 0) && performanceHistory.length > 0 && !shouldShowSampleData() && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {currentPerformance.strengths?.length > 0 && (
+                    <div
+                      className={`rounded-lg shadow-lg p-6 ${
+                        isDarkMode ? "bg-gray-800" : "bg-white"
+                      }`}
+                    >
+                      <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                        <TrendingUp className={`w-5 h-5 ${isDarkMode ? "text-green-400" : "text-green-500"}`} />
+                        Strengths
+                      </h3>
+                      <div className="space-y-2">
+                        {currentPerformance.strengths
+                          .slice(0, 3)
+                          .map((strength, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                              <CheckCircle className={`w-4 h-4 ${isDarkMode ? "text-green-400" : "text-green-500"}`} />
+                              <span
+                                className={
+                                  isDarkMode ? "text-gray-300" : "text-gray-700"
+                                }
+                              >
+                                {strength}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentPerformance.weaknesses?.length > 0 && (
+                    <div
+                      className={`rounded-lg shadow-lg p-6 ${
+                        isDarkMode ? "bg-gray-800" : "bg-white"
+                      }`}
+                    >
+                      <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                        <AlertTriangle className={`w-5 h-5 ${isDarkMode ? "text-yellow-400" : "text-yellow-500"}`} />
+                        Areas for Improvement
+                      </h3>
+                      <div className="space-y-2">
+                        {currentPerformance.weaknesses
+                          .slice(0, 3)
+                          .map((weakness, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                              <AlertTriangle className={`w-4 h-4 ${isDarkMode ? "text-yellow-400" : "text-yellow-500"}`} />
+                              <span
+                                className={
+                                  isDarkMode ? "text-gray-300" : "text-gray-700"
+                                }
+                              >
+                                {weakness}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
             </div>
           )}
 
-        {(performanceHistory.length > 0 || currentPerformance) &&
+        {((performanceHistory.length > 0 && !shouldShowSampleData()) || displayPerformance) &&
           activeTab === "trends" && (
             <div className="space-y-6">
               {/* Chart Type Selector */}
               <div className="flex items-center gap-4 mb-6">
-                <span className="font-medium">Chart Type:</span>
+                <span className={`font-medium ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>Chart Type:</span>
                 {[
                   { type: "line", label: "Line Chart", icon: LineChartIcon },
                   { type: "bar", label: "Bar Chart", icon: BarChart3 },
@@ -942,7 +1086,7 @@ export const VisualAnalyticsDashboard: React.FC<
                   isDarkMode ? "bg-gray-800" : "bg-white"
                 }`}
               >
-                <h2 className="text-xl font-semibold mb-4">
+                <h2 className={`text-xl font-semibold mb-4 ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                   Performance Trends
                 </h2>
                 <div className="h-96">
@@ -1045,11 +1189,19 @@ export const VisualAnalyticsDashboard: React.FC<
                       </BarChart>
                     ) : (
                       <RadarChart
-                        data={skillBreakdownData.map((skill) => ({
-                          skill: skill.skill,
-                          current: skill.current,
-                          target: skill.target,
-                        }))}
+                        data={
+                          aspectRadarData.length > 0
+                            ? aspectRadarData.map((item) => ({
+                                skill: item.aspect,
+                                current: item.score,
+                                target: item.fullMark,
+                              }))
+                            : skillBreakdownData.map((skill) => ({
+                                skill: skill.skill,
+                                current: skill.current,
+                                target: skill.target,
+                              }))
+                        }
                       >
                         <PolarGrid
                           stroke={isDarkMode ? "#374151" : "#e5e7eb"}
@@ -1099,7 +1251,7 @@ export const VisualAnalyticsDashboard: React.FC<
                   isDarkMode ? "bg-gray-800" : "bg-white"
                 }`}
               >
-                <h2 className="text-xl font-semibold mb-4">
+                <h2 className={`text-xl font-semibold mb-4 ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                   Performance Heat Map
                 </h2>
                 <div className="grid grid-cols-3 gap-4">
@@ -1108,9 +1260,15 @@ export const VisualAnalyticsDashboard: React.FC<
                       key={index}
                       className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-105 ${
                         item.performance >= 80
-                          ? "bg-green-100 border-green-300 text-green-800"
+                          ? isDarkMode
+                            ? "bg-green-900/30 border-green-700 text-green-300"
+                            : "bg-green-100 border-green-300 text-green-800"
                           : item.performance >= 60
-                          ? "bg-yellow-100 border-yellow-300 text-yellow-800"
+                          ? isDarkMode
+                            ? "bg-yellow-900/30 border-yellow-700 text-yellow-300"
+                            : "bg-yellow-100 border-yellow-300 text-yellow-800"
+                          : isDarkMode
+                          ? "bg-red-900/30 border-red-700 text-red-300"
                           : "bg-red-100 border-red-300 text-red-800"
                       }`}
                       onClick={() =>
@@ -1123,14 +1281,14 @@ export const VisualAnalyticsDashboard: React.FC<
                       }
                     >
                       <div className="text-center">
-                        <div className="font-semibold">{item.category}</div>
-                        <div className="text-sm opacity-75">
+                        <div className={`font-semibold ${isDarkMode ? "text-gray-200" : ""}`}>{item.category}</div>
+                        <div className={`text-sm opacity-75 ${isDarkMode ? "text-gray-300" : ""}`}>
                           {item.difficulty}
                         </div>
-                        <div className="text-2xl font-bold mt-2">
+                        <div className={`text-2xl font-bold mt-2 ${isDarkMode ? "text-gray-100" : ""}`}>
                           {item.performance}%
                         </div>
-                        <div className="text-xs mt-1">
+                        <div className={`text-xs mt-1 ${isDarkMode ? "text-gray-400" : ""}`}>
                           {item.count} interviews
                         </div>
                       </div>
@@ -1141,7 +1299,7 @@ export const VisualAnalyticsDashboard: React.FC<
             </div>
           )}
 
-        {(performanceHistory.length > 0 || currentPerformance) &&
+        {((performanceHistory.length > 0 && !shouldShowSampleData()) || displayPerformance) &&
           activeTab === "skills" && (
             <div className="space-y-6">
               {/* Skill Breakdown Cards */}
@@ -1154,7 +1312,7 @@ export const VisualAnalyticsDashboard: React.FC<
                     }`}
                   >
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">{skill.skill}</h3>
+                      <h3 className={`text-lg font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}>{skill.skill}</h3>
                       <div
                         className={`text-2xl font-bold ${getScoreColor(
                           skill.current
@@ -1166,11 +1324,11 @@ export const VisualAnalyticsDashboard: React.FC<
 
                     {/* Progress Bar */}
                     <div className="mb-4">
-                      <div className="flex justify-between text-sm mb-1">
+                      <div className={`flex justify-between text-sm mb-1 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
                         <span>Current</span>
                         <span>Target: {skill.target}</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div className={`w-full rounded-full h-3 ${isDarkMode ? "bg-gray-700" : "bg-gray-200"}`}>
                         <div
                           className={`h-3 rounded-full ${
                             skill.current >= 80
@@ -1198,10 +1356,10 @@ export const VisualAnalyticsDashboard: React.FC<
                       <span
                         className={`text-sm ${
                           skill.improvement > 0
-                            ? "text-green-600"
+                            ? isDarkMode ? "text-green-400" : "text-green-600"
                             : skill.improvement < 0
-                            ? "text-red-600"
-                            : "text-gray-600"
+                            ? isDarkMode ? "text-red-400" : "text-red-600"
+                            : isDarkMode ? "text-gray-400" : "text-gray-600"
                         }`}
                       >
                         {skill.improvement > 0 ? "+" : ""}
@@ -1211,13 +1369,13 @@ export const VisualAnalyticsDashboard: React.FC<
 
                     {/* Sub-scores */}
                     <div className="mt-4 space-y-2">
-                      <div className="text-sm font-medium mb-2">
+                      <div className={`text-sm font-medium mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
                         Detailed Breakdown:
                       </div>
                       {skill.category === "communication" &&
                         currentPerformance && (
                           <>
-                            <div className="flex justify-between text-sm">
+                            <div className={`flex justify-between text-sm ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
                               <span>Clarity:</span>
                               <span>
                                 {currentPerformance.speechAnalysis
@@ -1225,7 +1383,7 @@ export const VisualAnalyticsDashboard: React.FC<
                                 %
                               </span>
                             </div>
-                            <div className="flex justify-between text-sm">
+                            <div className={`flex justify-between text-sm ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
                               <span>Pace:</span>
                               <span>
                                 {currentPerformance.speechAnalysis?.paceAnalysis
@@ -1233,7 +1391,7 @@ export const VisualAnalyticsDashboard: React.FC<
                                 WPM
                               </span>
                             </div>
-                            <div className="flex justify-between text-sm">
+                            <div className={`flex justify-between text-sm ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
                               <span>Confidence:</span>
                               <span>
                                 {currentPerformance.speechAnalysis
@@ -1245,7 +1403,7 @@ export const VisualAnalyticsDashboard: React.FC<
                         )}
                       {skill.category === "technical" && currentPerformance && (
                         <>
-                          <div className="flex justify-between text-sm">
+                          <div className={`flex justify-between text-sm ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
                             <span>Problem Solving:</span>
                             <span>
                               {Math.round(
@@ -1254,7 +1412,7 @@ export const VisualAnalyticsDashboard: React.FC<
                               %
                             </span>
                           </div>
-                          <div className="flex justify-between text-sm">
+                          <div className={`flex justify-between text-sm ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
                             <span>Code Quality:</span>
                             <span>
                               {Math.round(
@@ -1263,7 +1421,7 @@ export const VisualAnalyticsDashboard: React.FC<
                               %
                             </span>
                           </div>
-                          <div className="flex justify-between text-sm">
+                          <div className={`flex justify-between text-sm ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
                             <span>Explanation:</span>
                             <span>
                               {Math.round(
@@ -1285,7 +1443,7 @@ export const VisualAnalyticsDashboard: React.FC<
                   isDarkMode ? "bg-gray-800" : "bg-white"
                 }`}
               >
-                <h2 className="text-xl font-semibold mb-4">
+                <h2 className={`text-xl font-semibold mb-4 ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                   Skills vs Industry Benchmarks
                 </h2>
                 <div className="h-80">
@@ -1339,7 +1497,7 @@ export const VisualAnalyticsDashboard: React.FC<
             </div>
           )}
 
-        {(performanceHistory.length > 0 || currentPerformance) &&
+        {((performanceHistory.length > 0 && !shouldShowSampleData()) || displayPerformance) &&
           activeTab === "improvement" && (
             <div className="space-y-6">
               {/* Improvement Roadmap */}
@@ -1349,7 +1507,7 @@ export const VisualAnalyticsDashboard: React.FC<
                 }`}
               >
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold">
+                  <h2 className={`text-xl font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                     90-Day Improvement Roadmap
                   </h2>
                   <button
@@ -1369,7 +1527,9 @@ export const VisualAnalyticsDashboard: React.FC<
                     <div
                       key={milestone.id}
                       className={`border rounded-lg p-4 ${
-                        isDarkMode ? "border-gray-600" : "border-gray-200"
+                        isDarkMode 
+                          ? "bg-gray-800 border-gray-600" 
+                          : "bg-white border-gray-200"
                       }`}
                     >
                       <div className="flex items-center justify-between mb-3">
@@ -1386,7 +1546,7 @@ export const VisualAnalyticsDashboard: React.FC<
                             {index + 1}
                           </div>
                           <div>
-                            <h3 className="font-semibold">{milestone.title}</h3>
+                            <h3 className={`font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}>{milestone.title}</h3>
                             <p
                               className={`text-sm ${
                                 isDarkMode ? "text-gray-300" : "text-gray-600"
@@ -1397,7 +1557,7 @@ export const VisualAnalyticsDashboard: React.FC<
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-sm font-medium">
+                          <div className={`text-sm font-medium ${isDarkMode ? "text-gray-200" : "text-gray-700"}`}>
                             Target: {milestone.targetScore}
                           </div>
                           <div
@@ -1413,8 +1573,8 @@ export const VisualAnalyticsDashboard: React.FC<
 
                       {/* Practice Exercises */}
                       <div className="mb-4">
-                        <h4 className="font-medium mb-2 flex items-center gap-2">
-                          <Target className="w-4 h-4" />
+                        <h4 className={`font-medium mb-2 flex items-center gap-2 ${isDarkMode ? "text-gray-200" : "text-gray-700"}`}>
+                          <Target className={`w-4 h-4 ${isDarkMode ? "text-gray-300" : "text-gray-600"}`} />
                           Practice Exercises
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -1423,7 +1583,7 @@ export const VisualAnalyticsDashboard: React.FC<
                               <div
                                 key={exerciseIndex}
                                 className={`p-2 rounded text-sm ${
-                                  isDarkMode ? "bg-gray-700" : "bg-gray-100"
+                                  isDarkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-700"
                                 }`}
                               >
                                 {exercise}
@@ -1435,8 +1595,8 @@ export const VisualAnalyticsDashboard: React.FC<
 
                       {/* Resources */}
                       <div>
-                        <h4 className="font-medium mb-2 flex items-center gap-2">
-                          <BookOpen className="w-4 h-4" />
+                        <h4 className={`font-medium mb-2 flex items-center gap-2 ${isDarkMode ? "text-gray-200" : "text-gray-700"}`}>
+                          <BookOpen className={`w-4 h-4 ${isDarkMode ? "text-gray-300" : "text-gray-600"}`} />
                           Recommended Resources
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -1445,8 +1605,8 @@ export const VisualAnalyticsDashboard: React.FC<
                               <div
                                 key={resourceIndex}
                                 className={`p-2 rounded text-sm ${
-                                  isDarkMode ? "bg-blue-900" : "bg-blue-50"
-                                } text-blue-700`}
+                                  isDarkMode ? "bg-blue-900/30 text-blue-300" : "bg-blue-50 text-blue-700"
+                                }`}
                               >
                                 {resource}
                               </div>
@@ -1465,7 +1625,7 @@ export const VisualAnalyticsDashboard: React.FC<
                   isDarkMode ? "bg-gray-800" : "bg-white"
                 }`}
               >
-                <h2 className="text-xl font-semibold mb-4">
+                <h2 className={`text-xl font-semibold mb-4 ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                   Achievement Badges
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1499,7 +1659,9 @@ export const VisualAnalyticsDashboard: React.FC<
                       key={index}
                       className={`p-4 rounded-lg text-center transition-all ${
                         badge.earned
-                          ? "bg-yellow-100 border-2 border-yellow-300 text-yellow-800"
+                          ? isDarkMode
+                            ? "bg-yellow-900/30 border-2 border-yellow-600 text-yellow-300"
+                            : "bg-yellow-100 border-2 border-yellow-300 text-yellow-800"
                           : isDarkMode
                           ? "bg-gray-700 border-2 border-gray-600 text-gray-400"
                           : "bg-gray-100 border-2 border-gray-300 text-gray-500"
@@ -1507,11 +1669,13 @@ export const VisualAnalyticsDashboard: React.FC<
                     >
                       <badge.icon
                         className={`w-8 h-8 mx-auto mb-2 ${
-                          badge.earned ? "text-yellow-600" : "text-gray-400"
+                          badge.earned 
+                            ? isDarkMode ? "text-yellow-400" : "text-yellow-600"
+                            : isDarkMode ? "text-gray-500" : "text-gray-400"
                         }`}
                       />
-                      <div className="font-semibold text-sm">{badge.name}</div>
-                      <div className="text-xs mt-1">{badge.description}</div>
+                      <div className={`font-semibold text-sm ${isDarkMode && badge.earned ? "text-yellow-200" : ""}`}>{badge.name}</div>
+                      <div className={`text-xs mt-1 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>{badge.description}</div>
                     </div>
                   ))}
                 </div>

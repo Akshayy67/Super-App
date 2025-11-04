@@ -16,6 +16,7 @@ import {
   Copy,
   RefreshCw,
   Sparkles,
+  Menu,
 } from "lucide-react";
 import * as THREE from "three";
 import { unifiedAIService } from "../../utils/aiConfig";
@@ -85,6 +86,7 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
   const [meetingFormData, setMeetingFormData] = useState<{ [key: number]: { date: string; time: string } }>({});
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [creatingTeam, setCreatingTeam] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -967,7 +969,40 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
   const currentSession = getCurrentSession();
 
   return (
-    <div className="flex h-full w-full overflow-hidden relative">
+    <div className="flex flex-col lg:flex-row w-full h-full overflow-hidden fixed top-0 left-0 right-0 bottom-0 lg:relative lg:static z-[100] lg:z-auto bg-white dark:bg-slate-900">
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between flex-shrink-0 z-10">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors touch-manipulation flex-shrink-0"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
+            AI Chat
+          </h1>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={handleNewChatClick}
+            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors touch-manipulation"
+            aria-label="New chat"
+            title="New Chat"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setShowFileUpload(!showFileUpload)}
+            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors touch-manipulation"
+            aria-label="Upload file"
+            title="Upload File"
+          >
+            <Upload className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
       {/* Chat Type Selection Modal */}
       {showChatTypeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1001,8 +1036,27 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
         </div>
       )}
 
+      {/* Mobile sidebar backdrop */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-10 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Session Sidebar */}
-      <div className="w-64 bg-gray-50 dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col flex-shrink-0 relative z-10">
+      <div className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 w-64 bg-gray-50 dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col flex-shrink-0 relative z-30 transition-transform duration-300 ease-in-out lg:transition-none shadow-lg lg:shadow-none`}>
+        {/* Close button for mobile */}
+        <div className="lg:hidden p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+          <span className="font-semibold text-gray-900 dark:text-gray-100">Chats</span>
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
+            aria-label="Close sidebar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
         <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
           <button
             onClick={handleNewChatClick}
@@ -1052,7 +1106,7 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative z-10">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative z-10" style={{ height: '100%', minHeight: 0 }}>
         {/* Three.js Background Canvas - Only in chat area */}
         <canvas
           ref={canvasRef}
@@ -1067,9 +1121,17 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
           }}
         />
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex-shrink-0 relative z-10">
+        <div className="hidden lg:block p-3 sm:p-4 border-b border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex-shrink-0 relative z-10">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Mobile sidebar toggle */}
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="lg:hidden p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
+                aria-label="Toggle sidebar"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
               <Brain className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               <div>
                 <div className="flex items-center gap-2 mb-1">
@@ -1157,7 +1219,7 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 dark:bg-slate-800/50 backdrop-blur-sm min-h-0 max-h-full relative z-10">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50/50 dark:bg-slate-800/50 backdrop-blur-sm min-h-0 relative z-10" style={{ flex: '1 1 auto', overflowY: 'auto' }}>
           {currentSession?.messages.map((message) => (
             <div
               key={message.id}
@@ -1166,7 +1228,7 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
               }`}
             >
               <div
-                className={`flex gap-3 max-w-[80%] ${
+                className={`flex gap-2 sm:gap-3 max-w-[85%] sm:max-w-[80%] ${
                   message.type === "user" ? "flex-row-reverse" : "flex-row"
                 }`}
               >
@@ -1278,7 +1340,7 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
         </div>
 
         {/* Input Area */}
-        <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex-shrink-0 relative z-10">
+        <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex-shrink-0 relative z-10">
           {uploadedImage && (
             <div className="mb-3 relative inline-block">
               <img
@@ -1315,14 +1377,14 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
             </div>
           )}
 
-          <div className="flex gap-2">
-            <div className="flex gap-1">
+          <div className="flex gap-2 items-end">
+            <div className="flex gap-1 flex-shrink-0">
               <button
                 onClick={() => setShowFileUpload(!showFileUpload)}
-                className="p-2 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                className="p-2 sm:p-2.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors touch-manipulation"
                 title="Upload File"
               >
-                <Upload className="w-5 h-5" />
+                <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <input
                 ref={fileInputRef}
@@ -1344,15 +1406,15 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
               )}
             </div>
 
-            <div className="flex-1 relative">
+            <div className="flex-1 relative min-w-0">
               <textarea
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
+                className="w-full px-3 py-2 sm:px-4 sm:py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm sm:text-base pr-12"
                 placeholder="Ask me anything, request an image, or upload an image/PDF to analyze..."
-                className="w-full p-3 pr-12 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 rows={1}
-                style={{ minHeight: "44px", maxHeight: "120px" }}
+                style={{ minHeight: '44px', maxHeight: '120px' }}
               />
             </div>
             <button

@@ -46,6 +46,7 @@ import {
 import { PerformanceValidator } from "../utils/performanceValidator";
 import DataQualityIndicator from "./DataQualityIndicator";
 import DataResetButton from "./DataResetButton";
+import { InterviewFeedback } from "./InterviewPrep/InterviewFeedback";
 // Clear all stored data immediately to ensure fresh analytics
 import "../utils/immediateDataClear";
 
@@ -77,6 +78,10 @@ export const EnhancedMockInterview: React.FC<EnhancedMockInterviewProps> = ({
   const [questionCount, setQuestionCount] = useState(0);
   const [interviewDuration, setInterviewDuration] = useState(0);
   const [startTime, setStartTime] = useState<number>(0);
+  
+  // Feedback state
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [savedPerformanceData, setSavedPerformanceData] = useState<InterviewPerformanceData | null>(null);
 
   // Analysis state
   const [speechAnalysisResult, setSpeechAnalysisResult] =
@@ -402,10 +407,18 @@ Remember: This is a voice conversation, so keep all responses short and conversa
         timestamp: performanceData.timestamp,
       });
 
+      // Save performance data for feedback
+      setSavedPerformanceData(performanceData);
+
       // Call completion callback
       if (onComplete) {
         onComplete(performanceData);
       }
+      
+      // Automatically show feedback popup after a short delay
+      setTimeout(() => {
+        setShowFeedback(true);
+      }, 500);
     } catch (err) {
       console.error("Error ending interview:", err);
       setError("Error ending interview");
@@ -912,6 +925,28 @@ Remember: This is a voice conversation, so keep all responses short and conversa
           </div>
         </div>
       </div>
+      
+      {/* Interview Feedback Modal */}
+      {showFeedback && savedPerformanceData && (
+        <InterviewFeedback
+          messages={messages.map((msg: any) => ({
+            role: msg.role || "user",
+            content: msg.content || msg.message || "",
+            timestamp: msg.timestamp,
+          }))}
+          interviewType={interviewType}
+          difficulty={difficulty}
+          role={role}
+          performanceData={savedPerformanceData}
+          onClose={() => {
+            setShowFeedback(false);
+            setSavedPerformanceData(null);
+          }}
+          onScoresAnalyzed={(scores) => {
+            console.log("📊 AI scores analyzed:", scores);
+          }}
+        />
+      )}
     </div>
   );
 };

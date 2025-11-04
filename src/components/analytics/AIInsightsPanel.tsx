@@ -100,30 +100,30 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
   const getTrendIcon = (trend: string) => {
     switch (trend) {
       case "improving":
-        return <ArrowUp className="w-4 h-4 text-green-600" />;
+        return <ArrowUp className="w-4 h-4 text-green-600 dark:text-green-400" />;
       case "declining":
-        return <ArrowDown className="w-4 h-4 text-red-600" />;
+        return <ArrowDown className="w-4 h-4 text-red-600 dark:text-red-400" />;
       default:
-        return <Minus className="w-4 h-4 text-gray-600" />;
+        return <Minus className="w-4 h-4 text-gray-600 dark:text-gray-400" />;
     }
   };
 
   const getTrendColor = (trend: string) => {
     switch (trend) {
       case "improving":
-        return "text-green-600 bg-green-50 dark:bg-green-900/20";
+        return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20";
       case "declining":
-        return "text-red-600 bg-red-50 dark:bg-red-900/20";
+        return "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20";
       default:
-        return "text-gray-600 bg-gray-50 dark:bg-gray-900/20";
+        return "text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/20";
     }
   };
 
   const getReadinessLevel = (score: number) => {
-    if (score >= 85) return { level: "Excellent", color: "text-green-600" };
-    if (score >= 75) return { level: "Good", color: "text-blue-600" };
-    if (score >= 65) return { level: "Fair", color: "text-yellow-600" };
-    return { level: "Needs Work", color: "text-red-600" };
+    if (score >= 85) return { level: "Excellent", color: "text-green-600 dark:text-green-400" };
+    if (score >= 75) return { level: "Good", color: "text-blue-600 dark:text-blue-400" };
+    if (score >= 65) return { level: "Fair", color: "text-yellow-600 dark:text-yellow-400" };
+    return { level: "Needs Work", color: "text-red-600 dark:text-red-400" };
   };
 
   if (isAnalyzing) {
@@ -255,7 +255,7 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
       {/* Key Insights */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Lightbulb className="w-5 h-5 text-yellow-600" />
+          <Lightbulb className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
           Key AI Insights
         </h3>
         <div className="space-y-3">
@@ -264,7 +264,7 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
               key={index}
               className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg"
             >
-              <Brain className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <Brain className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
               <p className="text-gray-700 dark:text-gray-300">{insight}</p>
             </div>
           ))}
@@ -275,13 +275,13 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Award className="w-5 h-5 text-green-600" />
+            <Award className="w-5 h-5 text-green-600 dark:text-green-400" />
             Identified Strengths
           </h3>
           <div className="space-y-3">
             {aiAnalysis.strengthsAnalysis.map((strength, index) => (
               <div key={index} className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
                 <p className="text-gray-700 dark:text-gray-300">{strength}</p>
               </div>
             ))}
@@ -290,13 +290,13 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
 
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-orange-600" />
+            <AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             Areas for Improvement
           </h3>
           <div className="space-y-3">
             {aiAnalysis.weaknessesAnalysis.map((weakness, index) => (
               <div key={index} className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                <AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
                 <p className="text-gray-700 dark:text-gray-300">{weakness}</p>
               </div>
             ))}
@@ -308,7 +308,7 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
       {trendAnalysis.keyMetricChanges.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-blue-600" />
+            <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             Performance Trends
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -339,10 +339,10 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
                   <span
                     className={`text-lg font-bold ${
                       change.change > 0
-                        ? "text-green-600"
+                        ? "text-green-600 dark:text-green-400"
                         : change.change < 0
-                        ? "text-red-600"
-                        : "text-gray-600"
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-gray-600 dark:text-gray-400"
                     }`}
                   >
                     {change.change > 0 ? "+" : ""}
@@ -366,7 +366,7 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
 
           <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4 text-blue-600" />
+              <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span className="font-medium text-blue-900 dark:text-blue-100">
                 Improvement Timeline
               </span>
@@ -384,7 +384,7 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
       {/* AI Recommendations */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Zap className="w-5 h-5 text-yellow-600" />
+          <Zap className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
           AI-Powered Recommendations
         </h3>
         <div className="space-y-3">
@@ -394,7 +394,7 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
                 key={index}
                 className="flex items-start gap-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
               >
-                <div className="w-6 h-6 bg-yellow-600 text-white rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">
+                <div className="w-6 h-6 bg-yellow-600 dark:bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">
                   {index + 1}
                 </div>
                 <p className="text-gray-700 dark:text-gray-300">
@@ -409,7 +409,7 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
       {/* Market Comparison */}
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-purple-600" />
+          <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
           Market Comparison
         </h3>
         <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
@@ -429,7 +429,7 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
             <div className="space-y-2">
               {personalizedInsights.roleSpecificAdvice.map((advice, index) => (
                 <div key={index} className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                  <div className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
                   <p className="text-gray-700 dark:text-gray-300">{advice}</p>
                 </div>
               ))}
@@ -443,7 +443,7 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
             <div className="space-y-2">
               {personalizedInsights.industryTrends.map((trend, index) => (
                 <div key={index} className="flex items-start gap-2">
-                  <div className="w-2 h-2 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                  <div className="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
                   <p className="text-gray-700 dark:text-gray-300">{trend}</p>
                 </div>
               ))}

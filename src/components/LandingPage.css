@@ -19,6 +19,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
+  max-width: 100vw;
   height: 100vh;
   scroll-snap-align: start;
   scroll-snap-stop: always;
@@ -27,6 +28,8 @@
   -moz-user-select: none;
   -ms-user-select: none;
   background: transparent !important;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 /* Ensure sections container is transparent */
@@ -51,6 +54,10 @@
   padding: 0 2rem;
   pointer-events: none;
   background: transparent !important;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .section-title {
@@ -69,12 +76,55 @@
   transform-style: preserve-3d;
   perspective: 1000px;
   backface-visibility: hidden;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  word-wrap: normal !important;
+  white-space: normal;
+  hyphens: none !important;
+  -webkit-hyphens: none !important;
+  -moz-hyphens: none !important;
+  -ms-hyphens: none !important;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
-.section-title span {
-  display: inline-block;
+.section-title span,
+.section-title .no-break-word {
+  display: inline !important;
   transform-style: preserve-3d;
   backface-visibility: hidden;
+  white-space: nowrap !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  word-wrap: normal !important;
+  -webkit-hyphens: none !important;
+  -moz-hyphens: none !important;
+  -ms-hyphens: none !important;
+  hyphens: none !important;
+  unicode-bidi: embed;
+  -webkit-white-space: nowrap !important;
+  -moz-white-space: nowrap !important;
+  -ms-white-space: nowrap !important;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Force no breaking - highest specificity */
+h1.section-title span,
+h1.section-title .no-break-word,
+.section-title span.no-break-word,
+.section-title .no-break-word {
+  white-space: nowrap !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  word-wrap: normal !important;
+  -webkit-hyphens: none !important;
+  -moz-hyphens: none !important;
+  -ms-hyphens: none !important;
+  hyphens: none !important;
+  display: inline !important;
 }
 
 .section:hover .section-title {
@@ -158,6 +208,50 @@
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+}
+
+/* Prevent word breaking in all landing page text */
+.landing-page-container h1,
+.landing-page-container .section-title,
+.landing-page-container .section-title * {
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  word-wrap: normal !important;
+  -webkit-word-break: normal !important;
+  -ms-word-break: normal !important;
+  hyphens: none !important;
+  -webkit-hyphens: none !important;
+  -moz-hyphens: none !important;
+  -ms-hyphens: none !important;
+}
+
+.landing-page-container .section-title span,
+.landing-page-container .section-title .no-break-word,
+.landing-page-container h1.section-title span,
+.landing-page-container h1.section-title .no-break-word {
+  white-space: nowrap !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  word-wrap: normal !important;
+  display: inline !important;
+  -webkit-hyphens: none !important;
+  -moz-hyphens: none !important;
+  -ms-hyphens: none !important;
+  hyphens: none !important;
+  -webkit-white-space: nowrap !important;
+  -moz-white-space: nowrap !important;
+  -ms-white-space: nowrap !important;
+}
+
+/* Prevent word breaking in subtitle paragraphs */
+.landing-page-container .section-content p {
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  hyphens: none !important;
+  -webkit-hyphens: none !important;
+  -moz-hyphens: none !important;
+  -ms-hyphens: none !important;
 }
 
 /* Loading section specific */

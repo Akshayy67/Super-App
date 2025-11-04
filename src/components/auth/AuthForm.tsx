@@ -98,22 +98,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
           return;
         }
         
-        // If user is not premium, check if landing page was skipped
-        if (!result.isPremium) {
-          onAuthSuccess(); // Authenticate first
-          // Small delay to ensure auth state is updated, then redirect
-          setTimeout(() => {
-            const landingPageSkipped = localStorage.getItem("landingPageSkipped");
-            if (landingPageSkipped === "true") {
-              window.location.href = "/payment";
-            } else {
-              // Redirect to landing page first
-              window.location.href = "/";
-            }
-          }, 100);
-          return;
-        }
-        
+        // Call onAuthSuccess - let the parent component handle redirects
         onAuthSuccess();
       } else {
         setError(result.message || "Sign-in failed. Please try again.");
@@ -223,10 +208,27 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
         <button
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className={`text-white text-xs font-medium hover:opacity-70 transition-opacity px-4 py-2 border border-white/30 rounded uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`text-white text-xs font-medium px-4 py-2 border border-white/30 rounded uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 ease-in-out hover:scale-110 hover:bg-white/20 hover:border-white/60 hover:shadow-lg hover:shadow-white/30 hover:opacity-100 ${
             mounted ? "opacity-100" : "opacity-0"
           }`}
-          style={{ fontFamily: '"Inter", sans-serif' }}
+          style={{ 
+            fontFamily: '"Inter", sans-serif',
+            transition: "all 0.3s ease-in-out",
+          }}
+          onMouseEnter={(e) => {
+            if (!loading) {
+              e.currentTarget.style.transform = "scale(1.1)";
+              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.2)";
+              e.currentTarget.style.boxShadow = "0 10px 25px rgba(255, 255, 255, 0.3)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!loading) {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.boxShadow = "none";
+            }
+          }}
         >
           {loading ? (
             "Signing in..."

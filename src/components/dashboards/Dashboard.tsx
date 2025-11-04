@@ -24,7 +24,7 @@ import { Task } from "../types";
 import { FilePermissionsFixer } from "../file/FilePermissionsFixer";
 import { DashboardLayout, pageColors, componentThemes } from "../layout/PageLayout";
 import { Motivational3DComponent } from "../ui/Motivational3DComponent";
-import { MouseFollowingBird } from "../ui/MouseFollowingBird";
+import { RunningBull } from "../ui/RunningBull";
 import {
   ActivityFeedWidget,
   ProductivityMetricsWidget,
@@ -193,7 +193,7 @@ export const Dashboard: React.FC = () => {
                   Welcome back, {user?.username}!
                 </h1>
                 <div className="mt-2 md:mt-0">
-                  <MouseFollowingBird className="w-12 h-12 md:w-16 md:h-16" />
+                  <RunningBull className="w-16 h-16 md:w-20 md:h-20" isRunning={true} />
                 </div>
               </div>
               <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto" 
@@ -534,6 +534,7 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
         )}
+
       </div>
     </DashboardLayout>
   );

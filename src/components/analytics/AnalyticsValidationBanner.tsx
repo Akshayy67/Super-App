@@ -17,11 +17,12 @@ interface ValidationResult {
 interface AnalyticsValidationBannerProps {
   className?: string;
   showDetails?: boolean;
+  isDarkMode?: boolean;
 }
 
 export const AnalyticsValidationBanner: React.FC<
   AnalyticsValidationBannerProps
-> = ({ className = "", showDetails = false }) => {
+> = ({ className = "", showDetails = false, isDarkMode = false }) => {
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showFullReport, setShowFullReport] = useState(false);
@@ -63,10 +64,12 @@ export const AnalyticsValidationBanner: React.FC<
   if (isLoading) {
     return (
       <div
-        className={`flex items-center gap-2 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg ${className}`}
+        className={`flex items-center gap-2 p-3 rounded-lg ${className} ${
+          isDarkMode ? "bg-gray-800" : "bg-gray-100"
+        }`}
       >
-        <RefreshCw className="w-4 h-4 animate-spin" />
-        <span className="text-sm">Validating analytics data...</span>
+        <RefreshCw className={`w-4 h-4 animate-spin ${isDarkMode ? "text-gray-300" : "text-gray-600"}`} />
+        <span className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>Validating analytics data...</span>
       </div>
     );
   }
@@ -80,27 +83,30 @@ export const AnalyticsValidationBanner: React.FC<
       case "excellent":
         return {
           icon: CheckCircle,
-          color: "text-green-600 dark:text-green-400",
-          bgColor:
-            "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
+          color: isDarkMode ? "text-green-400" : "text-green-600",
+          bgColor: isDarkMode
+            ? "bg-green-900/20 border-green-800"
+            : "bg-green-50 border-green-200",
           title: "Excellent Data Quality",
           message: `All ${validation.dataCount} interviews represent real performance data with comprehensive analysis.`,
         };
       case "good":
         return {
           icon: CheckCircle,
-          color: "text-blue-600 dark:text-blue-400",
-          bgColor:
-            "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800",
+          color: isDarkMode ? "text-blue-400" : "text-blue-600",
+          bgColor: isDarkMode
+            ? "bg-blue-900/20 border-blue-800"
+            : "bg-blue-50 border-blue-200",
           title: "Good Data Quality",
           message: `${validation.dataCount} interviews with mostly real data. Some analysis components may be simulated.`,
         };
       case "poor":
         return {
           icon: AlertTriangle,
-          color: "text-yellow-600 dark:text-yellow-400",
-          bgColor:
-            "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800",
+          color: isDarkMode ? "text-yellow-400" : "text-yellow-600",
+          bgColor: isDarkMode
+            ? "bg-yellow-900/20 border-yellow-800"
+            : "bg-yellow-50 border-yellow-200",
           title: "Mixed Data Quality",
           message: `${validation.dataCount} interviews with mixed real and simulated data. Enable all analysis features for better accuracy.`,
         };
@@ -108,9 +114,10 @@ export const AnalyticsValidationBanner: React.FC<
       default:
         return {
           icon: XCircle,
-          color: "text-red-600 dark:text-red-400",
-          bgColor:
-            "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800",
+          color: isDarkMode ? "text-red-400" : "text-red-600",
+          bgColor: isDarkMode
+            ? "bg-red-900/20 border-red-800"
+            : "bg-red-50 border-red-200",
           title: "No Real Data",
           message:
             validation.dataCount === 0
@@ -130,7 +137,7 @@ export const AnalyticsValidationBanner: React.FC<
           <Icon className={`w-5 h-5 mt-0.5 ${config.color}`} />
           <div className="flex-1">
             <h4 className={`font-medium ${config.color}`}>{config.title}</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+            <p className={`text-sm mt-1 ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
               {config.message}
             </p>
 
@@ -138,14 +145,22 @@ export const AnalyticsValidationBanner: React.FC<
               <div className="mt-3 flex gap-2">
                 <button
                   onClick={loadValidation}
-                  className="text-xs px-2 py-1 bg-white dark:bg-gray-700 border rounded hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                  className={`text-xs px-2 py-1 border rounded transition-colors ${
+                    isDarkMode
+                      ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"
+                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
                 >
                   <RefreshCw className="w-3 h-3 inline mr-1" />
                   Refresh
                 </button>
                 <button
                   onClick={loadFullReport}
-                  className="text-xs px-2 py-1 bg-white dark:bg-gray-700 border rounded hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                  className={`text-xs px-2 py-1 border rounded transition-colors ${
+                    isDarkMode
+                      ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"
+                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
                 >
                   <Info className="w-3 h-3 inline mr-1" />
                   Full Report
@@ -159,21 +174,25 @@ export const AnalyticsValidationBanner: React.FC<
       {/* Full Report Modal */}
       {showFullReport && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold">
+          <div className={`rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden ${isDarkMode ? "bg-gray-800" : "bg-white"}`}>
+            <div className={`p-4 border-b ${isDarkMode ? "border-gray-700" : "border-gray-200"}`}>
+              <h3 className={`text-lg font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                 Analytics Validation Report
               </h3>
             </div>
             <div className="p-4 overflow-y-auto max-h-[60vh]">
-              <pre className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+              <pre className={`text-sm whitespace-pre-wrap ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}>
                 {fullReport}
               </pre>
             </div>
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+            <div className={`p-4 border-t flex justify-end ${isDarkMode ? "border-gray-700" : "border-gray-200"}`}>
               <button
                 onClick={() => setShowFullReport(false)}
-                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className={`px-4 py-2 rounded transition-colors ${
+                  isDarkMode
+                    ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
               >
                 Close
               </button>

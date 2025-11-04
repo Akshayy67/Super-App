@@ -49,15 +49,9 @@ export const PremiumGuard: React.FC<PremiumGuardProps> = ({ children }) => {
     );
   }
 
-  // If user is not premium, check if landing page was skipped
+  // If user is not premium, redirect to payment
   if (!isPremium) {
-    const landingPageSkipped = localStorage.getItem("landingPageSkipped");
-    if (landingPageSkipped === "true") {
-      return <Navigate to="/payment" replace />;
-    } else {
-      // Redirect to landing page first
-      return <Navigate to="/" replace />;
-    }
+    return <Navigate to="/payment" replace />;
   }
 
   // Allow access if user is premium

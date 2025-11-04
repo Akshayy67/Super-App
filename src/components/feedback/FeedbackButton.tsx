@@ -218,19 +218,29 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
     localStorage.setItem("feedbackButtonPosition", JSON.stringify(position));
   };
 
-  // Drag handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // Drag handlers - unified for both mouse and touch
+  const handleDragStart = (clientX: number, clientY: number) => {
     if (!draggable || finalPosition !== "draggable") return;
-    e.preventDefault();
     setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
+    setDragStart({ x: clientX, y: clientY });
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleDragStart(e.clientX, e.clientY);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    handleDragStart(touch.clientX, touch.clientY);
+  };
+
+  const handleDragMove = (clientX: number, clientY: number) => {
     if (!isDragging || !dragStart) return;
     
-    const deltaX = e.clientX - dragStart.x;
-    const deltaY = e.clientY - dragStart.y;
+    const deltaX = clientX - dragStart.x;
+    const deltaY = clientY - dragStart.y;
     
     const newPosition = {
       x: Math.max(0, Math.min(window.innerWidth - 60, (dragPosition?.x || 0) + deltaX)),
@@ -238,10 +248,22 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
     };
     
     setDragPosition(newPosition);
-    setDragStart({ x: e.clientX, y: e.clientY });
+    setDragStart({ x: clientX, y: clientY });
   };
 
-  const handleMouseUp = () => {
+  const handleMouseMove = (e: MouseEvent) => {
+    handleDragMove(e.clientX, e.clientY);
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (e.touches.length > 0) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      handleDragMove(touch.clientX, touch.clientY);
+    }
+  };
+
+  const handleDragEnd = () => {
     if (!isDragging) return;
     setIsDragging(false);
     if (dragPosition) {
@@ -249,14 +271,28 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
     }
   };
 
-  // Add global mouse event listeners for dragging
+  const handleMouseUp = () => {
+    handleDragEnd();
+  };
+
+  const handleTouchEnd = () => {
+    handleDragEnd();
+  };
+
+  // Add global mouse and touch event listeners for dragging
   React.useEffect(() => {
     if (isDragging) {
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
+      document.addEventListener("touchmove", handleTouchMove, { passive: false });
+      document.addEventListener("touchend", handleTouchEnd);
+      document.addEventListener("touchcancel", handleTouchEnd);
       return () => {
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
+        document.removeEventListener("touchmove", handleTouchMove);
+        document.removeEventListener("touchend", handleTouchEnd);
+        document.removeEventListener("touchcancel", handleTouchEnd);
       };
     }
   }, [isDragging, dragStart, dragPosition]);
@@ -416,6 +452,7 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
             ref={buttonRef}
             onClick={() => !isDragging && setIsOpen(true)}
             onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
             onMouseEnter={() => {
               setIsHovered(true);
               birdX.set(0);

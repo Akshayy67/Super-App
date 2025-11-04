@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { aiService } from "../../utils/aiService";
 import { InterviewPerformanceData } from "../../utils/performanceAnalytics";
+import { aspectScoresManager } from "../../utils/interviewAspectScores";
 
 interface FeedbackSection {
   id: string;
@@ -143,6 +144,87 @@ export const InterviewFeedback: React.FC<InterviewFeedbackProps> = ({
       setFeedbackSections(sections);
       setOverallScore(overallAnalysis.overallScore);
       setAnalysisComplete(true);
+
+      // Generate unique interview ID for this analysis
+      const interviewId = `interview-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const timestamp = new Date().toISOString();
+
+      // Store aspect scores in the aspect scores manager
+      const aspectScores: Record<string, any> = {
+        "Communication": {
+          score: communicationAnalysis.score * 10, // Convert to 0-100 scale
+          category: "communication" as const,
+          subScores: communicationAnalysis.subScores
+            ? Object.fromEntries(
+                Object.entries(communicationAnalysis.subScores).map(([k, v]) => [
+                  k,
+                  (v as number) * 10,
+                ])
+              )
+            : undefined,
+          metadata: {
+            confidence: 0.9,
+            analysisQuality: "high" as const,
+            notes: "AI-generated communication analysis",
+          },
+        },
+        "Technical Skills": {
+          score: technicalAnalysis.score * 10,
+          category: "technical" as const,
+          subScores: technicalAnalysis.subScores
+            ? Object.fromEntries(
+                Object.entries(technicalAnalysis.subScores).map(([k, v]) => [
+                  k,
+                  (v as number) * 10,
+                ])
+              )
+            : undefined,
+          metadata: {
+            confidence: 0.9,
+            analysisQuality: "high" as const,
+            notes: "AI-generated technical analysis",
+          },
+        },
+        "Behavioral": {
+          score: behavioralAnalysis.score * 10,
+          category: "behavioral" as const,
+          subScores: behavioralAnalysis.subScores
+            ? Object.fromEntries(
+                Object.entries(behavioralAnalysis.subScores).map(([k, v]) => [
+                  k,
+                  (v as number) * 10,
+                ])
+              )
+            : undefined,
+          metadata: {
+            confidence: 0.9,
+            analysisQuality: "high" as const,
+            notes: "AI-generated behavioral analysis",
+          },
+        },
+        "Overall": {
+          score: overallAnalysis.overallScore * 10,
+          category: "overall" as const,
+          metadata: {
+            confidence: 0.85,
+            analysisQuality: "high" as const,
+            notes: "AI-generated overall performance analysis",
+          },
+        },
+      };
+
+      // Store all aspect scores
+      aspectScoresManager.addScoresForInterview(
+        interviewId,
+        timestamp,
+        aspectScores
+      );
+
+      console.log("📊 Stored aspect scores:", {
+        interviewId,
+        aspectScores,
+        timestamp,
+      });
 
       // Pass the real AI scores back to parent component for analytics
       if (onScoresAnalyzed) {
@@ -286,20 +368,28 @@ Conversation:
 ${conversation}
 
 Focus on:
-1. Clarity and articulation
-2. Professional language usage
-3. Response structure and organization
-4. Active listening and engagement
-5. Confidence and poise
+1. Clarity and articulation (rate 1-10)
+2. Professional language usage (rate 1-10)
+3. Response structure and organization (rate 1-10)
+4. Active listening and engagement (rate 1-10)
+5. Confidence and poise (rate 1-10)
 
 Provide:
-- A score out of 10
+- An overall score out of 10
+- Sub-scores for each focus area (1-10 scale)
 - 2-3 specific observations about communication
 - 2-3 actionable suggestions for improvement
 
 Format as JSON:
 {
   "score": number,
+  "subScores": {
+    "clarity": number,
+    "professionalLanguage": number,
+    "structure": number,
+    "engagement": number,
+    "confidence": number
+  },
   "content": "detailed analysis text",
   "suggestions": ["suggestion1", "suggestion2", "suggestion3"]
 }`;
@@ -339,20 +429,28 @@ Conversation:
 ${conversation}
 
 Focus on:
-1. Technical knowledge depth
-2. Problem-solving approach
-3. Relevant experience demonstration
-4. Technical terminology usage
-5. Learning ability and adaptability
+1. Technical knowledge depth (rate 1-10)
+2. Problem-solving approach (rate 1-10)
+3. Relevant experience demonstration (rate 1-10)
+4. Technical terminology usage (rate 1-10)
+5. Learning ability and adaptability (rate 1-10)
 
 Provide:
-- A score out of 10
+- An overall score out of 10
+- Sub-scores for each focus area (1-10 scale)
 - 2-3 specific observations about technical skills
 - 2-3 actionable suggestions for improvement
 
 Format as JSON:
 {
   "score": number,
+  "subScores": {
+    "knowledgeDepth": number,
+    "problemSolving": number,
+    "experience": number,
+    "terminology": number,
+    "adaptability": number
+  },
   "content": "detailed analysis text",
   "suggestions": ["suggestion1", "suggestion2", "suggestion3"]
 }`;
@@ -392,20 +490,28 @@ Conversation:
 ${conversation}
 
 Focus on:
-1. STAR method usage
-2. Specific examples provided
-3. Problem-solving approach
-4. Teamwork and collaboration
-5. Adaptability and learning
+1. STAR method usage (rate 1-10)
+2. Specific examples provided (rate 1-10)
+3. Problem-solving approach (rate 1-10)
+4. Teamwork and collaboration (rate 1-10)
+5. Adaptability and learning (rate 1-10)
 
 Provide:
-- A score out of 10
+- An overall score out of 10
+- Sub-scores for each focus area (1-10 scale)
 - 2-3 specific observations about behavioral responses
 - 2-3 actionable suggestions for improvement
 
 Format as JSON:
 {
   "score": number,
+  "subScores": {
+    "starMethod": number,
+    "examples": number,
+    "problemSolving": number,
+    "teamwork": number,
+    "adaptability": number
+  },
   "content": "detailed analysis text",
   "suggestions": ["suggestion1", "suggestion2", "suggestion3"]
 }`;

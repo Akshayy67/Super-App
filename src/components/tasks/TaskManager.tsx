@@ -23,7 +23,9 @@ import { VibrationSettings } from "../VibrationSettings";
 import { StreakTracker, Achievement, StreakData } from "../../utils/streakTracker";
 import { TaskFeedback } from "../../utils/soundEffects";
 import { VibrationManager } from "../../utils/vibrationSettings";
+import { MonthlyCompletionTracker } from "../../utils/monthlyCompletionTracker";
 import { TodoReminderButton } from "./TodoReminderButton";
+import { DopamineSpikeCelebration } from "../ui/DopamineSpikeCelebration";
 
 export const TaskManager: React.FC = () => {
   const user = realTimeAuth.getCurrentUser();
@@ -49,6 +51,7 @@ export const TaskManager: React.FC = () => {
   }>({ startDate: "", endDate: "" });
   const [celebrationTask, setCelebrationTask] = useState<Task | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showThreeJSEffect, setShowThreeJSEffect] = useState(false);
   const [newAchievement, setNewAchievement] = useState<Achievement | null>(
     null
   );
@@ -195,12 +198,18 @@ export const TaskManager: React.FC = () => {
         const { newAchievements, streakData: updatedStreakData } =
           StreakTracker.updateStreak(user.id, task);
 
+        // Update monthly completion tracker
+        MonthlyCompletionTracker.incrementCompletion(user.id);
+
         // Update streak data state
         setStreakData(updatedStreakData);
 
         // Show celebration
         setCelebrationTask(task);
         setShowCelebration(true);
+        
+        // Trigger Three.js celebration effect
+        setShowThreeJSEffect(true);
 
         // Show achievement if any
         if (newAchievements.length > 0) {
@@ -1231,6 +1240,16 @@ export const TaskManager: React.FC = () => {
           onComplete={() => {
             setShowCelebration(false);
             setCelebrationTask(null);
+          }}
+        />
+
+        {/* Duolingo-style Dopamine Spike Celebration */}
+        <DopamineSpikeCelebration
+          isVisible={showThreeJSEffect}
+          taskTitle={celebrationTask?.title || ""}
+          priority={celebrationTask?.priority || "medium"}
+          onComplete={() => {
+            setShowThreeJSEffect(false);
           }}
         />
 

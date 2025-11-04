@@ -52,7 +52,7 @@ export const CommunityQuiz: React.FC = () => {
   const timerCallbackFiredRef = useRef<boolean>(false);
 
   const user = realTimeAuth.getCurrentUser();
-  const isAdminUserUser = isAdminUser();
+  const isAdminUser = isAdmin();
 
   useEffect(() => {
     const unsubscribe = quizService.subscribeToCommunityQuizzes((newQuizzes) => {
@@ -85,7 +85,7 @@ export const CommunityQuiz: React.FC = () => {
   }, []);
 
   const handleCreateQuiz = () => {
-    if (!isAdminUserUser) {
+    if (!isAdminUser) {
       alert("Only admins can create quizzes. Contact an admin if you need to create a quiz.");
       return;
     }

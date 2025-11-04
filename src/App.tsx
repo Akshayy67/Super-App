@@ -77,15 +77,9 @@ const AuthenticatedApp: React.FC = () => {
           isPremium = await isPremiumUserByEmail(user.email);
         }
         
-        // Only redirect to payment if user has skipped the landing page
+        // Redirect to payment if not premium
         if (!isPremium) {
-          const landingPageSkipped = localStorage.getItem("landingPageSkipped");
-          if (landingPageSkipped === "true") {
-            navigate("/payment", { replace: true });
-          } else {
-            // Redirect to landing page first
-            navigate("/", { replace: true });
-          }
+          navigate("/payment", { replace: true });
           return;
         }
       } catch (error) {
@@ -357,15 +351,13 @@ function App() {
             isPremium = await isPremiumUserByEmail(currentUser.email);
           }
           
-          // Only redirect to payment if user has skipped the landing page
+          // After signup, redirect based on premium status
           if (!isPremium) {
-            const landingPageSkipped = localStorage.getItem("landingPageSkipped");
-            if (landingPageSkipped === "true") {
-              window.location.href = "/payment";
-            } else {
-              // Redirect to landing page first
-              window.location.href = "/";
-            }
+            window.location.href = "/payment";
+            return;
+          } else {
+            // Premium user - redirect to dashboard
+            window.location.href = "/dashboard";
             return;
           }
         } catch (error) {
@@ -375,24 +367,18 @@ function App() {
     }, 200);
   };
 
-  if (!isAuthenticated) {
-    return (
-      <AuthWrapper>
-        <ErrorBoundary>
-          <div className="min-h-screen bg-gray-50">
-            <AuthForm onAuthSuccess={handleAuthSuccess} />
-          </div>
-        </ErrorBoundary>
-      </AuthWrapper>
-    );
-  }
-
   return (
     <ThemeProvider>
       <FeedbackProvider>
         <GlobalPomodoroProvider>
           <Router>
-            <AuthenticatedApp />
+            {isAuthenticated ? (
+              <AuthenticatedApp />
+            ) : (
+              <ErrorBoundary>
+                <AppRouter invitationData={null} />
+              </ErrorBoundary>
+            )}
           </Router>
         </GlobalPomodoroProvider>
       </FeedbackProvider>

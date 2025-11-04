@@ -56,3 +56,4 @@ loader.load('/assets/models/your-model.gltf', (gltf) => {
 - Use free models from Sketchfab (check license)
 - Generate procedural shapes with code
 
+

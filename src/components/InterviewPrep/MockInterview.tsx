@@ -153,6 +153,8 @@ export const MockInterview: React.FC = () => {
 
   // Feedback state
   const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackMessages, setFeedbackMessages] = useState<SavedMessage[]>([]);
+  const [feedbackSession, setFeedbackSession] = useState<InterviewSession | null>(null);
 
   // Performance analytics
   const performanceAnalytics = useRef(new PerformanceAnalytics());
@@ -1773,14 +1775,21 @@ Important:
       console.log("🏁 Interview completed, saving data...");
       await saveInterviewPerformanceData(activeSession);
 
-      // Preserve session for AI analysis
+      // Preserve session and messages for AI analysis and feedback
       setSessionToSave(activeSession);
+      setFeedbackSession(activeSession);
+      setFeedbackMessages([...messages]);
       setActiveSession(null);
       setIsRecording(false);
       setIsPaused(false);
       setCurrentAnswer("");
       setTimeRemaining(0);
       handleDisconnect();
+      
+      // Automatically show feedback popup after a short delay
+      setTimeout(() => {
+        setShowFeedback(true);
+      }, 500);
     } else {
       // Move to next question
       setActiveSession(updatedSession);
@@ -1795,8 +1804,10 @@ Important:
     console.log("🏁 Ending interview manually, saving data...");
     await saveInterviewPerformanceData(session);
 
-    // Preserve session for AI analysis
+    // Preserve session and messages for AI analysis and feedback
     setSessionToSave(session);
+    setFeedbackSession(session);
+    setFeedbackMessages([...messages]);
     setActiveSession(null);
     setIsInterviewStarted(false);
     setIsRecording(false);
@@ -1805,6 +1816,11 @@ Important:
     setTimeRemaining(0);
     handleDisconnect();
     stopCamera();
+    
+    // Automatically show feedback popup after a short delay
+    setTimeout(() => {
+      setShowFeedback(true);
+    }, 500);
   };
 
   const formatTime = (seconds: number) => {
@@ -3452,19 +3468,27 @@ Important:
       {/* Interview Feedback Modal */}
       {showFeedback && (
         <InterviewFeedback
-          messages={messages}
+          messages={feedbackMessages.length > 0 ? feedbackMessages : messages}
           interviewType={
-            (activeSession as InterviewSession | null)?.type || "general"
+            feedbackSession?.type || (activeSession as InterviewSession | null)?.type || "general"
           }
           difficulty={
-            (activeSession as InterviewSession | null)?.difficulty || "medium"
+            feedbackSession?.difficulty || (activeSession as InterviewSession | null)?.difficulty || "medium"
           }
           role={
-            (activeSession as InterviewSession | null)?.type === "custom"
+            feedbackSession?.type === "custom"
+              ? customRole
+              : feedbackSession?.type || (activeSession as InterviewSession | null)?.type === "custom"
               ? customRole
               : (activeSession as InterviewSession | null)?.type || "general"
           }
-          onClose={() => setShowFeedback(false)}
+          performanceData={null}
+          onClose={() => {
+            setShowFeedback(false);
+            // Clear feedback data after closing
+            setFeedbackMessages([]);
+            setFeedbackSession(null);
+          }}
           onScoresAnalyzed={handleAIScoresAnalyzed}
         />
       )}

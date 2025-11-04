@@ -1167,6 +1167,10 @@ body:not(.dark):not([data-theme="dark"]),
   }
 }
 
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
 /* 3D tilt effect */
 @keyframes tilt {
   0%, 100% {

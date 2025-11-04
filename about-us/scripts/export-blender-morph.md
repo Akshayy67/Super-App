@@ -94,3 +94,4 @@ print(f"Exported to {export_path}")
 - **Performance**: Keep under 10k vertices for smooth 60fps
 - **Naming**: Consistent morph target names help with debugging
 
+
