@@ -119,9 +119,15 @@ class UnifiedAnalyticsStorage {
       dataId: data.id,
     });
 
-    // Always save to local storage first
-    analyticsStorage.savePerformanceData(data);
-    console.log("✅ Saved to local storage");
+    // Add userId to data for user isolation
+    const dataWithUserId = {
+      ...data,
+      userId: this.currentUser?.uid || null,
+    } as InterviewPerformanceData & { userId: string | null };
+
+    // Always save to local storage first (now user-specific)
+    analyticsStorage.savePerformanceData(dataWithUserId as InterviewPerformanceData);
+    console.log("✅ Saved to local storage (user-specific)");
 
     // If user is authenticated and online, also save to cloud
     if (this.currentUser && this.isOnline) {

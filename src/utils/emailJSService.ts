@@ -54,36 +54,49 @@ const loadEmailJS = async (): Promise<boolean> => {
 
 export class EmailJSService {
   private isInitialized = false;
-  private emailjsServiceId: string;
+  private emailjsServiceId: string; // Team invite service (service_mshm1ku)
+  private emailjsTodoServiceId: string; // Todo reminder service (service_x8q9arx)
   private emailjsTemplateId: string;
-  private emailjsPublicKey: string;
+  private emailjsPublicKey: string; // General/Team invite public key
+  private emailjsTodoPublicKey: string; // Todo reminder public key (0P_pccQJUOU9CNIrF)
   private emailjsLoaded = false;
 
   constructor() {
     // Get EmailJS configuration from environment variables
-    this.emailjsServiceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || '';
+    // Team invites use service_mshm1ku
+    this.emailjsServiceId = import.meta.env.VITE_EMAILJS_TEAM_INVITE_SERVICE_ID || import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_mshm1ku';
+    // Todo reminders use service_x8q9arx
+    this.emailjsTodoServiceId = import.meta.env.VITE_EMAILJS_TODO_SERVICE_ID || 'service_x8q9arx';
     this.emailjsTemplateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || '';
     this.emailjsPublicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '';
+    // Todo reminders use separate public key: 0P_pccQJUOU9CNIrF
+    this.emailjsTodoPublicKey = import.meta.env.VITE_EMAILJS_TODO_PUBLIC_KEY || '0P_pccQJUOU9CNIrF';
     
     // Log configuration status (mask sensitive values)
     console.log('📧 EmailJS Configuration Status:', {
-      serviceId: this.emailjsServiceId ? `${this.emailjsServiceId.substring(0, 4)}...${this.emailjsServiceId.substring(this.emailjsServiceId.length - 4)}` : 'NOT SET',
+      teamInviteServiceId: this.emailjsServiceId ? `${this.emailjsServiceId.substring(0, 4)}...${this.emailjsServiceId.substring(this.emailjsServiceId.length - 4)}` : 'NOT SET',
+      todoReminderServiceId: this.emailjsTodoServiceId ? `${this.emailjsTodoServiceId.substring(0, 4)}...${this.emailjsTodoServiceId.substring(this.emailjsTodoServiceId.length - 4)}` : 'NOT SET',
       templateId: this.emailjsTemplateId || 'NOT SET',
       publicKey: this.emailjsPublicKey ? `${this.emailjsPublicKey.substring(0, 4)}...${this.emailjsPublicKey.substring(this.emailjsPublicKey.length - 4)}` : 'NOT SET',
+      todoPublicKey: this.emailjsTodoPublicKey ? `${this.emailjsTodoPublicKey.substring(0, 4)}...${this.emailjsTodoPublicKey.substring(this.emailjsTodoPublicKey.length - 4)}` : 'NOT SET',
       hasServiceId: !!this.emailjsServiceId,
+      hasTodoServiceId: !!this.emailjsTodoServiceId,
       hasTemplateId: !!this.emailjsTemplateId,
       hasPublicKey: !!this.emailjsPublicKey,
+      hasTodoPublicKey: !!this.emailjsTodoPublicKey,
     });
     
     if (this.emailjsServiceId && this.emailjsTemplateId && this.emailjsPublicKey) {
       this.isInitialized = true;
       console.log('✅ EmailJS service initialized successfully');
-      console.log('💡 Using Service ID:', this.emailjsServiceId);
+      console.log('💡 Team Invite Service ID:', this.emailjsServiceId);
+      console.log('💡 Todo Reminder Service ID:', this.emailjsTodoServiceId);
       console.log('💡 Using Template ID:', this.emailjsTemplateId);
     } else {
       console.warn('⚠️ EmailJS configuration incomplete!');
       console.warn('   Missing:', {
-        serviceId: !this.emailjsServiceId ? 'VITE_EMAILJS_SERVICE_ID' : '',
+        serviceId: !this.emailjsServiceId ? 'VITE_EMAILJS_TEAM_INVITE_SERVICE_ID or VITE_EMAILJS_SERVICE_ID' : '',
+        todoServiceId: !this.emailjsTodoServiceId ? 'VITE_EMAILJS_TODO_SERVICE_ID' : '',
         templateId: !this.emailjsTemplateId ? 'VITE_EMAILJS_TEMPLATE_ID' : '',
         publicKey: !this.emailjsPublicKey ? 'VITE_EMAILJS_PUBLIC_KEY' : '',
       });
@@ -162,11 +175,11 @@ export class EmailJSService {
         reply_to: 'noreply@yourdomain.com'
       };
 
-      // Log the service ID being used for debugging
-      console.log('🔍 Using EmailJS Service ID:', this.emailjsServiceId);
-      console.log('🔍 Using EmailJS Template ID:', this.emailjsTemplateId);
+      // Log the service ID being used for debugging (team invite service)
+      console.log('🔍 Using Team Invite Service ID:', this.emailjsServiceId);
+      console.log('🔍 Using Team Invite Template ID:', this.emailjsTemplateId);
       
-      // Send email using EmailJS
+      // Send email using EmailJS with team invite service (service_mshm1ku)
       const result = await window.emailjs.send(
         this.emailjsServiceId,
         this.emailjsTemplateId,
@@ -291,12 +304,22 @@ export class EmailJSService {
         reply_to: 'noreply@super-app.com'
       };
 
-      // Send email using EmailJS
+      // Use todo-specific service ID (service_x8q9arx) and public key (0P_pccQJUOU9CNIrF)
+      console.log('🔍 Using Todo Reminder Service ID:', this.emailjsTodoServiceId);
+      console.log('🔍 Using Todo Reminder Template ID:', todoTemplateId);
+      console.log('🔍 Using Todo Reminder Public Key:', this.emailjsTodoPublicKey ? `${this.emailjsTodoPublicKey.substring(0, 4)}...${this.emailjsTodoPublicKey.substring(this.emailjsTodoPublicKey.length - 4)}` : 'NOT SET');
+
+      // Initialize EmailJS with todo-specific public key before sending
+      if (window.emailjs) {
+        window.emailjs.init(this.emailjsTodoPublicKey);
+      }
+
+      // Send email using EmailJS with todo reminder service and public key
       const result = await window.emailjs.send(
-        this.emailjsServiceId,
+        this.emailjsTodoServiceId,
         todoTemplateId,
         templateParams,
-        this.emailjsPublicKey
+        this.emailjsTodoPublicKey
       );
 
       console.log('✅ Todo reminder email sent successfully via EmailJS:', result);

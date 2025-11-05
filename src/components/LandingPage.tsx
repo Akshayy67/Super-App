@@ -56,6 +56,11 @@ const sections: Section[] = [
     title: "THE FUTURE OF LEARNING BEGINS NOW",
     subtitle: "Stop drowning in 15 apps. Start soaring with one. Join thousands of students saving 49 days per year. Transform chaos into clarity. Begin your journey—completely free."
   },
+  { 
+    id: "universe", 
+    title: "FEATURES EXPAND LIKE THE UNIVERSE",
+    subtitle: "As our dedicated team works tirelessly, our platform evolves continuously. New features emerge, boundaries expand, possibilities multiply. What you see today is just the beginning. The universe of learning tools grows with every update, every innovation, every breakthrough. A powerful ecosystem that adapts, learns, and grows with you."
+  },
 ];
 
 export const LandingPage: React.FC = () => {
@@ -85,10 +90,17 @@ export const LandingPage: React.FC = () => {
 
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0); // Transparent background
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.5;
+    
+    console.log("🎨 Three.js renderer initialized", {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      pixelRatio: renderer.getPixelRatio()
+    });
 
     // Function to create different scene types
     const createSceneType = (type: string) => {
@@ -787,6 +799,440 @@ export const LandingPage: React.FC = () => {
           };
           break;
 
+        case "expanding-universe": {
+          // Advanced expanding universe effect with space-time warping
+          // Create expanding grid that warps like space-time
+          const gridSegments = 50;
+          const gridGeometry = new THREE.PlaneGeometry(4000, 4000, gridSegments, gridSegments);
+          const gridPositions = gridGeometry.attributes.position;
+          
+          // Store initial positions for warping
+          const initialGridPositions = new Float32Array(gridPositions.count * 3);
+          for (let i = 0; i < gridPositions.count; i++) {
+            initialGridPositions[i * 3] = gridPositions.getX(i);
+            initialGridPositions[i * 3 + 1] = gridPositions.getY(i);
+            initialGridPositions[i * 3 + 2] = gridPositions.getZ(i);
+          }
+          
+          // Create shader material for expanding grid with warping
+          const gridMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+              time: { value: 0 },
+              expansionRate: { value: 0.5 },
+            },
+            vertexShader: `
+              uniform float time;
+              uniform float expansionRate;
+              varying vec3 vPosition;
+              varying vec2 vUv;
+              
+              void main() {
+                vUv = uv;
+                vPosition = position;
+                
+                // Create expanding warp effect - space expands outward from center
+                vec3 pos = position;
+                float dist = length(pos.xy);
+                float expansion = 1.0 + dist * expansionRate * 0.001 * (1.0 + sin(time * 0.3) * 0.3);
+                
+                // Add wave distortion for space-time warping
+                float wave = sin(dist * 0.01 - time * 2.0) * 20.0;
+                pos.z += wave * (1.0 - dist / 2000.0);
+                
+                // Radial expansion
+                pos.xy *= expansion;
+                
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+              }
+            `,
+            fragmentShader: `
+              varying vec3 vPosition;
+              varying vec2 vUv;
+              
+              void main() {
+                // Create grid pattern
+                vec2 grid = abs(fract(vUv * 50.0 - 0.5));
+                float gridLine = min(grid.x, grid.y);
+                gridLine = smoothstep(0.0, 0.1, gridLine);
+                
+                // Distance-based fade
+                float dist = length(vPosition.xy);
+                float fade = 1.0 - smoothstep(0.0, 2000.0, dist);
+                
+                // Cosmic colors
+                vec3 color = mix(
+                  vec3(0.2, 0.4, 1.0), // Deep blue
+                  vec3(0.8, 0.5, 1.0), // Purple
+                  dist / 2000.0
+                );
+                
+                gl_FragColor = vec4(color * gridLine * fade, gridLine * fade * 0.6);
+              }
+            `,
+            transparent: true,
+            side: THREE.DoubleSide,
+            wireframe: false,
+          });
+          
+          const gridMesh = new THREE.Mesh(gridGeometry, gridMaterial);
+          gridMesh.rotation.x = -Math.PI / 2;
+          scene.add(gridMesh);
+          config.objects.push(gridMesh);
+          
+          // Create expanding particle field with morphing
+          const expandingParticleCount = 3000;
+          const expandingParticleGeometry = new THREE.BufferGeometry();
+          const particlePositions = new Float32Array(expandingParticleCount * 3);
+          const particleColors = new Float32Array(expandingParticleCount * 3);
+          const particleSizes = new Float32Array(expandingParticleCount);
+          const particleVelocities = new Float32Array(expandingParticleCount * 3);
+          const particleInitialPositions = new Float32Array(expandingParticleCount * 3);
+          const particleTypes = new Float32Array(expandingParticleCount); // For morphing behavior
+          
+          for (let i = 0; i < expandingParticleCount; i++) {
+            const i3 = i * 3;
+            
+            // Start from center with slight random offset
+            const radius = Math.random() * 100;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(Math.random() * 2 - 1);
+            
+            particleInitialPositions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+            particleInitialPositions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+            particleInitialPositions[i3 + 2] = radius * Math.cos(phi);
+            
+            particlePositions[i3] = particleInitialPositions[i3];
+            particlePositions[i3 + 1] = particleInitialPositions[i3 + 1];
+            particlePositions[i3 + 2] = particleInitialPositions[i3 + 2];
+            
+            // Expansion velocity (Hubble-like expansion)
+            const speed = 0.2 + Math.random() * 0.5;
+            const direction = new THREE.Vector3(
+              particleInitialPositions[i3],
+              particleInitialPositions[i3 + 1],
+              particleInitialPositions[i3 + 2]
+            ).normalize();
+            
+            particleVelocities[i3] = direction.x * speed;
+            particleVelocities[i3 + 1] = direction.y * speed;
+            particleVelocities[i3 + 2] = direction.z * speed;
+            
+            // Cosmic colors based on distance
+            const colorChoice = Math.random();
+            if (colorChoice < 0.3) {
+              particleColors[i3] = 0.3; // Deep space blue
+              particleColors[i3 + 1] = 0.5;
+              particleColors[i3 + 2] = 1.0;
+            } else if (colorChoice < 0.6) {
+              particleColors[i3] = 0.6; // Purple
+              particleColors[i3 + 1] = 0.3;
+              particleColors[i3 + 2] = 1.0;
+            } else if (colorChoice < 0.85) {
+              particleColors[i3] = 0.9; // Light blue
+              particleColors[i3 + 1] = 0.9;
+              particleColors[i3 + 2] = 1.0;
+            } else {
+              particleColors[i3] = 1.0; // White stars
+              particleColors[i3 + 1] = 1.0;
+              particleColors[i3 + 2] = 1.0;
+            }
+            
+            particleSizes[i] = 2 + Math.random() * 5;
+            particleTypes[i] = Math.random(); // Random type for morphing
+          }
+          
+          expandingParticleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+          expandingParticleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+          expandingParticleGeometry.setAttribute('size', new THREE.BufferAttribute(particleSizes, 1));
+          expandingParticleGeometry.setAttribute('type', new THREE.BufferAttribute(particleTypes, 1));
+          
+          const expandingParticleMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+              time: { value: 0 },
+              expansionTime: { value: 0 },
+            },
+            vertexShader: `
+              attribute float size;
+              attribute float type;
+              varying vec3 vColor;
+              varying float vType;
+              uniform float time;
+              uniform float expansionTime;
+              
+              void main() {
+                vColor = color;
+                vType = type;
+                
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                
+                // Morphing size based on type and expansion
+                float morphSize = size;
+                if (vType < 0.3) {
+                  // Pulsing stars
+                  morphSize *= 1.0 + sin(time * 3.0 + position.x * 0.01) * 0.5;
+                } else if (vType < 0.6) {
+                  // Expanding galaxies
+                  morphSize *= 1.0 + expansionTime * 0.1;
+                } else {
+                  // Twinkling particles
+                  morphSize *= 1.0 + sin(time * 5.0 + position.y * 0.01) * 0.3;
+                }
+                
+                gl_PointSize = morphSize * (300.0 / -mvPosition.z) * (1.0 + sin(time * 2.0) * 0.1);
+                gl_Position = projectionMatrix * mvPosition;
+              }
+            `,
+            fragmentShader: `
+              varying vec3 vColor;
+              varying float vType;
+              
+              void main() {
+                float distanceToCenter = distance(gl_PointCoord, vec2(0.5));
+                
+                // Different shapes based on type - no glow, just solid circles
+                float alpha;
+                if (vType < 0.3) {
+                  // Star shape - sharp edge
+                  alpha = 1.0 - smoothstep(0.0, 0.1, distanceToCenter);
+                } else if (vType < 0.6) {
+                  // Galaxy shape - sharp edge
+                  alpha = 1.0 - smoothstep(0.0, 0.1, distanceToCenter);
+                } else {
+                  // Circular particle - sharp edge, no glow
+                  alpha = 1.0 - smoothstep(0.0, 0.1, distanceToCenter);
+                }
+                
+                gl_FragColor = vec4(vColor, alpha * 0.3);
+              }
+            `,
+            transparent: true,
+            vertexColors: true,
+            blending: THREE.NormalBlending,
+            depthWrite: false,
+          });
+          
+          const particleSystem = new THREE.Points(expandingParticleGeometry, expandingParticleMaterial);
+          scene.add(particleSystem);
+          config.particles = particleSystem;
+          
+          // Store for animation
+          (particleSystem as any).velocities = particleVelocities;
+          (particleSystem as any).initialPositions = particleInitialPositions;
+          
+          // Create morphing 3D shapes that expand outward
+          const morphingShapes: THREE.Mesh[] = [];
+          const shapeCount = 20;
+          const geometryTypes = [
+            () => new THREE.IcosahedronGeometry(1, 0),
+            () => new THREE.OctahedronGeometry(1, 0),
+            () => new THREE.TetrahedronGeometry(1, 0),
+            () => new THREE.DodecahedronGeometry(1, 0),
+            () => new THREE.BoxGeometry(1, 1, 1),
+            () => new THREE.SphereGeometry(1, 16, 16),
+            () => new THREE.TorusGeometry(1, 0.3, 8, 16),
+            () => new THREE.ConeGeometry(1, 2, 8),
+          ];
+
+          for (let i = 0; i < shapeCount; i++) {
+            const baseGeometry = geometryTypes[i % geometryTypes.length]();
+            const geometry = baseGeometry.clone();
+            geometry.scale(40, 40, 40);
+            
+            // Create morph targets
+            const morphTargets: THREE.BufferAttribute[] = [];
+            for (let j = 0; j < 3; j++) {
+              const targetGeometry = geometryTypes[(i + j + 1) % geometryTypes.length]();
+              const targetPositions = targetGeometry.attributes.position.clone();
+              for (let k = 0; k < targetPositions.count; k++) {
+                targetPositions.setX(k, targetPositions.getX(k) * 40);
+                targetPositions.setY(k, targetPositions.getY(k) * 40);
+                targetPositions.setZ(k, targetPositions.getZ(k) * 40);
+              }
+              morphTargets.push(targetPositions);
+            }
+            geometry.morphAttributes.position = morphTargets;
+            
+            // Cosmic material
+            const hue = (i / shapeCount) * 0.5 + 0.5;
+            const color = new THREE.Color().setHSL(hue, 0.9, 0.6);
+            const material = new THREE.MeshStandardMaterial({
+              color: color,
+              emissive: color,
+              emissiveIntensity: 0.3,
+              metalness: 0.95,
+              roughness: 0.05,
+              transparent: true,
+              opacity: 0.4,
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            
+            // Expanding spiral pattern
+            const angle = (i / shapeCount) * Math.PI * 2;
+            const radius = 200 + i * 50;
+            const height = (i - shapeCount / 2) * 60;
+            
+            mesh.position.set(
+              Math.cos(angle) * radius,
+              height,
+              Math.sin(angle) * radius
+            );
+            
+            (mesh as any).initialPosition = mesh.position.clone();
+            (mesh as any).baseRadius = radius;
+            (mesh as any).angle = angle;
+            (mesh as any).morphSpeed = 0.2 + Math.random() * 0.3;
+            (mesh as any).rotationSpeed = 0.01 + Math.random() * 0.02;
+            (mesh as any).expansionSpeed = 0.2 + Math.random() * 0.3;
+            
+            scene.add(mesh);
+            morphingShapes.push(mesh);
+            config.objects.push(mesh);
+          }
+          
+
+          // Advanced dynamic lighting system
+          const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+          scene.add(ambientLight);
+          config.lights.push(ambientLight);
+
+          const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+          directionalLight.position.set(200, 200, 100);
+          scene.add(directionalLight);
+          config.lights.push(directionalLight);
+
+          // Expanding point lights that follow expansion
+          const pointLights: THREE.PointLight[] = [];
+          for (let i = 0; i < 6; i++) {
+            const hue = (i / 6) * 0.3 + 0.5;
+            const color = new THREE.Color().setHSL(hue, 0.8, 0.6);
+            const pointLight = new THREE.PointLight(color, 0.4, 1000);
+            const angle = (i / 6) * Math.PI * 2;
+            pointLight.position.set(
+              Math.cos(angle) * 300,
+              Math.sin(angle) * 300,
+              Math.sin(i) * 200
+            );
+            scene.add(pointLight);
+            pointLights.push(pointLight);
+            config.lights.push(pointLight);
+            (pointLight as any).baseRadius = 300;
+            (pointLight as any).angle = angle;
+          }
+
+          config.update = () => {
+            const time = Date.now() * 0.001;
+            const expansionTime = time * 0.5; // Slower expansion for dramatic effect
+            
+            // Update grid shader uniforms
+            if (gridMaterial.uniforms) {
+              gridMaterial.uniforms.time.value = time;
+              gridMaterial.uniforms.expansionRate.value = 0.3 + Math.sin(time * 0.2) * 0.2;
+            }
+            
+            // Update particle system shader
+            if (expandingParticleMaterial.uniforms) {
+              expandingParticleMaterial.uniforms.time.value = time;
+              expandingParticleMaterial.uniforms.expansionTime.value = expansionTime;
+            }
+            
+            // Update expanding particle system
+            const positions = expandingParticleGeometry.attributes.position.array as Float32Array;
+            const velocities = (particleSystem as any).velocities;
+            
+            for (let i = 0; i < expandingParticleCount; i++) {
+              const i3 = i * 3;
+              
+              // Hubble-like expansion with acceleration
+              const distance = Math.sqrt(
+                positions[i3] ** 2 + 
+                positions[i3 + 1] ** 2 + 
+                positions[i3 + 2] ** 2
+              );
+              
+              // Expansion rate increases with distance (like universe expansion)
+              const expansionFactor = 1.0 + expansionTime * (1.0 + distance * 0.0001);
+              
+              // Update positions with expansion
+              positions[i3] += velocities[i3] * expansionFactor;
+              positions[i3 + 1] += velocities[i3 + 1] * expansionFactor;
+              positions[i3 + 2] += velocities[i3 + 2] * expansionFactor;
+              
+              // Reset if too far (wrap around for continuous effect)
+              if (distance > 3000) {
+                const initialPositions = (particleSystem as any).initialPositions;
+                positions[i3] = initialPositions[i3];
+                positions[i3 + 1] = initialPositions[i3 + 1];
+                positions[i3 + 2] = initialPositions[i3 + 2];
+              }
+            }
+            
+            expandingParticleGeometry.attributes.position.needsUpdate = true;
+            
+            // Update morphing shapes
+            morphingShapes.forEach((mesh, i) => {
+              const morphTime = time * (mesh as any).morphSpeed;
+              
+              // Morph between shapes
+              if (mesh.geometry.morphAttributes.position) {
+                const morphTargetInfluences = mesh.morphTargetInfluences || [];
+                const cycle = (Math.sin(morphTime) + 1) * 0.5;
+                
+                if (morphTargetInfluences.length >= 2) {
+                  morphTargetInfluences[0] = 1 - cycle;
+                  morphTargetInfluences[1] = cycle;
+                  if (morphTargetInfluences.length >= 3) {
+                    morphTargetInfluences[2] = Math.sin(morphTime * 0.7) * 0.4;
+                  }
+                }
+              }
+              
+              // Continuous rotation
+              mesh.rotation.x += (mesh as any).rotationSpeed;
+              mesh.rotation.y += (mesh as any).rotationSpeed * 0.8;
+              mesh.rotation.z += (mesh as any).rotationSpeed * 0.6;
+              
+              // Expand outward with universe expansion
+              const expansion = 1 + expansionTime * 0.1 * (mesh as any).expansionSpeed;
+              const currentRadius = (mesh as any).baseRadius * expansion;
+              const orbitAngle = (mesh as any).angle + time * 0.2;
+              
+              mesh.position.x = Math.cos(orbitAngle) * currentRadius;
+              mesh.position.z = Math.sin(orbitAngle) * currentRadius;
+              mesh.position.y = (mesh as any).initialPosition.y * (1 + Math.sin(time * 0.4 + i) * 0.3);
+              
+              // Pulsing scale
+              const scale = 1 + Math.sin(time * 1.5 + i) * 0.3;
+              mesh.scale.setScalar(scale);
+              
+              // Pulsing emissive
+              if (mesh.material instanceof THREE.MeshStandardMaterial) {
+                const pulse = 0.3 + Math.sin(time * 2.0 + i) * 0.15;
+                mesh.material.emissiveIntensity = pulse;
+                mesh.material.opacity = 0.4 + Math.sin(time * 1.2 + i) * 0.1;
+              }
+            });
+            
+            // Animate expanding point lights
+            pointLights.forEach((light, i) => {
+              const baseRadius = (light as any).baseRadius;
+              const angle = time * 0.4 + (light as any).angle;
+              const expansion = 1 + expansionTime * 0.05;
+              
+              light.position.x = Math.cos(angle) * baseRadius * expansion;
+              light.position.y = Math.sin(angle) * baseRadius * expansion;
+              light.position.z = Math.sin(time * 0.6 + i) * 150;
+              light.intensity = 0.4 + Math.sin(time * 2.0 + i) * 0.2;
+              
+              // Update light color based on expansion
+              const hue = (i / pointLights.length) * 0.3 + 0.5 + expansionTime * 0.01;
+              const color = new THREE.Color().setHSL(hue, 0.8, 0.6);
+              light.color = color;
+            });
+          };
+          break;
+        }
+
         case "energy-particles":
           // Magnetic particle system
           const energyParticleCount = 2000;
@@ -1070,6 +1516,7 @@ export const LandingPage: React.FC = () => {
       "connecting-dots",        // PAIR PROGRAMMING & DRAWING: CREATE TOGETHER
       "solar-system",           // SMART LEARNING: REMEMBER FOR LIFE
       "interactive-grid",       // THE FUTURE OF LEARNING BEGINS NOW
+      "expanding-universe",     // FEATURES EXPAND LIKE THE UNIVERSE
     ];
 
     // Current active scene config
@@ -1116,30 +1563,32 @@ export const LandingPage: React.FC = () => {
       clearScene();
 
       const sceneType = sceneTypes[sectionIndex] || "geometric-shapes";
+      console.log(`🎨 Loading scene type: ${sceneType} for section ${sectionIndex}`);
       currentSceneConfig = createSceneType(sceneType);
+      console.log(`✅ Scene loaded: ${currentSceneConfig.objects.length} objects, ${currentSceneConfig.particles ? 'with particles' : 'no particles'}, ${currentSceneConfig.lights.length} lights`);
 
-      // Animate scene in
+      // Animate scene in - start visible for immediate feedback
       currentSceneConfig.objects.forEach((obj, i) => {
-        obj.scale.setScalar(0);
-        gsap.to(obj.scale, {
-          x: 1,
-          y: 1,
-          z: 1,
-          duration: 0.8,
-          delay: i * 0.1,
-          ease: "elastic.out(1, 0.6)",
-        });
+        // Start at full scale for immediate visibility
+        obj.scale.setScalar(1);
+        // Add subtle entrance animation for first few objects
+        if (i < 3) {
+          obj.scale.setScalar(0);
+          gsap.to(obj.scale, {
+            x: 1,
+            y: 1,
+            z: 1,
+            duration: 0.5,
+            delay: i * 0.1,
+            ease: "power2.out",
+          });
+        }
       });
 
       if (currentSceneConfig.particles) {
-        currentSceneConfig.particles.scale.setScalar(0);
-        gsap.to(currentSceneConfig.particles.scale, {
-          x: 1,
-          y: 1,
-          z: 1,
-          duration: 1,
-          ease: "power2.out",
-        });
+        // Start particles visible
+        currentSceneConfig.particles.scale.setScalar(1);
+        console.log(`✨ Particles initialized and visible`);
       }
     };
 
@@ -1147,6 +1596,8 @@ export const LandingPage: React.FC = () => {
     loadScene(currentSection);
 
     camera.position.set(0, 0, 800);
+    camera.lookAt(0, 0, 0);
+    console.log("📹 Camera positioned at:", camera.position);
 
     // Mouse tracking for interactive effects
     let mouseX = 0;
@@ -1166,10 +1617,10 @@ export const LandingPage: React.FC = () => {
         currentSceneConfig.update();
       }
 
-      // Camera movement based on mouse
-      camera.position.x += (mouseX * 100 - camera.position.x) * 0.05;
-      camera.position.y += (-mouseY * 100 - camera.position.y) * 0.05;
-      camera.lookAt(scene.position);
+      // Camera movement based on mouse (subtle)
+      camera.position.x += (mouseX * 50 - camera.position.x) * 0.03;
+      camera.position.y += (-mouseY * 50 - camera.position.y) * 0.03;
+      camera.lookAt(0, 0, 0);
 
       renderer.render(scene, camera);
     };
@@ -1279,14 +1730,22 @@ export const LandingPage: React.FC = () => {
           title.textContent = "";
           title.setAttribute("data-animated", "true");
           
-          const letters = text.split("");
-          letters.forEach((letter, i) => {
+          // Split by words, not letters
+          const words = text.split(/\s+/).filter(word => word.length > 0);
+          words.forEach((word, i) => {
             const span = document.createElement("span");
-            span.textContent = letter === " " ? "\u00A0" : letter;
-            span.style.display = "inline-block";
+            span.textContent = word;
+            span.style.display = "inline";
+            span.style.whiteSpace = "nowrap";
+            span.style.wordBreak = "keep-all";
             span.style.opacity = "0";
             span.style.transform = "translateY(50px) rotateX(90deg)";
             title.appendChild(span);
+            // Add space after word (except last word)
+            if (i < words.length - 1) {
+              const space = document.createTextNode(" ");
+              title.appendChild(space);
+            }
 
             gsap.to(span, {
               opacity: 1,
@@ -1456,8 +1915,16 @@ export const LandingPage: React.FC = () => {
       {/* WebGL Background Canvas */}
       <canvas
         ref={canvasRef}
-        className="fixed inset-0 w-full h-full pointer-events-none opacity-30"
-        style={{ zIndex: 0 }}
+        className="fixed inset-0 w-full h-full pointer-events-none"
+          style={{ 
+            zIndex: 0, 
+            opacity: 0.3,
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%'
+          }}
       />
 
       {/* Sections Container */}
@@ -1512,7 +1979,14 @@ export const LandingPage: React.FC = () => {
             />
 
             {/* Section Content */}
-            <div className="section-content text-center px-4 relative z-20" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+            <div className="section-content text-center relative z-20" style={{ 
+              width: '100%', 
+              maxWidth: '100vw', 
+              boxSizing: 'border-box', 
+              overflow: 'hidden',
+              padding: '0 clamp(1rem, 4vw, 2rem)',
+              margin: '0 auto'
+            }}>
               <h1
                 className="section-title font-bold leading-tight"
                 style={{
@@ -1523,24 +1997,26 @@ export const LandingPage: React.FC = () => {
                   letterSpacing: index === 0 ? "0.01em" : "-0.01em",
                   textTransform: "uppercase",
                   opacity: 0,
-                  maxWidth: index === 0 ? "90%" : "95%",
+                  maxWidth: "100%",
                   width: "100%",
                   margin: "0 auto",
+                  padding: "0",
                   lineHeight: index === 0 ? "1.3" : "1.2",
                   fontWeight: 700,
                   color: "#b0b0b0",
-                  wordBreak: "normal",
-                  overflowWrap: "normal",
-                  wordWrap: "normal",
                   whiteSpace: "normal",
+                  overflowWrap: "break-word",
+                  wordBreak: "keep-all",
+                  textOverflow: "ellipsis",
+                  overflow: "hidden",
+                  wordWrap: "break-word",
                   hyphens: "none",
                   boxSizing: "border-box",
-                  overflow: "hidden",
                 }}
               >
                 {section.title
                   .replace(/-/g, '\u2011') // Replace hyphens with non-breaking hyphens
-                  .split(/\s+/) // Split by whitespace
+                  .split(/\s+/) // Split by whitespace to get words
                   .filter(word => word.length > 0) // Remove empty strings
                   .map((word, wordIndex, words) => (
                     <React.Fragment key={wordIndex}>
@@ -1549,23 +2025,40 @@ export const LandingPage: React.FC = () => {
                         style={{
                           whiteSpace: "nowrap",
                           display: "inline",
+                          overflowWrap: "normal",
+                          wordBreak: "keep-all",
+                          textOverflow: "ellipsis",
+                          overflow: "visible",
+                          wordWrap: "normal",
                         }}
                       >
                         {word}
                       </span>
-                      {wordIndex < words.length - 1 && ' '}
+                      {wordIndex < words.length - 1 && ' '} {/* Regular space - allows wrapping between words */}
                     </React.Fragment>
                   ))}
               </h1>
               {section.subtitle && (
                 <p
-                  className="mt-8 text-base sm:text-lg md:text-xl max-w-4xl mx-auto leading-relaxed"
+                  className="mt-8 leading-relaxed"
                   style={{
                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+                    fontSize: "clamp(0.875rem, 2.5vw, 1.25rem)",
                     opacity: 0.9,
                     fontWeight: 400,
                     letterSpacing: "0.02em",
                     color: "#b0b0b0",
+                    maxWidth: "100%",
+                    width: "100%",
+                    margin: "0 auto",
+                    padding: "0",
+                    wordBreak: "normal",
+                    overflowWrap: "break-word",
+                    wordWrap: "break-word",
+                    hyphens: "none",
+                    whiteSpace: "normal",
+                    boxSizing: "border-box",
+                    overflow: "hidden",
                   }}
                 >
                   {section.subtitle}

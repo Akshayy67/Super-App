@@ -75,6 +75,28 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
       setMounted(true);
     }, 1500);
 
+    // Check for redirect result (user might have been redirected back from Google)
+    const checkRedirectResult = async () => {
+      try {
+        const redirectResult = await realTimeAuth.handleRedirectResult();
+        if (redirectResult && redirectResult.success) {
+          console.log("✅ Redirect authentication successful");
+          if (redirectResult.isBlocked) {
+            onAuthSuccess();
+            setTimeout(() => {
+              window.location.href = "/blocked";
+            }, 100);
+          } else {
+            onAuthSuccess();
+          }
+        }
+      } catch (error) {
+        console.error("Error checking redirect result:", error);
+      }
+    };
+    
+    checkRedirectResult();
+
     // Cleanup
     return () => {
       document.head.removeChild(styleEl);
@@ -86,7 +108,9 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await realTimeAuth.signInWithGoogle();
+      // Always use popup method (no redirect)
+      const result = await realTimeAuth.signInWithGoogle(false);
+      
       if (result.success) {
         // If user is blocked, redirect to blocked page after authentication
         if (result.isBlocked) {
@@ -101,11 +125,15 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
         // Call onAuthSuccess - let the parent component handle redirects
         onAuthSuccess();
       } else {
-        setError(result.message || "Sign-in failed. Please try again.");
+        // Only show error if message is provided (demo sign-in handles popup-closed automatically)
+        if (result.message) {
+          setError(result.message);
+        }
       }
     } catch (error: any) {
       console.error("Google sign-in failed:", error);
-      setError(error.message || "Sign-in failed. Please try again.");
+      const errorMessage = error.message || "Sign-in failed. Please try again.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

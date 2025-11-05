@@ -1,11 +1,12 @@
 import emailjs from "@emailjs/browser";
 
 // EmailJS Configuration
+// Feedback and Contact Us use service_i4ksmkg with public key xKbkJUlAG_JHj3d9b
 const EMAILJS_CONFIG = {
-  SERVICE_ID: import.meta.env.VITE_EMAILJS_SERVICE_ID || "service_i4ksmkg",
+  SERVICE_ID: import.meta.env.VITE_EMAILJS_FEEDBACK_SERVICE_ID || import.meta.env.VITE_EMAILJS_SERVICE_ID || "service_i4ksmkg",
   TEMPLATE_ID: import.meta.env.VITE_EMAILJS_FEEDBACK_TEMPLATE_ID || "template_00lom57", // Feedback template ID
   TEMPLATE_URGENT_ID: "template_lhf0w0m", // Your urgent template ID (if needed)
-  PUBLIC_KEY: import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "xKbkJUlAG_JHj3d9b",
+  PUBLIC_KEY: import.meta.env.VITE_EMAILJS_FEEDBACK_PUBLIC_KEY || import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "xKbkJUlAG_JHj3d9b",
 };
 
 // Initialize EmailJS
@@ -43,7 +44,9 @@ export class EmailService {
    */
   async sendFeedback(feedbackData: FeedbackData): Promise<boolean> {
     try {
-      // Prepare email template parameters with all recipients in the message
+      // Prepare email template parameters
+      // Note: EmailJS only supports a single 'to_email' field in templates
+      // CC/BCC must be configured in the EmailJS template settings, not via parameters
       const templateParams = {
         // Basic feedback info
         feedback_type: feedbackData.type.toUpperCase(),
@@ -72,20 +75,19 @@ export class EmailService {
         // Formatted message for email body
         formatted_message: this.formatFeedbackMessage(feedbackData),
 
-        // Recipients list for the template
+        // Recipients list for display in email body (informational only)
         recipients_list:
           "akshay.juluri@super-app.tech, gyanmote.akhil@super-app.tech, support@super-app.tech, admin@super-app.tech",
 
-        // Primary recipient (your main email)
+        // Primary recipient - EmailJS only supports single 'to_email' field
+        // To send to multiple recipients, configure CC in EmailJS template settings
         to_email: "akshay.juluri@super-app.tech",
-
-        // Additional recipients as separate fields (if your template supports them)
-        cc_email_1: "gyanmote.akhil@super-app.tech",
-        cc_email_2: "support@super-app.tech",
-        cc_email_3: "admin@super-app.tech",
       };
 
       console.log("📧 Sending feedback email with params:", templateParams);
+      console.log("🔍 Using Feedback Service ID:", EMAILJS_CONFIG.SERVICE_ID);
+      console.log("🔍 Using Feedback Template ID:", EMAILJS_CONFIG.TEMPLATE_ID);
+      console.log("🔍 Using Public Key:", EMAILJS_CONFIG.PUBLIC_KEY ? `${EMAILJS_CONFIG.PUBLIC_KEY.substring(0, 4)}...${EMAILJS_CONFIG.PUBLIC_KEY.substring(EMAILJS_CONFIG.PUBLIC_KEY.length - 4)}` : 'NOT SET');
 
       // Send single email with all recipients
       const response = await emailjs.send(
@@ -96,8 +98,38 @@ export class EmailService {
 
       console.log("✅ Feedback email sent successfully:", response.status);
       return true;
-    } catch (error) {
+    } catch (error: any) {
+      // Log detailed error information
       console.error("❌ Failed to send feedback email:", error);
+      
+      // EmailJS provides detailed error information
+      if (error?.text) {
+        console.error("📋 EmailJS Error Details:", error.text);
+      }
+      if (error?.status) {
+        console.error("📊 HTTP Status:", error.status);
+      }
+      if (error?.response) {
+        console.error("📨 EmailJS Response:", error.response);
+      }
+
+      // Show which service ID was used (for troubleshooting)
+      console.error("🔍 Service ID used:", EMAILJS_CONFIG.SERVICE_ID);
+      console.error("🔍 Template ID used:", EMAILJS_CONFIG.TEMPLATE_ID);
+      
+      // Provide helpful troubleshooting steps
+      if (error?.text?.includes("service ID not found")) {
+        console.error("💡 SOLUTION: The Service ID does not exist in your EmailJS account.");
+        console.error("   1. Go to https://dashboard.emailjs.com/admin/integration");
+        console.error("   2. Check your Email Services list");
+        console.error("   3. Find the service ID for feedback/contact emails");
+        console.error("   4. Update your .env file with:");
+        console.error(`      VITE_EMAILJS_FEEDBACK_SERVICE_ID=your_actual_service_id`);
+        console.error("   5. Or use an existing service ID:");
+        console.error(`      VITE_EMAILJS_FEEDBACK_SERVICE_ID=${EMAILJS_CONFIG.SERVICE_ID}`);
+        console.error("   6. Restart your dev server after updating .env file");
+        console.error("   7. Make sure the service ID starts with 'service_'");
+      }
 
       // Fallback: Store in localStorage for manual retrieval
       this.storeFeedbackLocally(feedbackData);
@@ -205,11 +237,10 @@ export class EmailService {
           user_email: feedbackData.email || "Anonymous",
           timestamp: new Date(feedbackData.timestamp).toLocaleString(),
 
-          // Recipients
+          // Primary recipient - EmailJS only supports single 'to_email' field
           to_email: "akshay.juluri@super-app.tech",
-          cc_email_1: "gyanmote.akhil@super-app.tech",
-          cc_email_2: "support@super-app.tech",
-          cc_email_3: "admin@super-app.tech",
+          
+          // Recipients list for display in email body (informational only)
           recipients_list:
             "akshay.juluri@super-app.tech, gyanmote.akhil@super-app.tech, support@super-app.tech, admin@super-app.tech",
         };

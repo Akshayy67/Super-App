@@ -70,26 +70,8 @@ const AuthenticatedApp: React.FC = () => {
           return;
         }
 
-        // Check if user is admin/creator - they should have access to admin routes
-        const { isCreatorEmail } = await import("./services/premiumUserService");
-        const { isAdminEmail } = await import("./utils/adminUtils");
-        const isAdmin = isCreatorEmail(user.email) || isAdminEmail(user.email);
-        
-        // If user is admin, skip premium check
-        if (isAdmin) {
-          console.log("✅ Admin/Creator user - premium access granted");
-          return;
-        }
-
-        // Check premium status for non-admin users
-        const { isPremiumUserByEmail } = await import("./services/premiumUserService");
-        const isPremium = await isPremiumUserByEmail(user.email);
-        
-        // Redirect to payment if not premium
-        if (!isPremium) {
-          navigate("/payment", { replace: true });
-          return;
-        }
+        // Premium check disabled - all users have access
+        console.log("✅ Premium check disabled - allowing access");
       } catch (error) {
         console.error("Error checking user status:", error);
       }
@@ -196,7 +178,7 @@ const AuthenticatedApp: React.FC = () => {
   };
 
   // Routes where sidebar should not be shown (auth pages)
-  const authRoutes = ["/", "/landing", "/signup", "/blocked", "/payment", "/about"];
+  const authRoutes = ["/", "/landing", "/signup", "/blocked", "/payment"];
   const isAuthPage = authRoutes.includes(location.pathname);
 
   return (
@@ -354,34 +336,10 @@ function App() {
             return;
           }
 
-          // Check premium status
-          const { isPremiumUserByEmail, isCreatorEmail } = await import("./services/premiumUserService");
-          
-          // Creator email always has premium access
-          let isPremium = false;
-          if (isCreatorEmail(currentUser.email)) {
-            isPremium = true;
-            console.log("✅ Creator email - premium access granted");
-            // Ensure creator has premium record
-            try {
-              const { createPremiumUser } = await import("./services/premiumUserService");
-              await createPremiumUser(currentUser.id, currentUser.email, "lifetime");
-            } catch (error) {
-              console.error("Error creating creator premium record:", error);
-            }
-          } else {
-            isPremium = await isPremiumUserByEmail(currentUser.email);
-          }
-          
-          // After signup, redirect based on premium status
-          if (!isPremium) {
-            window.location.href = "/payment";
-            return;
-          } else {
-            // Premium user - redirect to dashboard
-            window.location.href = "/dashboard";
-            return;
-          }
+          // Premium check disabled - all users have access
+          console.log("✅ Premium check disabled - redirecting to dashboard");
+          window.location.href = "/dashboard";
+          return;
         } catch (error) {
           console.error("Error checking user status:", error);
         }

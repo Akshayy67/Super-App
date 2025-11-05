@@ -1,14 +1,18 @@
 import { InterviewPerformanceData } from "./performanceAnalytics";
+import { realTimeAuth } from "./realTimeAuth";
 
-// Storage keys
-const STORAGE_KEYS = {
-  PERFORMANCE_HISTORY: "interview_performance_history",
-  USER_PREFERENCES: "user_preferences",
-  ANALYTICS_SETTINGS: "analytics_settings",
-  ACHIEVEMENT_PROGRESS: "achievement_progress",
-  IMPROVEMENT_MILESTONES: "improvement_milestones",
-  FEEDBACK_RESPONSES: "feedback_responses",
-} as const;
+// Get user-specific storage keys
+const getStorageKeys = (userId?: string) => {
+  const userSuffix = userId ? `_${userId}` : "";
+  return {
+    PERFORMANCE_HISTORY: `interview_performance_history${userSuffix}`,
+    USER_PREFERENCES: `user_preferences${userSuffix}`,
+    ANALYTICS_SETTINGS: `analytics_settings${userSuffix}`,
+    ACHIEVEMENT_PROGRESS: `achievement_progress${userSuffix}`,
+    IMPROVEMENT_MILESTONES: `improvement_milestones${userSuffix}`,
+    FEEDBACK_RESPONSES: `feedback_responses${userSuffix}`,
+  } as const;
+};
 
 // User preferences interface
 export interface UserPreferences {
@@ -79,6 +83,23 @@ export class AnalyticsStorageService {
     return AnalyticsStorageService.instance;
   }
 
+  // Get current user ID for storage isolation
+  private getCurrentUserId(): string | null {
+    try {
+      const user = realTimeAuth.getCurrentUser();
+      return user?.id || null;
+    } catch (error) {
+      console.warn("Could not get current user ID:", error);
+      return null;
+    }
+  }
+
+  // Get user-specific storage keys
+  private getStorageKeys() {
+    const userId = this.getCurrentUserId();
+    return getStorageKeys(userId || undefined);
+  }
+
   // Generic storage methods
   private setItem<T>(key: string, value: T): void {
     try {
@@ -100,6 +121,7 @@ export class AnalyticsStorageService {
 
   // Performance data methods
   public savePerformanceData(data: InterviewPerformanceData): void {
+    const STORAGE_KEYS = this.getStorageKeys();
     const history = this.getPerformanceHistory();
 
     // Check if this performance data already exists (by ID)
@@ -126,7 +148,25 @@ export class AnalyticsStorageService {
   }
 
   public getPerformanceHistory(): InterviewPerformanceData[] {
-    return this.getItem(STORAGE_KEYS.PERFORMANCE_HISTORY, []);
+    const STORAGE_KEYS = this.getStorageKeys();
+    const history = this.getItem(STORAGE_KEYS.PERFORMANCE_HISTORY, [] as InterviewPerformanceData[]);
+    
+    // Filter by current user ID to ensure isolation (in case of migration issues)
+    const userId = this.getCurrentUserId();
+    if (userId) {
+      // Filter out any data that doesn't belong to current user (safety check)
+      // Note: This assumes the data structure includes userId if available
+      return history.filter((item: any) => {
+        // If data has userId field, filter by it
+        if (item.userId) {
+          return item.userId === userId;
+        }
+        // Otherwise, assume it belongs to current user (legacy data)
+        return true;
+      });
+    }
+    
+    return history;
   }
 
   public getPerformanceById(id: string): InterviewPerformanceData | null {
@@ -135,6 +175,7 @@ export class AnalyticsStorageService {
   }
 
   public deletePerformanceData(id: string): boolean {
+    const STORAGE_KEYS = this.getStorageKeys();
     const history = this.getPerformanceHistory();
     const filteredHistory = history.filter((item) => item.id !== id);
 
@@ -146,11 +187,13 @@ export class AnalyticsStorageService {
   }
 
   public clearPerformanceHistory(): void {
+    const STORAGE_KEYS = this.getStorageKeys();
     this.setItem(STORAGE_KEYS.PERFORMANCE_HISTORY, []);
   }
 
   // User preferences methods
   public getUserPreferences(): UserPreferences {
+    const STORAGE_KEYS = this.getStorageKeys();
     return this.getItem(STORAGE_KEYS.USER_PREFERENCES, {
       darkMode: false,
       defaultTimeRange: "60",
@@ -165,6 +208,7 @@ export class AnalyticsStorageService {
   }
 
   public updateUserPreferences(preferences: Partial<UserPreferences>): void {
+    const STORAGE_KEYS = this.getStorageKeys();
     const current = this.getUserPreferences();
     const updated = { ...current, ...preferences };
     this.setItem(STORAGE_KEYS.USER_PREFERENCES, updated);
@@ -172,6 +216,7 @@ export class AnalyticsStorageService {
 
   // Analytics settings methods
   public getAnalyticsSettings(): AnalyticsSettings {
+    const STORAGE_KEYS = this.getStorageKeys();
     return this.getItem(STORAGE_KEYS.ANALYTICS_SETTINGS, {
       trackingEnabled: true,
       dataRetentionDays: 365,
@@ -183,6 +228,7 @@ export class AnalyticsStorageService {
   }
 
   public updateAnalyticsSettings(settings: Partial<AnalyticsSettings>): void {
+    const STORAGE_KEYS = this.getStorageKeys();
     const current = this.getAnalyticsSettings();
     const updated = { ...current, ...settings };
     this.setItem(STORAGE_KEYS.ANALYTICS_SETTINGS, updated);
@@ -190,6 +236,7 @@ export class AnalyticsStorageService {
 
   // Achievement progress methods
   public getAchievementProgress(): AchievementProgress {
+    const STORAGE_KEYS = this.getStorageKeys();
     return this.getItem(STORAGE_KEYS.ACHIEVEMENT_PROGRESS, {});
   }
 
@@ -197,6 +244,7 @@ export class AnalyticsStorageService {
     achievementId: string,
     progress: Partial<AchievementProgress[string]>
   ): void {
+    const STORAGE_KEYS = this.getStorageKeys();
     const current = this.getAchievementProgress();
     current[achievementId] = {
       ...current[achievementId],
@@ -215,12 +263,14 @@ export class AnalyticsStorageService {
 
   // Improvement milestones methods
   public getImprovementMilestones(): ImprovementMilestone[] {
+    const STORAGE_KEYS = this.getStorageKeys();
     return this.getItem(STORAGE_KEYS.IMPROVEMENT_MILESTONES, []);
   }
 
   public addImprovementMilestone(
     milestone: Omit<ImprovementMilestone, "id" | "createdDate">
   ): string {
+    const STORAGE_KEYS = this.getStorageKeys();
     const milestones = this.getImprovementMilestones();
     const newMilestone: ImprovementMilestone = {
       ...milestone,
@@ -238,6 +288,7 @@ export class AnalyticsStorageService {
     id: string,
     updates: Partial<ImprovementMilestone>
   ): boolean {
+    const STORAGE_KEYS = this.getStorageKeys();
     const milestones = this.getImprovementMilestones();
     const index = milestones.findIndex((m) => m.id === id);
 
@@ -256,6 +307,7 @@ export class AnalyticsStorageService {
   }
 
   public deleteImprovementMilestone(id: string): boolean {
+    const STORAGE_KEYS = this.getStorageKeys();
     const milestones = this.getImprovementMilestones();
     const filteredMilestones = milestones.filter((m) => m.id !== id);
 
@@ -268,12 +320,14 @@ export class AnalyticsStorageService {
 
   // Feedback responses methods
   public getFeedbackResponses(): FeedbackResponse[] {
+    const STORAGE_KEYS = this.getStorageKeys();
     return this.getItem(STORAGE_KEYS.FEEDBACK_RESPONSES, []);
   }
 
   public addFeedbackResponse(
     response: Omit<FeedbackResponse, "timestamp">
   ): void {
+    const STORAGE_KEYS = this.getStorageKeys();
     const responses = this.getFeedbackResponses();
     const newResponse: FeedbackResponse = {
       ...response,
@@ -311,6 +365,7 @@ export class AnalyticsStorageService {
 
   public importData(jsonData: string): boolean {
     try {
+      const STORAGE_KEYS = this.getStorageKeys();
       const data = JSON.parse(jsonData);
 
       // Validate data structure
@@ -358,6 +413,7 @@ export class AnalyticsStorageService {
 
   // Data cleanup methods
   public cleanupOldData(): void {
+    const STORAGE_KEYS = this.getStorageKeys();
     const settings = this.getAnalyticsSettings();
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - settings.dataRetentionDays);
