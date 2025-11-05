@@ -5,8 +5,6 @@ import {
   Copy,
   Eye,
   EyeOff,
-  Volume2,
-  Play,
   Lightbulb,
   Zap,
   TrendingUp,
@@ -193,24 +191,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   <span>View Code</span>
                 </>
               )}
-            </button>
-          )}
-
-          <button className="flex items-center space-x-2 px-4 py-2.5 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-all duration-300 text-sm font-medium border border-gray-200 dark:border-slate-600">
-            <Volume2 className="w-4 h-4" />
-            <span>Practice Aloud</span>
-          </button>
-
-          {setSelectedQuestions && setShowPracticeModal && (
-            <button
-              onClick={() => {
-                setSelectedQuestions([question.id]);
-                setShowPracticeModal(true);
-              }}
-              className="flex items-center space-x-2 px-4 py-2.5 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200 transition-all duration-300 text-sm font-medium border border-purple-200"
-            >
-              <Play className="w-4 h-4" />
-              <span>Practice This</span>
             </button>
           )}
         </div>

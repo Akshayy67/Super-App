@@ -224,18 +224,61 @@ class CloudAnalyticsStorage {
     userId: string
   ): Promise<boolean> {
     try {
-      // First verify ownership
-      const existing = await this.getPerformanceById(interviewId, userId);
-      if (!existing) {
-        console.warn("❌ Cannot delete: Interview not found or unauthorized");
+      const docRef = doc(db, this.COLLECTION_NAME, interviewId);
+      
+      // First, try to get the document to verify it exists and belongs to user
+      const docSnap = await getDoc(docRef);
+      
+      if (!docSnap.exists()) {
+        console.log(`ℹ️ Interview ${interviewId} not found in cloud (may already be deleted)`);
+        return true; // Return true since it's effectively deleted
+      }
+      
+      const data = docSnap.data() as CloudAnalyticsData;
+      
+      // Verify ownership
+      if (data.userId !== userId) {
+        console.warn(`❌ Cannot delete: Interview ${interviewId} belongs to different user`);
         return false;
       }
 
-      await deleteDoc(doc(db, this.COLLECTION_NAME, interviewId));
-      console.log("✅ Interview deleted from cloud:", interviewId);
+      // Delete the document
+      await deleteDoc(docRef);
+      
+      // Wait a moment for Firestore to process the deletion (handles eventual consistency)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Verify deletion with retries (Firestore eventual consistency)
+      let verified = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const verifySnap = await getDoc(docRef);
+        if (!verifySnap.exists()) {
+          verified = true;
+          break;
+        }
+        // Wait before retrying
+        if (attempt < 2) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
+      if (!verified) {
+        console.warn(`⚠️ Interview ${interviewId} still exists after deletion attempt (may be eventual consistency)`);
+        // Still return true - the deletion was initiated, Firestore will eventually process it
+        // The deletion tracking will prevent it from being restored
+        return true;
+      }
+      
+      console.log(`✅ Interview ${interviewId} deleted from cloud successfully`);
       return true;
-    } catch (error) {
-      console.error("❌ Failed to delete from cloud:", error);
+    } catch (error: any) {
+      console.error(`❌ Failed to delete interview ${interviewId} from cloud:`, error);
+      console.error("Error details:", {
+        code: error?.code,
+        message: error?.message,
+        interviewId,
+        userId
+      });
       return false;
     }
   }

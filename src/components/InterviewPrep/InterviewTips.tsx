@@ -775,13 +775,13 @@ export const InterviewTips: React.FC = () => {
                 >
                   <Sparkles className="w-5 h-5" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                   Practice Session
                 </h3>
               </div>
               <button
                 onClick={() => setIsPracticeModeActive(false)}
-                className="text-sm text-gray-500 hover:text-gray-700 flex items-center space-x-1"
+                className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex items-center space-x-1"
               >
                 <span>Exit Practice</span>
               </button>
@@ -799,7 +799,7 @@ export const InterviewTips: React.FC = () => {
                 <h5 className="font-medium text-blue-700 dark:text-blue-400 mb-2">
                   Practice Task:
                 </h5>
-                <p className="text-gray-700">
+                <p className="text-gray-700 dark:text-gray-300">
                   {currentPracticeTip.practicePrompt ||
                     "Practice applying this tip by writing a response below."}
                 </p>
@@ -810,7 +810,7 @@ export const InterviewTips: React.FC = () => {
               value={practiceResponse}
               onChange={(e) => setPracticeResponse(e.target.value)}
               placeholder="Type your practice response here..."
-              className="w-full h-40 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full h-40 p-4 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
             />
 
             <div className="mt-4 flex justify-between">
@@ -858,10 +858,10 @@ export const InterviewTips: React.FC = () => {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mb-4">
               <Lightbulb className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               Interview Mastery Guide
             </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Comprehensive tips and strategies to help you ace your next
               interview
             </p>
@@ -890,33 +890,33 @@ export const InterviewTips: React.FC = () => {
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
-                <TrendingUp className="w-6 h-6 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">
+                <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Your Progress
                 </h3>
               </div>
               <div className="flex items-center space-x-3">
-                <span className="text-lg font-bold text-gray-900">
+                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
                   {completedTips.length} /{" "}
                   {tipCategories.reduce((acc, cat) => acc + cat.tips.length, 0)}
                 </span>
 
                 <button
                   onClick={generateCheatSheet}
-                  className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800"
+                  className="flex items-center space-x-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                 >
                   <Download className="w-4 h-4" />
                   <span>Download Cheat Sheet</span>
                 </button>
               </div>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
+            <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3">
               <div
                 className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${completionPercentage}%` }}
               />
             </div>
-            <p className="text-sm text-gray-600 mt-2 text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 text-center">
               {completionPercentage}% Complete - Keep going!
             </p>
           </div>
@@ -1004,7 +1004,7 @@ export const InterviewTips: React.FC = () => {
 
                   {/* Category Content */}
                   {isExpanded && (
-                    <div className="bg-gradient-to-b from-gray-50 to-white dark:from-slate-800 dark:to-slate-800 border-t-0 border border-gray-100 dark:border-slate-700 rounded-b-2xl shadow-inner">
+                    <div className="bg-gradient-to-b from-gray-100 to-gray-50 dark:from-slate-800 dark:to-slate-800 border-t-0 border border-gray-200 dark:border-slate-700 rounded-b-2xl shadow-inner">
                       <div className="grid grid-cols-1 gap-6 p-6">
                         {category.tips.map((tip) => {
                           const isCompleted = completedTips.includes(tip.id);
@@ -1014,34 +1014,34 @@ export const InterviewTips: React.FC = () => {
                           switch (tip.importance) {
                             case "high":
                               accentStyles =
-                                "border-l-red-500 bg-gradient-to-r from-red-50/50 via-red-50/10 to-white dark:from-red-900/20 dark:via-red-900/5 dark:to-slate-800";
+                                "border-l-red-500 bg-gradient-to-r from-gray-50 via-gray-50/80 to-gray-50 dark:from-red-900/20 dark:via-red-900/5 dark:to-slate-800";
                               break;
                             case "medium":
                               accentStyles =
-                                "border-l-amber-500 bg-gradient-to-r from-amber-50/50 via-amber-50/10 to-white dark:from-amber-900/20 dark:via-amber-900/5 dark:to-slate-800";
+                                "border-l-amber-500 bg-gradient-to-r from-gray-50 via-gray-50/80 to-gray-50 dark:from-amber-900/20 dark:via-amber-900/5 dark:to-slate-800";
                               break;
                             case "low":
                               accentStyles =
-                                "border-l-green-500 bg-gradient-to-r from-green-50/50 via-green-50/10 to-white dark:from-green-900/20 dark:via-green-900/5 dark:to-slate-800";
+                                "border-l-green-500 bg-gradient-to-r from-gray-50 via-gray-50/80 to-gray-50 dark:from-green-900/20 dark:via-green-900/5 dark:to-slate-800";
                               break;
                             default:
                               accentStyles =
-                                "border-l-blue-400 bg-gradient-to-r from-blue-50/50 via-blue-50/10 to-white dark:from-blue-900/20 dark:via-blue-900/5 dark:to-slate-800";
+                                "border-l-blue-400 bg-gradient-to-r from-gray-50 via-gray-50/80 to-gray-50 dark:from-blue-900/20 dark:via-blue-900/5 dark:to-slate-800";
                           }
 
                           return (
                             <div
                               key={tip.id}
-                              className={`rounded-xl border-l-4 ${accentStyles} border border-gray-100 shadow-md transition-all duration-300 overflow-hidden ${
+                              className={`rounded-xl border-l-4 ${accentStyles} border border-gray-200 dark:border-slate-700 shadow-md transition-all duration-300 overflow-hidden ${
                                 isCompleted
-                                  ? "ring-2 ring-green-300 shadow-green-100"
+                                  ? "ring-2 ring-green-300 dark:ring-green-700 shadow-green-100 dark:shadow-green-900/50"
                                   : "hover:shadow-lg hover:-translate-y-0.5"
                               }`}
                             >
                               <div className="p-6">
                                 <div className="flex items-center justify-between mb-4">
                                   <div className="flex-1 flex flex-col sm:flex-row sm:items-center">
-                                    <h4 className="text-xl font-bold text-gray-900 mb-2 sm:mb-0 sm:mr-3">
+                                    <h4 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 sm:mb-0 sm:mr-3">
                                       {tip.title}
                                     </h4>
                                     <span
@@ -1072,11 +1072,11 @@ export const InterviewTips: React.FC = () => {
                                 </p>
 
                                 {/* Examples & Don'ts in tabs */}
-                                {(tip.examples || tip.doNot) && (
-                                  <div className="mt-4 border-t border-gray-100 pt-4">
+                                    {(tip.examples || tip.doNot) && (
+                                  <div className="mt-4 border-t border-gray-100 dark:border-slate-700 pt-4">
                                     <div className="flex flex-wrap gap-2 mb-3">
                                       {tip.examples && (
-                                        <div className="flex items-center space-x-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full text-xs font-medium border border-emerald-200 dark:border-emerald-800">
+                                        <div className="flex items-center space-x-1 bg-gray-100 dark:bg-emerald-900/20 text-gray-700 dark:text-emerald-400 px-3 py-1 rounded-full text-xs font-medium border border-gray-300 dark:border-emerald-800">
                                           <CheckCircle className="w-3 h-3" />
                                           <span>
                                             {tip.examples.length} Examples
@@ -1085,7 +1085,7 @@ export const InterviewTips: React.FC = () => {
                                       )}
 
                                       {tip.doNot && (
-                                        <div className="flex items-center space-x-1 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-3 py-1 rounded-full text-xs font-medium border border-red-200 dark:border-red-800">
+                                        <div className="flex items-center space-x-1 bg-gray-100 dark:bg-red-900/20 text-gray-700 dark:text-red-400 px-3 py-1 rounded-full text-xs font-medium border border-gray-300 dark:border-red-800">
                                           <AlertCircle className="w-3 h-3" />
                                           <span>
                                             {tip.doNot.length} Things to Avoid
@@ -1094,7 +1094,7 @@ export const InterviewTips: React.FC = () => {
                                       )}
 
                                       {tip.practicePrompt && (
-                                        <div className="flex items-center space-x-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-medium border border-blue-200 dark:border-blue-800">
+                                        <div className="flex items-center space-x-1 bg-gray-100 dark:bg-blue-900/20 text-gray-700 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-medium border border-gray-300 dark:border-blue-800">
                                           <Play className="w-3 h-3" />
                                           <span>Practice Available</span>
                                         </div>
@@ -1106,9 +1106,9 @@ export const InterviewTips: React.FC = () => {
                                         {tip.examples.map((example, idx) => (
                                           <div
                                             key={idx}
-                                            className="flex items-start text-sm text-gray-700 dark:text-gray-300 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800"
+                                            className="flex items-start text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-emerald-900/20 px-3 py-2 rounded-lg border border-gray-300 dark:border-emerald-800"
                                           >
-                                            <CheckCircle className="w-3.5 h-3.5 text-emerald-500 mt-0.5 mr-2 flex-shrink-0" />
+                                            <CheckCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 mt-0.5 mr-2 flex-shrink-0" />
                                             <span>{example}</span>
                                           </div>
                                         ))}
@@ -1120,9 +1120,9 @@ export const InterviewTips: React.FC = () => {
                                         {tip.doNot.map((dont, idx) => (
                                           <div
                                             key={idx}
-                                            className="flex items-start text-sm text-gray-700 dark:text-gray-300 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg border border-red-200 dark:border-red-800"
+                                            className="flex items-start text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-red-900/20 px-3 py-2 rounded-lg border border-gray-300 dark:border-red-800"
                                           >
-                                            <AlertCircle className="w-3.5 h-3.5 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
+                                            <AlertCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400 mt-0.5 mr-2 flex-shrink-0" />
                                             <span>{dont}</span>
                                           </div>
                                         ))}
@@ -1132,7 +1132,7 @@ export const InterviewTips: React.FC = () => {
                                 )}
 
                                 {/* Bottom Actions Area */}
-                                <div className="mt-4 flex flex-wrap items-center justify-between pt-3 border-t border-gray-100">
+                                <div className="mt-4 flex flex-wrap items-center justify-between pt-3 border-t border-gray-100 dark:border-slate-700">
                                   {/* Industry Tags */}
                                   {tip.industry && tip.industry.length > 0 && (
                                     <div className="flex flex-wrap gap-1 mr-2">

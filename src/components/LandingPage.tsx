@@ -6,60 +6,87 @@ import "./LandingPage.css";
 
 interface Section {
   id: string;
+  preheading?: string;
   title: string;
   subtitle?: string;
+  quote?: string;
+  author?: string;
+  ctaPrimary?: string;
+  ctaSecondary?: string;
 }
 
 const sections: Section[] = [
   { 
+    id: "hero",
+    preheading: "WELCOME TO THE WORLD'S FIRST AI ACADEMIC ECOSYSTEM",
+    title: "STUDY SMARTER. ACHIEVE MORE. EVERY SINGLE DAY.",
+    subtitle: 
+      "Discover a new way to learn — where AI adapts to you, plans with you, and grows beside you. " +
+      "Say goodbye to chaos, guesswork, and burnout. " +
+      "Experience clarity, focus, and progress like never before. " +
+      "Your roadmap, your rhythm, your results — all powered by AI built for learners who want more.",
+    quote: "The future of learning isn't about studying harder — it's about learning smarter.",
+    author: "AI Academic Ecosystem — Launch Edition",
+  },
+  { 
     id: "welcome", 
-    title: "WELCOME TO THE WORLD'S FIRST AI-POWERED ACADEMIC ECOSYSTEM",
-    subtitle: "Where 15 fragmented apps become ONE. Where your dreams transform into action plans. Where every meeting becomes searchable knowledge. Where interviews improve through AI-driven analysis. This isn't just an app—it's the future of learning, unified."
+    title: "STUDY SMARTER. ACHIEVE MORE. EVERY SINGLE DAY.",
+    subtitle: "Get a personalized plan that turns chaos into progress. You no longer feel stuck, inconsistent, or unsure where to begin—because now, every step is clear. Follow a roadmap built around you. Stop guessing what to study. Start building unstoppable consistency. Watch motivation return as your plan grows with you."
   },
   { 
     id: "dream-to-plan", 
-    title: "DREAM TO PLAN: FROM THOUGHTS TO ACTION",
-    subtitle: "Write in your journal: 'Build an e-commerce website by December. Complete OS assignment by November 3rd.' Our AI INSTANTLY detects your intent, extracts dates, creates todos, suggests teams, schedules meetings. Your journal becomes your action plan. No one else does this. Only we do."
+    title: "FROM CHAOS TO CLARITY IN SECONDS",
+    subtitle: "Stop drowning in scattered notes and endless to-dos. Write your dreams once—and watch them turn into a clear, actionable plan. Your ideas become steps. Your vision becomes direction. Feel the calm as structure replaces confusion, and every goal becomes something you can actually reach."
   },
   { 
     id: "ai-interview", 
-    title: "INTERVIEW ANALYTICS: COMPARE, SIMULATE, IMPROVE",
-    subtitle: "Every interview simulated and analyzed on 5 factors: confidence, clarity, professionalism, engagement, adaptability. Face detection tracks real-time progress. Compare current performance to previous sessions. Watch improvement graphs over time. Identify weak areas instantly. ₹41,000+ value. FREE."
+    title: "CONFIDENCE THAT SPEAKS FOR ITSELF",
+    subtitle: "No more pre-interview panic. Each session sharpens your confidence. See exactly where you improve. Watch weak spots turn into strengths. Track your growth in real-time—and walk into every interview knowing you're fully prepared to shine."
   },
   { 
     id: "unified-ecosystem", 
-    title: "FRAGMENTED TO ONE: EVERYTHING CONNECTED",
-    subtitle: "15 apps. 15 logins. 2.5 hours wasted daily. NO MORE. Your meeting notes sync with your study notes. Your journal connects to your todos. Your interview prep links to your analytics. Your flashcards remember your learning patterns. ONE platform. ZERO context switching. 500% productivity increase."
+    title: "ONE PLATFORM. ZERO STRESS. INFINITE FOCUS.",
+    subtitle: "Forget switching between apps and losing track of your progress. Everything now connects effortlessly. Your study notes sync with your insights. Your flashcards understand your learning rhythm. Your schedule adapts in real time. Feel the relief as chaos turns into calm, and focus finally feels natural."
   },
   { 
     id: "ai-scribe", 
-    title: "AI SCRIBE: MEETINGS NEVER DISAPPEAR",
-    subtitle: "Every meeting auto-transcribed in real-time, AI-summarized, action items extracted, saved forever, searchable in seconds. Zoom saves nothing. We save EVERYTHING. 120 hours per year saved. Never lose information again."
+    title: "NEVER LOSE A MOMENT OF WISDOM",
+    subtitle: "Meetings, classes, brainstorms—nothing slips away. Every word is transcribed. Every insight remembered. Every action captured. Find anything in seconds. Feel the clarity and control that comes from having every thought, every idea, right when you need it."
   },
   { 
     id: "video-collab", 
-    title: "HD VIDEO COLLABORATION: ENTERPRISE-GRADE, FREE",
-    subtitle: "Crystal-clear WebRTC technology. Screen sharing. Real-time collaboration. Everything you need for study groups, project meetings, pair programming—completely free. No subscriptions. No limits."
+    title: "COLLABORATE WITHOUT BARRIERS",
+    subtitle: "No lag. No lost connection. Just smooth, effortless collaboration. Study together, build together, and connect deeply—no matter where you are. Feel the flow of teamwork that keeps ideas alive and learning exciting."
   },
   { 
     id: "pair-programming", 
-    title: "PAIR PROGRAMMING & DRAWING: CREATE TOGETHER",
-    subtitle: "Real-time collaborative coding with 13+ languages. Real-time collaborative drawing with 12 professional tools. Code together. Draw together. Build together. All in one place. Seamlessly integrated."
+    title: "BUILD TOGETHER. LEARN TOGETHER. GROW TOGETHER.",
+    subtitle: "Say goodbye to coding alone. Experience the spark of real-time creation. Watch ideas evolve as you collaborate. Solve problems faster. Grow through shared learning. Feel the joy of building something meaningful—together."
   },
   { 
     id: "smart-learning", 
-    title: "SMART LEARNING: REMEMBER FOR LIFE",
-    subtitle: "AI-powered spaced repetition flashcards based on Ebbinghaus's Forgetting Curve. Our AI predicts when you'll forget and reminds you at the optimal time. Science-backed memory optimization. Remember what matters most—for life."
+    title: "REMEMBER WHAT MATTERS. FOR LIFE.",
+    subtitle: "Stop forgetting what you studied last week. Learn at your perfect pace—not too fast, never too slow. Retain more every day. Feel the power of true mastery as knowledge finally sticks. Turn short-term studying into lifelong understanding."
+  },
+  { 
+    id: "study-plans", 
+    title: "YOUR PATH TO SUCCESS, PERSONALIZED.",
+    subtitle: "No more blank calendars or chaotic study sessions. Your roadmap understands your rhythm. Every topic, deadline, and goal—perfectly organized. Watch your progress unfold. Feel momentum replace stress. See dreams turn into a clear, achievable journey."
+  },
+  { 
+    id: "roadmaps", 
+    title: "SEE YOUR FUTURE. BUILD IT STEP BY STEP.",
+    subtitle: "You know your destination—now see the path. Every milestone mapped, every skill identified, every obstacle anticipated. Feel the thrill of direction as big dreams become small, doable actions. Experience progress you can actually measure."
+  },
+  { 
+    id: "working-professionals", 
+    title: "BALANCE WORK AND GROWTH. WITHOUT THE SACRIFICE.",
+    subtitle: "You handle deadlines, meetings, and learning—all at once. Now, growth fits your lifestyle. Your study plan flexes with your work. Your roadmap adapts to your time. Feel steady progress without burnout. Achieve balance without compromise."
   },
   { 
     id: "begin", 
-    title: "THE FUTURE OF LEARNING BEGINS NOW",
-    subtitle: "Stop drowning in 15 apps. Start soaring with one. Join thousands of students saving 49 days per year. Transform chaos into clarity. Begin your journey—completely free."
-  },
-  { 
-    id: "universe", 
-    title: "FEATURES EXPAND LIKE THE UNIVERSE",
-    subtitle: "As our dedicated team works tirelessly, our platform evolves continuously. New features emerge, boundaries expand, possibilities multiply. What you see today is just the beginning. The universe of learning tools grows with every update, every innovation, every breakthrough. A powerful ecosystem that adapts, learns, and grows with you."
+    title: "YOUR TRANSFORMATION STARTS NOW.",
+    subtitle: "You've imagined a better way to learn—a system that finally works. It's here. Join thousands turning chaos into clarity. Begin your journey today and be part of the revolution. Your focused, confident future starts now.",
   },
 ];
 
@@ -1507,16 +1534,19 @@ export const LandingPage: React.FC = () => {
 
     // Define scene types for each section
     const sceneTypes = [
-      "energy-particles",       // WELCOME TO THE WORLD'S FIRST...
-      "interactive-grid",       // DREAM TO PLAN: FROM THOUGHTS TO ACTION
-      "neural-network",         // INTERVIEW ANALYTICS: COMPARE, SIMULATE, IMPROVE
-      "particle-trail",         // FRAGMENTED TO ONE: EVERYTHING CONNECTED
-      "particles-cloud",        // AI SCRIBE: MEETINGS NEVER DISAPPEAR
-      "geometric-morph",        // HD VIDEO COLLABORATION: ENTERPRISE-GRADE, FREE
-      "connecting-dots",        // PAIR PROGRAMMING & DRAWING: CREATE TOGETHER
-      "solar-system",           // SMART LEARNING: REMEMBER FOR LIFE
-      "interactive-grid",       // THE FUTURE OF LEARNING BEGINS NOW
-      "expanding-universe",     // FEATURES EXPAND LIKE THE UNIVERSE
+      "energy-particles",       // HERO: STUDY SMARTER. ACHIEVE MORE. EVERY SINGLE DAY.
+      "interactive-grid",       // WELCOME: STUDY SMARTER. ACHIEVE MORE. EVERY SINGLE DAY.
+      "interactive-grid",       // FROM CHAOS TO CLARITY IN SECONDS
+      "neural-network",         // CONFIDENCE THAT SPEAKS FOR ITSELF
+      "particle-trail",         // ONE PLATFORM. ZERO STRESS. INFINITE FOCUS.
+      "particles-cloud",        // NEVER LOSE A MOMENT OF WISDOM
+      "geometric-morph",        // COLLABORATE WITHOUT BARRIERS
+      "connecting-dots",        // BUILD TOGETHER. LEARN TOGETHER. GROW TOGETHER.
+      "solar-system",           // REMEMBER WHAT MATTERS. FOR LIFE.
+      "waves",                  // YOUR PATH TO SUCCESS, PERSONALIZED.
+      "expanding-universe",     // SEE YOUR FUTURE. BUILD IT STEP BY STEP.
+      "fluid-morph",            // BALANCE WORK AND GROWTH. WITHOUT THE SACRIFICE.
+      "energy-particles",       // YOUR TRANSFORMATION STARTS NOW.
     ];
 
     // Current active scene config
@@ -1664,7 +1694,7 @@ export const LandingPage: React.FC = () => {
       // Animate previous section out
       if (prevElement && prevIndex !== targetIndex) {
         const prevTitle = prevElement.querySelector(".section-title");
-        const prevSubtitle = prevElement.querySelector("p");
+        const prevSubtitle = prevElement.querySelector(".section-subtitle");
         
         if (prevTitle) {
           gsap.to(prevTitle, {
@@ -1692,7 +1722,7 @@ export const LandingPage: React.FC = () => {
 
       // Enhanced text animation with morphing
       const title = targetElement.querySelector(".section-title");
-      const subtitle = targetElement.querySelector("p");
+      const subtitle = targetElement.querySelector(".section-subtitle");
       
       if (title) {
         gsap.fromTo(
@@ -1842,7 +1872,7 @@ export const LandingPage: React.FC = () => {
       const firstSection = containerRef.current.children[0] as HTMLElement;
       if (firstSection) {
         const title = firstSection.querySelector(".section-title");
-        const subtitle = firstSection.querySelector("p");
+        const subtitle = firstSection.querySelector(".section-subtitle");
         
         if (title) {
           gsap.fromTo(
@@ -1987,6 +2017,26 @@ export const LandingPage: React.FC = () => {
               padding: '0 clamp(1rem, 4vw, 2rem)',
               margin: '0 auto'
             }}>
+              {section.preheading && (
+                <p
+                  className="section-preheading mb-4 leading-relaxed"
+                  style={{
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+                    fontSize: "clamp(0.75rem, 2vw, 1rem)",
+                    opacity: 0.7,
+                    fontWeight: 500,
+                    letterSpacing: "0.1em",
+                    color: "#b0b0b0",
+                    textTransform: "uppercase",
+                    maxWidth: "100%",
+                    width: "100%",
+                    margin: "0 auto 1rem",
+                    padding: "0",
+                  }}
+                >
+                  {section.preheading}
+                </p>
+              )}
               <h1
                 className="section-title font-bold leading-tight"
                 style={{
@@ -2040,7 +2090,7 @@ export const LandingPage: React.FC = () => {
               </h1>
               {section.subtitle && (
                 <p
-                  className="mt-8 leading-relaxed"
+                  className="section-subtitle mt-8 leading-relaxed"
                   style={{
                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
                     fontSize: "clamp(0.875rem, 2.5vw, 1.25rem)",
@@ -2064,7 +2114,160 @@ export const LandingPage: React.FC = () => {
                   {section.subtitle}
                 </p>
               )}
+              {section.quote && (
+                <div className="mt-12" style={{ maxWidth: "800px", margin: "3rem auto 0" }}>
+                  <p
+                    style={{
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+                      fontSize: "clamp(1rem, 3vw, 1.5rem)",
+                      fontStyle: "italic",
+                      opacity: 0.85,
+                      fontWeight: 300,
+                      letterSpacing: "0.02em",
+                      color: "#b0b0b0",
+                      lineHeight: "1.6",
+                      margin: "0 0 0.5rem",
+                    }}
+                  >
+                    "{section.quote}"
+                  </p>
+                  {section.author && (
+                    <p
+                      style={{
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+                        fontSize: "clamp(0.75rem, 2vw, 0.875rem)",
+                        opacity: 0.6,
+                        fontWeight: 400,
+                        letterSpacing: "0.05em",
+                        color: "#b0b0b0",
+                        textTransform: "uppercase",
+                        margin: "0",
+                      }}
+                    >
+                      — {section.author}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
+
+            {/* Previous Button - Positioned at Top */}
+            {index > 0 && (
+              <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30 flex justify-center items-center">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    scrollToSection(index - 1);
+                  }}
+                  className="text-sm font-medium px-4 py-4 border rounded-full transition-all duration-300 ease-in-out hover:scale-110 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center justify-center"
+                  style={{ 
+                    fontFamily: '"Inter", sans-serif',
+                    color: "#b0b0b0",
+                    borderColor: "rgba(176, 176, 176, 0.3)",
+                    transition: "all 0.3s ease-in-out",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "scale(1.1)";
+                    e.currentTarget.style.color = "#ffffff";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "scale(1)";
+                    e.currentTarget.style.color = "#b0b0b0";
+                  }}
+                >
+                  <svg 
+                    width="24" 
+                    height="24" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 15l-6-6-6 6" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Next Button - Positioned at Bottom */}
+            {index < sections.length - 1 ? (
+              <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-30 flex justify-center items-center">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    scrollToSection(index + 1);
+                  }}
+                  className="text-sm font-medium px-4 py-4 border rounded-full transition-all duration-300 ease-in-out hover:scale-110 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center justify-center"
+                  style={{ 
+                    fontFamily: '"Inter", sans-serif',
+                    color: "#b0b0b0",
+                    borderColor: "rgba(176, 176, 176, 0.3)",
+                    transition: "all 0.3s ease-in-out",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "scale(1.1)";
+                    e.currentTarget.style.color = "#ffffff";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "scale(1)";
+                    e.currentTarget.style.color = "#b0b0b0";
+                  }}
+                >
+                  <svg 
+                    width="24" 
+                    height="24" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-30 flex justify-center items-center">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate("/signup");
+                  }}
+                  className="text-sm font-medium px-6 py-3 border rounded-full uppercase tracking-wider transition-all duration-300 ease-in-out hover:scale-110 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center gap-2"
+                  style={{ 
+                    fontFamily: '"Inter", sans-serif',
+                    color: "#b0b0b0",
+                    borderColor: "rgba(176, 176, 176, 0.3)",
+                    transition: "all 0.3s ease-in-out",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "scale(1.1)";
+                    e.currentTarget.style.color = "#ffffff";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "scale(1)";
+                    e.currentTarget.style.color = "#b0b0b0";
+                  }}
+                >
+                  <span>Get Started</span>
+                  <svg 
+                    width="16" 
+                    height="16" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  >
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            )}
 
             {/* Navigation Indicator */}
             <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30">
@@ -2110,7 +2313,7 @@ export const LandingPage: React.FC = () => {
             e.currentTarget.style.color = "#b0b0b0";
           }}
         >
-          SKIP
+          START MY TRANSFORMATION
         </button>
       </div>
 

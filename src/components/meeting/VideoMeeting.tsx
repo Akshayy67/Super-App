@@ -515,9 +515,10 @@ export const VideoMeeting: React.FC = () => {
 
   const handleIceCandidate = async (senderId: string, candidate: RTCIceCandidate) => {
     try {
+      console.log(`🧊 Received ICE candidate from ${senderId}`);
       await webRTCService.addIceCandidate(senderId, candidate);
     } catch (err) {
-      console.error('Error handling ICE candidate:', err);
+      console.error(`❌ Error handling ICE candidate from ${senderId}:`, err);
     }
   };
 

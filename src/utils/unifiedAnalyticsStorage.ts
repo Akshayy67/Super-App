@@ -16,11 +16,64 @@ class UnifiedAnalyticsStorage {
   private currentUser: User | null = null;
   private isOnline: boolean = navigator.onLine;
   private autoSyncInterval: NodeJS.Timeout | null = null;
+  private recentDeletions: Set<string> = new Set(); // Track recently deleted IDs to prevent re-sync
+  private deletionTimestamps: Map<string, number> = new Map(); // Track when deletions happened
+  private readonly DELETION_TRACKING_KEY = "analytics_recent_deletions"; // Persist across refreshes
 
   constructor() {
     this.initializeAuth();
     this.setupNetworkListeners();
     this.startAutoSync();
+    this.loadPersistedDeletions();
+  }
+
+  /**
+   * Load persisted deletion tracking from localStorage (survives page refresh)
+   */
+  private loadPersistedDeletions(): void {
+    try {
+      const stored = localStorage.getItem(this.DELETION_TRACKING_KEY);
+      if (stored) {
+        const data = JSON.parse(stored);
+        const now = Date.now();
+        const validDeletions: { id: string; timestamp: number }[] = [];
+        
+        // Only keep deletions from the last 5 minutes
+        data.forEach((item: { id: string; timestamp: number }) => {
+          if (now - item.timestamp < 300000) { // 5 minutes
+            this.recentDeletions.add(item.id);
+            this.deletionTimestamps.set(item.id, item.timestamp);
+            validDeletions.push(item);
+          }
+        });
+        
+        // Save back only valid deletions
+        if (validDeletions.length !== data.length) {
+          localStorage.setItem(this.DELETION_TRACKING_KEY, JSON.stringify(validDeletions));
+        }
+        
+        if (validDeletions.length > 0) {
+          console.log(`📋 Loaded ${validDeletions.length} persisted deletion(s) from previous session`);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading persisted deletions:", error);
+    }
+  }
+
+  /**
+   * Save deletion tracking to localStorage (persists across refreshes)
+   */
+  private savePersistedDeletions(): void {
+    try {
+      const deletions: { id: string; timestamp: number }[] = [];
+      this.deletionTimestamps.forEach((timestamp, id) => {
+        deletions.push({ id, timestamp });
+      });
+      localStorage.setItem(this.DELETION_TRACKING_KEY, JSON.stringify(deletions));
+    } catch (error) {
+      console.error("Error saving persisted deletions:", error);
+    }
   }
 
   /**
@@ -220,6 +273,9 @@ class UnifiedAnalyticsStorage {
       isOnline: this.isOnline,
     });
 
+    // Get local data first (for comparison)
+    const localDataBeforeSync = analyticsStorage.getPerformanceHistory();
+
     // If authenticated and online, try to get fresh data from cloud
     if (this.currentUser && this.isOnline) {
       try {
@@ -227,25 +283,58 @@ class UnifiedAnalyticsStorage {
         const cloudData = await cloudAnalyticsStorage.getPerformanceHistory(
           this.currentUser.uid
         );
-
+        
         if (cloudData.length > 0) {
           // Migrate cloud data if needed (already done in cloudAnalyticsStorage, but double-check)
           const migratedCloudData = cloudData.map((data) =>
             this.migrateDataFormat(data)
           );
 
-          // Update local storage with migrated cloud data
+          // Filter out recently deleted items to prevent them from being restored
+          // This handles Firestore eventual consistency and page refreshes
+          console.log(`🔍 Checking ${migratedCloudData.length} cloud interviews against ${this.recentDeletions.size} tracked deletions`);
+          const filteredCloudData = migratedCloudData.filter((data) => {
+            if (this.recentDeletions.has(data.id)) {
+              const deletionTime = this.deletionTimestamps.get(data.id) || 0;
+              const timeSinceDeletion = Date.now() - deletionTime;
+              
+              // If deleted less than 5 minutes ago, exclude it (handles eventual consistency and refreshes)
+              if (timeSinceDeletion < 300000) { // 5 minutes
+                console.log(
+                  `🚫 Excluding recently deleted interview ${data.id} from cloud sync (deleted ${Math.round(timeSinceDeletion / 1000)}s ago)`
+                );
+                return false;
+              }
+              // Remove from tracking after 5 minutes (deletion should be fully propagated by then)
+              this.recentDeletions.delete(data.id);
+              this.deletionTimestamps.delete(data.id);
+              this.savePersistedDeletions(); // Update persisted tracking
+              console.log(
+                `✅ Removed ${data.id} from deletion tracking (deleted ${Math.round(timeSinceDeletion / 1000)}s ago)`
+              );
+            }
+            return true;
+          });
+          
+          const excludedCount = migratedCloudData.length - filteredCloudData.length;
+          if (excludedCount > 0) {
+            console.log(`🚫 Filtered out ${excludedCount} recently deleted interview(s) from cloud data`);
+          }
+
+          // Cloud is the source of truth - use cloud data
+          // This ensures that deletions from cloud are respected
+          // Update local storage with filtered cloud data
           analyticsStorage.clearAllData();
-          migratedCloudData.forEach((data) =>
+          filteredCloudData.forEach((data) =>
             analyticsStorage.savePerformanceData(data)
           );
 
           console.log(
-            `✅ Loaded ${migratedCloudData.length} interviews from cloud`
+            `✅ Loaded ${filteredCloudData.length} interviews from cloud (was ${localDataBeforeSync.length} locally, ${migratedCloudData.length - filteredCloudData.length} filtered as recently deleted)`
           );
-          return migratedCloudData;
+          return filteredCloudData;
         } else {
-          console.log("☁️ No cloud data found");
+          console.log("☁️ No cloud data found, using local data");
         }
       } catch (error) {
         console.error("❌ Failed to load from cloud, using local data:", error);
@@ -379,20 +468,55 @@ class UnifiedAnalyticsStorage {
    * Delete performance data
    */
   async deletePerformanceData(id: string): Promise<boolean> {
-    // Delete from local storage
+    // Delete from local storage first
     const localSuccess = analyticsStorage.deletePerformanceData(id);
+    
+    if (!localSuccess) {
+      console.warn(`⚠️ Failed to delete interview ${id} from local storage`);
+      return false;
+    }
+
+    // Mark as recently deleted to prevent cloud sync from restoring it
+    // Keep this for 5 minutes to handle Firestore eventual consistency and page refreshes
+    this.recentDeletions.add(id);
+    this.deletionTimestamps.set(id, Date.now());
+    
+    // Persist deletion tracking to localStorage (survives page refresh)
+    this.savePersistedDeletions();
+    
+    // Clean up old deletion records (older than 5 minutes)
+    const now = Date.now();
+    this.deletionTimestamps.forEach((timestamp, deletedId) => {
+      if (now - timestamp > 300000) { // 5 minutes
+        this.recentDeletions.delete(deletedId);
+        this.deletionTimestamps.delete(deletedId);
+      }
+    });
+    
+    // Save after cleanup
+    this.savePersistedDeletions();
 
     // If authenticated and online, also delete from cloud
     if (this.currentUser && this.isOnline) {
       try {
-        await cloudAnalyticsStorage.deletePerformanceData(
+        const cloudSuccess = await cloudAnalyticsStorage.deletePerformanceData(
           id,
           this.currentUser.uid
         );
-        console.log("✅ Interview deleted from both local and cloud");
+        
+        if (cloudSuccess) {
+          console.log(`✅ Interview ${id} deleted from both local and cloud`);
+        } else {
+          console.warn(`⚠️ Interview ${id} deleted locally but cloud deletion returned false`);
+          // Still return true since local deletion succeeded
+        }
       } catch (error) {
-        console.error("❌ Failed to delete from cloud:", error);
+        console.error(`❌ Failed to delete interview ${id} from cloud:`, error);
+        // Still return true since local deletion succeeded
+        // Cloud deletion will be retried on next sync
       }
+    } else {
+      console.log(`📱 Interview ${id} deleted from local storage (offline or not authenticated)`);
     }
 
     return localSuccess;

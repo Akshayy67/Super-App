@@ -1694,9 +1694,13 @@ export const VisualAnalyticsDashboard: React.FC<
         {activeTab === "data-management" && (
           <div className="space-y-6">
             <InterviewDataManager
-              onDataChange={() => {
-                // Trigger a refresh of the analytics data
-                window.location.reload();
+              onDataChange={async () => {
+                // Trigger a refresh of the analytics data without page reload
+                // The useAnalyticsDataReadOnly hook will automatically update
+                // when storage changes, so we just need to wait a moment
+                console.log("📊 Data changed, analytics will auto-refresh");
+                // Force a small delay to allow deletion to complete
+                await new Promise(resolve => setTimeout(resolve, 500));
               }}
               showDetailedView={(interview) => {
                 // Switch to detailed history tab and show specific interview

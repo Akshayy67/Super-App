@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Sparkles, Loader2, X } from "lucide-react";
+import { Sparkles, Loader2, X, Clock } from "lucide-react";
 import { StudyPlanInput } from "../../types/studyPlan";
 import { studyPlanService } from "../../utils/studyPlanService";
 import { studyPlanAIService } from "../../utils/studyPlanAIService";
@@ -120,26 +120,35 @@ export const NewStudyPlanForm: React.FC<NewStudyPlanFormProps> = ({
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6 md:p-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-            <Sparkles className="w-6 h-6 text-white" />
+      <div className="relative">
+        {/* Animated Background Glow */}
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 dark:from-purple-500/10 dark:to-indigo-500/10 rounded-2xl blur-2xl"></div>
+        
+        {/* Main Card */}
+        <div className="relative backdrop-blur-sm bg-white/90 dark:bg-slate-800/90 rounded-2xl shadow-xl border border-gray-200/50 dark:border-slate-700/50 p-6 md:p-8">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl blur-lg opacity-50 animate-pulse"></div>
+              <div className="relative p-3 bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-500 rounded-xl shadow-lg">
+                <Sparkles className="w-6 h-6 text-white animate-pulse" />
+              </div>
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 dark:from-purple-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
+                Create New Study Plan
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Let AI create a personalized roadmap for your learning goal
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Create New Study Plan
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Let AI create a personalized roadmap for your learning goal
-            </p>
-          </div>
-        </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Goal Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              🎯 Learning Goal
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+              <span className="text-lg">🎯</span>
+              Learning Goal
             </label>
             <textarea
               value={formData.goal}
@@ -147,19 +156,21 @@ export const NewStudyPlanForm: React.FC<NewStudyPlanFormProps> = ({
                 setFormData({ ...formData, goal: e.target.value })
               }
               placeholder="e.g., Complete DSA in 1 month, Master React in 6 weeks, Learn Python in 2 months"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-slate-700 dark:text-gray-100 resize-none"
+              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-slate-700/50 dark:text-gray-100 resize-none transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500"
               rows={3}
               required
             />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
               Be specific about what you want to learn and achieve
             </p>
           </div>
 
           {/* Duration */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              📅 Duration (Weeks)
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+              <span className="text-lg">📅</span>
+              Duration (Weeks)
             </label>
             <input
               type="number"
@@ -169,15 +180,16 @@ export const NewStudyPlanForm: React.FC<NewStudyPlanFormProps> = ({
               onChange={(e) =>
                 setFormData({ ...formData, duration: parseInt(e.target.value) || 1 })
               }
-              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-slate-700 dark:text-gray-100"
+              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-slate-700/50 dark:text-gray-100 transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500"
               required
             />
           </div>
 
           {/* Difficulty */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              🧠 Difficulty Level
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+              <span className="text-lg">🧠</span>
+              Difficulty Level
             </label>
             <div className="grid grid-cols-3 gap-3">
               {(["beginner", "intermediate", "advanced"] as const).map((level) => (
@@ -185,13 +197,16 @@ export const NewStudyPlanForm: React.FC<NewStudyPlanFormProps> = ({
                   key={level}
                   type="button"
                   onClick={() => setFormData({ ...formData, difficulty: level })}
-                  className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                  className={`relative px-4 py-3 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${
                     formData.difficulty === level
-                      ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400"
-                      : "border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-slate-500"
+                      ? "border-purple-500 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 text-purple-700 dark:text-purple-400 shadow-lg shadow-purple-500/20"
+                      : "border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:border-purple-400 dark:hover:border-purple-500 bg-white dark:bg-slate-700/50"
                   }`}
                 >
-                  <div className="font-medium capitalize">{level}</div>
+                  {formData.difficulty === level && (
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-indigo-500/10 rounded-xl blur"></div>
+                  )}
+                  <div className="relative font-semibold capitalize">{level}</div>
                 </button>
               ))}
             </div>
@@ -199,8 +214,9 @@ export const NewStudyPlanForm: React.FC<NewStudyPlanFormProps> = ({
 
           {/* Current Level (Optional) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              📊 Current Level (Optional)
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+              <span className="text-lg">📊</span>
+              Current Level (Optional)
             </label>
             <input
               type="text"
@@ -209,14 +225,15 @@ export const NewStudyPlanForm: React.FC<NewStudyPlanFormProps> = ({
                 setFormData({ ...formData, currentLevel: e.target.value })
               }
               placeholder="e.g., Beginner, Intermediate, Advanced, or leave empty"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-slate-700 dark:text-gray-100"
+              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-slate-700/50 dark:text-gray-100 transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500"
             />
           </div>
 
           {/* Daily Hours */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              ⏰ Daily Available Hours
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+              <span className="text-lg">⏰</span>
+              Daily Available Hours
             </label>
             <input
               type="number"
@@ -230,27 +247,28 @@ export const NewStudyPlanForm: React.FC<NewStudyPlanFormProps> = ({
                   dailyHours: parseFloat(e.target.value) || 0,
                 })
               }
-              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-slate-700 dark:text-gray-100"
+              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-slate-700/50 dark:text-gray-100 transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500"
               required
             />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              <Clock className="w-3 h-3" />
               How many hours per day can you dedicate to studying?
             </p>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-6">
             <button
               type="button"
               onClick={onCancel}
-              className="flex-1 px-6 py-3 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+              className="flex-1 px-6 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all duration-300 font-semibold hover:scale-105"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="relative flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 via-purple-600 to-indigo-500 text-white rounded-xl hover:from-purple-600 hover:via-purple-700 hover:to-indigo-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-semibold shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 transform overflow-hidden group"
             >
               {loading ? (
                 <>
@@ -259,13 +277,15 @@ export const NewStudyPlanForm: React.FC<NewStudyPlanFormProps> = ({
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-5 h-5" />
+                  <Sparkles className="w-5 h-5 group-hover:animate-pulse" />
                   Generate with AI
                 </>
               )}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

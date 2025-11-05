@@ -180,17 +180,28 @@ class WebRTCService {
 
     const peerConnection = new RTCPeerConnection(this.configuration);
 
-    // Debounce ICE candidates to avoid sending too many
+    // Batch ICE candidates to avoid sending too many messages, but send ALL candidates
     let lastCandidateTime = 0;
     const candidateQueue: RTCIceCandidate[] = [];
     let candidateTimeout: NodeJS.Timeout | null = null;
 
-    const sendCandidate = () => {
+    const sendCandidates = () => {
       if (candidateQueue.length > 0) {
-        // Send the most recent candidate
-        const candidate = candidateQueue[candidateQueue.length - 1];
+        // CRITICAL: Send ALL candidates, not just the most recent one
+        // Each candidate represents a different network path and is needed for connection
+        candidateQueue.forEach(candidate => {
+          try {
+            onIceCandidate(candidate);
+            console.log(`🧊 Sending ICE candidate for ${userId}:`, {
+              candidate: candidate.candidate.substring(0, 50) + '...',
+              sdpMLineIndex: candidate.sdpMLineIndex,
+              sdpMid: candidate.sdpMid
+            });
+          } catch (err) {
+            console.error('Error sending ICE candidate:', err);
+          }
+        });
         candidateQueue.length = 0;
-        onIceCandidate(candidate);
         lastCandidateTime = Date.now();
       }
       candidateTimeout = null;
@@ -201,25 +212,30 @@ class WebRTCService {
       if (event.candidate) {
         // Add to queue
         candidateQueue.push(event.candidate);
+        console.log(`🧊 ICE candidate gathered for ${userId}, queue size: ${candidateQueue.length}`);
         
         // Clear existing timeout
         if (candidateTimeout) {
           clearTimeout(candidateTimeout);
         }
         
-        // Send candidate after a short debounce (50ms) or immediately if it's been a while
+        // Send candidates after a short debounce (100ms) to batch them
+        // This reduces signaling messages while still sending all candidates
         const timeSinceLastCandidate = Date.now() - lastCandidateTime;
-        if (timeSinceLastCandidate > 100) {
-          sendCandidate();
+        if (timeSinceLastCandidate > 200) {
+          // If it's been a while, send immediately
+          sendCandidates();
         } else {
-          candidateTimeout = setTimeout(sendCandidate, 50);
+          // Otherwise, batch candidates together with a short delay
+          candidateTimeout = setTimeout(sendCandidates, 100);
         }
       } else {
         // null candidate means gathering is complete - send any queued candidates
-        if (candidateQueue.length > 0 && candidateTimeout) {
+        console.log(`🧊 ICE candidate gathering complete for ${userId}, sending ${candidateQueue.length} queued candidates`);
+        if (candidateTimeout) {
           clearTimeout(candidateTimeout);
-          sendCandidate();
         }
+        sendCandidates();
       }
     };
 
@@ -449,14 +465,28 @@ class WebRTCService {
     peerConnection.oniceconnectionstatechange = () => {
       const iceState = peerConnection.iceConnectionState;
       const connectionState = peerConnection.connectionState;
-      console.log(`🧊 ICE connection state for ${userId}:`, iceState);
+      const signalingState = peerConnection.signalingState;
+      const iceGatheringState = peerConnection.iceGatheringState;
+      
+      console.log(`🧊 ICE connection state for ${userId}:`, {
+        iceConnectionState: iceState,
+        connectionState: connectionState,
+        signalingState: signalingState,
+        iceGatheringState: iceGatheringState
+      });
       
       if (iceState === 'connected' || iceState === 'completed') {
         console.log(`✅ ICE connection established with ${userId}`);
         // Reset reconnection attempts on successful connection
         this.reconnectionAttempts.delete(userId);
       } else if (iceState === 'failed') {
-        console.warn(`⚠️ ICE connection failed with ${userId}`);
+        console.warn(`⚠️ ICE connection failed with ${userId}`, {
+          connectionState: connectionState,
+          signalingState: signalingState,
+          iceGatheringState: iceGatheringState,
+          localDescription: !!peerConnection.localDescription,
+          remoteDescription: !!peerConnection.remoteDescription
+        });
         // Attempt reconnection for failed ICE connections
         this.attemptReconnection(userId);
       } else if (iceState === 'disconnected') {
@@ -473,6 +503,36 @@ class WebRTCService {
             this.attemptReconnection(userId);
           }
         }, 3000); // Wait 3 seconds
+      } else if (iceState === 'checking') {
+        // Log additional info when stuck in checking state
+        console.log(`🔍 ICE checking state for ${userId} - waiting for connection...`, {
+          connectionState: connectionState,
+          signalingState: signalingState,
+          iceGatheringState: iceGatheringState,
+          hasLocalDescription: !!peerConnection.localDescription,
+          hasRemoteDescription: !!peerConnection.remoteDescription,
+          pendingCandidates: this.pendingIceCandidates.get(userId)?.length || 0
+        });
+      }
+    };
+    
+    // Monitor ICE gathering state
+    peerConnection.onicegatheringstatechange = () => {
+      const gatheringState = peerConnection.iceGatheringState;
+      const iceState = peerConnection.iceConnectionState;
+      console.log(`🧊 ICE gathering state for ${userId}:`, {
+        iceGatheringState: gatheringState,
+        iceConnectionState: iceState,
+        pendingCandidates: candidateQueue.length
+      });
+      
+      if (gatheringState === 'complete') {
+        console.log(`✅ ICE gathering complete for ${userId}`);
+        // Ensure all candidates are sent
+        if (candidateQueue.length > 0) {
+          console.log(`📤 Sending ${candidateQueue.length} remaining candidates after gathering complete`);
+          sendCandidates();
+        }
       }
     };
 
@@ -640,15 +700,33 @@ class WebRTCService {
         this.pendingIceCandidates.set(userId, []);
       }
       this.pendingIceCandidates.get(userId)!.push(candidate);
-      console.log(`🧊 Queued ICE candidate for ${userId} (will process after remote description)`);
+      console.log(`🧊 Queued ICE candidate for ${userId} (will process after remote description)`, {
+        hasPeerConnection: !!peerConnection,
+        hasRemoteDescription: !!peerConnection?.remoteDescription,
+        candidate: candidate.candidate?.substring(0, 50) + '...'
+      });
       return;
     }
 
     // Remote description is set, add candidate immediately
     try {
+      console.log(`🧊 Adding ICE candidate for ${userId}:`, {
+        candidate: candidate.candidate?.substring(0, 50) + '...',
+        sdpMLineIndex: candidate.sdpMLineIndex,
+        sdpMid: candidate.sdpMid,
+        iceConnectionState: peerConnection.iceConnectionState,
+        connectionState: peerConnection.connectionState
+      });
       await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      console.log(`✅ ICE candidate added successfully for ${userId}`);
     } catch (err) {
-      console.error('Error adding ICE candidate:', err);
+      console.error(`❌ Error adding ICE candidate for ${userId}:`, err);
+      // Log the candidate details for debugging
+      console.error('Candidate details:', {
+        candidate: candidate.candidate,
+        sdpMLineIndex: candidate.sdpMLineIndex,
+        sdpMid: candidate.sdpMid
+      });
     }
   }
 

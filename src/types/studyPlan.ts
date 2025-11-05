@@ -1,3 +1,22 @@
+export interface DayDetails {
+  suggestions: string[];
+  detailedTasks: Array<{
+    task: string;
+    description: string;
+    estimatedTime: string;
+    priority: "high" | "medium" | "low";
+  }>;
+  resources: Array<{
+    title: string;
+    url: string;
+    type: "video" | "article" | "course" | "practice" | "documentation";
+    description: string;
+  }>;
+  tips: string[];
+  motivation: string;
+  generatedAt?: Date;
+}
+
 export interface DailyTask {
   day: number;
   topic: string;
@@ -7,6 +26,7 @@ export interface DailyTask {
   dayType?: "study" | "rest" | "review";
   completed?: boolean;
   completedAt?: Date;
+  dayDetails?: DayDetails;
 }
 
 export interface WeekPlan {

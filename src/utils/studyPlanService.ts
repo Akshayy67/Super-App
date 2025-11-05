@@ -12,7 +12,7 @@ import {
   Timestamp,
   serverTimestamp,
 } from "firebase/firestore";
-import { StudyPlan, StudyPlanInput } from "../types/studyPlan";
+import { StudyPlan, StudyPlanInput, DayDetails } from "../types/studyPlan";
 import { realTimeAuth } from "./realTimeAuth";
 
 // Helper function to safely convert Date to Timestamp
@@ -78,6 +78,10 @@ class StudyPlanService {
           dailyPlan: (week.dailyPlan || []).map((day: any) => ({
             ...day,
             completedAt: day.completedAt?.toDate(),
+            dayDetails: day.dayDetails ? {
+              ...day.dayDetails,
+              generatedAt: day.dayDetails.generatedAt?.toDate(),
+            } : undefined,
           })),
         })),
       } as StudyPlan;
@@ -135,15 +139,25 @@ class StudyPlanService {
           description: week.description || "",
           progress: week.progress || 0,
           completed: week.completed || false,
-          dailyPlan: (week.dailyPlan || []).map((day) => ({
-            day: day.day || 0,
-            topic: day.topic || "",
-            hours: day.hours || 0,
-            tasks: day.tasks || [],
-            completed: day.completed || false,
-            resources: day.resources || [],
-            dayType: day.dayType || "study",
-          })),
+          dailyPlan: (week.dailyPlan || []).map((day) => {
+            const dayData: any = {
+              day: day.day || 0,
+              topic: day.topic || "",
+              hours: day.hours || 0,
+              tasks: day.tasks || [],
+              completed: day.completed || false,
+              resources: day.resources || [],
+              dayType: day.dayType || "study",
+            };
+            // Include dayDetails if it exists
+            if (day.dayDetails) {
+              dayData.dayDetails = {
+                ...day.dayDetails,
+                generatedAt: day.dayDetails.generatedAt ? toTimestamp(day.dayDetails.generatedAt) : null,
+              };
+            }
+            return dayData;
+          }),
         };
 
         // Only add optional fields if they exist
@@ -226,6 +240,13 @@ class StudyPlanService {
           if (dayCompletedAtTimestamp) {
             dayData.completedAt = dayCompletedAtTimestamp;
           }
+          // Include dayDetails if it exists
+          if (day.dayDetails) {
+            dayData.dayDetails = {
+              ...day.dayDetails,
+              generatedAt: day.dayDetails.generatedAt ? toTimestamp(day.dayDetails.generatedAt) : null,
+            };
+          }
           return dayData;
         }),
       };
@@ -274,6 +295,14 @@ class StudyPlanService {
       dayType: existingDay.dayType || "study",
     };
 
+    // Preserve dayDetails if it exists (unless explicitly updated)
+    if (existingDay.dayDetails && updates.dayDetails === undefined) {
+      dayData.dayDetails = {
+        ...existingDay.dayDetails,
+        generatedAt: existingDay.dayDetails.generatedAt ? toTimestamp(existingDay.dayDetails.generatedAt) : null,
+      };
+    }
+
     // Only update defined fields
     if (updates.day !== undefined) dayData.day = updates.day;
     if (updates.topic !== undefined) dayData.topic = updates.topic;
@@ -282,6 +311,13 @@ class StudyPlanService {
     if (updates.completed !== undefined) dayData.completed = updates.completed;
     if (updates.resources !== undefined) dayData.resources = updates.resources || [];
     if (updates.dayType !== undefined) dayData.dayType = updates.dayType;
+    // Allow updating dayDetails if provided
+    if (updates.dayDetails !== undefined) {
+      dayData.dayDetails = {
+        ...updates.dayDetails,
+        generatedAt: updates.dayDetails.generatedAt ? toTimestamp(updates.dayDetails.generatedAt) : null,
+      };
+    }
 
     // Convert Date to Timestamp if needed
     const completedAtTimestamp = updates.completedAt 
@@ -332,6 +368,13 @@ class StudyPlanService {
           if (dayCompletedAtTimestamp) {
             dayData.completedAt = dayCompletedAtTimestamp;
           }
+          // Include dayDetails if it exists
+          if (day.dayDetails) {
+            dayData.dayDetails = {
+              ...day.dayDetails,
+              generatedAt: day.dayDetails.generatedAt ? toTimestamp(day.dayDetails.generatedAt) : null,
+            };
+          }
           return dayData;
         }),
       };
@@ -351,6 +394,85 @@ class StudyPlanService {
     await updateDoc(planRef, {
       weeks: weeksData,
       totalProgress,
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  async saveDayDetails(
+    userId: string,
+    planId: string,
+    weekIndex: number,
+    dayIndex: number,
+    dayDetails: DayDetails
+  ): Promise<void> {
+    const plan = await this.getPlan(userId, planId);
+    if (!plan) throw new Error("Plan not found");
+
+    const weeks = [...plan.weeks];
+    const week = { ...weeks[weekIndex] };
+    const dailyPlan = [...week.dailyPlan];
+    const day = { ...dailyPlan[dayIndex] };
+
+    // Add generatedAt timestamp if not present
+    const detailsWithTimestamp: DayDetails = {
+      ...dayDetails,
+      generatedAt: dayDetails.generatedAt || new Date(),
+    };
+
+    day.dayDetails = detailsWithTimestamp;
+    dailyPlan[dayIndex] = day;
+    week.dailyPlan = dailyPlan;
+    weeks[weekIndex] = week;
+
+    const planRef = doc(this.getPlansCollection(userId), planId);
+
+    // Convert all weeks data properly
+    const weeksData = weeks.map((w) => {
+      const weekData: any = {
+        week: w.week || 0,
+        focus: w.focus || "",
+        description: w.description || "",
+        progress: w.progress || 0,
+        completed: w.completed || false,
+        dailyPlan: (w.dailyPlan || []).map((day) => {
+          const dayData: any = {
+            day: day.day || 0,
+            topic: day.topic || "",
+            hours: day.hours || 0,
+            tasks: day.tasks || [],
+            completed: day.completed || false,
+            resources: day.resources || [],
+            dayType: day.dayType || "study",
+          };
+          const dayCompletedAtTimestamp = toTimestamp(day.completedAt);
+          if (dayCompletedAtTimestamp) {
+            dayData.completedAt = dayCompletedAtTimestamp;
+          }
+          // Include dayDetails if it exists
+          if (day.dayDetails) {
+            dayData.dayDetails = {
+              ...day.dayDetails,
+              generatedAt: day.dayDetails.generatedAt ? toTimestamp(day.dayDetails.generatedAt) : null,
+            };
+          }
+          return dayData;
+        }),
+      };
+
+      // Only add optional fields if they exist
+      if (w.summary) weekData.summary = w.summary;
+      if (w.learningGoals && w.learningGoals.length > 0) weekData.learningGoals = w.learningGoals;
+      if (w.recommendedHours !== undefined) weekData.recommendedHours = w.recommendedHours;
+      const weekCompletedAtTimestamp = toTimestamp(w.completedAt);
+      if (weekCompletedAtTimestamp) {
+        weekData.completedAt = weekCompletedAtTimestamp;
+      }
+
+      return weekData;
+    });
+
+    await updateDoc(planRef, {
+      weeks: weeksData,
       updatedAt: serverTimestamp(),
     });
   }
