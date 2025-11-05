@@ -463,6 +463,7 @@ export class AnalyticsStorageService {
    */
   clearAllData(): void {
     try {
+      const STORAGE_KEYS = this.getStorageKeys();
       Object.values(STORAGE_KEYS).forEach((key) => {
         localStorage.removeItem(key);
       });

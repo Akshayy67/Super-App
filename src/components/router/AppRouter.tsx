@@ -26,6 +26,7 @@ import { BlockedUserGuard } from "./BlockedUserGuard";
 import { PaymentPage } from "../PaymentPage";
 import { AboutUsPage } from "../AboutUsPage";
 import { SignupPage } from "../auth/SignupPage";
+import { StudyPlanManager } from "../studyPlan/StudyPlan";
 
 interface AppRouterProps {
   invitationData: {
@@ -244,6 +245,14 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         element={
           <BlockedUserGuard>
             <PageTransitionWrapper><JournalManager /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/study-plans" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><StudyPlanManager /></PageTransitionWrapper>
           </BlockedUserGuard>
         } 
       />

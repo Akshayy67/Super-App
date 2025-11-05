@@ -53,7 +53,23 @@ CRITICAL INSTRUCTIONS - Detect these action types:
    - "schedule a meeting", "set up a meeting", "have a meeting", "meet with", "call with", "discussion", "appointment"
    - Example: "I need to schedule a meeting with John tomorrow" → type: "meeting"
 
-3. "todo" type - Use when user says:
+3. "study_plan" type - Use when user says:
+   - "create a study plan", "make a study plan", "generate a study plan", "study plan for", "learn [topic] in [time]", "master [topic] in [time]"
+   - "complete [topic] in [duration]", "study [topic] for [duration]", "prepare for [topic] in [time]"
+   - "I want to learn [topic]", "I need to study [topic]", "help me learn [topic]", "create a roadmap for [topic]"
+   - Examples:
+     * "I want to create a study plan for DSA" → type: "study_plan"
+     * "Help me learn React in 1 month" → type: "study_plan"
+     * "I need to complete DSA in 4 weeks" → type: "study_plan"
+     * "Create a study roadmap for machine learning" → type: "study_plan"
+   - Extract study plan parameters:
+     * goal: The topic/subject to learn (e.g., "DSA", "React", "Machine Learning")
+     * duration: Extract time period (e.g., "1 month" → 4 weeks, "2 months" → 8 weeks, "4 weeks" → 4 weeks)
+     * difficulty: Infer from context ("beginner", "intermediate", "advanced") or default to "intermediate"
+     * dailyHours: Extract if mentioned (e.g., "3 hours per day" → 3), otherwise default to 3
+     * currentLevel: Extract if mentioned (e.g., "I'm a beginner", "intermediate level")
+
+4. "todo" type - Use when user says:
    - "need to", "need to complete", "need to finish", "need to do", "must do", "should do"
    - "complete", "finish", "work on", "do [something]", "complete [something]"
    - "assignments", "tasks", "homework", "project", "report", "work"
@@ -62,20 +78,23 @@ CRITICAL INSTRUCTIONS - Detect these action types:
      * "I need to complete my 2 assignments of os and cn one by 3rd november and other by 5th november" → type: "todo" (extract dates)
      * "I need to finish the report" → type: "todo"
      * "complete homework by Friday" → type: "todo" with suggestedDate
+   - NOTE: If the action is about learning/studying a topic with a timeline, prefer "study_plan" type instead
 
-4. "reminder" type - Use when user explicitly mentions:
+5. "reminder" type - Use when user explicitly mentions:
    - "remind me", "don't forget", "remember to"
    - Example: "Remind me to call mom" → type: "reminder"
 
 STRICT RULES:
 - If user says "create a team" or "make a team" or "team which works on" → MUST use type "team"
-- If user says "schedule a meeting" or "meet with" → MUST use type "meeting"  
+- If user says "schedule a meeting" or "meet with" → MUST use type "meeting"
+- If user says "create a study plan", "learn [topic] in [time]", "study [topic] for [duration]" → MUST use type "study_plan"
 - If user mentions completing/finishing work, assignments, tasks, projects, reports with or without dates → MUST use type "todo"
 - Extract dates/deadlines when mentioned (e.g., "by 3rd november", "by November 5", "on Friday", "by [date]") and set suggestedDate
 - If user mentions multiple tasks/assignments, create separate action items for each
 - Do NOT create action items for general descriptions or explanations - ONLY for explicit actions
 - If user describes a team structure but doesn't explicitly say "create team", do NOT create a team action item
 - Extract the team name/purpose from the user's message if mentioned
+- For study plans, extract goal (topic), duration (weeks), difficulty, and daily hours from the text
 - Handle typos gracefully - "assignments" vs "assignmnets", "november" vs "novembneer", etc.
 
 Please respond in the following JSON format:
@@ -99,10 +118,17 @@ Please respond in the following JSON format:
   "motivationInsights": "Provide insights about the user's motivation, mood, and emotional state",
   "actionItems": [
     {
-      "text": "Action item text (e.g., 'Create team for e-commerce website' or 'Complete OS assignment' or 'Complete CN assignment')",
-      "type": "todo|meeting|reminder|event|team",
+      "text": "Action item text (e.g., 'Create team for e-commerce website' or 'Complete OS assignment' or 'Create study plan for DSA')",
+      "type": "todo|meeting|reminder|event|team|study_plan",
       "suggestedDate": "YYYY-MM-DD HH:MM or null (extract dates like '3rd november' → '2024-11-03 00:00', '5th november' → '2024-11-05 00:00')",
-      "teamName": "Team name if type is team (extract from user message or infer from purpose)"
+      "teamName": "Team name if type is team (extract from user message or infer from purpose)",
+      "studyPlanData": {
+        "goal": "Learning goal/topic (e.g., 'Complete DSA', 'Master React', 'Learn Python')",
+        "duration": 4,
+        "difficulty": "beginner|intermediate|advanced",
+        "dailyHours": 3,
+        "currentLevel": "Current level if mentioned, or null"
+      }
     }
   ]
 }
@@ -232,6 +258,7 @@ IMPORTANT: Only create action items if the user explicitly wants to DO something
             ? new Date(item.suggestedDate)
             : undefined,
           teamName: item.teamName || undefined,
+          studyPlanData: item.studyPlanData || undefined,
         }));
 
         // Log normalized types
@@ -421,6 +448,62 @@ IMPORTANT: Only create action items if the user explicitly wants to DO something
     }
   }
 
+  async createStudyPlansFromActions(
+    actionItems: DreamToPlanResult["actionItems"]
+  ): Promise<Array<{ planId: string; goal: string }>> {
+    const user = realTimeAuth.getCurrentUser();
+    if (!user) throw new Error("User not authenticated");
+
+    const { studyPlanService } = await import("./studyPlanService");
+    const createdPlans: Array<{ planId: string; goal: string }> = [];
+
+    for (const item of actionItems) {
+      if (item.type === "study_plan" && item.studyPlanData) {
+        const { goal, duration = 4, difficulty = "intermediate", dailyHours = 3, currentLevel } = item.studyPlanData;
+
+        try {
+          // Create the study plan
+          const planId = await studyPlanService.createPlan({
+            goal: goal || item.text,
+            duration: duration,
+            difficulty: difficulty as "beginner" | "intermediate" | "advanced",
+            dailyHours: dailyHours,
+            currentLevel: currentLevel,
+          });
+
+          createdPlans.push({ planId, goal: goal || item.text });
+
+          // Generate AI plan asynchronously (don't wait for it)
+          const { studyPlanAIService } = await import("./studyPlanAIService");
+          studyPlanAIService.generateStudyPlan({
+            goal: goal || item.text,
+            duration: duration,
+            difficulty: difficulty as "beginner" | "intermediate" | "advanced",
+            dailyHours: dailyHours,
+            currentLevel: currentLevel,
+          }).then((aiPlan) => {
+            // Update plan with AI-generated content
+            studyPlanService.updatePlan(user.id, planId, {
+              overview: aiPlan.overview,
+              weeks: aiPlan.weeks || [],
+              timeSummary: aiPlan.timeSummary,
+              tips: aiPlan.tips || [],
+              recommendedPlatforms: aiPlan.recommendedPlatforms || [],
+              motivation: aiPlan.motivation || "",
+              totalProgress: aiPlan.totalProgress || 0,
+            });
+          }).catch((error) => {
+            console.error("Error generating AI study plan:", error);
+          });
+        } catch (error) {
+          console.error("Error creating study plan:", error);
+        }
+      }
+    }
+
+    return createdPlans;
+  }
+
   async processJournalEntry(
     journalContent: string,
     options: {
@@ -450,6 +533,9 @@ IMPORTANT: Only create action items if the user explicitly wants to DO something
       );
     }
 
+    // Note: Study plans are handled in the UI component to allow user confirmation
+    // and navigation to the study plan page with pre-filled data
+
     return result;
   }
 
@@ -463,6 +549,7 @@ Text: "${text}"
 CRITICAL - Detect action types accurately:
 - "team" type: If user says "create a team", "form a team", "make a team", "set up a team", "new team"
 - "meeting" type: If user says "schedule a meeting", "meet with", "call with", "have a meeting", "appointment"
+- "study_plan" type: If user says "create a study plan", "make a study plan", "learn [topic] in [time]", "study [topic] for [duration]", "help me learn [topic]"
 - "todo" type: If user says "need to", "should", "do", "task", "complete", "finish"
 - "reminder" type: If user says "remind me", "don't forget", "remember"
 
@@ -471,14 +558,21 @@ Respond in JSON format:
   "actionItems": [
     {
       "text": "Action item text",
-      "type": "todo|meeting|reminder|event|team",
+      "type": "todo|meeting|reminder|event|team|study_plan",
       "suggestedDate": "YYYY-MM-DD HH:MM or null if not specified",
-      "teamName": "Team name if type is team and mentioned, or null"
+      "teamName": "Team name if type is team and mentioned, or null",
+      "studyPlanData": {
+        "goal": "Learning goal/topic if type is study_plan",
+        "duration": 4,
+        "difficulty": "beginner|intermediate|advanced",
+        "dailyHours": 3,
+        "currentLevel": "Current level if mentioned, or null"
+      }
     }
   ]
 }
 
-Be precise: "create a team" → type: "team". "schedule a meeting" → type: "meeting".`;
+Be precise: "create a team" → type: "team". "schedule a meeting" → type: "meeting". "create a study plan for DSA" → type: "study_plan".`;
 
     try {
       const response = await unifiedAIService.generateResponse(prompt, "");
@@ -494,6 +588,7 @@ Be precise: "create a team" → type: "team". "schedule a meeting" → type: "me
             type: (item.type?.toLowerCase() || "todo"), // Normalize type
             suggestedDate: item.suggestedDate ? new Date(item.suggestedDate) : undefined,
             teamName: item.teamName || undefined,
+            studyPlanData: item.studyPlanData || undefined,
           }));
         }
       }

@@ -8,6 +8,11 @@ import {
   ArrowLeftRight,
   X,
   Search,
+  ChevronDown,
+  ChevronUp,
+  AlertTriangle,
+  Calendar,
+  Clock,
 } from "lucide-react";
 import { Task } from "../../types";
 import { firestoreUserTasks } from "../../utils/firestoreUserTasks";
@@ -67,6 +72,7 @@ export const TaskManager: React.FC = () => {
     dueDate: "",
     priority: "medium" as "low" | "medium" | "high",
   });
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 
   if (!user) {
     return (
@@ -653,6 +659,125 @@ export const TaskManager: React.FC = () => {
     setDateRange({ startDate: "", endDate: "" });
   };
 
+  // Group tasks into organized sections
+  interface GroupedTasks {
+    overdue: Task[];
+    today: Task[];
+    tomorrow: Task[];
+    upcoming: Task[];
+    completed: Task[];
+  }
+
+  const groupTasks = (tasks: Task[]): GroupedTasks => {
+    const grouped: GroupedTasks = {
+      overdue: [],
+      today: [],
+      tomorrow: [],
+      upcoming: [],
+      completed: [],
+    };
+
+    tasks.forEach((task) => {
+      if (task.status === "completed") {
+        grouped.completed.push(task);
+      } else {
+        const taskDate = new Date(task.dueDate);
+        if (isNaN(taskDate.getTime())) {
+          grouped.upcoming.push(task);
+        } else if (isOverdue(task)) {
+          grouped.overdue.push(task);
+        } else if (isToday(taskDate)) {
+          grouped.today.push(task);
+        } else if (isTomorrow(taskDate)) {
+          grouped.tomorrow.push(task);
+        } else {
+          grouped.upcoming.push(task);
+        }
+      }
+    });
+
+    return grouped;
+  };
+
+  const toggleSection = (sectionId: string) => {
+    setCollapsedSections((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionId)) {
+        newSet.delete(sectionId);
+      } else {
+        newSet.add(sectionId);
+      }
+      return newSet;
+    });
+  };
+
+  const isSectionCollapsed = (sectionId: string) => {
+    return collapsedSections.has(sectionId);
+  };
+
+  const renderTaskSection = (
+    title: string,
+    sectionId: string,
+    tasks: Task[],
+    icon: React.ReactNode,
+    headerColor: string,
+    bgColor: string,
+    borderColor: string
+  ) => {
+    if (tasks.length === 0) return null;
+
+    const isCollapsed = isSectionCollapsed(sectionId);
+
+    return (
+      <div className="mb-5 shadow-sm rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => toggleSection(sectionId)}
+          className={`w-full flex items-center justify-between p-4 sm:p-5 ${headerColor} transition-all duration-200 hover:shadow-md`}
+        >
+          <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+            <div className={`p-2 sm:p-2.5 rounded-lg ${bgColor} flex-shrink-0 shadow-sm`}>
+              {icon}
+            </div>
+            <div className="text-left flex-1 min-w-0">
+              <h3 className="font-bold text-base sm:text-lg text-gray-900 dark:text-gray-100 truncate">
+                {title}
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                {tasks.length} task{tasks.length !== 1 ? "s" : ""} in this section
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0 ml-3">
+            <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${bgColor} text-gray-800 dark:text-gray-200 shadow-sm border ${borderColor}`}>
+              {tasks.length}
+            </span>
+            <div className="p-1.5 rounded-full bg-white dark:bg-gray-800 shadow-sm">
+              {isCollapsed ? (
+                <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400" />
+              ) : (
+                <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-400" />
+              )}
+            </div>
+          </div>
+        </button>
+        {!isCollapsed && (
+          <div className={`${bgColor} border-t ${borderColor} p-4 sm:p-5 space-y-3 sm:space-y-4`}>
+            {tasks.map((task) => (
+              <SwipeableTaskItem
+                key={task.id}
+                task={task}
+                onToggleStatus={toggleTaskStatus}
+                onEdit={startEditing}
+                onDelete={deleteTask}
+                getPriorityColor={getPriorityColor}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <GeneralLayout>
       <div
@@ -1074,18 +1199,76 @@ export const TaskManager: React.FC = () => {
               </div>
             </div>
           )}
-          <div className="space-y-3 sm:space-y-4">
-            {getFilteredTasks().map((task) => (
-              <SwipeableTaskItem
-                key={task.id}
-                task={task}
-                onToggleStatus={toggleTaskStatus}
-                onEdit={startEditing}
-                onDelete={deleteTask}
-                getPriorityColor={getPriorityColor}
-              />
-            ))}
-          </div>
+
+          {/* Organized Task Sections */}
+          {(() => {
+            const filteredTasks = getFilteredTasks();
+            const grouped = groupTasks(filteredTasks);
+            const hasAnyTasks = Object.values(grouped).some((tasks) => tasks.length > 0);
+
+            if (!hasAnyTasks) {
+              return null;
+            }
+
+            return (
+              <div className="space-y-4">
+                {/* Overdue Section */}
+                {renderTaskSection(
+                  "⚠️ Overdue",
+                  "overdue",
+                  grouped.overdue,
+                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />,
+                  "bg-red-50 dark:bg-red-900/20",
+                  "bg-red-50/50 dark:bg-red-900/10",
+                  "border-red-300 dark:border-red-700"
+                )}
+
+                {/* Today Section */}
+                {renderTaskSection(
+                  "📅 Today",
+                  "today",
+                  grouped.today,
+                  <Calendar className="w-5 h-5 text-orange-600 dark:text-orange-400" />,
+                  "bg-orange-50 dark:bg-orange-900/20",
+                  "bg-orange-50/50 dark:bg-orange-900/10",
+                  "border-orange-300 dark:border-orange-700"
+                )}
+
+                {/* Tomorrow Section */}
+                {renderTaskSection(
+                  "⏰ Tomorrow",
+                  "tomorrow",
+                  grouped.tomorrow,
+                  <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
+                  "bg-blue-50 dark:bg-blue-900/20",
+                  "bg-blue-50/50 dark:bg-blue-900/10",
+                  "border-blue-300 dark:border-blue-700"
+                )}
+
+                {/* Upcoming Section */}
+                {renderTaskSection(
+                  "📆 Upcoming",
+                  "upcoming",
+                  grouped.upcoming,
+                  <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />,
+                  "bg-purple-50 dark:bg-purple-900/20",
+                  "bg-purple-50/50 dark:bg-purple-900/10",
+                  "border-purple-300 dark:border-purple-700"
+                )}
+
+                {/* Completed Section */}
+                {renderTaskSection(
+                  "✅ Completed",
+                  "completed",
+                  grouped.completed,
+                  <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />,
+                  "bg-green-50 dark:bg-green-900/20",
+                  "bg-green-50/50 dark:bg-green-900/10",
+                  "border-green-300 dark:border-green-700"
+                )}
+              </div>
+            );
+          })()}
 
           {getFilteredTasks().length === 0 && (
             <div className="text-center py-8 sm:py-12 px-4">

@@ -42,9 +42,16 @@ export interface DreamToPlanResult {
   motivationInsights: string;
   actionItems: Array<{
     text: string;
-    type: "todo" | "meeting" | "reminder" | "event" | "team";
+    type: "todo" | "meeting" | "reminder" | "event" | "team" | "study_plan";
     suggestedDate?: Date;
     teamName?: string; // For team creation action items
+    studyPlanData?: {
+      goal: string;
+      duration?: number; // weeks
+      difficulty?: "beginner" | "intermediate" | "advanced";
+      dailyHours?: number;
+      currentLevel?: string;
+    }; // For study plan creation action items
   }>;
 }
 

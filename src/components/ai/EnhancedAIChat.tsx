@@ -855,10 +855,21 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
 
     try {
       const hasTeamActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "team");
+      const hasStudyPlanActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "study_plan");
       
       // Only create team if team form was filled and submitted
       if (hasTeamActions && showTeamForm && teamFormData.name.trim()) {
         await handleCreateTeam();
+      }
+
+      // Handle study plans - navigate to study plan page with pre-filled data
+      if (hasStudyPlanActions) {
+        const studyPlanItems = currentDreamToPlanResult.actionItems.filter((item: any) => item.type === "study_plan");
+        // Store study plan data in sessionStorage for the study plan page to use
+        sessionStorage.setItem("pendingStudyPlans", JSON.stringify(studyPlanItems));
+        // Navigate to study plan page
+        window.location.href = "/study-plans?tab=new";
+        return; // Don't close modal yet, let navigation happen
       }
 
       // Always add todos and goals to calendar
@@ -1742,6 +1753,44 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
                 </div>
               )}
 
+              {/* Study Plan Section - Only show if study plan actions detected */}
+              {currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "study_plan") && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                    <SparklesIcon className="w-5 h-5 text-purple-600" />
+                    Study Plans
+                  </h4>
+                  <div className="space-y-3">
+                    {currentDreamToPlanResult.actionItems
+                      .filter((item: any) => item.type === "study_plan")
+                      .map((item: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800"
+                        >
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                            {item.studyPlanData?.goal || item.text}
+                          </p>
+                          <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                            {item.studyPlanData?.duration && (
+                              <div>Duration: {item.studyPlanData.duration} weeks</div>
+                            )}
+                            {item.studyPlanData?.difficulty && (
+                              <div>Difficulty: {item.studyPlanData.difficulty}</div>
+                            )}
+                            {item.studyPlanData?.dailyHours && (
+                              <div>Daily Hours: {item.studyPlanData.dailyHours}h</div>
+                            )}
+                          </div>
+                          <p className="text-xs text-purple-600 dark:text-purple-400 mt-2">
+                            Click "Create Study Plan" to generate your personalized learning roadmap!
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
               {/* Todo Tasks Section - Only show if todo actions detected */}
               {(currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "todo") || currentDreamToPlanResult.suggestedGoals?.length > 0) && (
                 <div>
@@ -1773,14 +1822,17 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
                 {(() => {
                   const hasTeamActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "team");
                   const hasMeetingActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "meeting");
+                  const hasStudyPlanActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "study_plan");
                   const hasTodoActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "todo") || currentDreamToPlanResult.suggestedGoals?.length > 0;
                   
                   let buttonText = "Add to Calendar";
-                  if (hasTeamActions && !hasMeetingActions && !hasTodoActions) {
+                  if (hasStudyPlanActions && !hasTeamActions && !hasMeetingActions && !hasTodoActions) {
+                    buttonText = "Create Study Plan";
+                  } else if (hasTeamActions && !hasMeetingActions && !hasTodoActions && !hasStudyPlanActions) {
                     buttonText = "Create Team";
-                  } else if (hasMeetingActions && !hasTeamActions && !hasTodoActions) {
+                  } else if (hasMeetingActions && !hasTeamActions && !hasTodoActions && !hasStudyPlanActions) {
                     buttonText = "Schedule Meeting & Add to Calendar";
-                  } else if (hasTodoActions && !hasTeamActions && !hasMeetingActions) {
+                  } else if (hasTodoActions && !hasTeamActions && !hasMeetingActions && !hasStudyPlanActions) {
                     buttonText = "Add Todos & Calendar";
                   } else {
                     buttonText = "Add All to Calendar";

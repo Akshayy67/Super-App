@@ -18,6 +18,7 @@ import {
   Calendar,
   Sparkles,
   Info,
+  Target,
 } from "lucide-react";
 import { gsap } from "gsap";
 import * as THREE from "three";
@@ -70,6 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: "calendar", label: "Calendar", icon: Calendar, path: "/calendar" },
     { id: "meetings", label: "Meetings", icon: Users, path: "/meetings" },
     { id: "journal", label: "Journal", icon: Sparkles, path: "/journal" },
+    { id: "study-plans", label: "Study Plans", icon: Target, path: "/study-plans" },
     { id: "chat", label: "AI Assistant", icon: MessageSquare, path: "/chat" },
     { id: "tools", label: "Study Tools", icon: Brain, path: "/tools" },
     {
