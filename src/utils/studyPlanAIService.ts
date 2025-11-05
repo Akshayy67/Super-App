@@ -37,12 +37,10 @@ class StudyPlanAIService {
                                   geminiError?.message?.includes("referrer") ||
                                   (geminiError?.status === 403);
         
-        // If rate limited, provide specific error message
+        // If rate limited, provide generic error message
         if (isRateLimited) {
           throw new Error(
-            "RATE_LIMIT_EXCEEDED: You've hit the API rate limit. " +
-            "Please wait a few minutes before trying again, or consider upgrading your Gemini API plan. " +
-            "The rate limit is temporary and will reset automatically."
+            "Our AI servers are busy right now. Please try again in a few moments."
           );
         }
         
@@ -58,8 +56,7 @@ class StudyPlanAIService {
             // Check if it's a rate limit error from unified service
             if (response.error?.includes("429") || response.error?.includes("rate limit")) {
               throw new Error(
-                "RATE_LIMIT_EXCEEDED: You've hit the API rate limit. " +
-                "Please wait a few minutes before trying again, or consider upgrading your Gemini API plan."
+                "Our AI servers are busy right now. Please try again in a few moments."
               );
             }
             throw new Error(response.error || "Failed to generate study plan");
@@ -75,8 +72,7 @@ class StudyPlanAIService {
           if (isFallbackMessage) {
             // Unified service couldn't help either - likely rate limit or API issue
             throw new Error(
-              "AI_SERVICE_UNAVAILABLE: The AI service is currently unavailable. " +
-              "This could be due to rate limiting or API issues. Please try again in a few minutes."
+              "Our AI servers are busy right now. Please try again in a few moments."
             );
           }
           
@@ -89,24 +85,22 @@ class StudyPlanAIService {
         } catch (fallbackError: any) {
           console.error("Unified service fallback also failed:", fallbackError);
           
-          // Don't override rate limit errors
-          if (fallbackError?.message?.includes("RATE_LIMIT_EXCEEDED")) {
+          // Don't override rate limit errors - they're already generic
+          if (fallbackError?.message?.includes("Our AI servers are busy")) {
             throw fallbackError;
           }
           
           // Provide helpful error message
           if (isReferrerBlocked) {
             throw new Error(
-              "API_KEY_HTTP_REFERRER_BLOCKED: Your Google Cloud API key has HTTP referrer restrictions. " +
-              "Please update your API key settings in Google Cloud Console to allow requests from your domain, " +
-              "or remove referrer restrictions for production use."
+              "Service temporarily unavailable. Please try again later."
             );
           }
           
           if (fallbackError?.message) {
             throw fallbackError;
           }
-          throw new Error("Unable to generate study plan. Please check your API configuration and try again.");
+          throw new Error("Our AI servers are busy right now. Please try again in a few moments.");
         }
       }
 
@@ -240,11 +234,10 @@ Return only the JSON object, no additional text.`;
                                   geminiError?.message?.includes("referrer") ||
                                   (geminiError?.status === 403);
         
-        // If rate limited, provide specific error message
+        // If rate limited, provide generic error message
         if (isRateLimited) {
           throw new Error(
-            "RATE_LIMIT_EXCEEDED: You've hit the API rate limit. " +
-            "Please wait a few minutes before trying again, or consider upgrading your Gemini API plan."
+            "Our AI servers are busy right now. Please try again in a few moments."
           );
         }
         
@@ -260,8 +253,7 @@ Return only the JSON object, no additional text.`;
             // Check if it's a rate limit error from unified service
             if (response.error?.includes("429") || response.error?.includes("rate limit")) {
               throw new Error(
-                "RATE_LIMIT_EXCEEDED: You've hit the API rate limit. " +
-                "Please wait a few minutes before trying again."
+                "Our AI servers are busy right now. Please try again in a few moments."
               );
             }
             throw new Error(response.error || "Failed to regenerate week plan");
@@ -276,8 +268,7 @@ Return only the JSON object, no additional text.`;
           
           if (isFallbackMessage) {
             throw new Error(
-              "AI_SERVICE_UNAVAILABLE: The AI service is currently unavailable. " +
-              "This could be due to rate limiting or API issues. Please try again in a few minutes."
+              "Our AI servers are busy right now. Please try again in a few moments."
             );
           }
           
@@ -285,22 +276,21 @@ Return only the JSON object, no additional text.`;
         } catch (fallbackError: any) {
           console.error("Unified service fallback also failed:", fallbackError);
           
-          // Don't override rate limit errors
-          if (fallbackError?.message?.includes("RATE_LIMIT_EXCEEDED")) {
+          // Don't override rate limit errors - they're already generic
+          if (fallbackError?.message?.includes("Our AI servers are busy")) {
             throw fallbackError;
           }
           
           if (isReferrerBlocked) {
             throw new Error(
-              "API_KEY_HTTP_REFERRER_BLOCKED: Your Google Cloud API key has HTTP referrer restrictions. " +
-              "Please update your API key settings in Google Cloud Console to allow requests from your domain."
+              "Service temporarily unavailable. Please try again later."
             );
           }
           
           if (fallbackError?.message) {
             throw fallbackError;
           }
-          throw new Error("Unable to regenerate week plan. Please check your API configuration and try again.");
+          throw new Error("Our AI servers are busy right now. Please try again in a few moments.");
         }
       }
 
@@ -511,6 +501,140 @@ Return ONLY the JSON object, no additional text or markdown formatting outside t
         progress: week.progress || 0,
       };
     });
+  }
+
+  async generateDayDetails(
+    goal: string,
+    weekFocus: string,
+    day: DailyTask,
+    difficulty: "beginner" | "intermediate" | "advanced"
+  ): Promise<{
+    suggestions: string[];
+    detailedTasks: Array<{
+      task: string;
+      description: string;
+      estimatedTime: string;
+      priority: "high" | "medium" | "low";
+    }>;
+    resources: Array<{
+      title: string;
+      url: string;
+      type: "video" | "article" | "course" | "practice" | "documentation";
+      description: string;
+    }>;
+    tips: string[];
+    motivation: string;
+  }> {
+    const prompt = `You are an expert study planner. Generate detailed suggestions and resources for a specific day in a study plan.
+
+Goal: ${goal}
+Week Focus: ${weekFocus}
+Day Topic: ${day.topic}
+Day Hours: ${day.hours}
+Difficulty: ${difficulty}
+
+Existing Tasks:
+${day.tasks.map(t => `- ${t}`).join('\n')}
+
+Generate:
+1. **Suggestions for today** - 3-5 actionable suggestions to maximize learning
+2. **Detailed task breakdown** - Expand each existing task with:
+   - Detailed description
+   - Estimated time
+   - Priority level
+3. **Learning resources** - Provide 5-8 relevant resources with:
+   - Title
+   - URL (use real URLs from platforms like YouTube, Coursera, LeetCode, etc.)
+   - Type (video/article/course/practice/documentation)
+   - Brief description
+4. **Study tips** - 3-5 tips specific to today's topic
+5. **Motivation** - A brief motivational message
+
+Return JSON format:
+{
+  "suggestions": ["Suggestion 1", "Suggestion 2", ...],
+  "detailedTasks": [
+    {
+      "task": "Task name",
+      "description": "Detailed explanation",
+      "estimatedTime": "30 minutes",
+      "priority": "high|medium|low"
+    }
+  ],
+  "resources": [
+    {
+      "title": "Resource title",
+      "url": "https://example.com/resource",
+      "type": "video|article|course|practice|documentation",
+      "description": "What this resource covers"
+    }
+  ],
+  "tips": ["Tip 1", "Tip 2", ...],
+  "motivation": "Motivational message for today"
+}
+
+IMPORTANT: 
+- Use real, working URLs from popular platforms
+- Make suggestions specific and actionable
+- Prioritize tasks based on importance
+- Include a mix of resource types
+- Make tips practical and applicable
+
+Return ONLY the JSON object, no additional text.`;
+
+    try {
+      let responseText: string;
+      
+      try {
+        const result = await geminiModel.generateContent(prompt);
+        responseText = result.response.text();
+      } catch (geminiError: any) {
+        console.warn("Gemini API failed, using fallback:", geminiError);
+        const response = await unifiedAIService.generateResponse(prompt, "");
+        if (!response.success || !response.data) {
+          throw new Error(response.error || "Failed to generate day details");
+        }
+        responseText = response.data;
+      }
+
+      const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/) || 
+                       responseText.match(/\{[\s\S]*\}/);
+      
+      if (!jsonMatch) {
+        throw new Error("Failed to parse AI response");
+      }
+
+      const jsonText = jsonMatch[1] || jsonMatch[0];
+      return JSON.parse(jsonText);
+    } catch (error: any) {
+      console.error("Error generating day details:", error);
+      // Return fallback data
+      return {
+        suggestions: [
+          `Focus on understanding the core concepts of ${day.topic}`,
+          `Practice with hands-on exercises`,
+          `Take notes and review key points`
+        ],
+        detailedTasks: day.tasks.map(task => ({
+          task,
+          description: `Complete: ${task}`,
+          estimatedTime: `${Math.floor(day.hours / day.tasks.length)} hours`,
+          priority: "medium" as const
+        })),
+        resources: day.resources?.map(resource => ({
+          title: resource,
+          url: `https://www.google.com/search?q=${encodeURIComponent(resource)}`,
+          type: "article" as const,
+          description: `Learn about ${resource}`
+        })) || [],
+        tips: [
+          "Break down complex topics into smaller chunks",
+          "Take regular breaks to maintain focus",
+          "Practice actively rather than just reading"
+        ],
+        motivation: `You're making progress on ${day.topic}! Keep going!`
+      };
+    }
   }
 }
 

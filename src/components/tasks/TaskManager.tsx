@@ -17,6 +17,7 @@ import {
 import { Task } from "../../types";
 import { firestoreUserTasks } from "../../utils/firestoreUserTasks";
 import { realTimeAuth } from "../../utils/realTimeAuth";
+import { calendarService } from "../../utils/calendarService";
 import { isAfter, startOfDay, isToday, isTomorrow } from "date-fns";
 import SwipeableTaskItem from "./SwipeableTaskItem";
 import { TaskCelebration } from "./TaskCelebration";
@@ -150,6 +151,13 @@ export const TaskManager: React.FC = () => {
       resetForm();
       setShowAddTask(false);
       await loadTasks();
+      // Sync to calendar after adding task
+      try {
+        await calendarService.syncTodosToCalendar(user.id);
+      } catch (syncError) {
+        console.error("Error syncing to calendar:", syncError);
+        // Don't fail the task creation if calendar sync fails
+      }
     } catch (error) {
       console.error("Error adding task:", error);
       alert("Failed to add task. Please try again.");
@@ -181,6 +189,13 @@ export const TaskManager: React.FC = () => {
       setEditingTask(null);
       resetForm();
       await loadTasks();
+      // Sync to calendar after updating task
+      try {
+        await calendarService.syncTodosToCalendar(user.id);
+      } catch (syncError) {
+        console.error("Error syncing to calendar:", syncError);
+        // Don't fail the task update if calendar sync fails
+      }
     } catch (error) {
       console.error("Error updating task:", error);
       alert("Failed to update task. Please try again.");
@@ -194,6 +209,14 @@ export const TaskManager: React.FC = () => {
       await firestoreUserTasks.updateTask(user.id, task.id, {
         status: newStatus,
       });
+
+      // Sync to calendar after status change (completed todos should be removed from calendar)
+      try {
+        await calendarService.syncTodosToCalendar(user.id);
+      } catch (syncError) {
+        console.error("Error syncing to calendar:", syncError);
+        // Don't fail the status change if calendar sync fails
+      }
 
       // If task is being completed, trigger celebration
       if (newStatus === "completed") {
@@ -259,6 +282,13 @@ export const TaskManager: React.FC = () => {
     try {
       await firestoreUserTasks.deleteTask(user.id, taskId);
       await loadTasks();
+      // Sync to calendar after deleting task (removes calendar event)
+      try {
+        await calendarService.syncTodosToCalendar(user.id);
+      } catch (syncError) {
+        console.error("Error syncing to calendar:", syncError);
+        // Don't fail the task deletion if calendar sync fails
+      }
     } catch (error) {
       console.error("Error deleting task:", error);
       alert("Failed to delete task. Please try again.");

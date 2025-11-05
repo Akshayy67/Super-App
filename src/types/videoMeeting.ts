@@ -40,6 +40,35 @@ export interface VideoMeeting {
   breakoutRooms?: BreakoutRoom[];
   transcript?: string;
   aiSummary?: string;
+  notes?: string;
+  meetingIntent?: {
+    themes?: Array<{
+      name: string;
+      description: string;
+      confidence: number;
+      tags?: string[];
+    }>;
+    suggestedGoals: Array<{
+      title: string;
+      description: string;
+      priority: "low" | "medium" | "high";
+      suggestedDueDate?: Date;
+    }>;
+    motivationInsights: string;
+    actionItems: Array<{
+      text: string;
+      type: "todo" | "meeting" | "reminder" | "event" | "team" | "study_plan";
+      suggestedDate?: Date;
+      teamName?: string;
+      studyPlanData?: {
+        goal: string;
+        duration?: number;
+        difficulty?: "beginner" | "intermediate" | "advanced";
+        dailyHours?: number;
+        currentLevel?: string;
+      };
+    }>;
+  };
   transcriptionStartTime?: Date;
   whiteboard?: WhiteboardState;
 }

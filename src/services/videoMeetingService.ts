@@ -226,6 +226,33 @@ class VideoMeetingService {
     });
   }
 
+  // Update meeting intent
+  async updateMeetingIntent(meetingId: string, intent: any): Promise<void> {
+    // Convert Date objects to Firestore Timestamps for storage
+    const serializedIntent = {
+      ...intent,
+      suggestedGoals: intent.suggestedGoals?.map((goal: any) => ({
+        ...goal,
+        suggestedDueDate: goal.suggestedDueDate ? Timestamp.fromDate(new Date(goal.suggestedDueDate)) : null
+      })),
+      actionItems: intent.actionItems?.map((item: any) => ({
+        ...item,
+        suggestedDate: item.suggestedDate ? Timestamp.fromDate(new Date(item.suggestedDate)) : null
+      }))
+    };
+
+    await updateDoc(doc(this.meetingsCollection, meetingId), {
+      meetingIntent: serializedIntent
+    });
+  }
+
+  // Update meeting notes
+  async updateMeetingNotes(meetingId: string, notes: string): Promise<void> {
+    await updateDoc(doc(this.meetingsCollection, meetingId), {
+      notes: notes
+    });
+  }
+
   // End meeting
   async endMeeting(meetingId: string): Promise<void> {
     await updateDoc(doc(this.meetingsCollection, meetingId), {
@@ -261,6 +288,17 @@ class VideoMeetingService {
               ...msg,
               timestamp: msg.timestamp?.toDate() || new Date()
             })),
+            meetingIntent: data.meetingIntent ? {
+              ...data.meetingIntent,
+              suggestedGoals: (data.meetingIntent.suggestedGoals || []).map((goal: any) => ({
+                ...goal,
+                suggestedDueDate: goal.suggestedDueDate?.toDate() || undefined
+              })),
+              actionItems: (data.meetingIntent.actionItems || []).map((item: any) => ({
+                ...item,
+                suggestedDate: item.suggestedDate?.toDate() || undefined
+              }))
+            } : undefined,
             whiteboard: data.whiteboard ? {
               ...data.whiteboard,
               paths: (data.whiteboard.paths || []).map((path: any) => ({
@@ -357,6 +395,17 @@ class VideoMeetingService {
             ...msg,
             timestamp: msg.timestamp?.toDate() || new Date()
           })),
+          meetingIntent: data.meetingIntent ? {
+            ...data.meetingIntent,
+            suggestedGoals: (data.meetingIntent.suggestedGoals || []).map((goal: any) => ({
+              ...goal,
+              suggestedDueDate: goal.suggestedDueDate?.toDate() || undefined
+            })),
+            actionItems: (data.meetingIntent.actionItems || []).map((item: any) => ({
+              ...item,
+              suggestedDate: item.suggestedDate?.toDate() || undefined
+            }))
+          } : undefined,
           whiteboard: data.whiteboard ? {
             ...data.whiteboard,
             paths: (data.whiteboard.paths || []).map((path: any) => ({

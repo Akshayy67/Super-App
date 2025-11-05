@@ -11,6 +11,7 @@ export const JournalManager: React.FC = () => {
   const [mood, setMood] = useState("");
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [addingToCalendar, setAddingToCalendar] = useState(false);
   const [showDreamToPlan, setShowDreamToPlan] = useState(false);
   const [dreamToPlanResult, setDreamToPlanResult] = useState<any>(null);
   const [teamFormData, setTeamFormData] = useState<{ name: string; emails: string[]; currentEmail: string }>({
@@ -86,8 +87,9 @@ export const JournalManager: React.FC = () => {
   };
 
   const handleAcceptGoals = async () => {
-    if (!dreamToPlanResult || !user) return;
+    if (!dreamToPlanResult || !user || addingToCalendar) return;
 
+    setAddingToCalendar(true);
     try {
       const hasTeamActions = dreamToPlanResult.actionItems?.some((item: any) => item.type === "team");
       
@@ -130,6 +132,8 @@ export const JournalManager: React.FC = () => {
     } catch (error) {
       console.error("Error accepting goals:", error);
       alert("Failed to add items. Please try again.");
+    } finally {
+      setAddingToCalendar(false);
     }
   };
 
@@ -596,10 +600,20 @@ export const JournalManager: React.FC = () => {
                 return (
                   <button
                     onClick={handleAcceptGoals}
-                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2"
+                    disabled={addingToCalendar}
+                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    <CheckCircle2 className="w-4 h-4" />
-                    {buttonText}
+                    {addingToCalendar ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        {buttonText}
+                      </>
+                    )}
                   </button>
                 );
               })()}

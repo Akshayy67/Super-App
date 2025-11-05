@@ -13,6 +13,10 @@ import {
   TrendingUp,
   Sparkles,
   BookOpen,
+  ExternalLink,
+  Lightbulb,
+  Link2,
+  AlertCircle,
 } from "lucide-react";
 import { StudyPlan, WeekPlan, DailyTask } from "../../types/studyPlan";
 import { studyPlanService } from "../../utils/studyPlanService";
@@ -39,6 +43,9 @@ export const StudyPlanDetails: React.FC<StudyPlanDetailsProps> = ({
   const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(
     new Set(plan.weeks && plan.weeks.length > 0 ? [plan.weeks[0].week] : []) // Expand first week by default
   );
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set()); // Format: "weekIndex-dayIndex"
+  const [dayDetails, setDayDetails] = useState<Map<string, any>>(new Map());
+  const [loadingDayDetails, setLoadingDayDetails] = useState<Set<string>>(new Set());
   const [regenerating, setRegenerating] = useState(false);
   const [syncingToCalendar, setSyncingToCalendar] = useState(false);
 
@@ -60,6 +67,56 @@ export const StudyPlanDetails: React.FC<StudyPlanDetailsProps> = ({
       newExpanded.add(weekNumber);
     }
     setExpandedWeeks(newExpanded);
+  };
+
+  const toggleDay = async (weekIndex: number, dayIndex: number) => {
+    const dayKey = `${weekIndex}-${dayIndex}`;
+    const newExpanded = new Set(expandedDays);
+    
+    if (newExpanded.has(dayKey)) {
+      newExpanded.delete(dayKey);
+    } else {
+      newExpanded.add(dayKey);
+      
+      // Load day details if not already loaded
+      if (!dayDetails.has(dayKey) && !loadingDayDetails.has(dayKey)) {
+        await loadDayDetails(weekIndex, dayIndex, dayKey);
+      }
+    }
+    
+    setExpandedDays(newExpanded);
+  };
+
+  const loadDayDetails = async (weekIndex: number, dayIndex: number, dayKey: string) => {
+    if (!user) return;
+    
+    const week = plan.weeks[weekIndex];
+    const day = week.dailyPlan[dayIndex];
+    
+    setLoadingDayDetails(prev => new Set(prev).add(dayKey));
+    
+    try {
+      const details = await studyPlanAIService.generateDayDetails(
+        plan.goal,
+        week.focus,
+        day,
+        plan.difficulty
+      );
+      
+      setDayDetails(prev => {
+        const newMap = new Map(prev);
+        newMap.set(dayKey, details);
+        return newMap;
+      });
+    } catch (error) {
+      console.error("Error loading day details:", error);
+    } finally {
+      setLoadingDayDetails(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(dayKey);
+        return newSet;
+      });
+    }
   };
 
   const handleTaskToggle = async (
@@ -470,78 +527,224 @@ export const StudyPlanDetails: React.FC<StudyPlanDetailsProps> = ({
                 <div className="border-t border-gray-200 dark:border-slate-700 p-4">
                   <div className="space-y-3">
                     {(week.dailyPlan || []).length > 0 ? (
-                      week.dailyPlan.map((day, dayIndex) => (
-                      <div
-                        key={day.day}
-                        className={`p-4 rounded-lg border ${
-                          day.completed
-                            ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
-                            : "bg-gray-50 dark:bg-slate-700/50 border-gray-200 dark:border-slate-600"
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <button
-                            onClick={() =>
-                              handleTaskToggle(
-                                weekIndex,
-                                dayIndex,
-                                !day.completed
-                              )
-                            }
-                            className="mt-0.5 btn-touch"
+                      week.dailyPlan.map((day, dayIndex) => {
+                        const dayKey = `${weekIndex}-${dayIndex}`;
+                        const isDayExpanded = expandedDays.has(dayKey);
+                        const details = dayDetails.get(dayKey);
+                        const isLoading = loadingDayDetails.has(dayKey);
+                        
+                        return (
+                          <div
+                            key={day.day}
+                            className={`rounded-lg border transition-all ${
+                              day.completed
+                                ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
+                                : "bg-gray-50 dark:bg-slate-700/50 border-gray-200 dark:border-slate-600"
+                            }`}
                           >
-                            {day.completed ? (
-                              <CheckCircle2 className="w-5 h-5 text-green-500" />
-                            ) : (
-                              <Circle className="w-5 h-5 text-gray-400" />
-                            )}
-                          </button>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <h4 className="font-semibold text-gray-900 dark:text-gray-100">
-                                Day {day.day}: {day.topic}
-                              </h4>
-                              {day.dayType && (
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                  day.dayType === "rest" 
-                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                    : day.dayType === "review"
-                                    ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                                    : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-                                }`}>
-                                  {day.dayType === "rest" ? "☕ Rest" : day.dayType === "review" ? "🧩 Review" : "📚 Study"}
-                                </span>
-                              )}
-                              {day.hours > 0 && (
-                                <div className="flex items-center gap-1 text-xs text-gray-500">
-                                  <Clock className="w-3 h-3" />
-                                  <span>{day.hours}h</span>
+                            {/* Day Header - Clickable */}
+                            <div
+                              className="p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-600/50 transition-colors"
+                              onClick={() => toggleDay(weekIndex, dayIndex)}
+                            >
+                              <div className="flex items-start gap-3">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleTaskToggle(
+                                      weekIndex,
+                                      dayIndex,
+                                      !day.completed
+                                    );
+                                  }}
+                                  className="mt-0.5 btn-touch"
+                                >
+                                  {day.completed ? (
+                                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                  ) : (
+                                    <Circle className="w-5 h-5 text-gray-400" />
+                                  )}
+                                </button>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                                      Day {day.day}: {day.topic}
+                                    </h4>
+                                    {day.dayType && (
+                                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                        day.dayType === "rest" 
+                                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                          : day.dayType === "review"
+                                          ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                          : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                                      }`}>
+                                        {day.dayType === "rest" ? "☕ Rest" : day.dayType === "review" ? "🧩 Review" : "📚 Study"}
+                                      </span>
+                                    )}
+                                    {day.hours > 0 && (
+                                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                                        <Clock className="w-3 h-3" />
+                                        <span>{day.hours}h</span>
+                                      </div>
+                                    )}
+                                    <div className="ml-auto">
+                                      {isDayExpanded ? (
+                                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                                      ) : (
+                                        <ChevronRight className="w-4 h-4 text-gray-500" />
+                                      )}
+                                    </div>
+                                  </div>
+                                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400 ml-1">
+                                    {day.tasks.map((task, taskIndex) => (
+                                      <li key={taskIndex}>{task}</li>
+                                    ))}
+                                  </ul>
                                 </div>
-                              )}
+                              </div>
                             </div>
-                            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400 ml-1 mb-2">
-                              {day.tasks.map((task, taskIndex) => (
-                                <li key={taskIndex}>{task}</li>
-                              ))}
-                            </ul>
-                            {day.resources && day.resources.length > 0 && (
-                              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-slate-600">
-                                <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                                  📚 Resources:
-                                </div>
-                                <ul className="space-y-1">
-                                  {day.resources.map((resource, idx) => (
-                                    <li key={idx} className="text-xs text-gray-600 dark:text-gray-400">
-                                      • {resource}
-                                    </li>
-                                  ))}
-                                </ul>
+                            
+                            {/* Expanded Day Details */}
+                            {isDayExpanded && (
+                              <div className="border-t border-gray-200 dark:border-slate-600 p-4 bg-white dark:bg-slate-800">
+                                {isLoading ? (
+                                  <div className="flex items-center justify-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
+                                    <span className="ml-3 text-gray-600 dark:text-gray-400">Loading day details...</span>
+                                  </div>
+                                ) : details ? (
+                                  <div className="space-y-4">
+                                    {/* Suggestions */}
+                                    {details.suggestions && details.suggestions.length > 0 && (
+                                      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                        <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                                          <Lightbulb className="w-4 h-4 text-blue-500" />
+                                          Suggestions for Today
+                                        </h5>
+                                        <ul className="space-y-2">
+                                          {details.suggestions.map((suggestion: string, idx: number) => (
+                                            <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
+                                              <span className="text-blue-500 mt-1">•</span>
+                                              <span>{suggestion}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Detailed Tasks */}
+                                    {details.detailedTasks && details.detailedTasks.length > 0 && (
+                                      <div>
+                                        <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                                          <Target className="w-4 h-4 text-purple-500" />
+                                          Detailed Task Breakdown
+                                        </h5>
+                                        <div className="space-y-3">
+                                          {details.detailedTasks.map((detailedTask: any, idx: number) => (
+                                            <div key={idx} className="p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-600">
+                                              <div className="flex items-start justify-between mb-2">
+                                                <div className="flex-1">
+                                                  <h6 className="font-medium text-gray-900 dark:text-gray-100">{detailedTask.task}</h6>
+                                                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{detailedTask.description}</p>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-1 ml-3">
+                                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                                    detailedTask.priority === "high"
+                                                      ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                                      : detailedTask.priority === "low"
+                                                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                                      : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                                  }`}>
+                                                    {detailedTask.priority}
+                                                  </span>
+                                                  <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                                    <Clock className="w-3 h-3" />
+                                                    {detailedTask.estimatedTime}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Resources with Links */}
+                                    {details.resources && details.resources.length > 0 && (
+                                      <div>
+                                        <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                                          <Link2 className="w-4 h-4 text-green-500" />
+                                          Learning Resources
+                                        </h5>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                          {details.resources.map((resource: any, idx: number) => (
+                                            <a
+                                              key={idx}
+                                              href={resource.url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-green-500 dark:hover:border-green-500 transition-colors group"
+                                            >
+                                              <div className="flex items-start justify-between gap-2">
+                                                <div className="flex-1 min-w-0">
+                                                  <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300">
+                                                      {resource.type}
+                                                    </span>
+                                                  </div>
+                                                  <h6 className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors truncate">
+                                                    {resource.title}
+                                                  </h6>
+                                                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                                                    {resource.description}
+                                                  </p>
+                                                </div>
+                                                <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-green-500 flex-shrink-0 mt-1" />
+                                              </div>
+                                            </a>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Tips */}
+                                    {details.tips && details.tips.length > 0 && (
+                                      <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                                        <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                                          <AlertCircle className="w-4 h-4 text-yellow-500" />
+                                          Study Tips
+                                        </h5>
+                                        <ul className="space-y-2">
+                                          {details.tips.map((tip: string, idx: number) => (
+                                            <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
+                                              <span className="text-yellow-500 mt-1">•</span>
+                                              <span>{tip}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Motivation */}
+                                    {details.motivation && (
+                                      <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                                        <p className="text-sm text-gray-700 dark:text-gray-300 italic flex items-start gap-2">
+                                          <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                          <span>{details.motivation}</span>
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                                    <p className="text-sm">Failed to load day details. Please try again.</p>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
-                        </div>
-                      </div>
-                    ))
+                        );
+                      })
                     ) : (
                       <div className="p-4 text-center text-gray-500 dark:text-gray-400">
                         <p className="text-sm">No daily tasks available for this week.</p>

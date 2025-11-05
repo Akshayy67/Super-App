@@ -63,11 +63,17 @@ export const StudyPlanManager: React.FC = () => {
   };
 
   const handlePlanCreated = async () => {
-    await loadPlans();
+    // First, switch to list tab immediately to close the form
     setActiveTab("list");
+    
+    // Update URL to remove tab parameter
     const newUrl = new URL(window.location.href);
     newUrl.searchParams.delete("tab");
+    newUrl.searchParams.delete("plan");
     window.history.pushState({}, "", newUrl.toString());
+    
+    // Then reload plans to show the newly created plan
+    await loadPlans();
   };
 
   const handlePlanSelect = (plan: StudyPlan) => {

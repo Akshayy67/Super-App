@@ -488,9 +488,7 @@ export const aiService = {
             // Check if it's a rate limit error
             if (response.status === 429) {
               const error = new Error(
-                `Rate limited: ${
-                  apiResult.error?.message || response.statusText
-                }`
+                "Our AI servers are busy right now. Please try again in a few moments."
               );
               (error as any).status = 429;
               throw error;
@@ -523,45 +521,20 @@ export const aiService = {
               // Log the full error message as a string for easier reading
               console.error("📋 Full Error Response:", JSON.stringify(apiResult, null, 2));
               
-              // Handle suspended API key specifically
+              // Handle suspended API key specifically - show generic message to users
               if (isSuspended) {
-                const suspendedMessage = `🚨 API Key Suspended\n\nYour API key has been suspended by Google. This typically happens when:\n\n• The API key was exposed publicly (e.g., in client-side code, GitHub, etc.)\n• Google detected security issues with the key\n• Terms of service violations\n• Billing issues with the associated project\n\n🔧 Solution:\n\n1. Go to Google Cloud Console: https://console.cloud.google.com/\n2. Navigate to "APIs & Services" > "Credentials"\n3. Delete the suspended API key (or check if it can be restored)\n4. Create a NEW API key\n5. Set appropriate restrictions:\n   - Application restrictions: "HTTP referrers" with your domains\n   - API restrictions: Select only "Generative Language API"\n6. Add the new key to your .env file as VITE_GOOGLE_AI_API_KEY\n7. NEVER commit API keys to version control (add .env to .gitignore)\n8. For production, consider using a backend proxy to hide your API key\n\n⚠️ Important: If this key is exposed in your code or repository, revoke it immediately for security.`;
-                
                 console.error("⚠️ SECURITY WARNING: API key has been suspended. It may be exposed publicly!");
                 
                 return {
                   success: false,
-                  error: suspendedMessage,
+                  error: "Service temporarily unavailable. Please try again later.",
                 };
               }
               
-              // Provide specific error messages based on common 403 causes
-              let userFriendlyMessage = "Access forbidden (403). ";
-              
-              // Check for specific Google API error codes and messages
-              if (errorMessage?.toLowerCase().includes("api key") || 
-                  errorMessage?.toLowerCase().includes("api_key") ||
-                  errorMessage?.toLowerCase().includes("invalid api key")) {
-                userFriendlyMessage += "❌ Invalid or restricted API key. ";
-              } else if (errorMessage?.toLowerCase().includes("permission denied") ||
-                         errorMessage?.toLowerCase().includes("access denied")) {
-                userFriendlyMessage += "❌ Permission denied. Check API key restrictions. ";
-              } else if (errorMessage?.toLowerCase().includes("billing") ||
-                         errorMessage?.toLowerCase().includes("quota")) {
-                userFriendlyMessage += "❌ Billing required or quota exceeded. ";
-              } else if (errorMessage?.toLowerCase().includes("not enabled") ||
-                         errorMessage?.toLowerCase().includes("api not enabled")) {
-                userFriendlyMessage += "❌ Generative Language API not enabled. ";
-              } else if (errorMessage?.toLowerCase().includes("restricted") ||
-                         errorMessage?.toLowerCase().includes("http referrer")) {
-                userFriendlyMessage += "❌ API key restrictions are blocking the request. ";
-              }
-              
-              userFriendlyMessage += `\n\nError Code: ${errorCode}\nError Message: ${errorMessage || "No specific message"}\n\n💡 Troubleshooting Steps:\n1. Verify API key is valid in Google Cloud Console\n2. Enable "Generative Language API" in APIs & Services\n3. Check API key restrictions (HTTP referrer/IP restrictions)\n4. Ensure billing is enabled for your project\n5. Check if you've exceeded quota limits`;
-              
+              // Provide generic error message for all 403 errors
               return {
                 success: false,
-                error: userFriendlyMessage,
+                error: "Service temporarily unavailable. Please try again later.",
               };
             }
 

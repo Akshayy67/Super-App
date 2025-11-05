@@ -251,11 +251,30 @@ export const VideoMeeting: React.FC = () => {
 
       webRTCService.onConnectionStateChange((userId, state) => {
         console.log('🔗 Connection state for', userId, ':', state);
-        if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+        // Only remove stream if connection is completely closed or failed
+        // Don't remove on "disconnected" as it might reconnect
+        if (state === 'failed' || state === 'closed') {
+          console.log(`🗑️ Removing stream for ${userId} due to connection state: ${state}`);
           setRemoteStreams(prev => {
             const newMap = new Map(prev);
             newMap.delete(userId);
             return newMap;
+          });
+        } else if (state === 'disconnected') {
+          // Keep stream but log warning - connection might reconnect
+          console.warn(`⚠️ Connection disconnected for ${userId}, keeping stream (might reconnect)`);
+        } else if (state === 'connected') {
+          // Connection established - ensure stream is still in state
+          console.log(`✅ Connection established for ${userId}, ensuring stream is available`);
+          // Stream should already be in state from onRemoteStream callback
+          // But verify it's there
+          setRemoteStreams(prev => {
+            const existingStream = webRTCService.getPeerConnection(userId);
+            if (existingStream && !prev.has(userId)) {
+              // Stream might not be in state yet, check if we can get it
+              console.log(`⚠️ Stream not in state for ${userId} but connection is connected`);
+            }
+            return prev;
           });
         }
       });
@@ -845,6 +864,21 @@ export const VideoMeeting: React.FC = () => {
           if (summary) {
             await videoMeetingService.updateMeetingSummary(currentMeetingId, summary);
             console.log('✅ AI summary saved');
+            
+            // Analyze meeting intent after summary is generated
+            try {
+              const meetingIntent = await meetingTranscriptionService.analyzeMeetingIntent(
+                finalTranscript,
+                summary
+              );
+              if (meetingIntent) {
+                await videoMeetingService.updateMeetingIntent(currentMeetingId, meetingIntent);
+                console.log('✅ Meeting intent analyzed and saved');
+              }
+            } catch (intentErr) {
+              console.error('Error analyzing meeting intent:', intentErr);
+              // Don't fail the whole process if intent analysis fails
+            }
           }
         } catch (err) {
           console.error('Error saving transcript/summary:', err);

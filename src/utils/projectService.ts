@@ -16,6 +16,7 @@ import {
 import { db } from '../config/firebase';
 import { Task } from '../types';
 import { firestoreUserTasks } from './firestoreUserTasks';
+import { calendarService } from './calendarService';
 
 export interface TeamProject {
   id: string;
@@ -346,6 +347,14 @@ class ProjectService {
       userId,
       metadata: { taskTitle: taskData.title }
     });
+
+    // Sync to calendar after adding task
+    try {
+      await calendarService.syncTodosToCalendar(userId);
+    } catch (syncError) {
+      console.error("Error syncing to calendar:", syncError);
+      // Don't fail the task creation if calendar sync fails
+    }
 
     return projectTask;
   }

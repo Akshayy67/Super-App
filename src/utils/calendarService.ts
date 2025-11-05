@@ -153,12 +153,25 @@ class CalendarService {
     await deleteDoc(doc(this.getEventsCollection(userId), eventId));
   }
 
-  async syncTodosToCalendar(userId: string): Promise<void> {
+  async syncTodosToCalendar(userId: string, startDate?: Date, endDate?: Date): Promise<void> {
     const tasks = await firestoreUserTasks.getTasks(userId);
-    const existingEvents = await this.getEvents(userId);
+    
+    // Only get events for the date range if provided
+    const existingEvents = startDate && endDate 
+      ? await this.getEvents(userId, startDate, endDate)
+      : await this.getEvents(userId);
 
     for (const task of tasks) {
       if (task.status === "pending" && task.dueDate) {
+        const taskDate = new Date(task.dueDate);
+        
+        // Only sync tasks within the date range if provided
+        if (startDate && endDate) {
+          if (taskDate < startDate || taskDate > endDate) {
+            continue;
+          }
+        }
+        
         const existingEvent = existingEvents.find(
           (e) => e.type === "todo" && e.relatedId === task.id
         );
@@ -166,7 +179,7 @@ class CalendarService {
         const eventData: Omit<CalendarEvent, "id" | "userId" | "createdAt" | "updatedAt"> = {
           title: task.title,
           description: task.description || `Subject: ${task.subject}`,
-          startDate: new Date(task.dueDate),
+          startDate: taskDate,
           type: "todo",
           relatedId: task.id,
           color: task.priority === "high" ? "#ef4444" : task.priority === "medium" ? "#f59e0b" : "#10b981",
@@ -192,9 +205,13 @@ class CalendarService {
     }
   }
 
-  async syncJournalsToCalendar(userId: string): Promise<void> {
+  async syncJournalsToCalendar(userId: string, startDate?: Date, endDate?: Date): Promise<void> {
     const journals = await journalService.getJournalEntries(userId);
-    const existingEvents = await this.getEvents(userId);
+    
+    // Only get events for the date range if provided
+    const existingEvents = startDate && endDate 
+      ? await this.getEvents(userId, startDate, endDate)
+      : await this.getEvents(userId);
 
     for (const journal of journals) {
       const journalDate = journal.date;
@@ -230,12 +247,24 @@ class CalendarService {
     }
   }
 
-  async syncNotesToCalendar(userId: string): Promise<void> {
+  async syncNotesToCalendar(userId: string, startDate?: Date, endDate?: Date): Promise<void> {
     const notes = storageUtils.getShortNotes(userId);
-    const existingEvents = await this.getEvents(userId);
+    
+    // Only get events for the date range if provided
+    const existingEvents = startDate && endDate 
+      ? await this.getEvents(userId, startDate, endDate)
+      : await this.getEvents(userId);
 
     for (const note of notes) {
       const noteDate = new Date(note.createdAt);
+      
+      // Only sync notes within the date range if provided
+      if (startDate && endDate) {
+        if (noteDate < startDate || noteDate > endDate) {
+          continue;
+        }
+      }
+      
       const existingEvent = existingEvents.find(
         (e) => e.type === "note" && e.relatedId === note.id
       );
@@ -268,13 +297,25 @@ class CalendarService {
     }
   }
 
-  async syncFilesToCalendar(userId: string): Promise<void> {
+  async syncFilesToCalendar(userId: string, startDate?: Date, endDate?: Date): Promise<void> {
     const files = await driveStorageUtils.getFiles(userId);
-    const existingEvents = await this.getEvents(userId);
+    
+    // Only get events for the date range if provided
+    const existingEvents = startDate && endDate 
+      ? await this.getEvents(userId, startDate, endDate)
+      : await this.getEvents(userId);
 
     for (const file of files) {
       if (file.type === "file") {
         const fileDate = new Date(file.uploadedAt);
+        
+        // Only sync files within the date range if provided
+        if (startDate && endDate) {
+          if (fileDate < startDate || fileDate > endDate) {
+            continue;
+          }
+        }
+        
         const existingEvent = existingEvents.find(
           (e) => e.type === "file" && e.relatedId === file.id
         );
@@ -308,9 +349,13 @@ class CalendarService {
     }
   }
 
-  async syncFlashcardsToCalendar(userId: string): Promise<void> {
+  async syncFlashcardsToCalendar(userId: string, startDate?: Date, endDate?: Date): Promise<void> {
     const flashcards = await driveStorageUtils.loadFlashcardsFromDrive(userId);
-    const existingEvents = await this.getEvents(userId);
+    
+    // Only get events for the date range if provided
+    const existingEvents = startDate && endDate 
+      ? await this.getEvents(userId, startDate, endDate)
+      : await this.getEvents(userId);
 
     // Group flashcards by creation date
     const flashcardsByDate = new Map<string, any[]>();
@@ -329,7 +374,14 @@ class CalendarService {
     // Create calendar events for each date with flashcards
     for (const [dateKey, cards] of flashcardsByDate.entries()) {
       const cardDate = new Date(dateKey);
-      const eventId = `flashcard_${dateKey}`;
+      
+      // Only sync flashcards within the date range if provided
+      if (startDate && endDate) {
+        if (cardDate < startDate || cardDate > endDate) {
+          continue;
+        }
+      }
+      
       const existingEvent = existingEvents.find(
         (e) => e.type === "flashcard" && format(e.startDate, "yyyy-MM-dd") === dateKey
       );
@@ -361,13 +413,13 @@ class CalendarService {
     }
   }
 
-  async syncAllItemsToCalendar(userId: string): Promise<void> {
+  async syncAllItemsToCalendar(userId: string, startDate?: Date, endDate?: Date): Promise<void> {
     await Promise.all([
-      this.syncTodosToCalendar(userId),
-      this.syncJournalsToCalendar(userId),
-      this.syncNotesToCalendar(userId),
-      this.syncFilesToCalendar(userId),
-      this.syncFlashcardsToCalendar(userId),
+      this.syncTodosToCalendar(userId, startDate, endDate),
+      this.syncJournalsToCalendar(userId, startDate, endDate),
+      this.syncNotesToCalendar(userId, startDate, endDate),
+      this.syncFilesToCalendar(userId, startDate, endDate),
+      this.syncFlashcardsToCalendar(userId, startDate, endDate),
     ]);
   }
 

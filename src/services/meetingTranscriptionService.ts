@@ -373,6 +373,28 @@ Format the summary with clear bullet points for easy reading.`;
       return null;
     }
   }
+
+  async analyzeMeetingIntent(transcript: string, summary?: string): Promise<any | null> {
+    if (!transcript.trim()) {
+      return null;
+    }
+
+    try {
+      // Import dreamToPlanService to analyze the meeting content
+      const { dreamToPlanService } = await import('../utils/dreamToPlanService');
+      
+      // Use the summary if available, otherwise use the transcript
+      const contentToAnalyze = summary || transcript;
+      
+      // Analyze the meeting content for intents using dream-to-plan service
+      const intentResult = await dreamToPlanService.analyzeJournalAndSuggestGoals(contentToAnalyze);
+      
+      return intentResult;
+    } catch (error) {
+      console.error('Error analyzing meeting intent:', error);
+      return null;
+    }
+  }
 }
 
 export const meetingTranscriptionService = new MeetingTranscriptionService();

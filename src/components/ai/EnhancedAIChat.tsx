@@ -86,6 +86,7 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
   const [meetingFormData, setMeetingFormData] = useState<{ [key: number]: { date: string; time: string } }>({});
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [creatingTeam, setCreatingTeam] = useState(false);
+  const [addingToCalendar, setAddingToCalendar] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -851,8 +852,9 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
   };
 
   const handleAcceptDreamToPlan = async () => {
-    if (!currentDreamToPlanResult) return;
+    if (!currentDreamToPlanResult || addingToCalendar) return;
 
+    setAddingToCalendar(true);
     try {
       const hasTeamActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "team");
       const hasStudyPlanActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "study_plan");
@@ -912,6 +914,8 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
     } catch (error) {
       console.error("Error accepting dream-to-plan:", error);
       addMessage("ai", "Sorry, I encountered an error adding items. Please try again.");
+    } finally {
+      setAddingToCalendar(false);
     }
   };
 
@@ -1841,10 +1845,20 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
                   return (
                     <button
                       onClick={handleAcceptDreamToPlan}
-                      className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+                      disabled={addingToCalendar}
+                      className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                     >
-                      <SparklesIcon className="w-4 h-4" />
-                      {buttonText}
+                      {addingToCalendar ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Adding...
+                        </>
+                      ) : (
+                        <>
+                          <SparklesIcon className="w-4 h-4" />
+                          {buttonText}
+                        </>
+                      )}
                     </button>
                   );
                 })()}

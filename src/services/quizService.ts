@@ -769,7 +769,7 @@ Make sure each question is unique and tests different aspects of ${topic}.`;
     );
 
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.statusText}`);
+      throw new Error("Our AI servers are busy right now. Please try again in a few moments.");
     }
 
     const data = await response.json();

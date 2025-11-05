@@ -68,6 +68,7 @@ export const AIChat: React.FC<AIChatProps> = ({
   const [showChatTypeModal, setShowChatTypeModal] = useState(false);
   const [extractedActions, setExtractedActions] = useState<any[]>([]);
   const [showActionConfirmModal, setShowActionConfirmModal] = useState(false);
+  const [addingActions, setAddingActions] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasSentInitialPromptRef = useRef<boolean>(false);
@@ -857,6 +858,9 @@ export const AIChat: React.FC<AIChatProps> = ({
               </button>
               <button
                 onClick={async () => {
+                  if (addingActions) return;
+                  
+                  setAddingActions(true);
                   try {
                     await dreamToPlanService.createTodosFromActions(
                       extractedActions.filter((a) => a.type === "todo")
@@ -873,12 +877,24 @@ export const AIChat: React.FC<AIChatProps> = ({
                   } catch (error) {
                     console.error("Error adding actions:", error);
                     alert("Failed to add action items. Please try again.");
+                  } finally {
+                    setAddingActions(false);
                   }
                 }}
-                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2"
+                disabled={addingActions}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                Add to Calendar & Todos
+                {addingActions ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    Add to Calendar & Todos
+                  </>
+                )}
               </button>
             </div>
           </div>

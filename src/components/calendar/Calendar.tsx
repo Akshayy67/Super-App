@@ -52,14 +52,34 @@ export const Calendar: React.FC = () => {
       const startDate = startOfMonth(currentDate);
       const endDate = endOfMonth(currentDate);
       
-      // Sync all items to calendar first
-      await calendarService.syncAllItemsToCalendar(user.id);
-      
-      // Then load events
+      // Only load events for the current month - don't sync on every load
+      // Sync should happen when items are created/updated, not on every calendar view
       const loadedEvents = await calendarService.getEvents(user.id, startDate, endDate);
       setEvents(loadedEvents);
     } catch (error) {
       console.error("Error loading events:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSyncCalendar = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      // Sync only for the current month to keep it fast
+      const startDate = startOfMonth(currentDate);
+      const endDate = endOfMonth(currentDate);
+      
+      await calendarService.syncAllItemsToCalendar(user.id, startDate, endDate);
+      
+      // Reload events after sync
+      const loadedEvents = await calendarService.getEvents(user.id, startDate, endDate);
+      setEvents(loadedEvents);
+    } catch (error) {
+      console.error("Error syncing calendar:", error);
+      alert("Failed to sync calendar. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -185,7 +205,7 @@ export const Calendar: React.FC = () => {
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : [];
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 h-full flex flex-col">
+    <div className="bg-white dark:bg-black rounded-lg shadow-lg p-6 h-full flex flex-col border border-gray-200 dark:border-gray-800">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
@@ -197,13 +217,13 @@ export const Calendar: React.FC = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => setCurrentDate(subMonths(currentDate, 1))}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg text-gray-900 dark:text-gray-100"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button
                 onClick={() => setCurrentDate(addMonths(currentDate, 1))}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg text-gray-900 dark:text-gray-100"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -224,25 +244,44 @@ export const Calendar: React.FC = () => {
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as typeof filter)}
-            className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-black text-gray-900 dark:text-gray-100"
+            style={{ colorScheme: 'dark' }}
           >
-            <option value="all">All Events</option>
-            <option value="todo">Todos</option>
-            <option value="meeting">Meetings</option>
-            <option value="study_session">Study Sessions</option>
-            <option value="event">Events</option>
-            <option value="reminder">Reminders</option>
-            <option value="journal">Journals</option>
-            <option value="note">Notes</option>
-            <option value="file">Files</option>
-            <option value="flashcard">Flashcards</option>
+            <option value="all" className="bg-white dark:bg-black text-gray-900 dark:text-gray-100">All Events</option>
+            <option value="todo" className="bg-white dark:bg-black text-gray-900 dark:text-gray-100">Todos</option>
+            <option value="meeting" className="bg-white dark:bg-black text-gray-900 dark:text-gray-100">Meetings</option>
+            <option value="study_session" className="bg-white dark:bg-black text-gray-900 dark:text-gray-100">Study Sessions</option>
+            <option value="event" className="bg-white dark:bg-black text-gray-900 dark:text-gray-100">Events</option>
+            <option value="reminder" className="bg-white dark:bg-black text-gray-900 dark:text-gray-100">Reminders</option>
+            <option value="journal" className="bg-white dark:bg-black text-gray-900 dark:text-gray-100">Journals</option>
+            <option value="note" className="bg-white dark:bg-black text-gray-900 dark:text-gray-100">Notes</option>
+            <option value="file" className="bg-white dark:bg-black text-gray-900 dark:text-gray-100">Files</option>
+            <option value="flashcard" className="bg-white dark:bg-black text-gray-900 dark:text-gray-100">Flashcards</option>
           </select>
           <button
             onClick={() => loadEvents()}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg text-gray-900 dark:text-gray-100"
             title="Refresh Calendar"
           >
             <RefreshCw className="w-5 h-5" />
+          </button>
+          <button
+            onClick={handleSyncCalendar}
+            disabled={loading}
+            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+            title="Sync Calendar with Todos, Journals, Notes, etc."
+          >
+            {loading ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Syncing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                Sync
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -255,7 +294,7 @@ export const Calendar: React.FC = () => {
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
               <div
                 key={day}
-                className="p-3 text-center text-base font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg"
+                className="p-3 text-center text-base font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
               >
                 {day}
               </div>
@@ -273,12 +312,12 @@ export const Calendar: React.FC = () => {
                 <div
                   key={idx}
                   onClick={() => handleDateClick(day)}
-                  className={`min-h-[80px] p-1 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer transition-colors ${
+                  className={`min-h-[80px] p-1 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer transition-colors ${
                     !isCurrentMonth
-                      ? "bg-gray-50 dark:bg-slate-800/50 opacity-50"
-                      : "bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700"
-                  } ${isToday ? "ring-2 ring-blue-500" : ""} ${
-                    isSelected ? "bg-blue-50 dark:bg-blue-900/20" : ""
+                      ? "bg-gray-50 dark:bg-gray-900/50 opacity-50"
+                      : "bg-white dark:bg-black hover:bg-gray-50 dark:hover:bg-gray-900"
+                  } ${isToday ? "ring-2 ring-blue-500 dark:ring-blue-400" : ""} ${
+                    isSelected ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700" : ""
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -328,9 +367,9 @@ export const Calendar: React.FC = () => {
 
       {/* Date Detail Modal */}
       {showDateDetail && selectedDate && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-black rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
               <div>
                 <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">
                   {format(selectedDate, "EEEE")}
@@ -346,7 +385,7 @@ export const Calendar: React.FC = () => {
                   setDateSummary(null);
                   setRemainingTasksCount(0);
                 }}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg text-gray-900 dark:text-gray-100"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -420,7 +459,7 @@ export const Calendar: React.FC = () => {
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-purple-600" />
+                    <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                     Daily Summary
                   </h4>
                   <button
@@ -475,7 +514,7 @@ export const Calendar: React.FC = () => {
                       <div
                         key={event.id}
                         onClick={() => handleEventClick(event)}
-                        className="p-4 rounded-lg border border-gray-200 dark:border-slate-700 hover:shadow-lg transition-all cursor-pointer group"
+                        className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all cursor-pointer group bg-white dark:bg-black hover:bg-gray-50 dark:hover:bg-gray-900"
                         style={{
                           borderLeftColor: getEventColor(event),
                           borderLeftWidth: "4px",
@@ -526,8 +565,8 @@ export const Calendar: React.FC = () => {
       )}
 
       {loading && (
-        <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="absolute inset-0 bg-white/50 dark:bg-black/50 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
         </div>
       )}
     </div>

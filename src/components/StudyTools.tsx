@@ -380,7 +380,8 @@ export const StudyTools: React.FC = () => {
         // setInputText("");
         // setSelectedDocument("");
       } else {
-        alert("AI processing failed: " + (result.error || "Unknown error"));
+        // Always show generic message - never expose technical details
+        alert("Our AI servers are busy right now. Please try again in a few moments.");
       }
     } catch (error) {
       alert(

@@ -16,6 +16,11 @@ import {
   ArrowDown,
   CheckSquare,
   Square,
+  Sparkles,
+  CheckCircle2,
+  Tag,
+  Edit3,
+  Save,
 } from "lucide-react";
 import { calendarService, type CalendarEvent, type MeetingRequest } from "../../utils/calendarService";
 import { videoMeetingService } from "../../services/videoMeetingService";
@@ -58,6 +63,10 @@ export const MeetingsTimeline: React.FC = () => {
     title: "",
     description: "",
   });
+  const [showMeetingIntentModal, setShowMeetingIntentModal] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [meetingNotes, setMeetingNotes] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
   const user = realTimeAuth.getCurrentUser();
   const navigate = useNavigate();
 
@@ -193,6 +202,33 @@ export const MeetingsTimeline: React.FC = () => {
   const handleMeetingClick = (meeting: UnifiedMeeting) => {
     setSelectedMeeting(meeting);
     setShowDetails(true);
+    // Load existing notes if available
+    if (meeting.videoMeeting?.notes) {
+      setMeetingNotes(meeting.videoMeeting.notes);
+    } else {
+      setMeetingNotes("");
+    }
+    setEditingNotes(false);
+  };
+
+  const handleSaveNotes = async () => {
+    if (!selectedMeeting?.videoMeeting?.id) return;
+    
+    setSavingNotes(true);
+    try {
+      await videoMeetingService.updateMeetingNotes(selectedMeeting.videoMeeting.id, meetingNotes);
+      // Update local state
+      if (selectedMeeting.videoMeeting) {
+        selectedMeeting.videoMeeting.notes = meetingNotes;
+      }
+      setEditingNotes(false);
+      // Reload meetings to get updated data
+      await loadMeetings();
+    } catch (error) {
+      console.error('Error saving meeting notes:', error);
+    } finally {
+      setSavingNotes(false);
+    }
   };
 
   const handleJoinVideoMeeting = (meetingId: string) => {
@@ -1068,6 +1104,18 @@ export const MeetingsTimeline: React.FC = () => {
                           ))}
                         </div>
                       </div>
+                      {/* Show Meeting Intent Button */}
+                      {selectedMeeting.videoMeeting.meetingIntent && (
+                        <div className="mt-3">
+                          <button
+                            onClick={() => setShowMeetingIntentModal(true)}
+                            className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold flex items-center justify-center gap-2"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            View Meeting Intent & Action Items
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1092,6 +1140,73 @@ export const MeetingsTimeline: React.FC = () => {
                     </div>
                   )}
                 </>
+              )}
+
+              {/* Meeting Notes Section - Available for all video meetings */}
+              {selectedMeeting.type === "video" && selectedMeeting.videoMeeting && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                      📝 Meeting Notes
+                    </h4>
+                    {!editingNotes && (
+                      <button
+                        onClick={() => setEditingNotes(true)}
+                        className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                        {meetingNotes ? "Edit Notes" : "Add Notes"}
+                      </button>
+                    )}
+                  </div>
+                  {editingNotes ? (
+                    <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg border border-gray-200 dark:border-slate-600">
+                      <textarea
+                        value={meetingNotes}
+                        onChange={(e) => setMeetingNotes(e.target.value)}
+                        rows={6}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                        placeholder="Write your notes about this meeting..."
+                      />
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={handleSaveNotes}
+                          disabled={savingNotes}
+                          className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          <Save className="w-4 h-4" />
+                          {savingNotes ? "Saving..." : "Save Notes"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingNotes(false);
+                            // Reset to original notes if editing was cancelled
+                            if (selectedMeeting.videoMeeting?.notes) {
+                              setMeetingNotes(selectedMeeting.videoMeeting.notes);
+                            } else {
+                              setMeetingNotes("");
+                            }
+                          }}
+                          className="px-4 py-2 bg-gray-300 dark:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-400 dark:hover:bg-slate-500 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg border border-gray-200 dark:border-slate-600">
+                      {meetingNotes ? (
+                        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap text-sm">
+                          {meetingNotes}
+                        </p>
+                      ) : (
+                        <p className="text-gray-500 dark:text-gray-400 text-sm italic">
+                          No notes added yet. Click "Add Notes" to write your thoughts about this meeting.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Action Buttons */}
@@ -1127,6 +1242,176 @@ export const MeetingsTimeline: React.FC = () => {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Meeting Intent Modal - Similar to Dream-to-Plan */}
+      {showMeetingIntentModal && selectedMeeting?.videoMeeting?.meetingIntent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-slate-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 mb-2">
+                  <Sparkles className="w-6 h-6 text-purple-600" />
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                    Meeting Intent Analysis
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowMeetingIntentModal(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Action items and goals extracted from this meeting
+              </p>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Motivation Insights */}
+              {selectedMeeting.videoMeeting.meetingIntent.motivationInsights && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    Meeting Insights
+                  </h4>
+                  <p className="text-gray-700 dark:text-gray-300">
+                    {selectedMeeting.videoMeeting.meetingIntent.motivationInsights}
+                  </p>
+                </div>
+              )}
+
+              {/* Themes Analysis */}
+              {selectedMeeting.videoMeeting.meetingIntent.themes && selectedMeeting.videoMeeting.meetingIntent.themes.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                    <Tag className="w-5 h-5 text-cyan-600" />
+                    Key Themes ({selectedMeeting.videoMeeting.meetingIntent.themes.length})
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {selectedMeeting.videoMeeting.meetingIntent.themes.map((theme: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="p-4 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg border border-cyan-200 dark:border-cyan-800"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <h5 className="font-medium text-gray-900 dark:text-gray-100">
+                            {theme.name}
+                          </h5>
+                          <span className="px-2 py-1 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-800 dark:text-cyan-300 rounded-full text-xs font-medium">
+                            {theme.confidence}%
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          {theme.description}
+                        </p>
+                        {theme.tags && theme.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {theme.tags.map((tag: string, tagIdx: number) => (
+                              <span
+                                key={tagIdx}
+                                className="px-2 py-1 bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 rounded text-xs border border-cyan-300 dark:border-cyan-700"
+                              >
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Suggested Goals */}
+              {selectedMeeting.videoMeeting.meetingIntent.suggestedGoals?.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5" />
+                    Suggested Goals ({selectedMeeting.videoMeeting.meetingIntent.suggestedGoals.length})
+                  </h4>
+                  <div className="space-y-3">
+                    {selectedMeeting.videoMeeting.meetingIntent.suggestedGoals.map((goal: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="p-4 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <h5 className="font-medium text-gray-900 dark:text-gray-100">
+                            {goal.title}
+                          </h5>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              goal.priority === "high"
+                                ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                                : goal.priority === "medium"
+                                ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                                : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                            }`}
+                          >
+                            {goal.priority}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          {goal.description}
+                        </p>
+                        {goal.suggestedDueDate && (
+                          <p className="text-xs text-gray-500 dark:text-gray-500 flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            Due: {format(new Date(goal.suggestedDueDate), "MMM d, yyyy")}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Items */}
+              {selectedMeeting.videoMeeting.meetingIntent.actionItems?.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                    Action Items ({selectedMeeting.videoMeeting.meetingIntent.actionItems.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedMeeting.videoMeeting.meetingIntent.actionItems.map((item: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 flex items-center gap-2"
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                        <div className="flex-1">
+                          <span className="text-sm text-gray-900 dark:text-gray-100">{item.text}</span>
+                          {item.type && (
+                            <span className="ml-2 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-xs">
+                              {item.type}
+                            </span>
+                          )}
+                          {item.suggestedDate && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {format(new Date(item.suggestedDate), "MMM d, yyyy 'at' h:mm a")}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-200 dark:border-slate-700 flex gap-3">
+              <button
+                onClick={() => setShowMeetingIntentModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

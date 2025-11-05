@@ -150,23 +150,54 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
       if (video) {
         // Important: Set muted only for local stream to prevent echo
         video.muted = isLocal;
+        
+        // CRITICAL: Ensure all tracks are enabled before setting srcObject
+        stream.getTracks().forEach(track => {
+          if (!track.enabled) {
+            track.enabled = true;
+            console.log(`✅ Enabled ${track.kind} track before setting srcObject`);
+          }
+        });
+        
+        // Set srcObject
         video.srcObject = stream;
         
         // Force play - critical for video/audio to work
         const playVideo = async () => {
           if (video && stream) {
             try {
+              // Re-check and enable tracks before playing
+              stream.getVideoTracks().forEach(track => {
+                if (!track.enabled) {
+                  track.enabled = true;
+                  console.log(`✅ Enabled video track ${track.id} before play`);
+                }
+              });
+              
+              stream.getAudioTracks().forEach(track => {
+                if (!track.enabled) {
+                  track.enabled = true;
+                  console.log(`✅ Enabled audio track ${track.id} before play`);
+                }
+              });
+              
               // Check if we have tracks before playing
               const hasVideo = stream.getVideoTracks().length > 0;
               const hasAudio = stream.getAudioTracks().length > 0;
               
               if (hasVideo || hasAudio) {
+                // Ensure video element is ready
+                if (video.readyState < 2) {
+                  video.load();
+                }
+                
                 await video.play();
                 console.log(`✅ Video playing for ${participant.name}`, {
                   hasVideo,
                   hasAudio,
                   muted: video.muted,
-                  isLocal
+                  isLocal,
+                  readyState: video.readyState
                 });
               }
             } catch (err) {
@@ -186,17 +217,34 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
           console.log(`📹 Video metadata loaded for ${participant.name}`);
           await playVideo();
         };
+        
+        // Play when track becomes available
+        const onTrackAdded = async () => {
+          console.log(`🎥 Track added for ${participant.name}`);
+          await playVideo();
+        };
 
         video.addEventListener('canplay', onCanPlay);
         video.addEventListener('loadedmetadata', onLoadedMetadata);
         
+        // Monitor for track additions
+        stream.addEventListener('addtrack', onTrackAdded);
+        
         // Try immediately
         playVideo();
         
-        // Also try after a short delay to handle timing issues
+        // Also try after short delays to handle timing issues
+        setTimeout(() => {
+          playVideo();
+        }, 100);
+        
         setTimeout(() => {
           playVideo();
         }, 500);
+        
+        setTimeout(() => {
+          playVideo();
+        }, 1000);
 
         return () => {
           if (video) {
@@ -205,6 +253,7 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
           }
           stream.removeEventListener('active', onActive);
           stream.removeEventListener('inactive', onInactive);
+          stream.removeEventListener('addtrack', onTrackAdded);
           // Remove track unmute listeners
           trackUnmuteHandlers.forEach((handler, track) => {
             track.removeEventListener('unmute', handler);

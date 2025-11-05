@@ -79,10 +79,80 @@ export const CommunityQuiz: React.FC = () => {
   // Cleanup timers
   useEffect(() => {
     return () => {
-      if (totalTimerRef.current) clearInterval(totalTimerRef.current);
-      if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+      if (totalTimerRef.current) {
+        clearInterval(totalTimerRef.current);
+        totalTimerRef.current = null;
+      }
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
     };
   }, []);
+
+  // Reset question timer when question index changes
+  useEffect(() => {
+    if (!quizStarted || !selectedQuiz || !selectedQuiz.settings.timePerQuestion) {
+      // If no per-question timer, ensure timer is cleared
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
+      if (!selectedQuiz || !selectedQuiz.settings.timePerQuestion) {
+        setQuestionTimeRemaining(null);
+      }
+      return;
+    }
+
+    // Clear existing question timer
+    if (questionTimerRef.current) {
+      clearInterval(questionTimerRef.current);
+      questionTimerRef.current = null;
+    }
+
+    // Reset question start time
+    questionStartTimeRef.current = Date.now();
+
+    // Set up new timer for current question
+    timerCallbackFiredRef.current = false;
+    setQuestionTimeRemaining(selectedQuiz.settings.timePerQuestion);
+    
+    questionTimerRef.current = setInterval(() => {
+      // Use functional update to avoid stale closure issues
+      setQuestionTimeRemaining((prev) => {
+        if (prev === null || prev <= 1) {
+          // Prevent multiple fires
+          if (timerCallbackFiredRef.current) {
+            return prev;
+          }
+          timerCallbackFiredRef.current = true;
+          
+          // Clear timer immediately
+          if (questionTimerRef.current) {
+            clearInterval(questionTimerRef.current);
+            questionTimerRef.current = null;
+          }
+          
+            // Auto-skip to next question - use refs to avoid stale closures
+            // Note: handleAutoSkip is defined outside, using refs ensures we have current values
+            setTimeout(() => {
+              timerCallbackFiredRef.current = false;
+              handleAutoSkip();
+            }, 0);
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Cleanup function
+    return () => {
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
+    };
+  }, [currentQuestionIndex, quizStarted, selectedQuiz]);
 
   const handleCreateQuiz = () => {
     if (!isAdminUser) {
@@ -121,11 +191,21 @@ export const CommunityQuiz: React.FC = () => {
 
         // Initialize total timer if quiz has total time
         if (quiz.settings.totalTime) {
+          // Clear any existing total timer first
+          if (totalTimerRef.current) {
+            clearInterval(totalTimerRef.current);
+            totalTimerRef.current = null;
+          }
+          
           setTotalTimeRemaining(quiz.settings.totalTime);
           totalTimerRef.current = setInterval(() => {
             setTotalTimeRemaining((prev) => {
               if (prev === null || prev <= 1) {
-                if (totalTimerRef.current) clearInterval(totalTimerRef.current);
+                // Clear timer immediately
+                if (totalTimerRef.current) {
+                  clearInterval(totalTimerRef.current);
+                  totalTimerRef.current = null;
+                }
                 // Auto-submit when total time expires
                 setTimeout(() => {
                   setQuizCompleted((completed) => {
@@ -143,33 +223,12 @@ export const CommunityQuiz: React.FC = () => {
         }
 
         // Initialize question timer if quiz has per-question time
+        // Note: The timer will be set up by the useEffect that watches currentQuestionIndex
+        // This ensures the timer is properly synced when the question changes
         if (quiz.settings.timePerQuestion) {
           timerCallbackFiredRef.current = false; // Reset flag for new timer
           setQuestionTimeRemaining(quiz.settings.timePerQuestion);
-          const totalQuestions = quiz.questions.length; // Capture questions length
-          questionTimerRef.current = setInterval(() => {
-            setQuestionTimeRemaining((prev) => {
-              if (prev === null || prev <= 1) {
-                // Prevent multiple fires
-                if (timerCallbackFiredRef.current) {
-                  return prev;
-                }
-                timerCallbackFiredRef.current = true;
-                
-                if (questionTimerRef.current) {
-                  clearInterval(questionTimerRef.current);
-                  questionTimerRef.current = null;
-                }
-                // Auto-skip to next question when time expires
-                setTimeout(() => {
-                  timerCallbackFiredRef.current = false; // Reset for next time
-                  handleAutoSkip();
-                }, 0);
-                return null;
-              }
-              return prev - 1;
-            });
-          }, 1000);
+          // Timer will be set up by the useEffect hook when currentQuestionIndex changes
         }
       }
     } catch (error) {
@@ -222,42 +281,20 @@ export const CommunityQuiz: React.FC = () => {
         }
       }
       
-      // Move to next question
+      // Clear question timer before moving
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
+      
+      // Move to next question - timer will be set up by useEffect
       const nextIdx = currentIdx + 1;
       if (nextIdx < quiz.questions.length) {
         // Not the last question - move forward
         setCurrentQuestionIndex(nextIdx);
         currentQuestionIndexRef.current = nextIdx;
         questionStartTimeRef.current = Date.now();
-        
-        // Set up timer for the next question
-        if (quiz.settings.timePerQuestion) {
-          timerCallbackFiredRef.current = false; // Reset flag for new timer
-          setQuestionTimeRemaining(quiz.settings.timePerQuestion);
-          questionTimerRef.current = setInterval(() => {
-            setQuestionTimeRemaining((prev) => {
-              if (prev === null || prev <= 1) {
-                // Prevent multiple fires
-                if (timerCallbackFiredRef.current) {
-                  return prev;
-                }
-                timerCallbackFiredRef.current = true;
-                
-                if (questionTimerRef.current) {
-                  clearInterval(questionTimerRef.current);
-                  questionTimerRef.current = null;
-                }
-                // Auto-skip to next question
-                setTimeout(() => {
-                  timerCallbackFiredRef.current = false; // Reset for next time
-                  handleAutoSkip();
-                }, 0);
-                return null;
-              }
-              return prev - 1;
-            });
-          }, 1000);
-        }
+        // Timer will be automatically set up by the useEffect that watches currentQuestionIndex
       } else {
         // Last question - submit quiz
         handleSubmitQuiz();
@@ -309,47 +346,20 @@ export const CommunityQuiz: React.FC = () => {
         );
       }
 
-      // Reset question timer
-      if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+      // Clear question timer before moving
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
       
-      // Move to next question BEFORE setting up new timer
+      // Move to next question - timer will be set up by useEffect
       const nextIdx = currentIdx + 1;
       if (nextIdx < quiz.questions.length) {
         // Not the last question - move forward
         setCurrentQuestionIndex(nextIdx);
         currentQuestionIndexRef.current = nextIdx; // Update ref
         questionStartTimeRef.current = Date.now();
-        
-        // Set up timer for the next question
-        if (quiz.settings.timePerQuestion) {
-          timerCallbackFiredRef.current = false; // Reset flag for new timer
-          const totalQuestions = quiz.questions.length; // Capture questions length
-          setQuestionTimeRemaining(quiz.settings.timePerQuestion);
-          questionTimerRef.current = setInterval(() => {
-            setQuestionTimeRemaining((prev) => {
-              if (prev === null || prev <= 1) {
-                // Prevent multiple fires
-                if (timerCallbackFiredRef.current) {
-                  return prev;
-                }
-                timerCallbackFiredRef.current = true;
-                
-                // Clear timer immediately to prevent multiple triggers
-                if (questionTimerRef.current) {
-                  clearInterval(questionTimerRef.current);
-                  questionTimerRef.current = null;
-                }
-                // Auto-skip to next question - use dedicated function
-                setTimeout(() => {
-                  timerCallbackFiredRef.current = false; // Reset for next time
-                  handleAutoSkip();
-                }, 0);
-                return null;
-              }
-              return prev - 1;
-            });
-          }, 1000);
-        }
+        // Timer will be automatically set up by the useEffect that watches currentQuestionIndex
       } else {
         // This was the last question - submit quiz
         handleSubmitQuiz();
@@ -361,8 +371,19 @@ export const CommunityQuiz: React.FC = () => {
 
   const handlePreviousQuestion = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
+      // Clear existing timer before moving
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
+      
+      // Move to previous question
+      const prevIdx = currentQuestionIndex - 1;
+      setCurrentQuestionIndex(prevIdx);
+      currentQuestionIndexRef.current = prevIdx;
       questionStartTimeRef.current = Date.now();
+      
+      // Timer will be reset by the useEffect hook that watches currentQuestionIndex
     }
   };
 
@@ -421,8 +442,18 @@ export const CommunityQuiz: React.FC = () => {
       setUserScore(submittedAttempt);
       setQuizCompleted(true);
       setQuizStarted(false);
-      if (totalTimerRef.current) clearInterval(totalTimerRef.current);
-      if (questionTimerRef.current) clearInterval(questionTimerRef.current);
+      
+      // Clear all timers and reset state
+      if (totalTimerRef.current) {
+        clearInterval(totalTimerRef.current);
+        totalTimerRef.current = null;
+      }
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+        questionTimerRef.current = null;
+      }
+      setTotalTimeRemaining(null);
+      setQuestionTimeRemaining(null);
 
       // Show leaderboard after a delay
       setTimeout(() => {

@@ -208,56 +208,37 @@ class FriendRequestsService {
     const user = realTimeAuth.getCurrentUser();
     if (!user) return () => {};
 
-    // Try with orderBy first (requires index), fallback to client-side sorting if index missing
-    const q = query(
+    // Use fallback query directly to avoid index errors and Firestore internal assertion failures
+    // Sort client-side instead of requiring a Firestore index
+    const fallbackQuery = query(
       this.friendRequestsCollection,
       where("toUserId", "==", user.id),
-      where("status", "==", "pending"),
-      orderBy("createdAt", "desc")
+      where("status", "==", "pending")
     );
 
-    let unsubscribeFn: (() => void) | null = null;
-
-    unsubscribeFn = onSnapshot(
-      q,
+    const unsubscribeFn = onSnapshot(
+      fallbackQuery,
       (snapshot) => {
         const requests = snapshot.docs.map((doc) => ({
           ...doc.data(),
           id: doc.id,
         })) as FriendRequest[];
+        // Sort client-side by createdAt descending
+        requests.sort((a, b) => {
+          const aTime = a.createdAt?.toMillis?.() || (a.createdAt as any)?.seconds * 1000 || 0;
+          const bTime = b.createdAt?.toMillis?.() || (b.createdAt as any)?.seconds * 1000 || 0;
+          return bTime - aTime;
+        });
         callback(requests);
       },
       (error) => {
-        // If index is missing, fallback to query without orderBy and sort client-side
-        if (error.code === 'failed-precondition') {
-          console.warn("Index missing for friend requests query, using fallback");
-          const fallbackQuery = query(
-            this.friendRequestsCollection,
-            where("toUserId", "==", user.id),
-            where("status", "==", "pending")
-          );
-          unsubscribeFn = onSnapshot(fallbackQuery, (snapshot) => {
-            const requests = snapshot.docs.map((doc) => ({
-              ...doc.data(),
-              id: doc.id,
-            })) as FriendRequest[];
-            // Sort client-side by createdAt descending
-            requests.sort((a, b) => {
-              const aTime = a.createdAt?.toMillis() || 0;
-              const bTime = b.createdAt?.toMillis() || 0;
-              return bTime - aTime;
-            });
-            callback(requests);
-          });
-        } else {
-          console.error("Error subscribing to friend requests:", error);
-          callback([]);
-        }
+        console.error("Error subscribing to friend requests:", error);
+        callback([]);
       }
     );
 
     return () => {
-      if (unsubscribeFn) unsubscribeFn();
+      unsubscribeFn();
     };
   }
 
@@ -272,56 +253,37 @@ class FriendRequestsService {
     const user = realTimeAuth.getCurrentUser();
     if (!user) return () => {};
 
-    // Try with orderBy first (requires index), fallback to client-side sorting if index missing
-    const q = query(
+    // Use fallback query directly to avoid index errors and Firestore internal assertion failures
+    // Sort client-side instead of requiring a Firestore index
+    const fallbackQuery = query(
       this.friendRequestsCollection,
       where("fromUserId", "==", user.id),
-      where("status", "==", "pending"),
-      orderBy("createdAt", "desc")
+      where("status", "==", "pending")
     );
 
-    let unsubscribeFn: (() => void) | null = null;
-
-    unsubscribeFn = onSnapshot(
-      q,
+    const unsubscribeFn = onSnapshot(
+      fallbackQuery,
       (snapshot) => {
         const requests = snapshot.docs.map((doc) => ({
           ...doc.data(),
           id: doc.id,
         })) as FriendRequest[];
+        // Sort client-side by createdAt descending
+        requests.sort((a, b) => {
+          const aTime = a.createdAt?.toMillis?.() || (a.createdAt as any)?.seconds * 1000 || 0;
+          const bTime = b.createdAt?.toMillis?.() || (b.createdAt as any)?.seconds * 1000 || 0;
+          return bTime - aTime;
+        });
         callback(requests);
       },
       (error) => {
-        // If index is missing, fallback to query without orderBy and sort client-side
-        if (error.code === 'failed-precondition') {
-          console.warn("Index missing for sent friend requests query, using fallback");
-          const fallbackQuery = query(
-            this.friendRequestsCollection,
-            where("fromUserId", "==", user.id),
-            where("status", "==", "pending")
-          );
-          unsubscribeFn = onSnapshot(fallbackQuery, (snapshot) => {
-            const requests = snapshot.docs.map((doc) => ({
-              ...doc.data(),
-              id: doc.id,
-            })) as FriendRequest[];
-            // Sort client-side by createdAt descending
-            requests.sort((a, b) => {
-              const aTime = a.createdAt?.toMillis() || 0;
-              const bTime = b.createdAt?.toMillis() || 0;
-              return bTime - aTime;
-            });
-            callback(requests);
-          });
-        } else {
-          console.error("Error subscribing to sent friend requests:", error);
-          callback([]);
-        }
+        console.error("Error subscribing to sent friend requests:", error);
+        callback([]);
       }
     );
 
     return () => {
-      if (unsubscribeFn) unsubscribeFn();
+      unsubscribeFn();
     };
   }
 }

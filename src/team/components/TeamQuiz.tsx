@@ -110,6 +110,12 @@ export const TeamQuiz: React.FC<TeamQuizProps> = ({ teamId }) => {
 
   // Track synchronized countdown for active quizzes - update display, auto-start, and auto-complete
   useEffect(() => {
+    // Clear any existing interval first
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+
     const synchronizedQuizzes = quizzes.filter(
       q => q.startMode === "synchronized" && q.status === "active"
     );
@@ -118,15 +124,17 @@ export const TeamQuiz: React.FC<TeamQuizProps> = ({ teamId }) => {
       return;
     }
 
+    // Use ref to track interval to prevent multiple intervals
     // Don't force re-render - rely on the countdown timer state instead
     // This prevents double updates that cause seconds to jump by 2
-    const interval = setInterval(async () => {
+    countdownTimerRef.current = setInterval(async () => {
       // Get fresh quiz data from the current quizzes array
-      const currentQuizzes = quizzes.filter(
+      // Read from state directly to avoid stale closures
+      const currentSynchronizedQuizzes = quizzes.filter(
         q => q.startMode === "synchronized" && q.status === "active"
       );
       
-      for (const quiz of currentQuizzes) {
+      for (const quiz of currentSynchronizedQuizzes) {
         // Check if countdown has reached 0 and quiz should auto-start
         if (quiz.synchronizedStartTime && user) {
           const startTime = quiz.synchronizedStartTime instanceof Date 
@@ -157,32 +165,40 @@ export const TeamQuiz: React.FC<TeamQuizProps> = ({ teamId }) => {
           
           // If quiz time has elapsed, auto-complete it
           if (elapsed >= quiz.settings.totalTime && quiz.status === "active") {
-            try {
-              // Auto-submit all in-progress attempts (even if incomplete)
-              const attempts = await quizService.getQuizAttempts(quiz.id, false);
-              for (const attempt of attempts) {
-                if (attempt.status === "in-progress" && !attempt.submittedAt) {
-                  try {
-                    // Submit the attempt - it will calculate score based on submitted answers
-                    await quizService.submitQuizAttempt(attempt.id, quiz.id, false);
-                  } catch (error) {
-                    console.error(`Error auto-submitting attempt ${attempt.id}:`, error);
+            // Use async function to handle the async operations
+            (async () => {
+              try {
+                // Auto-submit all in-progress attempts (even if incomplete)
+                const attempts = await quizService.getQuizAttempts(quiz.id, false);
+                for (const attempt of attempts) {
+                  if (attempt.status === "in-progress" && !attempt.submittedAt) {
+                    try {
+                      // Submit the attempt - it will calculate score based on submitted answers
+                      await quizService.submitQuizAttempt(attempt.id, quiz.id, false);
+                    } catch (error) {
+                      console.error(`Error auto-submitting attempt ${attempt.id}:`, error);
+                    }
                   }
                 }
+                
+                // Mark quiz as completed
+                await quizService.updateQuiz(quiz.id, { status: "completed", endedAt: serverTimestamp() as any }, false, user?.id);
+              } catch (error) {
+                console.error(`Error auto-completing quiz ${quiz.id}:`, error);
               }
-              
-              // Mark quiz as completed
-              await quizService.updateQuiz(quiz.id, { status: "completed", endedAt: serverTimestamp() as any }, false, user?.id);
-            } catch (error) {
-              console.error(`Error auto-completing quiz ${quiz.id}:`, error);
-            }
+            })();
           }
         }
       }
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, [quizzes, quizStarted, selectedQuiz, user]);
+    return () => {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+    };
+  }, [quizzes, quizStarted, selectedQuiz, user, synchronizedQuizId]);
 
   const handleCreateQuiz = async () => {
     if (!user) return;

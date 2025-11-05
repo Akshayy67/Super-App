@@ -344,11 +344,12 @@ class FriendsService {
     const user = realTimeAuth.getCurrentUser();
     if (!user) return () => {};
 
+    // Use query without orderBy to avoid index requirement and Firestore internal assertion failures
+    // Sort client-side instead
     const q = query(
       this.friendRequestsCollection,
       where("toUserId", "==", user.id),
-      where("status", "==", "pending"),
-      orderBy("createdAt", "desc")
+      where("status", "==", "pending")
     );
 
     return onSnapshot(q, (snapshot) => {
@@ -356,7 +357,16 @@ class FriendsService {
         ...doc.data(),
         id: doc.id,
       })) as FriendRequest[];
+      // Sort client-side by createdAt descending
+      requests.sort((a, b) => {
+        const aTime = a.createdAt?.toMillis?.() || (a.createdAt as any)?.seconds * 1000 || 0;
+        const bTime = b.createdAt?.toMillis?.() || (b.createdAt as any)?.seconds * 1000 || 0;
+        return bTime - aTime;
+      });
       callback(requests);
+    }, (error) => {
+      console.error("Error subscribing to friend requests:", error);
+      callback([]);
     });
   }
 
@@ -369,11 +379,12 @@ class FriendsService {
     const user = realTimeAuth.getCurrentUser();
     if (!user) return () => {};
 
+    // Use query without orderBy to avoid index requirement and Firestore internal assertion failures
+    // Sort client-side instead
     const q = query(
       this.friendRequestsCollection,
       where("fromUserId", "==", user.id),
-      where("status", "==", "pending"),
-      orderBy("createdAt", "desc")
+      where("status", "==", "pending")
     );
 
     return onSnapshot(q, (snapshot) => {
@@ -381,7 +392,16 @@ class FriendsService {
         ...doc.data(),
         id: doc.id,
       })) as FriendRequest[];
+      // Sort client-side by createdAt descending
+      requests.sort((a, b) => {
+        const aTime = a.createdAt?.toMillis?.() || (a.createdAt as any)?.seconds * 1000 || 0;
+        const bTime = b.createdAt?.toMillis?.() || (b.createdAt as any)?.seconds * 1000 || 0;
+        return bTime - aTime;
+      });
       callback(requests);
+    }, (error) => {
+      console.error("Error subscribing to sent friend requests:", error);
+      callback([]);
     });
   }
 

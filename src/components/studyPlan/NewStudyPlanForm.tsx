@@ -96,6 +96,7 @@ export const NewStudyPlanForm: React.FC<NewStudyPlanFormProps> = ({
 
       console.log("Plan updated successfully with weeks:", aiPlan.weeks.length);
 
+      // Call the callback which will handle navigation and closing
       onPlanCreated();
     } catch (error: any) {
       console.error("Error creating study plan:", error);
@@ -103,26 +104,12 @@ export const NewStudyPlanForm: React.FC<NewStudyPlanFormProps> = ({
       // Provide user-friendly error messages
       let errorMessage = error.message || "Failed to create study plan. Please try again.";
       
-      if (errorMessage.includes("RATE_LIMIT_EXCEEDED")) {
-        errorMessage = "⏳ Rate Limit Exceeded\n\n" +
-          "You've hit the API rate limit. Please wait 1-2 minutes before trying again.\n\n" +
-          "The rate limit will reset automatically. If this happens frequently, consider:\n" +
-          "• Upgrading your Gemini API plan\n" +
-          "• Waiting a few minutes between requests";
-      } else if (errorMessage.includes("AI_SERVICE_UNAVAILABLE")) {
-        errorMessage = "🔌 AI Service Unavailable\n\n" +
-          "The AI service is temporarily unavailable. This could be due to:\n" +
-          "• Rate limiting\n" +
-          "• API service issues\n" +
-          "• Network problems\n\n" +
-          "Please try again in a few minutes.";
+      if (errorMessage.includes("RATE_LIMIT_EXCEEDED") || errorMessage.includes("Our AI servers are busy")) {
+        errorMessage = "Our AI servers are busy right now. Please try again in a few moments.";
+      } else if (errorMessage.includes("AI_SERVICE_UNAVAILABLE") || errorMessage.includes("AI service")) {
+        errorMessage = "Our AI servers are busy right now. Please try again in a few moments.";
       } else if (errorMessage.includes("API_KEY_HTTP_REFERRER_BLOCKED")) {
-        errorMessage = "🔒 API Key Restriction\n\n" +
-          "Your API key has referrer restrictions. Please update your Google Cloud API key settings:\n" +
-          "1. Go to Google Cloud Console\n" +
-          "2. Navigate to APIs & Services → Credentials\n" +
-          "3. Edit your API key\n" +
-          "4. Add your domain to HTTP referrer restrictions";
+        errorMessage = "Service temporarily unavailable. Please try again later.";
       }
       
       alert(errorMessage);

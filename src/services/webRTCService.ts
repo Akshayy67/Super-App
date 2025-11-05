@@ -243,12 +243,14 @@ class WebRTCService {
       
       // Add track to our collection
       if (event.track) {
-        // Ensure track is enabled
+        // CRITICAL: Ensure track is enabled immediately
         if (!event.track.enabled) {
           console.warn(`⚠️ Track ${event.track.kind} is disabled, enabling it`);
           event.track.enabled = true;
         }
         
+        // Don't remove stream if track is muted - it might unmute later
+        // Only remove if track actually ends
         userTracks.set(event.track.kind, event.track);
         console.log(`📦 Added ${event.track.kind} track for ${userId}:`, {
           trackId: event.track.id,
@@ -262,38 +264,55 @@ class WebRTCService {
         event.track.onended = () => {
           console.log(`⚠️ Track ${event.track.kind} ended for ${userId}`);
           userTracks.delete(event.track.kind);
-          // Remove stream if no tracks left
+          // Only remove stream if ALL tracks are gone
           if (userTracks.size === 0) {
+            console.log(`🗑️ Removing stream for ${userId} - no tracks left`);
             this.remoteStreamsMap.delete(userId);
+          } else {
+            // Update existing stream if it exists
+            const existingStream = this.remoteStreamsMap.get(userId);
+            if (existingStream && this.onRemoteStreamCallback) {
+              // Recreate stream with remaining tracks
+              const newStream = new MediaStream(Array.from(userTracks.values()));
+              this.remoteStreamsMap.set(userId, newStream);
+              this.onRemoteStreamCallback(userId, newStream);
+            }
           }
         };
         
         event.track.onmute = () => {
           console.log(`🔇 Track ${event.track.kind} muted for ${userId}`);
+          // Don't remove stream when muted - tracks often mute temporarily during connection
         };
         
         event.track.onunmute = () => {
           console.log(`🔊 Track ${event.track.kind} unmuted for ${userId}`);
-          // Debounce unmute callbacks to avoid excessive updates
-          // Only call callback if stream actually exists and we haven't called recently
+          // Ensure track is enabled when it unmutes
+          if (!event.track.enabled) {
+            console.warn(`⚠️ Track ${event.track.kind} unmuted but disabled, enabling it`);
+            event.track.enabled = true;
+          }
+          
+          // Immediately notify about unmute - don't debounce as aggressively
           if (this.onRemoteStreamCallback && userTracks.size > 0) {
-            const existingStream = this.remoteStreamsMap.get(userId);
-            if (existingStream) {
-              // Clear existing timeout for this user
-              const existingTimeout = this.unmuteCallbackTimeouts.get(userId);
-              if (existingTimeout) {
-                clearTimeout(existingTimeout);
-              }
-              
-              // Debounce callback - only call after 300ms of no unmute events
-              const timeout = setTimeout(() => {
-                console.log(`🔄 Re-calling callback due to ${event.track.kind} track unmute (debounced)`);
-                this.onRemoteStreamCallback!(userId, existingStream);
-                this.unmuteCallbackTimeouts.delete(userId);
-              }, 300);
-              
-              this.unmuteCallbackTimeouts.set(userId, timeout);
+            let existingStream = this.remoteStreamsMap.get(userId);
+            
+            // Create/update stream with all current tracks
+            if (!existingStream || !existingStream.getTracks().some(t => t.id === event.track.id)) {
+              existingStream = new MediaStream(Array.from(userTracks.values()));
+              this.remoteStreamsMap.set(userId, existingStream);
             }
+            
+            // Clear existing timeout for this user
+            const existingTimeout = this.unmuteCallbackTimeouts.get(userId);
+            if (existingTimeout) {
+              clearTimeout(existingTimeout);
+            }
+            
+            // Call callback immediately for unmute - this is critical for video/audio to work
+            console.log(`🔔 Immediately notifying about ${event.track.kind} track unmute`);
+            this.onRemoteStreamCallback(userId, existingStream);
+            this.unmuteCallbackTimeouts.delete(userId);
           }
         };
       }
@@ -323,11 +342,15 @@ class WebRTCService {
       }
       
       if (streamToUse && this.onRemoteStreamCallback) {
-        // Ensure all tracks are enabled
+        // CRITICAL: Ensure all tracks are enabled BEFORE storing/calling callback
         streamToUse.getVideoTracks().forEach(track => {
           if (!track.enabled) {
             track.enabled = true;
             console.log(`✅ Enabled video track ${track.id}`);
+          }
+          // Ensure track is not muted (if possible)
+          if (track.muted && track.readyState === 'live') {
+            console.log(`⚠️ Video track ${track.id} is muted - will unmute when ready`);
           }
         });
         
@@ -336,9 +359,14 @@ class WebRTCService {
             track.enabled = true;
             console.log(`✅ Enabled audio track ${track.id}`);
           }
+          // Ensure track is not muted (if possible)
+          if (track.muted && track.readyState === 'live') {
+            console.log(`⚠️ Audio track ${track.id} is muted - will unmute when ready`);
+          }
         });
         
         // Store the stream for this user (update if exists)
+        // Always update to ensure we have the latest stream with all tracks
         this.remoteStreamsMap.set(userId, streamToUse);
         
         // Log stream info
@@ -362,12 +390,25 @@ class WebRTCService {
           }))
         });
         
-        // Call callback immediately - don't wait for tracks to be live
-        // The video element will handle track state changes
+        // Call callback immediately - tracks may be muted initially but will unmute
+        // The video element and track unmute handlers will handle updates
         this.onRemoteStreamCallback(userId, streamToUse);
         
-        // Also call again after tracks unmute (debounced in onunmute handler)
-        // This ensures UI updates when tracks become available
+        // Also set up multiple delayed callbacks to ensure stream is updated after tracks unmute
+        // This handles cases where tracks unmute after the initial callback
+        [100, 500, 1000, 2000].forEach(delay => {
+          setTimeout(() => {
+            const currentStream = this.remoteStreamsMap.get(userId);
+            if (currentStream && currentStream.getTracks().length > 0) {
+              // Check if any tracks unmuted since initial callback
+              const hasUnmutedTracks = currentStream.getTracks().some(t => !t.muted && t.enabled);
+              if (hasUnmutedTracks && this.onRemoteStreamCallback) {
+                console.log(`🔄 Re-notifying about stream after ${delay}ms delay to catch unmuted tracks`);
+                this.onRemoteStreamCallback(userId, currentStream);
+              }
+            }
+          }, delay);
+        });
       } else {
         console.warn('⚠️ Cannot create stream callback:', {
           hasStream: !!streamToUse,
