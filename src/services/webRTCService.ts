@@ -19,11 +19,33 @@ class WebRTCService {
       { urls: 'stun:stun2.l.google.com:19302' },
       { urls: 'stun:stun3.l.google.com:19302' },
       { urls: 'stun:stun4.l.google.com:19302' },
-    ]
+      // Add TURN servers for NAT traversal (public TURN servers)
+      { 
+        urls: [
+          'turn:openrelay.metered.ca:80',
+          'turn:openrelay.metered.ca:443',
+          'turn:openrelay.metered.ca:443?transport=tcp'
+        ],
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      },
+      {
+        urls: [
+          'turn:relay.metered.ca:80',
+          'turn:relay.metered.ca:443',
+          'turn:relay.metered.ca:443?transport=tcp'
+        ],
+        username: 'b1c2d3e4f5g6h7i8j9k0',
+        credential: 'b1c2d3e4f5g6h7i8j9k0'
+      }
+    ],
+    iceCandidatePoolSize: 10, // Pre-gather candidates for faster connection
+    iceTransportPolicy: 'all' // Allow both relay and direct connections
   };
 
   private onRemoteStreamCallback?: (userId: string, stream: MediaStream) => void;
   private onConnectionStateChangeCallback?: (userId: string, state: RTCPeerConnectionState) => void;
+  private onIceRestartOfferCallback?: (userId: string, offer: RTCSessionDescriptionInit) => void;
 
   // Get available media devices
   async getMediaDevices(): Promise<MediaDevices> {
@@ -455,9 +477,23 @@ class WebRTCService {
         console.log('✅ Peer connection fully established with', userId);
         // Reset reconnection attempts on successful connection
         this.reconnectionAttempts.delete(userId);
-      } else if (state === 'failed' || state === 'disconnected') {
-        // Attempt reconnection for failed/disconnected connections
+      } else if (state === 'failed') {
+        // Only attempt reconnection for failed state, not disconnected
+        // Disconnected might recover on its own
+        console.log(`🔄 Connection failed for ${userId}, attempting reconnection`);
         this.attemptReconnection(userId);
+      } else if (state === 'disconnected') {
+        // Wait a bit - disconnected might recover automatically
+        setTimeout(() => {
+          const currentState = peerConnection.connectionState;
+          const currentIceState = peerConnection.iceConnectionState;
+          if (currentState === 'disconnected' && currentIceState === 'disconnected') {
+            console.log(`🔄 Still disconnected after delay, attempting reconnection for ${userId}`);
+            this.attemptReconnection(userId);
+          } else if (currentState === 'connected' || currentIceState === 'connected') {
+            console.log(`✅ Connection recovered automatically for ${userId}`);
+          }
+        }, 2000);
       }
     };
     
@@ -491,18 +527,30 @@ class WebRTCService {
         this.attemptReconnection(userId);
       } else if (iceState === 'disconnected') {
         console.warn(`⚠️ ICE connection disconnected with ${userId}`);
-        // Wait a bit before attempting reconnection - might reconnect on its own
+        // Wait longer before attempting reconnection - ICE might reconnect automatically
+        // Also check if we're in the middle of initial connection
+        const isInitialConnection = signalingState === 'have-local-offer' || signalingState === 'have-remote-offer' || signalingState === 'stable';
+        const waitTime = isInitialConnection ? 5000 : 3000; // Wait longer for initial connections
+        
         setTimeout(() => {
           const currentIceState = peerConnection.iceConnectionState;
           const currentConnState = peerConnection.connectionState;
-          // Only attempt reconnection if still disconnected and not closing/closed
+          const currentSignalingState = peerConnection.signalingState;
+          
+          // Only attempt reconnection if:
+          // 1. Still disconnected
+          // 2. Not closing/closed
+          // 3. Not in initial connection phase (unless it's been too long)
           if (currentIceState === 'disconnected' && 
               currentConnState !== 'closed' && 
-              currentConnState !== 'closing') {
-            console.log(`🔄 ICE still disconnected after delay, attempting reconnection for ${userId}`);
+              currentConnState !== 'closing' &&
+              (currentSignalingState === 'stable' || !isInitialConnection)) {
+            console.log(`🔄 ICE still disconnected after ${waitTime}ms delay, attempting reconnection for ${userId}`);
             this.attemptReconnection(userId);
+          } else if (currentIceState === 'connected' || currentIceState === 'completed') {
+            console.log(`✅ ICE reconnected automatically for ${userId}`);
           }
-        }, 3000); // Wait 3 seconds
+        }, waitTime);
       } else if (iceState === 'checking') {
         // Log additional info when stuck in checking state
         console.log(`🔍 ICE checking state for ${userId} - waiting for connection...`, {
@@ -694,39 +742,64 @@ class WebRTCService {
   async addIceCandidate(userId: string, candidate: RTCIceCandidateInit): Promise<void> {
     const peerConnection = this.peerConnections.get(userId);
     
-    // If peer connection doesn't exist or remote description not set, queue the candidate
-    if (!peerConnection || !peerConnection.remoteDescription) {
+    // If peer connection doesn't exist, queue the candidate
+    if (!peerConnection) {
+      if (!this.pendingIceCandidates.has(userId)) {
+        this.pendingIceCandidates.set(userId, []);
+      }
+      this.pendingIceCandidates.get(userId)!.push(candidate);
+      console.log(`🧊 Queued ICE candidate for ${userId} (no peer connection yet)`, {
+        candidate: candidate.candidate?.substring(0, 50) + '...'
+      });
+      return;
+    }
+    
+    // If remote description is not set, queue the candidate
+    if (!peerConnection.remoteDescription) {
       if (!this.pendingIceCandidates.has(userId)) {
         this.pendingIceCandidates.set(userId, []);
       }
       this.pendingIceCandidates.get(userId)!.push(candidate);
       console.log(`🧊 Queued ICE candidate for ${userId} (will process after remote description)`, {
-        hasPeerConnection: !!peerConnection,
-        hasRemoteDescription: !!peerConnection?.remoteDescription,
-        candidate: candidate.candidate?.substring(0, 50) + '...'
+        candidate: candidate.candidate?.substring(0, 50) + '...',
+        signalingState: peerConnection.signalingState
       });
       return;
     }
 
     // Remote description is set, add candidate immediately
+    // Even if connection is in failed/disconnected state, we should still add candidates
+    // as they might help establish the connection
     try {
+      const iceState = peerConnection.iceConnectionState;
+      const connState = peerConnection.connectionState;
+      
       console.log(`🧊 Adding ICE candidate for ${userId}:`, {
         candidate: candidate.candidate?.substring(0, 50) + '...',
         sdpMLineIndex: candidate.sdpMLineIndex,
         sdpMid: candidate.sdpMid,
-        iceConnectionState: peerConnection.iceConnectionState,
-        connectionState: peerConnection.connectionState
+        iceConnectionState: iceState,
+        connectionState: connState,
+        signalingState: peerConnection.signalingState
       });
+      
       await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
       console.log(`✅ ICE candidate added successfully for ${userId}`);
-    } catch (err) {
-      console.error(`❌ Error adding ICE candidate for ${userId}:`, err);
-      // Log the candidate details for debugging
-      console.error('Candidate details:', {
-        candidate: candidate.candidate,
-        sdpMLineIndex: candidate.sdpMLineIndex,
-        sdpMid: candidate.sdpMid
-      });
+    } catch (err: any) {
+      // Don't log as error if candidate is invalid (might be duplicate or already processed)
+      if (err?.message?.includes('InvalidStateError') || 
+          err?.message?.includes('already exists') ||
+          err?.message?.includes('Invalid candidate')) {
+        console.log(`⚠️ ICE candidate already processed or invalid for ${userId}:`, err.message);
+      } else {
+        console.error(`❌ Error adding ICE candidate for ${userId}:`, err);
+        // Log the candidate details for debugging
+        console.error('Candidate details:', {
+          candidate: candidate.candidate,
+          sdpMLineIndex: candidate.sdpMLineIndex,
+          sdpMid: candidate.sdpMid
+        });
+      }
     }
   }
 
@@ -767,6 +840,10 @@ class WebRTCService {
 
   onConnectionStateChange(callback: (userId: string, state: RTCPeerConnectionState) => void): void {
     this.onConnectionStateChangeCallback = callback;
+  }
+
+  onIceRestartOffer(callback: (userId: string, offer: RTCSessionDescriptionInit) => void): void {
+    this.onIceRestartOfferCallback = callback;
   }
 
   // Switch camera (front/back)
@@ -888,26 +965,54 @@ class WebRTCService {
       return;
     }
     
+    // Don't reconnect if we're still in initial connection phase
+    const signalingState = peerConnection.signalingState;
+    const isInitialConnection = signalingState === 'have-local-offer' || 
+                                 signalingState === 'have-remote-offer' ||
+                                 signalingState === 'stable';
+    
+    // If we're in initial connection and this is the first attempt, wait longer
+    if (isInitialConnection && attempts === 0) {
+      console.log(`⏳ Waiting longer for initial connection to ${userId} before reconnecting`);
+      setTimeout(() => {
+        const currentState = peerConnection.connectionState;
+        const currentIceState = peerConnection.iceConnectionState;
+        if ((currentState === 'failed' || currentIceState === 'failed') && 
+            peerConnection.signalingState === 'stable') {
+          this.attemptReconnection(userId);
+        }
+      }, 5000);
+      return;
+    }
+    
     this.reconnectionAttempts.set(userId, attempts + 1);
     console.log(`🔄 Attempting reconnection ${attempts + 1}/${this.maxReconnectionAttempts} for ${userId}`);
     
     // Restart ICE gathering - this can help recover from connection issues
     try {
-      // Create a new offer/answer to restart ICE
+      // Create a new offer/answer to restart ICE only if we're in stable state
       if (peerConnection.signalingState === 'stable') {
         // We're stable, create a new offer to restart ICE
         peerConnection.createOffer({ iceRestart: true })
           .then(offer => {
-            return peerConnection.setLocalDescription(offer);
+            return peerConnection.setLocalDescription(offer).then(() => offer);
           })
-          .then(() => {
+          .then((offer) => {
             console.log('✅ ICE restart offer created for', userId);
-            // Note: The actual offer sending needs to be handled by the signaling service
-            // This is just to trigger ICE restart - the component should handle sending the offer
+            // Send the ICE restart offer through callback so it can be sent via signaling
+            if (this.onIceRestartOfferCallback) {
+              this.onIceRestartOfferCallback(userId, offer);
+            }
+            // Trigger connection state change callback
+            if (this.onConnectionStateChangeCallback) {
+              this.onConnectionStateChangeCallback(userId, 'connecting');
+            }
           })
           .catch(err => {
             console.error('❌ Error restarting ICE for', userId, ':', err);
           });
+      } else {
+        console.log(`⏳ Waiting for stable signaling state before reconnecting ${userId} (current: ${signalingState})`);
       }
     } catch (err) {
       console.error('❌ Error attempting reconnection for', userId, ':', err);

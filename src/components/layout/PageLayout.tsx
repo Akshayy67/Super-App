@@ -68,7 +68,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   };
 
   return (
-    <div className={getContainerClasses()} style={{ width: '100%' }}>
+    <div className={getContainerClasses()} style={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden', boxSizing: 'border-box' }}>
       {/* Background Text (removed) */}
       {showBackground && (
         <SuperAppBackground
@@ -79,7 +79,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
       )}
 
       {/* Page Content */}
-      <div className="relative z-10" style={{ width: '100%' }}>
+      <div className="relative z-10" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: 'clamp(0.75rem, 2vw, 1rem)' }}>
         {children}
       </div>
     </div>

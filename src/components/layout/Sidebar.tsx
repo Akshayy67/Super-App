@@ -365,11 +365,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, []);
 
   return (
-    <div className="bg-white dark:bg-black h-full shadow-2xl border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-500 backdrop-blur-xl bg-opacity-95 dark:bg-opacity-90 relative overflow-hidden">
-      {/* Three.js Rotary Phone Background */}
+    <div className="bg-white dark:bg-black h-full shadow-2xl border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-500 backdrop-blur-xl bg-opacity-95 dark:bg-opacity-90 relative overflow-hidden" style={{ width: '100%', maxWidth: '100%' }}>
+      {/* Three.js Rotary Phone Background - Hidden on mobile */}
       <canvas
         ref={canvasRef}
-        className="absolute top-0 right-0 w-[280px] h-full pointer-events-none opacity-20 dark:opacity-10"
+        className="absolute top-0 right-0 w-[280px] h-full pointer-events-none opacity-20 dark:opacity-10 hidden lg:block"
         style={{ zIndex: 0 }}
       />
 
@@ -450,8 +450,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      <nav className="flex-1 px-3 sm:px-4 py-4 sm:py-6 overflow-y-auto scroll-area-mobile relative z-20">
-        <ul className="space-y-1 sm:space-y-2">
+      <nav className="flex-1 px-3 sm:px-4 py-4 sm:py-6 overflow-y-auto scroll-area-mobile relative z-20" style={{ padding: 'clamp(0.75rem, 2vw, 1rem) clamp(0.75rem, 3vw, 1.5rem)' }}>
+        <ul className="space-y-1 sm:space-y-2" style={{ gap: 'clamp(0.25rem, 1vw, 0.5rem)' }}>
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeView === item.id;

@@ -193,39 +193,42 @@ const AuthenticatedApp: React.FC = () => {
         />
       )}
 
-      <div className="h-screen bg-gray-50 dark:bg-slate-900 flex flex-col lg:flex-row landscape-compact transition-colors duration-300">
+      <div className="h-screen bg-gray-50 dark:bg-slate-900 flex flex-col lg:flex-row landscape-compact transition-colors duration-300 overflow-hidden" style={{ maxWidth: '100vw', width: '100%' }}>
         {/* Mobile Header - Only show on non-auth pages */}
         {!isAuthPage && (
-        <div className="mobile-header lg:hidden bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 p-3 sm:p-4 flex items-center justify-between relative z-30">
+        <div className="mobile-header lg:hidden bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 safe-area-top flex items-center justify-between relative z-30" style={{ padding: 'clamp(0.75rem, 2vw, 1rem) clamp(1rem, 3vw, 1.5rem)', minHeight: '60px' }}>
           <button
             onClick={() => navigate("/dashboard")}
             className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity min-w-0 flex-1 btn-touch"
+            style={{ gap: 'clamp(0.5rem, 2vw, 0.75rem)' }}
           >
             <img
               src="/SuperApp.png"
               alt="Super Study Logo"
-              className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0"
+              className="object-contain flex-shrink-0"
+              style={{ width: 'clamp(28px, 6vw, 32px)', height: 'clamp(28px, 6vw, 32px)' }}
               onError={(e) => {
                 console.error("Logo failed to load:", e);
                 e.currentTarget.style.display = "none";
               }}
             />
-            <span className="text-responsive-lg font-bold text-gray-900 dark:text-gray-100 truncate">
+            <span className="text-responsive-lg font-bold text-gray-900 dark:text-gray-100 truncate" style={{ fontSize: 'clamp(1rem, 4vw, 1.25rem)' }}>
               Super Study
             </span>
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" style={{ gap: 'clamp(0.5rem, 2vw, 0.75rem)' }}>
             <ThemeToggle variant="compact" />
             <button
               onClick={toggleMobileMenu}
               className="btn-touch p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 flex-shrink-0 touch-manipulation"
               aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+              style={{ padding: 'clamp(0.5rem, 2vw, 0.75rem)', minWidth: '44px', minHeight: '44px' }}
             >
               {isMobileMenuOpen ? (
-                <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" style={{ width: 'clamp(20px, 5vw, 24px)', height: 'clamp(20px, 5vw, 24px)' }} />
               ) : (
-                <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
+                <Menu className="w-5 h-5 sm:w-6 sm:h-6" style={{ width: 'clamp(20px, 5vw, 24px)', height: 'clamp(20px, 5vw, 24px)' }} />
               )}
             </button>
           </div>
@@ -265,8 +268,8 @@ const AuthenticatedApp: React.FC = () => {
         )}
 
         {/* Main Content */}
-        <div className={`flex-1 flex flex-col relative min-w-0 overflow-hidden ${isAuthPage ? 'w-full' : ''}`}>
-          <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className={`flex-1 flex flex-col relative min-w-0 overflow-hidden ${isAuthPage ? 'w-full' : ''}`} style={{ maxWidth: '100vw', width: '100%' }}>
+          <div className="flex-1 overflow-y-auto overflow-x-hidden scroll-area-mobile" style={{ maxWidth: '100%', width: '100%' }}>
             <AppRouter invitationData={invitationData} />
           </div>
         </div>

@@ -2014,7 +2014,7 @@ export const LandingPage: React.FC = () => {
               maxWidth: '100vw', 
               boxSizing: 'border-box', 
               overflow: 'hidden',
-              padding: '0 clamp(1rem, 4vw, 2rem)',
+              padding: '0 clamp(0.75rem, 4vw, 2rem)',
               margin: '0 auto'
             }}>
               {section.preheading && (
@@ -2022,7 +2022,7 @@ export const LandingPage: React.FC = () => {
                   className="section-preheading mb-4 leading-relaxed"
                   style={{
                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
-                    fontSize: "clamp(0.75rem, 2vw, 1rem)",
+                    fontSize: "clamp(0.625rem, 2vw, 1rem)",
                     opacity: 0.7,
                     fontWeight: 500,
                     letterSpacing: "0.1em",
@@ -2032,6 +2032,7 @@ export const LandingPage: React.FC = () => {
                     width: "100%",
                     margin: "0 auto 1rem",
                     padding: "0",
+                    lineHeight: "1.4",
                   }}
                 >
                   {section.preheading}
@@ -2041,8 +2042,8 @@ export const LandingPage: React.FC = () => {
                 className="section-title font-bold leading-tight"
                 style={{
                   fontSize: index === 0 
-                    ? "clamp(1.5rem, 5vw, 3rem)" 
-                    : "clamp(2rem, 7vw, 5rem)",
+                    ? "clamp(1.5rem, 6vw, 3rem)" 
+                    : "clamp(1.5rem, 7vw, 4.5rem)",
                   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
                   letterSpacing: index === 0 ? "0.01em" : "-0.01em",
                   textTransform: "uppercase",
@@ -2051,7 +2052,7 @@ export const LandingPage: React.FC = () => {
                   width: "100%",
                   margin: "0 auto",
                   padding: "0",
-                  lineHeight: index === 0 ? "1.3" : "1.2",
+                  lineHeight: index === 0 ? "1.2" : "1.15",
                   fontWeight: 700,
                   color: "#b0b0b0",
                   whiteSpace: "normal",
@@ -2093,14 +2094,14 @@ export const LandingPage: React.FC = () => {
                   className="section-subtitle mt-8 leading-relaxed"
                   style={{
                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
-                    fontSize: "clamp(0.875rem, 2.5vw, 1.25rem)",
+                    fontSize: "clamp(0.875rem, 3vw, 1.25rem)",
                     opacity: 0.9,
                     fontWeight: 400,
                     letterSpacing: "0.02em",
                     color: "#b0b0b0",
                     maxWidth: "100%",
                     width: "100%",
-                    margin: "0 auto",
+                    margin: "1rem auto 0",
                     padding: "0",
                     wordBreak: "normal",
                     overflowWrap: "break-word",
@@ -2109,23 +2110,24 @@ export const LandingPage: React.FC = () => {
                     whiteSpace: "normal",
                     boxSizing: "border-box",
                     overflow: "hidden",
+                    lineHeight: "1.5",
                   }}
                 >
                   {section.subtitle}
                 </p>
               )}
               {section.quote && (
-                <div className="mt-12" style={{ maxWidth: "800px", margin: "3rem auto 0" }}>
+                <div className="mt-12" style={{ maxWidth: "min(800px, 90vw)", margin: "1.5rem auto 0", padding: "0 clamp(0.75rem, 4vw, 1rem)" }}>
                   <p
                     style={{
                       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
-                      fontSize: "clamp(1rem, 3vw, 1.5rem)",
+                      fontSize: "clamp(0.875rem, 3.5vw, 1.25rem)",
                       fontStyle: "italic",
                       opacity: 0.85,
                       fontWeight: 300,
                       letterSpacing: "0.02em",
                       color: "#b0b0b0",
-                      lineHeight: "1.6",
+                      lineHeight: "1.5",
                       margin: "0 0 0.5rem",
                     }}
                   >
@@ -2135,7 +2137,7 @@ export const LandingPage: React.FC = () => {
                     <p
                       style={{
                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
-                        fontSize: "clamp(0.75rem, 2vw, 0.875rem)",
+                        fontSize: "clamp(0.625rem, 2vw, 0.875rem)",
                         opacity: 0.6,
                         fontWeight: 400,
                         letterSpacing: "0.05em",
@@ -2153,7 +2155,7 @@ export const LandingPage: React.FC = () => {
 
             {/* Previous Button - Positioned at Top */}
             {index > 0 && (
-              <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30 flex justify-center items-center">
+              <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-30 flex justify-center items-center" style={{ top: 'clamp(0.5rem, 2vh, 5rem)' }}>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -2161,10 +2163,14 @@ export const LandingPage: React.FC = () => {
                   }}
                   className="text-sm font-medium px-4 py-4 border rounded-full transition-all duration-300 ease-in-out hover:scale-110 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center justify-center"
                   style={{ 
-                    fontFamily: '"Inter", sans-serif',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
                     color: "#b0b0b0",
                     borderColor: "rgba(176, 176, 176, 0.3)",
                     transition: "all 0.3s ease-in-out",
+                    fontSize: "clamp(0.75rem, 3vw, 0.875rem)",
+                    padding: "clamp(0.625rem, 2vw, 1rem) clamp(0.875rem, 3vw, 1rem)",
+                    minWidth: "44px",
+                    minHeight: "44px",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "scale(1.1)";
@@ -2184,6 +2190,7 @@ export const LandingPage: React.FC = () => {
                     strokeWidth="2" 
                     strokeLinecap="round" 
                     strokeLinejoin="round"
+                    style={{ width: 'clamp(20px, 5vw, 24px)', height: 'clamp(20px, 5vw, 24px)' }}
                   >
                     <path d="M18 15l-6-6-6 6" />
                   </svg>
@@ -2193,7 +2200,7 @@ export const LandingPage: React.FC = () => {
 
             {/* Next Button - Positioned at Bottom */}
             {index < sections.length - 1 ? (
-              <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-30 flex justify-center items-center">
+              <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-30 flex justify-center items-center" style={{ bottom: 'clamp(4rem, 8vh, 5rem)' }}>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -2201,10 +2208,14 @@ export const LandingPage: React.FC = () => {
                   }}
                   className="text-sm font-medium px-4 py-4 border rounded-full transition-all duration-300 ease-in-out hover:scale-110 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center justify-center"
                   style={{ 
-                    fontFamily: '"Inter", sans-serif',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
                     color: "#b0b0b0",
                     borderColor: "rgba(176, 176, 176, 0.3)",
                     transition: "all 0.3s ease-in-out",
+                    fontSize: "clamp(0.75rem, 3vw, 0.875rem)",
+                    padding: "clamp(0.625rem, 2vw, 1rem) clamp(0.875rem, 3vw, 1rem)",
+                    minWidth: "44px",
+                    minHeight: "44px",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "scale(1.1)";
@@ -2224,13 +2235,14 @@ export const LandingPage: React.FC = () => {
                     strokeWidth="2" 
                     strokeLinecap="round" 
                     strokeLinejoin="round"
+                    style={{ width: 'clamp(20px, 5vw, 24px)', height: 'clamp(20px, 5vw, 24px)' }}
                   >
                     <path d="M6 9l6 6 6-6" />
                   </svg>
                 </button>
               </div>
             ) : (
-              <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-30 flex justify-center items-center">
+              <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-30 flex justify-center items-center" style={{ bottom: 'clamp(4rem, 8vh, 5rem)' }}>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -2238,10 +2250,14 @@ export const LandingPage: React.FC = () => {
                   }}
                   className="text-sm font-medium px-6 py-3 border rounded-full uppercase tracking-wider transition-all duration-300 ease-in-out hover:scale-110 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center gap-2"
                   style={{ 
-                    fontFamily: '"Inter", sans-serif',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
                     color: "#b0b0b0",
                     borderColor: "rgba(176, 176, 176, 0.3)",
                     transition: "all 0.3s ease-in-out",
+                    fontSize: "clamp(0.75rem, 3vw, 0.875rem)",
+                    padding: "clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 4vw, 1.5rem)",
+                    minWidth: "44px",
+                    minHeight: "44px",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "scale(1.1)";
@@ -2262,6 +2278,7 @@ export const LandingPage: React.FC = () => {
                     strokeWidth="2" 
                     strokeLinecap="round" 
                     strokeLinejoin="round"
+                    style={{ width: 'clamp(14px, 4vw, 16px)', height: 'clamp(14px, 4vw, 16px)' }}
                   >
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
@@ -2270,18 +2287,22 @@ export const LandingPage: React.FC = () => {
             )}
 
             {/* Navigation Indicator */}
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30">
-              <div className="flex gap-2">
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30" style={{ bottom: 'clamp(1rem, 3vh, 2rem)' }}>
+              <div className="flex gap-2" style={{ gap: 'clamp(0.25rem, 1vw, 0.5rem)' }}>
                 {sections.map((_, i) => (
                   <div
                     key={i}
-                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    className={`rounded-full transition-all duration-300 ${
                       i === currentSection
-                        ? "w-8"
+                        ? ""
                         : "opacity-30"
                     }`}
                     style={{
-                      backgroundColor: i === currentSection ? "#b0b0b0" : "#b0b0b0",
+                      backgroundColor: "#b0b0b0",
+                      width: i === currentSection ? 'clamp(24px, 6vw, 32px)' : 'clamp(6px, 1.5vw, 8px)',
+                      height: 'clamp(6px, 1.5vw, 8px)',
+                      minWidth: '6px',
+                      minHeight: '6px',
                     }}
                   />
                 ))}
@@ -2292,17 +2313,21 @@ export const LandingPage: React.FC = () => {
       </div>
 
       {/* Control Buttons */}
-      <div className="fixed top-8 right-8 z-40 flex gap-4">
+      <div className="fixed top-8 right-8 z-40 flex gap-4" style={{ top: 'clamp(0.75rem, 2vh, 2rem)', right: 'clamp(0.75rem, 2vw, 2rem)', gap: 'clamp(0.5rem, 2vw, 1rem)' }}>
         <button
           onClick={() => {
             navigate("/signup");
           }}
           className="text-xs font-medium px-4 py-2 border rounded uppercase tracking-wider transition-all duration-300 ease-in-out hover:scale-110 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20"
           style={{ 
-            fontFamily: '"Inter", sans-serif',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
             color: "#b0b0b0",
             borderColor: "rgba(176, 176, 176, 0.3)",
             transition: "all 0.3s ease-in-out",
+            fontSize: "clamp(0.625rem, 2.5vw, 0.75rem)",
+            padding: "clamp(0.5rem, 2vw, 0.75rem) clamp(0.75rem, 3vw, 1rem)",
+            minWidth: "44px",
+            minHeight: "44px",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = "scale(1.1)";
@@ -2318,10 +2343,11 @@ export const LandingPage: React.FC = () => {
       </div>
 
       {/* Help Text */}
-      <div className="fixed bottom-8 right-8 z-40 text-xs opacity-50 uppercase tracking-wider">
+      <div className="fixed bottom-8 right-8 z-40 text-xs opacity-50 uppercase tracking-wider" style={{ bottom: 'clamp(1rem, 3vh, 2rem)', right: 'clamp(0.75rem, 2vw, 2rem)' }}>
         <div style={{ 
-          fontFamily: '"Inter", sans-serif',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
           color: "#b0b0b0",
+          fontSize: "clamp(0.625rem, 2vw, 0.75rem)",
         }}>
           Scroll or use ↑ ↓ keys
         </div>
@@ -2329,15 +2355,19 @@ export const LandingPage: React.FC = () => {
 
       {/* Back to Top Button - Only show on last section */}
       {currentSection === sections.length - 1 && (
-        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40">
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40" style={{ bottom: 'clamp(4rem, 8vh, 5rem)' }}>
           <button
             onClick={() => scrollToSection(0)}
             className="text-xs font-medium px-6 py-3 border rounded-full uppercase tracking-wider transition-all duration-300 ease-in-out hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center gap-2"
             style={{ 
-              fontFamily: '"Inter", sans-serif',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
               color: "#b0b0b0",
               borderColor: "rgba(176, 176, 176, 0.3)",
               transition: "all 0.3s ease-in-out",
+              fontSize: "clamp(0.75rem, 3vw, 0.875rem)",
+              padding: "clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 4vw, 1.5rem)",
+              minWidth: "44px",
+              minHeight: "44px",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = "scale(1.1)";
@@ -2357,6 +2387,7 @@ export const LandingPage: React.FC = () => {
               strokeWidth="2" 
               strokeLinecap="round" 
               strokeLinejoin="round"
+              style={{ width: 'clamp(14px, 4vw, 16px)', height: 'clamp(14px, 4vw, 16px)' }}
             >
               <path d="M18 15l-6-6-6 6" />
             </svg>

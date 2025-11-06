@@ -86,8 +86,26 @@ class CallService {
           this.notifyStateChange();
 
           if (state === 'closed' || state === 'failed') {
-            this.endCall();
+            // Don't end call immediately on failed - let reconnection attempt
+            if (state === 'closed') {
+              this.endCall();
+            }
           }
+        }
+      });
+
+      // Handle ICE restart offers for reconnection
+      webRTCService.onIceRestartOffer((userId, offer) => {
+        if (userId === recipientId && this.currentCall.callId) {
+          console.log('🔄 Sending ICE restart offer for reconnection');
+          callSignalingService.sendOffer(
+            this.currentCall.callId,
+            (webRTCService as any).getCurrentUserId() || 'unknown',
+            recipientId,
+            offer
+          ).catch((error) => {
+            console.error('❌ Error sending ICE restart offer:', error);
+          });
         }
       });
 
@@ -152,8 +170,26 @@ class CallService {
           this.notifyStateChange();
 
           if (state === 'closed' || state === 'failed') {
-            this.endCall();
+            // Don't end call immediately on failed - let reconnection attempt
+            if (state === 'closed') {
+              this.endCall();
+            }
           }
+        }
+      });
+
+      // Handle ICE restart offers for reconnection
+      webRTCService.onIceRestartOffer((userId, offer) => {
+        if (userId === callerId && this.currentCall.callId) {
+          console.log('🔄 Sending ICE restart offer for reconnection');
+          callSignalingService.sendOffer(
+            this.currentCall.callId,
+            (webRTCService as any).getCurrentUserId() || 'unknown',
+            callerId,
+            offer
+          ).catch((error) => {
+            console.error('❌ Error sending ICE restart offer:', error);
+          });
         }
       });
     } catch (error) {
