@@ -706,8 +706,8 @@ export const AboutUsPage: React.FC = () => {
                 <a href="mailto:support@super-app.tech" style={{ display: 'block', fontSize: 'clamp(1rem, 1.5vw, 1.25rem)', color: textColor, textDecoration: 'none', marginBottom: '0.5rem', fontWeight: 500 }}>
                   <span style={{ color: '#0ea5e9' }}>support@super-app.tech</span>
                 </a>
-                <a href="mailto:admin@super-app.tech" style={{ display: 'block', fontSize: 'clamp(1rem, 1.5vw, 1.25rem)', color: textColor, textDecoration: 'none', marginBottom: '1rem', fontWeight: 500 }}>
-                  <span style={{ color: '#0ea5e9' }}>admin@super-app.tech</span>
+                <a href="tel:+917382005522" style={{ display: 'block', fontSize: 'clamp(1rem, 1.5vw, 1.25rem)', color: textColor, textDecoration: 'none', marginBottom: '1rem', fontWeight: 500 }}>
+                  <span style={{ color: '#0ea5e9' }}>+91 7382005522</span>
                 </a>
               </div>
               <div className="social-links" role="navigation" aria-label="Social media links" style={{ display: 'flex', gap: '2rem', marginTop: '2rem' }}>
@@ -734,8 +734,83 @@ export const AboutUsPage: React.FC = () => {
         </section>
 
         <footer className="footer" style={{ padding: '4rem 2rem', textAlign: 'center', color: mutedTextColor, fontSize: 'clamp(0.875rem, 1.5vw, 1rem)', position: 'relative', zIndex: 2, background: 'transparent', backgroundColor: 'transparent' }}>
-          <p>&copy; 2024. All rights reserved.</p>
-          <p className="footer-hint" style={{ marginTop: '1rem', fontSize: '0.875em' }}>Press <kbd style={{ background: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', padding: '0.25em 0.5em', borderRadius: '4px', fontFamily: 'monospace' }}>↑</kbd>/<kbd style={{ background: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', padding: '0.25em 0.5em', borderRadius: '4px', fontFamily: 'monospace' }}>↓</kbd> or <kbd style={{ background: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', padding: '0.25em 0.5em', borderRadius: '4px', fontFamily: 'monospace' }}>Space</kbd> to toggle presentation mode</p>
+          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            {/* Policy Links */}
+            <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '2rem' }}>
+              <a 
+                href="/policies/privacy-policy.html" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ color: textColor, textDecoration: 'none', borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'}`, paddingBottom: '0.25rem', transition: 'all 0.3s ease' }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderBottomColor = '#0ea5e9'; e.currentTarget.style.color = '#0ea5e9'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderBottomColor = isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'; e.currentTarget.style.color = textColor; }}
+              >
+                Privacy Policy
+              </a>
+              <a 
+                href="/policies/terms-and-conditions.html" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ color: textColor, textDecoration: 'none', borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'}`, paddingBottom: '0.25rem', transition: 'all 0.3s ease' }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderBottomColor = '#0ea5e9'; e.currentTarget.style.color = '#0ea5e9'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderBottomColor = isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'; e.currentTarget.style.color = textColor; }}
+              >
+                Terms and Conditions
+              </a>
+              <a 
+                href="/policies/cancellation-refund.html" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ color: textColor, textDecoration: 'none', borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'}`, paddingBottom: '0.25rem', transition: 'all 0.3s ease' }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderBottomColor = '#0ea5e9'; e.currentTarget.style.color = '#0ea5e9'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderBottomColor = isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'; e.currentTarget.style.color = textColor; }}
+              >
+                Refund & Cancellation Policy
+              </a>
+              <a 
+                href="/policies/contact-us.html" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ color: textColor, textDecoration: 'none', borderBottom: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'}`, paddingBottom: '0.25rem', transition: 'all 0.3s ease' }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderBottomColor = '#0ea5e9'; e.currentTarget.style.color = '#0ea5e9'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderBottomColor = isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'; e.currentTarget.style.color = textColor; }}
+              >
+                Contact Us
+              </a>
+            </div>
+
+            {/* Contact Information */}
+            <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '2rem', fontSize: 'clamp(0.875rem, 1.2vw, 1rem)' }}>
+              <div>
+                <span style={{ color: mutedTextColor, marginRight: '0.5rem' }}>Email:</span>
+                <a 
+                  href="mailto:support@super-app.tech" 
+                  style={{ color: '#0ea5e9', textDecoration: 'none', transition: 'opacity 0.3s ease' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+                >
+                  support@super-app.tech
+                </a>
+              </div>
+              <div>
+                <span style={{ color: mutedTextColor, marginRight: '0.5rem' }}>Phone:</span>
+                <a 
+                  href="tel:+917382005522" 
+                  style={{ color: '#0ea5e9', textDecoration: 'none', transition: 'opacity 0.3s ease' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+                >
+                  +91 7382005522
+                </a>
+              </div>
+            </div>
+
+            {/* Copyright */}
+            <p style={{ marginBottom: '1rem' }}>&copy; 2025 Super Study App. All rights reserved.</p>
+            
+            {/* Keyboard Hint */}
+            <p className="footer-hint" style={{ marginTop: '1rem', fontSize: '0.875em', opacity: 0.7 }}>Press <kbd style={{ background: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', padding: '0.25em 0.5em', borderRadius: '4px', fontFamily: 'monospace' }}>↑</kbd>/<kbd style={{ background: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', padding: '0.25em 0.5em', borderRadius: '4px', fontFamily: 'monospace' }}>↓</kbd> or <kbd style={{ background: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', padding: '0.25em 0.5em', borderRadius: '4px', fontFamily: 'monospace' }}>Space</kbd> to toggle presentation mode</p>
+          </div>
         </footer>
       </main>
     </div>

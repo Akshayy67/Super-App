@@ -39,6 +39,7 @@ import {
 import { aiService } from "../../utils/aiService";
 import { InterviewFeedback } from "./InterviewFeedback";
 import { JAMSession } from "./JAMSession";
+import { GeminiATSService } from "../../utils/geminiATSService";
 import { useFaceDetection } from "../../hooks/useFaceDetection";
 import {
   FaceDetectionOverlay,
@@ -97,7 +98,7 @@ export const MockInterview: React.FC = () => {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("general");
-  const [activeTab, setActiveTab] = useState<"templates" | "custom">(
+  const [activeTab, setActiveTab] = useState<"templates" | "custom" | "resume">(
     "templates"
   );
   const [showJAMSession, setShowJAMSession] = useState(false);
@@ -115,6 +116,18 @@ export const MockInterview: React.FC = () => {
   ]);
   const [customTechTags, setCustomTechTags] = useState<string[]>([""]);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+
+  // Resume-based interview configuration
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [resumeText, setResumeText] = useState("");
+  const [parsedResumeData, setParsedResumeData] = useState<any>(null);
+  const [isParsingResume, setIsParsingResume] = useState(false);
+  const [resumeDifficulty, setResumeDifficulty] = useState<
+    "easy" | "medium" | "hard"
+  >("medium");
+  const [resumeQuestionCount, setResumeQuestionCount] = useState(5);
+  const [resumeDuration, setResumeDuration] = useState(15);
+  const [isGeneratingResumeQuestions, setIsGeneratingResumeQuestions] = useState(false);
 
   // VAPI states
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
@@ -440,7 +453,19 @@ export const MockInterview: React.FC = () => {
 
     const onError = (error: Error) => {
       console.error("VAPI Error:", error);
-      setError(error.message);
+      
+      // Provide more helpful error messages based on error type
+      let errorMessage = error.message;
+      
+      if (error.message.includes("ICE") || error.message.includes("connection") || error.message.includes("disconnected")) {
+        errorMessage = "Connection failed. This may be due to network or firewall restrictions. Please check your internet connection and try again. If the issue persists, try using a different network or disabling VPN/firewall.";
+      } else if (error.message.includes("permission") || error.message.includes("microphone")) {
+        errorMessage = "Microphone permission denied. Please allow microphone access in your browser settings and refresh the page.";
+      } else if (error.message.includes("timeout")) {
+        errorMessage = "Connection timeout. Please check your internet connection and try again.";
+      }
+      
+      setError(errorMessage);
       setCallStatus(CallStatus.INACTIVE);
       setIsRecording(false);
     };
@@ -1308,6 +1333,200 @@ Return only the JSON array, no additional text.`;
     }
   };
 
+  // Resume-based interview functions
+  const handleResumeFileUpload = async (file: File) => {
+    try {
+      setIsParsingResume(true);
+      setResumeFile(file);
+      setError(null);
+
+      // Read file as text if it's a text file
+      if (file.type === "text/plain") {
+        const text = await file.text();
+        setResumeText(text);
+        // Parse the resume
+        const parsed = await GeminiATSService.parseResumeText(text, file.name);
+        setParsedResumeData(parsed);
+      } else {
+        // For PDF/DOCX, use GeminiATSService to parse
+        const parsed = await GeminiATSService.parseResumeFile(file);
+        setResumeText(parsed.text);
+        setParsedResumeData(parsed);
+      }
+    } catch (error) {
+      console.error("Error parsing resume:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to parse resume. Please try again."
+      );
+    } finally {
+      setIsParsingResume(false);
+    }
+  };
+
+  const handleResumeTextInput = async (text: string) => {
+    try {
+      setIsParsingResume(true);
+      setResumeText(text);
+      setError(null);
+
+      // Parse the resume text
+      const parsed = await GeminiATSService.parseResumeText(text, "resume.txt");
+      setParsedResumeData(parsed);
+    } catch (error) {
+      console.error("Error parsing resume text:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to parse resume. Please try again."
+      );
+    } finally {
+      setIsParsingResume(false);
+    }
+  };
+
+  const generateResumeBasedQuestions = async (
+    resumeData: any,
+    difficulty: string,
+    count: number
+  ): Promise<InterviewQuestion[]> => {
+    try {
+      setIsGeneratingResumeQuestions(true);
+
+      const skills = resumeData.sections.skills || [];
+      const experience = resumeData.sections.experience || [];
+      const education = resumeData.sections.education || [];
+      const projects = resumeData.sections.projects || [];
+      const summary = resumeData.sections.summary || "";
+
+      // Create a prompt for the AI to generate resume-based questions
+      const prompt = `Generate ${count} personalized interview questions based on the candidate's resume. 
+
+Resume Summary: ${summary}
+Skills: ${skills.join(", ")}
+Experience: ${experience.slice(0, 3).join("; ")}
+Education: ${education.join("; ")}
+Projects: ${projects.slice(0, 2).join("; ")}
+
+Difficulty Level: ${difficulty}
+
+Requirements:
+- Questions should be personalized based on the candidate's actual experience, skills, and projects
+- Ask about specific technologies, projects, or experiences mentioned in the resume
+- Include a mix of technical questions (based on skills), behavioral questions (based on experience), and project-based questions
+- Questions should be challenging but appropriate for the difficulty level
+- Make questions feel natural and relevant to the candidate's background
+- Reference specific items from the resume when appropriate
+
+Format each question as a JSON object with:
+- question: the actual question text (personalized to the resume)
+- category: "technical" | "behavioral" | "project" | "experience"
+- timeLimit: appropriate time in seconds (60-180)
+- hints: 2-3 helpful hints for the candidate
+
+Return only the JSON array, no additional text.`;
+
+      // Use the existing aiService
+      const response = await aiService.generateResponse(prompt);
+
+      if (!response.success || !response.data) {
+        throw new Error(response.error || "Failed to generate resume-based questions");
+      }
+
+      // Try to parse the AI response as JSON
+      let aiQuestions;
+      try {
+        const jsonMatch = response.data.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          aiQuestions = JSON.parse(jsonMatch[0]);
+        } else {
+          aiQuestions = JSON.parse(response.data);
+        }
+      } catch (parseError) {
+        console.error("Failed to parse AI response as JSON:", parseError);
+        throw new Error("AI generated invalid response format");
+      }
+
+      // Convert AI questions to our format
+      const formattedQuestions: InterviewQuestion[] = aiQuestions.map(
+        (q: any, index: number) => ({
+          id: `resume-${index + 1}`,
+          question: q.question,
+          category: q.category || "general",
+          timeLimit: q.timeLimit || 120,
+          hints: q.hints || [
+            "Reference your resume",
+            "Be specific about your experience",
+            "Use concrete examples",
+          ],
+        })
+      );
+
+      return formattedQuestions;
+    } catch (error) {
+      console.error("Error generating resume-based questions:", error);
+      // Fallback to generic questions
+      return [];
+    } finally {
+      setIsGeneratingResumeQuestions(false);
+    }
+  };
+
+  const createResumeInterview = async () => {
+    if (!parsedResumeData) {
+      setError("Please upload and parse a resume first");
+      return;
+    }
+
+    try {
+      setIsGeneratingResumeQuestions(true);
+      const finalQuestionCount = Math.min(resumeQuestionCount, 10);
+
+      // Generate resume-based questions
+      const generatedQuestions = await generateResumeBasedQuestions(
+        parsedResumeData,
+        resumeDifficulty,
+        finalQuestionCount
+      );
+
+      if (generatedQuestions.length === 0) {
+        throw new Error("Failed to generate questions from resume");
+      }
+
+      const session: InterviewSession = {
+        id: Date.now().toString(),
+        type: "resume",
+        difficulty: resumeDifficulty,
+        duration: resumeDuration,
+        questions: generatedQuestions,
+        currentQuestionIndex: 0,
+        startTime: new Date(),
+      };
+
+      setActiveSession(session);
+      setTimeRemaining(session.questions[0].timeLimit);
+      setCurrentAnswer("");
+      setIsInterviewStarted(false);
+
+      // Auto-start camera if enabled
+      if (showCameraPreview) {
+        setTimeout(() => {
+          startCamera();
+        }, 100);
+      }
+    } catch (error) {
+      console.error("Error creating resume interview:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to create resume-based interview"
+      );
+    } finally {
+      setIsGeneratingResumeQuestions(false);
+    }
+  };
+
   const handleStartRecording = async () => {
     try {
       // Check if VAPI is ready
@@ -1504,6 +1723,8 @@ Important:
         role:
           sessionToUse.type === "custom"
             ? customRole || "Custom Role"
+            : sessionToUse.type === "resume"
+            ? parsedResumeData?.sections?.summary?.split(" ").slice(0, 5).join(" ") || "Resume-Based Role"
             : sessionToUse.type,
         difficulty: sessionToUse.difficulty || "medium",
         duration: duration || 0,
@@ -2330,6 +2551,54 @@ Important:
                 </div>
               )}
 
+              {/* Connection Status Warning */}
+              {callStatus === CallStatus.CONNECTING && (
+                <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-6 py-3 rounded-xl shadow-lg mb-4">
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+                    <span className="font-semibold text-lg">
+                      Connecting to Interview...
+                    </span>
+                    <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+                  </div>
+                  <p className="text-sm text-yellow-100 mt-2 text-center">
+                    If connection fails, check your network connection and try again
+                  </p>
+                </div>
+              )}
+
+              {/* Connection Error Help */}
+              {error && error.includes("connection") && (
+                <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl p-6 mb-4">
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-red-900 mb-2">
+                        Connection Troubleshooting
+                      </h4>
+                      <ul className="text-sm text-red-800 space-y-2 list-disc list-inside">
+                        <li>Check your internet connection</li>
+                        <li>Try disabling VPN or firewall temporarily</li>
+                        <li>Ensure microphone permissions are granted</li>
+                        <li>Try refreshing the page and starting again</li>
+                        <li>If on a corporate network, contact IT about WebRTC/UDP port restrictions</li>
+                      </ul>
+                      <button
+                        onClick={() => {
+                          setError(null);
+                          if (activeSession) {
+                            handleStartRecording();
+                          }
+                        }}
+                        className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                      >
+                        Retry Connection
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Interview Video Area - Same video element will be shown here */}
               <div className="flex-1 bg-gray-900 rounded-xl flex items-center justify-center relative overflow-hidden max-w-7xl mx-auto w-full aspect-video lg:aspect-[16/10] xl:aspect-[4/3] min-h-[500px] lg:min-h-[600px] xl:min-h-[700px]">
                 {/* Video element - always present in DOM for interview mode */}
@@ -2878,6 +3147,19 @@ Important:
                   <span>Custom Interview</span>
                 </div>
               </button>
+              <button
+                onClick={() => setActiveTab("resume")}
+                className={`flex-1 py-4 px-6 rounded-xl text-sm font-semibold transition-all duration-300 transform ${
+                  activeTab === "resume"
+                    ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg scale-105 border-2 border-green-200 dark:border-green-600"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-slate-700/50"
+                }`}
+              >
+                <div className="flex items-center justify-center space-x-2">
+                  <FileText className="w-5 h-5" />
+                  <span>Resume-Based Interview</span>
+                </div>
+              </button>
             </div>
           </div>
         </div>
@@ -3344,6 +3626,272 @@ Important:
             </div>
           </div>
         )}
+
+        {/* Resume-Based Interview Tab */}
+        {activeTab === "resume" && (
+          <div className="bg-gradient-to-br from-white via-green-50 to-emerald-50 dark:from-slate-800 dark:via-slate-700 dark:to-slate-600 rounded-3xl p-8 border border-gray-200 dark:border-slate-600 shadow-xl">
+            <div className="space-y-8">
+              {/* Header */}
+              <div className="text-center mb-8">
+                <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+                  Resume-Based Interview Practice
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 text-lg">
+                  Upload your resume and get personalized interview questions based on your actual experience, skills, and projects
+                </p>
+              </div>
+
+              {/* Resume Upload Section */}
+              <div className="space-y-4">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Upload Your Resume
+                </label>
+                <div className="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl p-8 text-center hover:border-green-500 dark:hover:border-green-600 transition-colors">
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleResumeFileUpload(file);
+                      }
+                    }}
+                    className="hidden"
+                    id="resume-upload"
+                  />
+                  <label
+                    htmlFor="resume-upload"
+                    className="cursor-pointer flex flex-col items-center"
+                  >
+                    <FileText className="w-16 h-16 text-green-600 mb-4" />
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                      Click to upload or drag and drop
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      PDF, DOC, DOCX, or TXT (Max 10MB)
+                    </p>
+                  </label>
+                </div>
+
+                {/* Or paste text */}
+                <div className="text-center">
+                  <p className="text-gray-600 dark:text-gray-400 mb-2">or</p>
+                  <textarea
+                    value={resumeText}
+                    onChange={(e) => setResumeText(e.target.value)}
+                    onBlur={() => {
+                      if (resumeText.trim()) {
+                        handleResumeTextInput(resumeText);
+                      }
+                    }}
+                    placeholder="Paste your resume text here..."
+                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 min-h-[200px]"
+                  />
+                </div>
+
+                {/* Parsing Status */}
+                {isParsingResume && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-blue-700 dark:text-blue-300 font-medium">
+                        Parsing resume... This may take a moment for PDF files.
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Display for Resume Parsing */}
+                {error && activeTab === "resume" && !isParsingResume && (
+                  <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl p-6">
+                    <div className="flex items-start space-x-3">
+                      <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-red-900 dark:text-red-100 mb-2">
+                          Resume Parsing Error
+                        </h4>
+                        <p className="text-red-800 dark:text-red-200 text-sm mb-4 whitespace-pre-line">
+                          {error}
+                        </p>
+                        <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-red-200 dark:border-red-700">
+                          <p className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">
+                            Alternative Options:
+                          </p>
+                          <ul className="text-sm text-red-800 dark:text-red-200 space-y-1 list-disc list-inside">
+                            <li>Copy and paste your resume text in the text area below</li>
+                            <li>Convert your PDF to a text file (.txt) and upload it</li>
+                            <li>If your PDF is image-based, try using an OCR tool first</li>
+                            <li>Ensure your PDF is not password-protected or encrypted</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Parsed Resume Data Display */}
+                {parsedResumeData && !isParsingResume && (
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6">
+                    <div className="flex items-start space-x-3 mb-4">
+                      <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
+                          Resume Parsed Successfully!
+                        </h4>
+                        <div className="space-y-2 text-sm text-green-800 dark:text-green-200">
+                          {parsedResumeData.sections.skills.length > 0 && (
+                            <div>
+                              <strong>Skills:</strong> {parsedResumeData.sections.skills.slice(0, 5).join(", ")}
+                              {parsedResumeData.sections.skills.length > 5 && "..."}
+                            </div>
+                          )}
+                          {parsedResumeData.sections.experience.length > 0 && (
+                            <div>
+                              <strong>Experience:</strong> {parsedResumeData.sections.experience.length} position(s) found
+                            </div>
+                          )}
+                          {parsedResumeData.sections.projects.length > 0 && (
+                            <div>
+                              <strong>Projects:</strong> {parsedResumeData.sections.projects.length} project(s) found
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Interview Settings */}
+              {parsedResumeData && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                        Difficulty Level
+                      </label>
+                      <select
+                        value={resumeDifficulty}
+                        onChange={(e) =>
+                          setResumeDifficulty(
+                            e.target.value as "easy" | "medium" | "hard"
+                          )
+                        }
+                        className="w-full px-4 py-3 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 text-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
+                      >
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                        Number of Questions
+                      </label>
+                      <input
+                        type="number"
+                        min="3"
+                        max="10"
+                        value={resumeQuestionCount}
+                        onChange={(e) =>
+                          setResumeQuestionCount(
+                            Math.min(parseInt(e.target.value) || 3, 10)
+                          )
+                        }
+                        className="w-full px-4 py-3 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 text-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                      Duration (minutes)
+                    </label>
+                    <input
+                      type="number"
+                      min="5"
+                      max="120"
+                      value={resumeDuration}
+                      onChange={(e) =>
+                        setResumeDuration(parseInt(e.target.value))
+                      }
+                      className="w-full px-4 py-3 border-2 border-gray-200 dark:border-slate-600 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 text-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+
+                  {/* Info Card */}
+                  <div className="bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 rounded-2xl p-6 border border-green-200 shadow-lg">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                        <FileText className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-bold text-green-900 dark:text-green-100 mb-2">
+                          Personalized Questions Based on Your Resume
+                        </h4>
+                        <p className="text-green-700 dark:text-green-300 leading-relaxed">
+                          Our AI will analyze your resume and generate {resumeQuestionCount} personalized interview questions
+                          based on your actual skills, experience, projects, and education. Questions will reference specific
+                          items from your resume to make the interview practice more realistic and relevant.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Create Interview Button */}
+                  <div className="pt-6">
+                    <button
+                      onClick={createResumeInterview}
+                      disabled={!parsedResumeData || isGeneratingResumeQuestions}
+                      className={`w-full py-4 px-8 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 ${
+                        parsedResumeData && !isGeneratingResumeQuestions
+                          ? "bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white shadow-2xl hover:shadow-green-500/25 hover:from-green-700 hover:via-emerald-700 hover:to-teal-700"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed shadow-lg"
+                      }`}
+                    >
+                      {isGeneratingResumeQuestions ? (
+                        <div className="flex items-center justify-center space-x-3">
+                          <svg
+                            className="animate-spin h-6 w-6 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          <span>Generating Personalized Questions...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center space-x-3">
+                          <FileText className="w-6 h-6" />
+                          <span>Create Resume-Based Interview</span>
+                        </div>
+                      )}
+                    </button>
+                    {!parsedResumeData && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-3 bg-gray-50 dark:bg-slate-700 rounded-lg px-4 py-2 border border-gray-200 dark:border-slate-600">
+                        Please upload or paste your resume to create a personalized interview
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tips Card */}
@@ -3478,6 +4026,8 @@ Important:
           role={
             feedbackSession?.type === "custom"
               ? customRole
+              : feedbackSession?.type === "resume" || (activeSession as InterviewSession | null)?.type === "resume"
+              ? parsedResumeData?.sections?.summary?.split(" ").slice(0, 5).join(" ") || "Resume-Based Role"
               : feedbackSession?.type || (activeSession as InterviewSession | null)?.type === "custom"
               ? customRole
               : (activeSession as InterviewSession | null)?.type || "general"

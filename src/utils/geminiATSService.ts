@@ -250,37 +250,254 @@ Return only the JSON object, no additional text.`;
     }
   }
 
-  // Extract text from PDF using PDF.js
+  // Validate PDF file structure
+  private static async validatePDF(file: File): Promise<boolean> {
+    try {
+      // Check file size (should be > 0)
+      if (file.size === 0) {
+        throw new Error("PDF file is empty");
+      }
+
+      // Check if file starts with PDF header
+      const arrayBuffer = await file.slice(0, 1024).arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const header = String.fromCharCode(...uint8Array.slice(0, 4));
+      
+      if (header !== "%PDF") {
+        throw new Error("File does not appear to be a valid PDF");
+      }
+
+      return true;
+    } catch (error) {
+      console.error("PDF validation error:", error);
+      return false;
+    }
+  }
+
+  // Extract text from PDF using PDF.js with fallback to Gemini Vision
   private static async extractTextFromPDF(file: File): Promise<string> {
     try {
+      // First, validate the PDF structure
+      const isValid = await this.validatePDF(file);
+      if (!isValid) {
+        throw new Error(
+          "Invalid PDF file. The file may be corrupted, not a valid PDF, or in an unsupported format. Please try:\n1. Re-saving the PDF from the original application\n2. Using the 'Paste Text' option below\n3. Converting to a text file (.txt)"
+        );
+      }
+
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      
+      // Try to load PDF with PDF.js
+      let pdf;
+      try {
+        pdf = await pdfjsLib.getDocument({ 
+          data: arrayBuffer,
+          verbosity: 0, // Suppress warnings
+          stopAtErrors: false, // Continue even with some errors
+          maxImageSize: 1024 * 1024, // 1MB max image size
+        }).promise;
+      } catch (pdfError: any) {
+        console.error("Error loading PDF with PDF.js:", pdfError);
+        
+        // Provide specific error messages based on error type
+        if (pdfError?.name === "InvalidPDFException" || pdfError?.message?.includes("Invalid PDF")) {
+          throw new Error(
+            "Invalid PDF structure. The PDF may be corrupted or in an unsupported format. Please try:\n1. Opening and re-saving the PDF in a PDF viewer\n2. Using the 'Paste Text' option below\n3. Converting the PDF to a text file"
+          );
+        }
+        
+        if (pdfError?.message?.includes("password") || pdfError?.message?.includes("encrypted")) {
+          throw new Error(
+            "This PDF is password-protected or encrypted. Please remove the password protection and try again, or use the 'Paste Text' option below."
+          );
+        }
+        
+        // For other PDF.js errors, try Gemini Vision as fallback
+        console.log("PDF.js failed, attempting Gemini Vision fallback...");
+        try {
+          return await this.extractTextFromPDFWithGemini(file);
+        } catch (geminiError) {
+          throw new Error(
+            "Cannot process this PDF. It may be corrupted, encrypted, or in an unsupported format. Please use the 'Paste Text' option below to manually enter your resume content."
+          );
+        }
+      }
+
       let fullText = "";
+      let hasText = false;
 
       // Extract text from all pages
       for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(" ");
-        fullText += pageText + "\n";
+        try {
+          const page = await pdf.getPage(pageNum);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item: any) => item.str)
+            .join(" ");
+          
+          if (pageText.trim().length > 0) {
+            hasText = true;
+            fullText += pageText + "\n";
+          }
+        } catch (pageError) {
+          console.warn(`Error extracting text from page ${pageNum}:`, pageError);
+          // Continue with other pages
+        }
       }
 
-      if (fullText.trim().length === 0) {
-        throw new Error(
-          "No text found in PDF. The PDF might be image-based or corrupted."
-        );
+      // If no text was extracted, try Gemini Vision API as fallback
+      if (!hasText || fullText.trim().length < 50) {
+        console.log("No text extracted from PDF, trying Gemini Vision API...");
+        try {
+          return await this.extractTextFromPDFWithGemini(file);
+        } catch (geminiError) {
+          console.error("Gemini Vision API also failed:", geminiError);
+          throw new Error(
+            "Failed to extract text from PDF. The PDF might be image-based, encrypted, or corrupted. Please try:\n1. Opening the PDF and copying the text manually\n2. Using the 'Paste Text' option below\n3. Converting the PDF to a text file"
+          );
+        }
       }
 
       return fullText.trim();
     } catch (error) {
       console.error("Error extracting text from PDF:", error);
-      throw new Error(
-        "Failed to extract text from PDF. Please ensure the PDF contains selectable text and try again, or use the 'Paste Text' option."
-      );
+      
+      // If it's already a helpful error message, preserve it
+      if (error instanceof Error && error.message.includes("Paste Text")) {
+        throw error;
+      }
+      
+      // Try Gemini Vision as last resort
+      try {
+        console.log("Attempting Gemini Vision API fallback...");
+        return await this.extractTextFromPDFWithGemini(file);
+      } catch (geminiError) {
+        console.error("All PDF extraction methods failed:", geminiError);
+        throw new Error(
+          "Failed to extract text from PDF. Please ensure the PDF contains selectable text and try again, or use the 'Paste Text' option below."
+        );
+      }
     }
   }
+
+  // Extract text from PDF using Gemini Vision API (for image-based/scanned PDFs)
+  // Converts PDF pages to images first, then uses Gemini Vision
+  private static async extractTextFromPDFWithGemini(file: File): Promise<string> {
+    try {
+      console.log("Using Gemini Vision API to extract text from PDF (converting pages to images)...");
+      
+      // First, load the PDF with PDF.js to convert pages to images
+      const arrayBuffer = await file.arrayBuffer();
+      let pdf;
+      try {
+        pdf = await pdfjsLib.getDocument({ 
+          data: arrayBuffer,
+          verbosity: 0
+        }).promise;
+      } catch (pdfError) {
+        console.error("Cannot load PDF for image conversion:", pdfError);
+        throw new Error(
+          "Cannot process this PDF. It may be corrupted or encrypted. Please use the 'Paste Text' option below."
+        );
+      }
+
+      if (pdf.numPages === 0) {
+        throw new Error("PDF has no pages");
+      }
+
+      // Convert each PDF page to an image and extract text using Gemini
+      let fullText = "";
+      const maxPages = Math.min(pdf.numPages, 5); // Limit to first 5 pages for performance
+
+      for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+        try {
+          const page = await pdf.getPage(pageNum);
+          
+          // Render page to canvas
+          const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better OCR
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d");
+          
+          if (!context) {
+            throw new Error("Cannot create canvas context");
+          }
+
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+
+          await page.render({
+            canvasContext: context,
+            viewport: viewport,
+          }).promise;
+
+          // Convert canvas to base64 image
+          const imageData = canvas.toDataURL("image/png");
+          const base64Data = imageData.split(",")[1];
+
+          // Use Gemini Vision to extract text from the image
+          const prompt = pageNum === 1 
+            ? `Extract all text from this resume page. Return the complete text content exactly as it appears, preserving structure. Include all sections like contact info, summary, skills, experience, education, projects, certifications, etc. Return only the extracted text, no commentary.`
+            : `Extract all text from this resume page (page ${pageNum}). Return the complete text content exactly as it appears. Return only the extracted text, no commentary.`;
+
+          const result = await this.model.generateContent([
+            {
+              inlineData: {
+                data: base64Data,
+                mimeType: "image/png",
+              },
+            },
+            prompt,
+          ]);
+
+          const response = await result.response;
+          const pageText = response.text().trim();
+          
+          if (pageText.length > 0) {
+            fullText += pageText + "\n\n";
+          }
+      } catch (pageError) {
+        console.warn(`Error processing page ${pageNum}:`, pageError);
+        // Continue with other pages
+      }
+    }
+
+    if (fullText.trim().length < 50) {
+      throw new Error("Extracted very little text from PDF pages");
+    }
+
+    return fullText.trim();
+  } catch (error) {
+    console.error("Error using Gemini Vision API for PDF:", error);
+    
+    // If it's already a helpful error message from validation, preserve it
+    if (error instanceof Error && (
+      error.message.includes("Invalid PDF") || 
+      error.message.includes("password") ||
+      error.message.includes("corrupted")
+    )) {
+      throw error;
+    }
+    
+    // Check for specific error types
+    if (error instanceof Error) {
+      if (error.message.includes("API_KEY") || error.message.includes("quota")) {
+        throw new Error(
+          "Gemini API issue. Please check your API key configuration. For now, please use the 'Paste Text' option to manually paste your resume content."
+        );
+      }
+      
+      if (error.message.includes("no pages") || error.message.includes("no pages")) {
+        throw new Error(
+          "The PDF appears to be empty or corrupted. Please try:\n1. Opening the PDF to verify it's not corrupted\n2. Using the 'Paste Text' option below\n3. Converting the PDF to a text file"
+        );
+      }
+    }
+    
+    throw new Error(
+      "Could not extract text using AI. The PDF might be corrupted, encrypted, or image-based. Please use the 'Paste Text' option below to manually enter your resume content."
+    );
+  }
+}
 
   // Convert file to format suitable for Gemini
   private static async fileToGenerativePart(file: File) {
