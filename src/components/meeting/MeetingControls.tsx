@@ -79,7 +79,7 @@ export const MeetingControls: React.FC<MeetingControlsProps> = ({
       setCopyLinkSuccess(true);
       setTimeout(() => setCopyLinkSuccess(false), 3000);
     } else if (meetingId) {
-      const link = `${window.location.origin}/meeting?id=${meetingId}&skipLobby=true`;
+      const link = `${window.location.origin}/meeting?id=${meetingId}`;
       navigator.clipboard.writeText(link).then(() => {
         setCopyLinkSuccess(true);
         setTimeout(() => setCopyLinkSuccess(false), 3000);

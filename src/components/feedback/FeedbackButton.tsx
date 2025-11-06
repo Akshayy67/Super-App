@@ -82,13 +82,31 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [isBirdFlying, setIsBirdFlying] = useState(false);
+  const [isCageFollowing, setIsCageFollowing] = useState(false);
+  const [isButtonMoving, setIsButtonMoving] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const isHoveredRef = useRef(false);
+  const isDraggingRef = useRef(false);
+  const originalButtonPositionRef = useRef<{ x: number; y: number } | null>(null);
   
   // Smooth bird position tracking
   const birdX = useMotionValue(0);
   const birdY = useMotionValue(0);
   const smoothBirdX = useSpring(birdX, { stiffness: 150, damping: 20 });
   const smoothBirdY = useSpring(birdY, { stiffness: 150, damping: 20 });
+  
+  // Cage position (follows bird when bird is flying)
+  const cageX = useMotionValue(0);
+  const cageY = useMotionValue(0);
+  const smoothCageX = useSpring(cageX, { stiffness: 100, damping: 15 });
+  const smoothCageY = useSpring(cageY, { stiffness: 100, damping: 15 });
+  
+  // Button position (for moving the entire button)
+  const buttonPositionX = useMotionValue(0);
+  const buttonPositionY = useMotionValue(0);
+  const smoothButtonX = useSpring(buttonPositionX, { stiffness: 80, damping: 20 });
+  const smoothButtonY = useSpring(buttonPositionY, { stiffness: 80, damping: 20 });
   
   // Eye tracking - position of pupils looking at cursor
   const eyeX = useMotionValue(0);
@@ -134,6 +152,185 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
       controls.wingDetailRy.stop();
     };
   }, [wingRx, wingRy, wingDetailRy]);
+
+  // Function to make bird fly away
+  const makeBirdFlyAway = (returnToCenter: boolean = true) => {
+    setIsBirdFlying(true);
+    
+    // Calculate opposite position (random opposite direction)
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 150; // Distance to fly
+    const targetX = Math.cos(angle) * distance;
+    const targetY = Math.sin(angle) * distance;
+    
+    // Animate bird flying away
+    animate(birdX, targetX, {
+      duration: 1.5,
+      ease: "easeOut",
+    });
+    animate(birdY, targetY, {
+      duration: 1.5,
+      ease: "easeOut",
+    });
+
+    // If returnToCenter is true, return after a delay (for 7-minute timer)
+    if (returnToCenter) {
+      setTimeout(() => {
+        setIsCageFollowing(true);
+        animate(cageX, targetX, {
+          duration: 1.5,
+          ease: "easeInOut",
+          onComplete: () => {
+            // After cage catches up, move the entire button to a new position
+            moveButtonToNewPosition(() => {
+              // After button moves, bird returns to center
+              setTimeout(() => {
+                makeBirdReturn();
+              }, 1000); // Wait 1 second before bird returns
+            });
+          },
+        });
+        animate(cageY, targetY, {
+          duration: 1.5,
+          ease: "easeInOut",
+        });
+      }, 2000);
+    }
+  };
+
+  // Function to move the entire button to a new position
+  const moveButtonToNewPosition = (onComplete?: () => void) => {
+    if (!buttonRef.current) {
+      onComplete?.();
+      return;
+    }
+
+    setIsButtonMoving(true);
+    
+    // Get current button position (accounting for any existing transform)
+    const rect = buttonRef.current.getBoundingClientRect();
+    const currentX = rect.left;
+    const currentY = rect.top;
+    
+    // Store original position if not already stored (before any movement)
+    if (!originalButtonPositionRef.current) {
+      originalButtonPositionRef.current = { x: currentX, y: currentY };
+    }
+
+    // Calculate new position (random position on screen, but keep it visible)
+    // Use a reasonable distance from current position (not too far, not too close)
+    const buttonSize = Math.max(rect.width, rect.height);
+    const minDistance = 100; // Minimum distance to move
+    const maxDistance = 300; // Maximum distance to move
+    const angle = Math.random() * Math.PI * 2;
+    const distance = minDistance + Math.random() * (maxDistance - minDistance);
+    
+    // Calculate new position relative to current
+    const offsetX = Math.cos(angle) * distance;
+    const offsetY = Math.sin(angle) * distance;
+    
+    // Make sure the new position stays within screen bounds
+    const newX = currentX + offsetX;
+    const newY = currentY + offsetY;
+    const maxX = window.innerWidth - buttonSize - 20;
+    const maxY = window.innerHeight - buttonSize - 20;
+    
+    // Clamp to screen bounds if needed
+    const finalOffsetX = Math.max(-currentX + 20, Math.min(maxX - currentX, offsetX));
+    const finalOffsetY = Math.max(-currentY + 20, Math.min(maxY - currentY, offsetY));
+    
+    // Animate button to new position
+    animate(buttonPositionX, finalOffsetX, {
+      duration: 2,
+      ease: "easeInOut",
+    });
+    animate(buttonPositionY, finalOffsetY, {
+      duration: 2,
+      ease: "easeInOut",
+      onComplete: () => {
+        onComplete?.();
+      },
+    });
+  };
+
+  // Function to return button to original position
+  const returnButtonToOriginal = () => {
+    if (!originalButtonPositionRef.current) {
+      setIsButtonMoving(false);
+      return;
+    }
+
+    // Animate button back to original position
+    animate(buttonPositionX, 0, {
+      duration: 2,
+      ease: "easeInOut",
+    });
+    animate(buttonPositionY, 0, {
+      duration: 2,
+      ease: "easeInOut",
+      onComplete: () => {
+        setIsButtonMoving(false);
+        originalButtonPositionRef.current = null;
+      },
+    });
+  };
+
+  // Function to make bird return to center
+  const makeBirdReturn = () => {
+    animate(birdX, 0, {
+      duration: 1.5,
+      ease: "easeIn",
+      onComplete: () => {
+        // Then cage returns
+        animate(cageX, 0, {
+          duration: 1.5,
+          ease: "easeInOut",
+          onComplete: () => {
+            // After cage returns, return button to original position
+            returnButtonToOriginal();
+            setIsBirdFlying(false);
+            setIsCageFollowing(false);
+            birdY.set(0);
+            cageY.set(0);
+          },
+        });
+      },
+    });
+    animate(birdY, 0, {
+      duration: 1.5,
+      ease: "easeIn",
+    });
+  };
+
+  // 7-minute timer for bird to fly away
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout;
+    
+    const flyAway = () => {
+      // Check if user is interacting - use refs to avoid stale closures
+      if (isHoveredRef.current || isDraggingRef.current) {
+        // Reschedule for later
+        timeoutId = setTimeout(flyAway, 10000); // Try again in 10 seconds
+        return;
+      }
+      
+      makeBirdFlyAway(true);
+    };
+
+    // Set up 7-minute interval (420000 milliseconds = 7 minutes)
+    intervalId = setInterval(() => {
+      flyAway();
+    }, 420000);
+    
+    // Also trigger on mount after 7 minutes
+    timeoutId = setTimeout(flyAway, 420000);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, []); // Empty dependency array - only run once on mount
   
   // Unique gradient IDs for each button instance (generated once)
   const gradientIdRef = useRef<string | null>(null);
@@ -222,6 +419,7 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
   const handleDragStart = (clientX: number, clientY: number) => {
     if (!draggable || finalPosition !== "draggable") return;
     setIsDragging(true);
+    isDraggingRef.current = true;
     setDragStart({ x: clientX, y: clientY });
   };
 
@@ -266,6 +464,7 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
   const handleDragEnd = () => {
     if (!isDragging) return;
     setIsDragging(false);
+    isDraggingRef.current = false;
     if (dragPosition) {
       saveDragPosition(dragPosition);
     }
@@ -423,7 +622,11 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
       {/* Floating Feedback Button */}
       <motion.div
         className={`fixed ${finalPosition === "draggable" ? "" : positionClasses[currentPosition]} z-40 ${isDragging ? "cursor-grabbing" : draggable && finalPosition === "draggable" ? "cursor-grab" : ""}`}
-        style={getButtonPosition()}
+        style={{
+          ...getButtonPosition(),
+          x: isButtonMoving ? smoothButtonX : 0,
+          y: isButtonMoving ? smoothButtonY : 0,
+        }}
         initial={{ scale: 0, opacity: 0 }}
         animate={{ 
           scale: isDragging ? 1.1 : 1, 
@@ -435,9 +638,9 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
         <div className="relative">
           {/* Pulse animation */}
           <motion.div
-            className={`absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full ${sizeClasses[finalSize]}`}
+            className={`absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-lg ${sizeClasses[finalSize]}`}
             animate={{
-              scale: [1, 1.2, 1],
+              scale: [1, 1.1, 1],
               opacity: [0.7, 0.3, 0.7],
             }}
             transition={{
@@ -447,32 +650,176 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
             }}
           />
 
+          {/* Cage bars - positioned around the button */}
+          <motion.div
+            className="absolute inset-0 pointer-events-none z-10 rounded-lg"
+            style={{
+              x: isCageFollowing ? smoothCageX : 0,
+              y: isCageFollowing ? smoothCageY : 0,
+            }}
+          >
+            <svg
+              className={`absolute inset-0 ${sizeClasses[finalSize]}`}
+              viewBox="0 0 100 100"
+              style={{ overflow: "visible" }}
+              preserveAspectRatio="none"
+            >
+              {/* Vertical bars */}
+              <line
+                x1="8"
+                y1="5"
+                x2="8"
+                y2="95"
+                stroke="rgba(255, 255, 255, 0.7)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="25"
+                y1="5"
+                x2="25"
+                y2="95"
+                stroke="rgba(255, 255, 255, 0.7)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="42"
+                y1="5"
+                x2="42"
+                y2="95"
+                stroke="rgba(255, 255, 255, 0.7)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="58"
+                y1="5"
+                x2="58"
+                y2="95"
+                stroke="rgba(255, 255, 255, 0.7)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="75"
+                y1="5"
+                x2="75"
+                y2="95"
+                stroke="rgba(255, 255, 255, 0.7)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="92"
+                y1="5"
+                x2="92"
+                y2="95"
+                stroke="rgba(255, 255, 255, 0.7)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              {/* Horizontal bars */}
+              <line
+                x1="5"
+                y1="8"
+                x2="95"
+                y2="8"
+                stroke="rgba(255, 255, 255, 0.7)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="5"
+                y1="25"
+                x2="95"
+                y2="25"
+                stroke="rgba(255, 255, 255, 0.7)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="5"
+                y1="42"
+                x2="95"
+                y2="42"
+                stroke="rgba(255, 255, 255, 0.7)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="5"
+                y1="58"
+                x2="95"
+                y2="58"
+                stroke="rgba(255, 255, 255, 0.7)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="5"
+                y1="75"
+                x2="95"
+                y2="75"
+                stroke="rgba(255, 255, 255, 0.7)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="5"
+                y1="92"
+                x2="95"
+                y2="92"
+                stroke="rgba(255, 255, 255, 0.7)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              {/* Corner decorations - cage corners */}
+              <rect x="3" y="3" width="4" height="4" rx="1" fill="rgba(255, 255, 255, 0.9)" />
+              <rect x="93" y="3" width="4" height="4" rx="1" fill="rgba(255, 255, 255, 0.9)" />
+              <rect x="3" y="93" width="4" height="4" rx="1" fill="rgba(255, 255, 255, 0.9)" />
+              <rect x="93" y="93" width="4" height="4" rx="1" fill="rgba(255, 255, 255, 0.9)" />
+            </svg>
+          </motion.div>
+
           {/* Main button */}
           <motion.button
             ref={buttonRef}
-            onClick={() => !isDragging && setIsOpen(true)}
+            onClick={() => {
+              if (!isDragging) {
+                // Make bird fly away when button is clicked
+                makeBirdFlyAway(false);
+                setIsOpen(true);
+              }
+            }}
             onMouseDown={handleMouseDown}
             onTouchStart={handleTouchStart}
             onMouseEnter={() => {
               setIsHovered(true);
-              birdX.set(0);
-              birdY.set(0);
+              isHoveredRef.current = true;
+              if (!isBirdFlying) {
+                birdX.set(0);
+                birdY.set(0);
+              }
               eyeX.set(0);
               eyeY.set(0);
             }}
             onMouseLeave={() => {
               setIsHovered(false);
-              birdX.set(0);
-              birdY.set(0);
+              isHoveredRef.current = false;
+              if (!isBirdFlying) {
+                birdX.set(0);
+                birdY.set(0);
+              }
               eyeX.set(0);
               eyeY.set(0);
             }}
-            className={`relative ${sizeClasses[finalSize]} bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group ${isDragging ? "shadow-2xl" : ""}`}
+            className={`relative ${sizeClasses[finalSize]} bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group ${isDragging ? "shadow-2xl" : ""} border-2 border-white/30`}
             whileHover={{ scale: isDragging ? 1.1 : 1.1 }}
             whileTap={{ scale: 0.95 }}
           >
             {/* Background sparkles */}
-            <div className="absolute inset-0 rounded-full overflow-hidden">
+            <div className="absolute inset-0 rounded-lg overflow-hidden">
               {[...Array(3)].map((_, i) => (
                 <motion.div
                   key={i}
@@ -494,12 +841,12 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
               ))}
             </div>
 
-            {/* Cute Bird - replaces Heart icon, follows mouse cursor on hover */}
+            {/* Cute Bird - replaces Heart icon, follows mouse cursor on hover or flies away every 7 minutes */}
             <motion.div
               style={{
-                position: isHovered && !isDragging ? "absolute" : "relative",
-                x: isHovered && !isDragging ? smoothBirdX : 0,
-                y: isHovered && !isDragging ? smoothBirdY : 0,
+                position: (isHovered && !isDragging) || isBirdFlying ? "absolute" : "relative",
+                x: (isHovered && !isDragging) || isBirdFlying ? smoothBirdX : 0,
+                y: (isHovered && !isDragging) || isBirdFlying ? smoothBirdY : 0,
                 pointerEvents: "none",
                 zIndex: 50,
               }}
@@ -723,7 +1070,14 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
       </motion.div>
 
       {/* Feedback System Modal */}
-      <FeedbackSystem isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <FeedbackSystem 
+        isOpen={isOpen} 
+        onClose={() => {
+          setIsOpen(false);
+          // Make bird return when modal closes
+          makeBirdReturn();
+        }} 
+      />
     </>
   );
 };

@@ -10,15 +10,22 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   AlertTriangle,
   Calendar,
   Clock,
+  Lightbulb,
+  Target,
+  Link2,
+  ExternalLink,
+  Sparkles,
+  AlertCircle,
 } from "lucide-react";
 import { Task } from "../../types";
 import { firestoreUserTasks } from "../../utils/firestoreUserTasks";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import { calendarService } from "../../utils/calendarService";
-import { isAfter, startOfDay, isToday, isTomorrow } from "date-fns";
+import { isAfter, startOfDay, isToday, isTomorrow, format, isSameDay, parseISO } from "date-fns";
 import SwipeableTaskItem from "./SwipeableTaskItem";
 import { TaskCelebration } from "./TaskCelebration";
 import { AchievementNotification } from "../notifications/AchievementNotification";
@@ -32,6 +39,8 @@ import { VibrationManager } from "../../utils/vibrationSettings";
 import { MonthlyCompletionTracker } from "../../utils/monthlyCompletionTracker";
 import { TodoReminderButton } from "./TodoReminderButton";
 import { DopamineSpikeCelebration } from "../ui/DopamineSpikeCelebration";
+import { todoDayDetailsService, DayDetails } from "../../utils/todoDayDetailsService";
+import { unifiedAIService } from "../../utils/aiConfig";
 
 export const TaskManager: React.FC = () => {
   const user = realTimeAuth.getCurrentUser();
@@ -74,6 +83,76 @@ export const TaskManager: React.FC = () => {
     priority: "medium" as "low" | "medium" | "high",
   });
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<"today" | "upcoming" | "completed">("today");
+  
+  // Load saved plan from localStorage on mount
+  const [todayPlanDetails, setTodayPlanDetails] = useState<DayDetails | null>(() => {
+    if (typeof window !== "undefined" && user?.id) {
+      const saved = localStorage.getItem(`todayPlanDetails_${user.id}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          // Check if plan is for today (not stale)
+          const planDate = parsed.generatedAt ? new Date(parsed.generatedAt) : null;
+          if (planDate && isToday(planDate)) {
+            return parsed;
+          } else {
+            // Plan is stale, remove it
+            localStorage.removeItem(`todayPlan_${user.id}`);
+            localStorage.removeItem(`todayPlanDetails_${user.id}`);
+          }
+        } catch (e) {
+          console.error("Error parsing saved plan:", e);
+          localStorage.removeItem(`todayPlan_${user.id}`);
+          localStorage.removeItem(`todayPlanDetails_${user.id}`);
+        }
+      }
+    }
+    return null;
+  });
+  
+  const [showTodayPlan, setShowTodayPlan] = useState(() => {
+    // Load visibility state from localStorage
+    if (typeof window !== "undefined" && user?.id) {
+      const saved = localStorage.getItem(`todayPlan_${user.id}`);
+      return saved === "true";
+    }
+    // Show plan if we have valid details (default to showing if plan exists)
+    return todayPlanDetails !== null;
+  });
+  
+  const [loadingTodayPlan, setLoadingTodayPlan] = useState(false);
+  
+  // Load task suggestions from localStorage (will be cleaned up after tasks load)
+  const [taskSuggestions, setTaskSuggestions] = useState<Map<string, any>>(() => {
+    if (typeof window !== "undefined" && user?.id) {
+      const saved = localStorage.getItem(`taskSuggestions_${user.id}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          const map = new Map();
+          Object.entries(parsed).forEach(([taskId, suggestions]: [string, any]) => {
+            map.set(taskId, suggestions);
+          });
+          return map;
+        } catch (e) {
+          console.error("Error parsing saved task suggestions:", e);
+        }
+      }
+    }
+    return new Map();
+  });
+  
+  const [loadingSuggestions, setLoadingSuggestions] = useState<Set<string>>(new Set());
+  const [showSuggestionsModal, setShowSuggestionsModal] = useState<string | null>(null);
+  
+  // Save task suggestions to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== "undefined" && user?.id && taskSuggestions.size > 0) {
+      const obj = Object.fromEntries(taskSuggestions);
+      localStorage.setItem(`taskSuggestions_${user.id}`, JSON.stringify(obj));
+    }
+  }, [taskSuggestions, user?.id]);
 
   if (!user) {
     return (
@@ -91,6 +170,83 @@ export const TaskManager: React.FC = () => {
   useEffect(() => {
     loadTasks();
   }, [user]);
+
+  // Check if saved plan is still valid (for today) when tasks change or day changes
+  useEffect(() => {
+    if (user?.id && todayPlanDetails) {
+      const planDate = todayPlanDetails.generatedAt ? new Date(todayPlanDetails.generatedAt) : null;
+      if (planDate && !isToday(planDate)) {
+        // Plan is stale (not for today), clear it
+        setShowTodayPlan(false);
+        setTodayPlanDetails(null);
+        if (typeof window !== "undefined") {
+          localStorage.removeItem(`todayPlan_${user.id}`);
+          localStorage.removeItem(`todayPlanDetails_${user.id}`);
+        }
+      }
+    }
+  }, [tasks, user, todayPlanDetails]);
+
+  // Periodic check to clean up daily plan when day changes (runs every minute)
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    const checkDayChange = () => {
+      if (todayPlanDetails) {
+        const planDate = todayPlanDetails.generatedAt ? new Date(todayPlanDetails.generatedAt) : null;
+        if (planDate && !isToday(planDate)) {
+          // Day has changed, clear the plan
+          setShowTodayPlan(false);
+          setTodayPlanDetails(null);
+          if (typeof window !== "undefined") {
+            localStorage.removeItem(`todayPlan_${user.id}`);
+            localStorage.removeItem(`todayPlanDetails_${user.id}`);
+          }
+        }
+      }
+    };
+    
+    // Check immediately
+    checkDayChange();
+    
+    // Check every minute
+    const interval = setInterval(checkDayChange, 60000);
+    
+    return () => clearInterval(interval);
+  }, [user?.id, todayPlanDetails]);
+
+  // Clean up completed task suggestions and invalid task suggestions
+  useEffect(() => {
+    if (user?.id && tasks.length > 0) {
+      setTaskSuggestions(prev => {
+        const newMap = new Map(prev);
+        let changed = false;
+        
+        // Remove suggestions for tasks that don't exist or are completed
+        newMap.forEach((_, taskId) => {
+          const task = tasks.find(t => t.id === taskId);
+          if (!task || task.status === "completed") {
+            newMap.delete(taskId);
+            changed = true;
+          }
+        });
+        
+        if (changed) {
+          // Update localStorage
+          if (typeof window !== "undefined") {
+            if (newMap.size > 0) {
+              const obj = Object.fromEntries(newMap);
+              localStorage.setItem(`taskSuggestions_${user.id}`, JSON.stringify(obj));
+            } else {
+              localStorage.removeItem(`taskSuggestions_${user.id}`);
+            }
+          }
+        }
+        
+        return newMap;
+      });
+    }
+  }, [tasks, user?.id]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -206,39 +362,27 @@ export const TaskManager: React.FC = () => {
     try {
       const newStatus = task.status === "completed" ? "pending" : "completed";
 
-      await firestoreUserTasks.updateTask(user.id, task.id, {
-        status: newStatus,
-      });
-
-      // Sync to calendar after status change (completed todos should be removed from calendar)
-      try {
-        await calendarService.syncTodosToCalendar(user.id);
-      } catch (syncError) {
-        console.error("Error syncing to calendar:", syncError);
-        // Don't fail the status change if calendar sync fails
-      }
-
-      // If task is being completed, trigger celebration
+      // If task is being completed, trigger celebration IMMEDIATELY (before async operations)
       if (newStatus === "completed") {
-        // Play completion feedback
+        // Play completion feedback immediately
         TaskFeedback.taskCompleted(task.priority);
 
-        // Update streak and check achievements
+        // Show celebration immediately
+        setCelebrationTask(task);
+        setShowCelebration(true);
+        
+        // Trigger Three.js celebration effect immediately
+        setShowThreeJSEffect(true);
+
+        // Update streak and check achievements (synchronous operations)
         const { newAchievements, streakData: updatedStreakData } =
           StreakTracker.updateStreak(user.id, task);
 
-        // Update monthly completion tracker
+        // Update monthly completion tracker (synchronous)
         MonthlyCompletionTracker.incrementCompletion(user.id);
 
         // Update streak data state
         setStreakData(updatedStreakData);
-
-        // Show celebration
-        setCelebrationTask(task);
-        setShowCelebration(true);
-        
-        // Trigger Three.js celebration effect
-        setShowThreeJSEffect(true);
 
         // Show achievement if any
         if (newAchievements.length > 0) {
@@ -269,6 +413,19 @@ export const TaskManager: React.FC = () => {
       } else {
         // Task uncompleted - play undo feedback
         TaskFeedback.taskUndone();
+      }
+
+      // Update task status (async operation - happens after celebration starts)
+      await firestoreUserTasks.updateTask(user.id, task.id, {
+        status: newStatus,
+      });
+
+      // Sync to calendar after status change (completed todos should be removed from calendar)
+      try {
+        await calendarService.syncTodosToCalendar(user.id);
+      } catch (syncError) {
+        console.error("Error syncing to calendar:", syncError);
+        // Don't fail the status change if calendar sync fails
       }
 
       await loadTasks();
@@ -729,6 +886,133 @@ export const TaskManager: React.FC = () => {
     return grouped;
   };
 
+  const generateTodayPlan = async () => {
+    if (!user) return;
+    
+    const filteredTasks = getFilteredTasks();
+    const grouped = groupTasks(filteredTasks);
+    const todayTasks = grouped.today.filter(task => task.status !== "completed");
+    
+    if (todayTasks.length === 0) {
+      alert("No tasks for today to generate a plan!");
+      return;
+    }
+    
+    setLoadingTodayPlan(true);
+    setShowTodayPlan(true);
+    
+    // Save show state to localStorage
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`todayPlan_${user.id}`, "true");
+    }
+    
+    try {
+      const today = new Date();
+      const details = await todoDayDetailsService.generateDayDetails(today, todayTasks);
+      setTodayPlanDetails(details);
+      
+      // Save plan details to localStorage
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`todayPlanDetails_${user.id}`, JSON.stringify(details));
+      }
+    } catch (error) {
+      console.error("Error generating today plan:", error);
+      alert("Failed to generate plan. Please try again.");
+    } finally {
+      setLoadingTodayPlan(false);
+    }
+  };
+
+  const generateTaskSuggestions = async (task: Task) => {
+    if (!user || task.status === "completed") return;
+    
+    const taskId = task.id;
+    
+    // Check if already loaded
+    if (taskSuggestions.has(taskId)) {
+      setShowSuggestionsModal(taskId);
+      return;
+    }
+    
+    setLoadingSuggestions(prev => new Set(prev).add(taskId));
+    setShowSuggestionsModal(taskId);
+    
+    try {
+      // Generate suggestions for a single task
+      const prompt = `You are a productivity expert. Provide helpful suggestions for completing this specific task.
+
+Task: ${task.title}
+${task.description ? `Description: ${task.description}` : ''}
+${task.subject ? `Subject: ${task.subject}` : ''}
+Priority: ${task.priority}
+Due Date: ${new Date(task.dueDate).toLocaleDateString()}
+
+Provide:
+1. **Step-by-step approach** - Break down the task into 3-5 actionable steps
+2. **Tips for success** - 3-4 practical tips specific to this task
+3. **Common pitfalls to avoid** - 2-3 things to watch out for
+4. **Estimated time** - How long this task might take
+5. **Motivation** - A brief encouraging message
+
+Return JSON format:
+{
+  "steps": ["Step 1", "Step 2", ...],
+  "tips": ["Tip 1", "Tip 2", ...],
+  "pitfalls": ["Pitfall 1", "Pitfall 2", ...],
+  "estimatedTime": "X minutes/hours",
+  "motivation": "Motivational message"
+}
+
+Return ONLY the JSON object, no additional text.`;
+
+      const response = await unifiedAIService.generateResponse(prompt, "");
+      
+      if (response.success && response.data) {
+        const jsonMatch = response.data.match(/```json\n?([\s\S]*?)\n?```/) || 
+                         response.data.match(/\{[\s\S]*\}/);
+        
+        if (jsonMatch) {
+          const jsonStr = jsonMatch[1] || jsonMatch[0];
+          const parsed = JSON.parse(jsonStr);
+          
+          const suggestions = {
+            steps: parsed.steps || [],
+            tips: parsed.tips || [],
+            pitfalls: parsed.pitfalls || [],
+            estimatedTime: parsed.estimatedTime || "30-60 minutes",
+            motivation: parsed.motivation || "You've got this!",
+            generatedAt: new Date(),
+          };
+          
+          setTaskSuggestions(prev => {
+            const newMap = new Map(prev);
+            newMap.set(taskId, suggestions);
+            // Save to localStorage immediately
+            if (typeof window !== "undefined" && user?.id) {
+              const obj = Object.fromEntries(newMap);
+              localStorage.setItem(`taskSuggestions_${user.id}`, JSON.stringify(obj));
+            }
+            return newMap;
+          });
+        } else {
+          throw new Error("Failed to parse AI response");
+        }
+      } else {
+        throw new Error(response.error || "Failed to generate suggestions");
+      }
+    } catch (error) {
+      console.error("Error generating task suggestions:", error);
+      alert("Failed to generate suggestions. Please try again.");
+      setShowSuggestionsModal(null);
+    } finally {
+      setLoadingSuggestions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(taskId);
+        return newSet;
+      });
+    }
+  };
+
   const toggleSection = (sectionId: string) => {
     setCollapsedSections((prev) => {
       const newSet = new Set(prev);
@@ -905,67 +1189,164 @@ export const TaskManager: React.FC = () => {
 
               <button
                 onClick={() => setShowAddTask(true)}
-                className="btn-touch flex items-center px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm sm:text-base touch-manipulation"
+                className="btn-touch flex items-center justify-center px-4 sm:px-4 py-3 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-base sm:text-base font-semibold shadow-sm hover:shadow-md touch-manipulation min-w-[120px] sm:min-w-auto"
               >
-                <Plus className="w-4 h-4 mr-1 sm:mr-2" />
-                <span className="hidden xs:inline">Add Task</span>
-                <span className="xs:hidden">Add</span>
+                <Plus className="w-5 h-5 sm:w-4 sm:h-4 mr-2 sm:mr-2" />
+                <span>Add Task</span>
               </button>
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="flex items-center space-x-2 mb-4">
-            <div className="relative flex-1 max-w-md">
+          {/* Tabs for Today, Upcoming, Completed */}
+          {(() => {
+            const filteredTasks = getFilteredTasks();
+            const grouped = groupTasks(filteredTasks);
+            return (
+              <div className="flex flex-col sm:flex-row gap-3 mb-4 sm:mb-6">
+                <div className="tabs-mobile flex-1 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-1 sm:p-1.5">
+                  <button
+                    onClick={() => setActiveTab("today")}
+                    className={`tab-mobile btn-touch flex items-center justify-center gap-2 w-full sm:w-auto ${
+                      activeTab === "today" ? "active" : ""
+                    } ${
+                      activeTab === "today"
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-gray-100"
+                    }`}
+                  >
+                    <Calendar className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-sm sm:text-base font-semibold">
+                      Today
+                    </span>
+                    {grouped.today.length > 0 && (
+                      <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${
+                        activeTab === "today"
+                          ? "bg-white/20 text-white"
+                          : "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400"
+                      }`}>
+                        {grouped.today.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("upcoming")}
+                    className={`tab-mobile btn-touch flex items-center justify-center gap-2 w-full sm:w-auto ${
+                      activeTab === "upcoming" ? "active" : ""
+                    } ${
+                      activeTab === "upcoming"
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-gray-100"
+                    }`}
+                  >
+                    <Calendar className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-sm sm:text-base font-semibold">
+                      Upcoming
+                    </span>
+                    {grouped.upcoming.length > 0 && (
+                      <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${
+                        activeTab === "upcoming"
+                          ? "bg-white/20 text-white"
+                          : "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400"
+                      }`}>
+                        {grouped.upcoming.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("completed")}
+                    className={`tab-mobile btn-touch flex items-center justify-center gap-2 w-full sm:w-auto ${
+                      activeTab === "completed" ? "active" : ""
+                    } ${
+                      activeTab === "completed"
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-gray-100"
+                    }`}
+                  >
+                    <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-sm sm:text-base font-semibold">
+                      Completed
+                    </span>
+                    {grouped.completed.length > 0 && (
+                      <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${
+                        activeTab === "completed"
+                          ? "bg-white/20 text-white"
+                          : "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400"
+                      }`}>
+                        {grouped.completed.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
+                
+                {/* Get Detailed Plan Button - Only show for Today tab */}
+                {activeTab === "today" && grouped.today.filter(t => t.status !== "completed").length > 0 && (
+                  <button
+                    onClick={generateTodayPlan}
+                    disabled={loadingTodayPlan}
+                    className="btn-touch flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loadingTodayPlan ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        <span>Generating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>Get Detailed Plan for Today</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Search Bar - Mobile Optimized */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 mb-4">
+            <div className="relative flex-1">
               <input
                 type="text"
-                placeholder="Search tasks by title, description, subject, priority, or status..."
+                placeholder="Search tasks..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-sm"
+                className="w-full pl-10 pr-10 py-3 sm:py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-base sm:text-sm touch-manipulation"
               />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5 sm:w-4 sm:h-4" />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors p-1 touch-manipulation"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5 sm:w-4 sm:h-4" />
                 </button>
               )}
             </div>
-            <button
-              onClick={() => setShowSearchBar(!showSearchBar)}
-              className={`px-3 py-2 text-sm border rounded-lg transition-colors ${
-                showSearchBar
-                  ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700"
-                  : "bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              {showSearchBar ? "Hide" : "Search"}
-            </button>
-            <button
-              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className={`px-3 py-2 text-sm border rounded-lg transition-colors ${
-                showAdvancedFilters
-                  ? "bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-700"
-                  : "bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              Advanced Filters
-            </button>
-            {getActiveFiltersCount() > 0 && (
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <button
-                onClick={clearAllFilters}
-                className="px-3 py-2 text-sm border border-red-200 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center space-x-1"
-                title={`Clear ${getActiveFiltersCount()} active filter${
-                  getActiveFiltersCount() > 1 ? "s" : ""
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className={`btn-touch px-4 sm:px-3 py-3 sm:py-2 text-sm sm:text-sm border rounded-lg transition-colors font-medium ${
+                  showAdvancedFilters
+                    ? "bg-purple-600 text-white border-purple-600"
+                    : "bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
                 }`}
               >
-                <X className="w-4 h-4" />
-                <span>Clear All</span>
+                <Filter className="w-4 h-4 sm:mr-1 sm:inline" />
+                <span className="sm:inline">Filters</span>
               </button>
-            )}
+              {getActiveFiltersCount() > 0 && (
+                <button
+                  onClick={clearAllFilters}
+                  className="btn-touch px-4 sm:px-3 py-3 sm:py-2 text-sm border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center space-x-1 font-medium"
+                  title={`Clear ${getActiveFiltersCount()} active filter${
+                    getActiveFiltersCount() > 1 ? "s" : ""
+                  }`}
+                >
+                  <X className="w-4 h-4" />
+                  <span>Clear</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Advanced Filters Panel */}
@@ -1002,23 +1383,23 @@ export const TaskManager: React.FC = () => {
 
                 {/* Priority Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-base sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                     Priorities ({selectedPriorities.length} selected)
                   </label>
-                  <div className="space-y-1">
+                  <div className="space-y-2 sm:space-y-1">
                     {getAvailablePriorities().map((priority) => (
                       <label
                         key={priority}
-                        className="flex items-center space-x-2 cursor-pointer"
+                        className="flex items-center space-x-3 cursor-pointer py-1.5 sm:py-0.5 touch-manipulation"
                       >
                         <input
                           type="checkbox"
                           checked={selectedPriorities.includes(priority)}
                           onChange={() => togglePriorityFilter(priority)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          className="w-5 h-5 sm:w-4 sm:h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
                         />
                         <span
-                          className={`text-sm capitalize ${getPriorityColor(
+                          className={`text-base sm:text-sm capitalize ${getPriorityColor(
                             priority
                           )}`}
                         >
@@ -1031,23 +1412,23 @@ export const TaskManager: React.FC = () => {
 
                 {/* Status Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-base sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                     Status ({selectedStatuses.length} selected)
                   </label>
-                  <div className="space-y-1">
+                  <div className="space-y-2 sm:space-y-1">
                     {getAvailableStatuses().map((status) => (
                       <label
                         key={status}
-                        className="flex items-center space-x-2 cursor-pointer"
+                        className="flex items-center space-x-3 cursor-pointer py-1.5 sm:py-0.5 touch-manipulation"
                       >
                         <input
                           type="checkbox"
                           checked={selectedStatuses.includes(status)}
                           onChange={() => toggleStatusFilter(status)}
-                          className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500"
+                          className="w-5 h-5 sm:w-4 sm:h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500 focus:ring-2"
                         />
                         <span
-                          className={`text-sm capitalize ${
+                          className={`text-base sm:text-sm capitalize ${
                             status === "completed"
                               ? "text-green-600 dark:text-green-400"
                               : "text-orange-600 dark:text-orange-400"
@@ -1062,10 +1443,10 @@ export const TaskManager: React.FC = () => {
 
                 {/* Date Range Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-base sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                     Date Range
                   </label>
-                  <div className="space-y-2">
+                  <div className="space-y-3 sm:space-y-2">
                     <input
                       type="date"
                       value={dateRange.startDate}
@@ -1075,7 +1456,7 @@ export const TaskManager: React.FC = () => {
                           startDate: e.target.value,
                         }))
                       }
-                      className="w-full px-2 py-1 text-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 sm:px-2 py-3 sm:py-1.5 text-base sm:text-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                       placeholder="Start Date"
                     />
                     <input
@@ -1087,7 +1468,7 @@ export const TaskManager: React.FC = () => {
                           endDate: e.target.value,
                         }))
                       }
-                      className="w-full px-2 py-1 text-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 sm:px-2 py-3 sm:py-1.5 text-base sm:text-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-black text-gray-900 dark:text-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation"
                       placeholder="End Date"
                     />
                   </div>
@@ -1122,30 +1503,31 @@ export const TaskManager: React.FC = () => {
             </div>
           )}
 
-          {/* Quick Stats */}
-          <div className="flex space-x-1 bg-gray-100 dark:bg-gray-900 p-3 rounded-lg">
-            <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
-              <span>
-                Total: <strong className="text-gray-900 dark:text-gray-300">{tasks.length}</strong>
-              </span>
-              <span>
-                Pending:{" "}
-                <strong className="text-orange-600 dark:text-orange-400">
+          {/* Quick Stats - Mobile Optimized */}
+          <div className="bg-gray-100 dark:bg-gray-900 p-3 sm:p-4 rounded-lg mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+              <div className="text-center sm:text-left">
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Total</div>
+                <div className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-300">{tasks.length}</div>
+              </div>
+              <div className="text-center sm:text-left">
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Pending</div>
+                <div className="text-lg sm:text-xl font-bold text-orange-600 dark:text-orange-400">
                   {tasks.filter((t) => t.status === "pending").length}
-                </strong>
-              </span>
-              <span>
-                Completed:{" "}
-                <strong className="text-green-600 dark:text-green-400">
+                </div>
+              </div>
+              <div className="text-center sm:text-left">
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Completed</div>
+                <div className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400">
                   {tasks.filter((t) => t.status === "completed").length}
-                </strong>
-              </span>
-              <span>
-                Overdue:{" "}
-                <strong className="text-red-600 dark:text-red-400">
+                </div>
+              </div>
+              <div className="text-center sm:text-left">
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">Overdue</div>
+                <div className="text-lg sm:text-xl font-bold text-red-600 dark:text-red-400">
                   {tasks.filter((t) => isOverdue(t)).length}
-                </strong>
-              </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1242,7 +1624,7 @@ export const TaskManager: React.FC = () => {
 
             return (
               <div className="space-y-4">
-                {/* Overdue Section */}
+                {/* Overdue Section - Always show */}
                 {renderTaskSection(
                   "⚠️ Overdue",
                   "overdue",
@@ -1253,18 +1635,7 @@ export const TaskManager: React.FC = () => {
                   "border-red-300 dark:border-red-700"
                 )}
 
-                {/* Today Section */}
-                {renderTaskSection(
-                  "📅 Today",
-                  "today",
-                  grouped.today,
-                  <Calendar className="w-5 h-5 text-orange-600 dark:text-orange-400" />,
-                  "bg-orange-50 dark:bg-orange-900/20",
-                  "bg-orange-50/50 dark:bg-orange-900/10",
-                  "border-orange-300 dark:border-orange-700"
-                )}
-
-                {/* Tomorrow Section */}
+                {/* Tomorrow Section - Always show */}
                 {renderTaskSection(
                   "⏰ Tomorrow",
                   "tomorrow",
@@ -1275,26 +1646,301 @@ export const TaskManager: React.FC = () => {
                   "border-blue-300 dark:border-blue-700"
                 )}
 
-                {/* Upcoming Section */}
-                {renderTaskSection(
-                  "📆 Upcoming",
-                  "upcoming",
-                  grouped.upcoming,
-                  <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />,
-                  "bg-purple-50 dark:bg-purple-900/20",
-                  "bg-purple-50/50 dark:bg-purple-900/10",
-                  "border-purple-300 dark:border-purple-700"
+                {/* Tab-based sections: Today, Upcoming, Completed */}
+                {activeTab === "today" && (
+                  <div className="space-y-3 sm:space-y-4">
+                    {/* Detailed Plan Panel - Toggleable */}
+                    {todayPlanDetails && (
+                      <div className="mb-6 rounded-xl border border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 shadow-lg">
+                        <div className="p-4 border-b border-purple-200 dark:border-purple-800 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                              Detailed Plan for Today
+                            </h3>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                setShowTodayPlan(!showTodayPlan);
+                                // Update localStorage
+                                if (typeof window !== "undefined" && user?.id) {
+                                  localStorage.setItem(`todayPlan_${user.id}`, (!showTodayPlan).toString());
+                                }
+                              }}
+                              className="p-1 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
+                              title={showTodayPlan ? "Hide plan" : "Show plan"}
+                            >
+                              {showTodayPlan ? (
+                                <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowTodayPlan(false);
+                                setTodayPlanDetails(null);
+                                // Clear from localStorage
+                                if (typeof window !== "undefined" && user?.id) {
+                                  localStorage.removeItem(`todayPlan_${user.id}`);
+                                  localStorage.removeItem(`todayPlanDetails_${user.id}`);
+                                }
+                              }}
+                              className="p-1 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
+                              title="Delete plan"
+                            >
+                              <X className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                            </button>
+                          </div>
+                        </div>
+                        {showTodayPlan && (
+                          <div className="p-5 space-y-4">
+                          {/* Suggestions */}
+                          {todayPlanDetails.suggestions && todayPlanDetails.suggestions.length > 0 && (
+                            <div className="p-4 bg-blue-50/80 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800/30 shadow-sm">
+                              <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                                <Lightbulb className="w-4 h-4 text-blue-500" />
+                                Suggestions for Today
+                              </h5>
+                              <ul className="space-y-2">
+                                {todayPlanDetails.suggestions.map((suggestion: string, idx: number) => (
+                                  <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2 leading-relaxed">
+                                    <span className="text-blue-500 mt-1.5 flex-shrink-0">•</span>
+                                    <span>{suggestion}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          
+                          {/* Detailed Tasks */}
+                          {todayPlanDetails.detailedTasks && todayPlanDetails.detailedTasks.length > 0 && (
+                            <div>
+                              <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                                <Target className="w-4 h-4 text-purple-500" />
+                                Detailed Task Breakdown
+                              </h5>
+                              <div className="space-y-3">
+                                {todayPlanDetails.detailedTasks
+                                  .sort((a, b) => a.order - b.order)
+                                  .map((detailedTask: any, idx: number) => (
+                                    <div key={idx} className="p-4 bg-white/80 dark:bg-slate-800/50 rounded-xl border border-gray-200/80 dark:border-slate-600/50 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                      <div className="flex items-start justify-between mb-2">
+                                        <div className="flex-1">
+                                          <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-1">{detailedTask.task}</h6>
+                                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{detailedTask.description}</p>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1 ml-3">
+                                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                            detailedTask.priority === "high"
+                                              ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                              : detailedTask.priority === "low"
+                                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                              : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                          }`}>
+                                            {detailedTask.priority}
+                                          </span>
+                                          <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                            <Clock className="w-3 h-3" />
+                                            {detailedTask.estimatedTime}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Resources */}
+                          {todayPlanDetails.resources && todayPlanDetails.resources.length > 0 && (
+                            <div>
+                              <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                                <Link2 className="w-4 h-4 text-green-500" />
+                                Learning Resources
+                              </h5>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {todayPlanDetails.resources.map((resource: any, idx: number) => (
+                                  <a
+                                    key={idx}
+                                    href={resource.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-4 bg-white/80 dark:bg-slate-800/50 rounded-xl border border-gray-200/80 dark:border-slate-600/50 hover:border-green-500 dark:hover:border-green-500 transition-all duration-200 group shadow-sm hover:shadow-md"
+                                  >
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300">
+                                            {resource.type}
+                                          </span>
+                                        </div>
+                                        <h6 className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors duration-200 truncate mb-1">
+                                          {resource.title}
+                                        </h6>
+                                        <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
+                                          {resource.description}
+                                        </p>
+                                      </div>
+                                      <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-green-500 flex-shrink-0 mt-1" />
+                                    </div>
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Tips */}
+                          {todayPlanDetails.tips && todayPlanDetails.tips.length > 0 && (
+                            <div className="p-4 bg-yellow-50/80 dark:bg-yellow-900/20 rounded-xl border border-yellow-100 dark:border-yellow-800/30 shadow-sm">
+                              <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4 text-yellow-500" />
+                                Productivity Tips
+                              </h5>
+                              <ul className="space-y-2">
+                                {todayPlanDetails.tips.map((tip: string, idx: number) => (
+                                  <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2 leading-relaxed">
+                                    <span className="text-yellow-500 mt-1.5 flex-shrink-0">•</span>
+                                    <span>{tip}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          
+                          {/* Motivation */}
+                          {todayPlanDetails.motivation && (
+                            <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                              <p className="text-sm text-gray-700 dark:text-gray-300 italic flex items-start gap-2">
+                                <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                <span>{todayPlanDetails.motivation}</span>
+                              </p>
+                            </div>
+                          )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Regular Todo List */}
+                    {grouped.today.length > 0 ? (
+                      grouped.today.map((task) => (
+                        <div key={task.id} className="space-y-2">
+                          <SwipeableTaskItem
+                            task={task}
+                            onToggleStatus={toggleTaskStatus}
+                            onEdit={startEditing}
+                            onDelete={deleteTask}
+                            getPriorityColor={getPriorityColor}
+                          />
+                          {task.status !== "completed" && (
+                            <button
+                              onClick={() => generateTaskSuggestions(task)}
+                              disabled={loadingSuggestions.has(task.id)}
+                              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-all duration-200 border border-purple-200 dark:border-purple-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {loadingSuggestions.has(task.id) ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-purple-600 dark:border-purple-400 border-t-transparent"></div>
+                                  <span>Getting suggestions...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Lightbulb className="w-4 h-4" />
+                                  <span>Get Suggestions</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 px-4 bg-orange-50/50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-800">
+                        <Calendar className="w-12 h-12 text-orange-300 dark:text-orange-700 mx-auto mb-3" />
+                        <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-2">
+                          No tasks for today
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          You're all caught up! 🎉
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 )}
 
-                {/* Completed Section */}
-                {renderTaskSection(
-                  "✅ Completed",
-                  "completed",
-                  grouped.completed,
-                  <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />,
-                  "bg-green-50 dark:bg-green-900/20",
-                  "bg-green-50/50 dark:bg-green-900/10",
-                  "border-green-300 dark:border-green-700"
+                {activeTab === "upcoming" && (
+                  <div className="space-y-3 sm:space-y-4">
+                    {grouped.upcoming.length > 0 ? (
+                      grouped.upcoming.map((task) => (
+                        <div key={task.id} className="space-y-2">
+                          <SwipeableTaskItem
+                            task={task}
+                            onToggleStatus={toggleTaskStatus}
+                            onEdit={startEditing}
+                            onDelete={deleteTask}
+                            getPriorityColor={getPriorityColor}
+                          />
+                          {task.status !== "completed" && (
+                            <button
+                              onClick={() => generateTaskSuggestions(task)}
+                              disabled={loadingSuggestions.has(task.id)}
+                              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-all duration-200 border border-purple-200 dark:border-purple-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {loadingSuggestions.has(task.id) ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-purple-600 dark:border-purple-400 border-t-transparent"></div>
+                                  <span>Getting suggestions...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Lightbulb className="w-4 h-4" />
+                                  <span>Get Suggestions</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 px-4 bg-purple-50/50 dark:bg-purple-900/10 rounded-lg border border-purple-200 dark:border-purple-800">
+                        <Calendar className="w-12 h-12 text-purple-300 dark:text-purple-700 mx-auto mb-3" />
+                        <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-2">
+                          No upcoming tasks
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          All your tasks are scheduled for today or tomorrow
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "completed" && (
+                  <div className="space-y-3 sm:space-y-4">
+                    {grouped.completed.length > 0 ? (
+                      grouped.completed.map((task) => (
+                        <SwipeableTaskItem
+                          key={task.id}
+                          task={task}
+                          onToggleStatus={toggleTaskStatus}
+                          onEdit={startEditing}
+                          onDelete={deleteTask}
+                          getPriorityColor={getPriorityColor}
+                        />
+                      ))
+                    ) : (
+                      <div className="text-center py-8 px-4 bg-green-50/50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
+                        <CheckCircle2 className="w-12 h-12 text-green-300 dark:text-green-700 mx-auto mb-3" />
+                        <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-2">
+                          No completed tasks yet
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Complete your first task to see it here!
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             );
@@ -1484,6 +2130,143 @@ export const TaskManager: React.FC = () => {
           isOpen={showVibrationSettings}
           onClose={() => setShowVibrationSettings(false)}
         />
+
+        {/* Task Suggestions Modal */}
+        {showSuggestionsModal && taskSuggestions.has(showSuggestionsModal) && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto scroll-area shadow-xl">
+              <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-800 z-10">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Suggestions for Task
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowSuggestionsModal(null)}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                </button>
+              </div>
+
+              <div className="p-4 sm:p-6 space-y-4">
+                {(() => {
+                  const task = tasks.find(t => t.id === showSuggestionsModal);
+                  const suggestions = taskSuggestions.get(showSuggestionsModal);
+                  if (!suggestions || !task) return null;
+
+                  return (
+                    <>
+                      {/* Task Info */}
+                      <div className="p-4 bg-gray-50 dark:bg-slate-700/30 rounded-lg border border-gray-200 dark:border-slate-600">
+                        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                          {task.title}
+                        </h4>
+                        {task.description && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {task.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Estimated Time */}
+                      {suggestions.estimatedTime && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <Clock className="w-4 h-4" />
+                          <span>Estimated time: <strong>{suggestions.estimatedTime}</strong></span>
+                        </div>
+                      )}
+
+                      {/* Step-by-step Approach */}
+                      {suggestions.steps && suggestions.steps.length > 0 && (
+                        <div>
+                          <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                            <Target className="w-4 h-4 text-purple-500" />
+                            Step-by-Step Approach
+                          </h5>
+                          <ol className="space-y-2">
+                            {suggestions.steps.map((step: string, idx: number) => (
+                              <li key={idx} className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
+                                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 flex items-center justify-center font-semibold text-xs">
+                                  {idx + 1}
+                                </span>
+                                <span className="leading-relaxed">{step}</span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+
+                      {/* Tips */}
+                      {suggestions.tips && suggestions.tips.length > 0 && (
+                        <div className="p-4 bg-blue-50/80 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800/30">
+                          <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                            <Lightbulb className="w-4 h-4 text-blue-500" />
+                            Tips for Success
+                          </h5>
+                          <ul className="space-y-2">
+                            {suggestions.tips.map((tip: string, idx: number) => (
+                              <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2 leading-relaxed">
+                                <span className="text-blue-500 mt-1.5 flex-shrink-0">•</span>
+                                <span>{tip}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Pitfalls */}
+                      {suggestions.pitfalls && suggestions.pitfalls.length > 0 && (
+                        <div className="p-4 bg-yellow-50/80 dark:bg-yellow-900/20 rounded-xl border border-yellow-100 dark:border-yellow-800/30">
+                          <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-yellow-500" />
+                            Common Pitfalls to Avoid
+                          </h5>
+                          <ul className="space-y-2">
+                            {suggestions.pitfalls.map((pitfall: string, idx: number) => (
+                              <li key={idx} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2 leading-relaxed">
+                                <span className="text-yellow-500 mt-1.5 flex-shrink-0">⚠</span>
+                                <span>{pitfall}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Motivation */}
+                      {suggestions.motivation && (
+                        <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                          <p className="text-sm text-gray-700 dark:text-gray-300 italic flex items-start gap-2">
+                            <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                            <span>{suggestions.motivation}</span>
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading Suggestions Modal */}
+        {showSuggestionsModal && loadingSuggestions.has(showSuggestionsModal) && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-md p-6 shadow-xl">
+              <div className="flex flex-col items-center justify-center gap-4">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-purple-500/20 rounded-full blur"></div>
+                  <div className="relative animate-spin rounded-full h-12 w-12 border-2 border-purple-200 dark:border-purple-800 border-t-purple-500"></div>
+                </div>
+                <p className="text-gray-600 dark:text-gray-400 font-medium">
+                  Generating suggestions...
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </GeneralLayout>
   );

@@ -72,6 +72,7 @@ export const AIChat: React.FC<AIChatProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasSentInitialPromptRef = useRef<boolean>(false);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
 
   // Get chat type specific greeting
   const getChatTypeGreeting = (chatType?: ChatType): string => {
@@ -426,9 +427,31 @@ export const AIChat: React.FC<AIChatProps> = ({
     }
   };
 
+  // Cleanup camera stream when image upload modal is closed
+  useEffect(() => {
+    if (!showImageUpload && cameraStreamRef.current) {
+      console.log("Image upload modal closed, stopping camera stream");
+      cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+      cameraStreamRef.current = null;
+    }
+  }, [showImageUpload]);
+
+  // Cleanup camera stream on component unmount
+  useEffect(() => {
+    return () => {
+      if (cameraStreamRef.current) {
+        console.log("Component unmounting, stopping camera stream");
+        cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+        cameraStreamRef.current = null;
+      }
+    };
+  }, []);
+
   const handleCameraCapture = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      cameraStreamRef.current = stream;
+      
       const video = document.createElement("video");
       video.srcObject = stream;
       video.play();
@@ -445,11 +468,19 @@ export const AIChat: React.FC<AIChatProps> = ({
         setShowImageUpload(false);
 
         // Stop the camera
-        stream.getTracks().forEach((track) => track.stop());
+        if (cameraStreamRef.current) {
+          cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+          cameraStreamRef.current = null;
+        }
       });
     } catch (error) {
       console.error("Camera access failed:", error);
       alert("Camera access failed. Please try uploading an image instead.");
+      // Ensure stream is stopped on error
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+        cameraStreamRef.current = null;
+      }
     }
   };
 

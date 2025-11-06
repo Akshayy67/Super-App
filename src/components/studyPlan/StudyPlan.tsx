@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { BookOpen, Plus, List, FileText, Sparkles } from "lucide-react";
 import { StudyPlanList } from "./StudyPlanList";
 import { NewStudyPlanForm } from "./NewStudyPlanForm";
@@ -13,10 +13,12 @@ type Tab = "list" | "new" | "details";
 export const StudyPlanManager: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const params = useParams<{ planId?: string }>();
   const [activeTab, setActiveTab] = useState<Tab>("list");
   const [selectedPlan, setSelectedPlan] = useState<StudyPlan | null>(null);
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const isManualSelection = useRef(false);
 
   const user = realTimeAuth.getCurrentUser();
 
@@ -27,27 +29,46 @@ export const StudyPlanManager: React.FC = () => {
   }, [user]);
 
   useEffect(() => {
-    // Check URL params for plan ID or tab
-    const params = new URLSearchParams(location.search);
-    const planId = params.get("plan");
-    const tab = params.get("tab");
+    // Skip if this is a manual selection to prevent flickering
+    if (isManualSelection.current) {
+      isManualSelection.current = false;
+      return;
+    }
+
+    // Check if we're on the "new" route by checking the pathname
+    const pathSegments = location.pathname.split('/').filter(Boolean);
+    const lastSegment = pathSegments[pathSegments.length - 1];
+    const isNewRoute = lastSegment === 'new' && pathSegments[pathSegments.length - 2] === 'study-plans';
     
-    if (planId && plans.length > 0) {
+    // Handle "new" route first
+    if (isNewRoute) {
+      setActiveTab("new");
+      setSelectedPlan(null);
+      return;
+    }
+
+    // Get planId from URL path parameter (only if not "new")
+    const planId = params.planId;
+    
+    if (planId && plans.length > 0 && !loading) {
       const plan = plans.find((p) => p.id === planId);
       if (plan) {
-        setSelectedPlan(plan);
-        setActiveTab("details");
+        // Only update if it's a different plan
+        setSelectedPlan((prev) => {
+          if (prev?.id === plan.id) return prev;
+          return plan;
+        });
+        setActiveTab((prev) => prev !== "details" ? "details" : prev);
         return;
       }
     }
     
-    // Check for tab parameter
-    if (tab === "new") {
-      setActiveTab("new");
-    } else if (tab === "list" || !tab) {
+    // Default to list if no planId
+    if (!planId) {
       setActiveTab("list");
+      setSelectedPlan(null);
     }
-  }, [location.search, plans]);
+  }, [params.planId, location.pathname, plans, loading]);
 
   const loadPlans = async () => {
     if (!user) return;
@@ -62,43 +83,53 @@ export const StudyPlanManager: React.FC = () => {
     }
   };
 
-  const handlePlanCreated = async () => {
-    // First, switch to list tab immediately to close the form
-    setActiveTab("list");
-    
-    // Update URL to remove tab parameter
-    const newUrl = new URL(window.location.href);
-    newUrl.searchParams.delete("tab");
-    newUrl.searchParams.delete("plan");
-    window.history.pushState({}, "", newUrl.toString());
-    
-    // Then reload plans to show the newly created plan
-    await loadPlans();
+  const handlePlanCreated = async (planId: string) => {
+    try {
+      // Get the newly created plan directly from service
+      const newPlan = await studyPlanService.getPlan(user!.id, planId);
+      
+      if (newPlan) {
+        // Reload plans to update the list
+        await loadPlans();
+        
+        // Auto-open the newly created plan
+        isManualSelection.current = true;
+        setSelectedPlan(newPlan);
+        setActiveTab("details");
+        navigate(`/tools/study-plans/${planId}`, { replace: false });
+      } else {
+        // Fallback: reload plans and go to list if plan not found
+        await loadPlans();
+        setActiveTab("list");
+        navigate("/tools/study-plans", { replace: true });
+      }
+    } catch (error) {
+      console.error("Error loading created plan:", error);
+      // Fallback: reload plans and go to list
+      await loadPlans();
+      setActiveTab("list");
+      navigate("/tools/study-plans", { replace: true });
+    }
   };
 
   const handlePlanSelect = (plan: StudyPlan) => {
+    isManualSelection.current = true;
     setSelectedPlan(plan);
     setActiveTab("details");
-    navigate(`/study-plans?plan=${plan.id}`);
+    navigate(`/tools/study-plans/${plan.id}`, { replace: false });
   };
 
   const handleBackToList = () => {
     setActiveTab("list");
     setSelectedPlan(null);
-    const newUrl = new URL(window.location.href);
-    newUrl.searchParams.delete("plan");
-    newUrl.searchParams.delete("tab");
-    window.history.pushState({}, "", newUrl.toString());
+    navigate("/tools/study-plans", { replace: true });
   };
 
   const handlePlanDeleted = async () => {
     await loadPlans();
     setActiveTab("list");
     setSelectedPlan(null);
-    const newUrl = new URL(window.location.href);
-    newUrl.searchParams.delete("plan");
-    newUrl.searchParams.delete("tab");
-    window.history.pushState({}, "", newUrl.toString());
+    navigate("/tools/study-plans", { replace: true });
   };
 
   const handlePlanUpdated = async () => {
@@ -166,14 +197,12 @@ export const StudyPlanManager: React.FC = () => {
                   key={tab.id}
                   onClick={() => {
                     setActiveTab(tab.id);
-                    // Update URL without navigation to avoid route issues
-                    const newUrl = new URL(window.location.href);
+                    // Navigate to appropriate route
                     if (tab.id === "new") {
-                      newUrl.searchParams.set("tab", "new");
+                      navigate("/tools/study-plans/new", { replace: true });
                     } else {
-                      newUrl.searchParams.delete("tab");
+                      navigate("/tools/study-plans", { replace: true });
                     }
-                    window.history.pushState({}, "", newUrl.toString());
                   }}
                   className={`relative tab-mobile btn-touch flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 ${
                     isActive ? "active" : ""
@@ -218,9 +247,7 @@ export const StudyPlanManager: React.FC = () => {
             onPlanCreated={handlePlanCreated}
             onCancel={() => {
               setActiveTab("list");
-              const newUrl = new URL(window.location.href);
-              newUrl.searchParams.delete("tab");
-              window.history.pushState({}, "", newUrl.toString());
+              navigate("/tools/study-plans", { replace: true });
             }}
           />
         ) : activeTab === "details" && selectedPlan ? (

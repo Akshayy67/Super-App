@@ -372,6 +372,14 @@ export const MockInterview: React.FC = () => {
     }
   }, [activeSession]);
 
+  // Stop camera when camera preview is closed
+  useEffect(() => {
+    if (!showCameraPreview && isCameraActive) {
+      console.log("Camera preview closed, stopping camera stream");
+      stopCamera();
+    }
+  }, [showCameraPreview]);
+
   // Ensure video element is available when component mounts
   useEffect(() => {
     console.log("Component mounted, video ref:", !!videoRef.current);

@@ -21,6 +21,7 @@ import { ContextualFeedback } from "./components/feedback/SmartFeedbackPrompt";
 import { DragInstructionTooltip } from "./components/feedback/DragInstructionTooltip";
 import { useTodoReminders } from "./hooks/useTodoReminders";
 import { User } from "./types";
+import { dailyTaskReminderService } from "./services/dailyTaskReminderService";
 import { GlobalPomodoroProvider } from "./contexts/GlobalPomodoroContext";
 import { GlobalPomodoroWidget } from "./components/pomodoro/GlobalPomodoroWidget";
 import { PomodoroEducation } from "./components/pomodoro/PomodoroEducation";
@@ -256,8 +257,9 @@ const AuthenticatedApp: React.FC = () => {
                 : "-translate-x-full lg:translate-x-0"
             }
           `}
+          style={{ height: '100vh', maxHeight: '100vh' }}
         >
-          <div className="h-full lg:h-auto">
+          <div className="h-full lg:h-screen" style={{ maxHeight: '100vh' }}>
             <Sidebar
               onLogout={handleLogout}
               isMobile={isMobileMenuOpen}
@@ -318,8 +320,15 @@ function App() {
       setIsAuthenticated(!!currentUser);
     });
 
+    // Start daily task reminder service (sends emails at 8am daily)
+    console.log("📧 Starting daily task reminder service...");
+    dailyTaskReminderService.startDailyReminders();
+
     // Clean up listener on component unmount
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      dailyTaskReminderService.stopReminders();
+    };
   }, []);
 
   const handleAuthSuccess = async () => {

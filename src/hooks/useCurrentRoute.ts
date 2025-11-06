@@ -11,15 +11,17 @@ export const useCurrentRoute = () => {
     // Map route segments to view names
     const routeMap: Record<string, string> = {
       'dashboard': 'dashboard',
-      'files': 'files',
+      'files-notes': 'files-notes',
+      'files': 'files-notes', // Redirect old route
+      'notes': 'files-notes', // Redirect old route
       'tasks': 'tasks',
-      'notes': 'notes',
       'calendar': 'calendar',
       'meetings': 'meetings',
       'journal': 'journal',
       'chat': 'chat',
       'tools': 'tools',
-      'flashcards': 'flashcards',
+      'flashcards': 'tools', // Redirect old route
+      'study-plans': 'tools', // Redirect old route
       'interview': 'interview',
       'team': 'team',
       'meeting': 'meeting',

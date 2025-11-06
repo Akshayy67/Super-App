@@ -6,7 +6,7 @@ import { studyPlanAIService } from "../../utils/studyPlanAIService";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 
 interface NewStudyPlanFormProps {
-  onPlanCreated: () => void;
+  onPlanCreated: (planId: string) => void;
   onCancel: () => void;
 }
 
@@ -96,8 +96,8 @@ export const NewStudyPlanForm: React.FC<NewStudyPlanFormProps> = ({
 
       console.log("Plan updated successfully with weeks:", aiPlan.weeks.length);
 
-      // Call the callback which will handle navigation and closing
-      onPlanCreated();
+      // Call the callback with the plan ID to auto-open it
+      onPlanCreated(planId);
     } catch (error: any) {
       console.error("Error creating study plan:", error);
       

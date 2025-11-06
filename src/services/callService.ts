@@ -359,6 +359,12 @@ class CallService {
     try {
       await webRTCService.setRemoteDescription(remoteUserId, answer);
     } catch (error: any) {
+      // If peer connection not found, the answer is stored as pending
+      if (error?.message?.includes('Peer connection not found')) {
+        console.log('📥 Answer stored as pending, will be processed when peer connection is created');
+        return; // This is handled - answer is stored in pendingAnswers
+      }
+      
       // If answer fails due to wrong state, check if we should ignore it
       if (error?.message?.includes('invalid state') || error?.message?.includes('wrong state')) {
         const existingPC = webRTCService.getPeerConnection(remoteUserId);

@@ -66,32 +66,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [user]);
 
   const menuItems = [
-    { id: "files", label: "File Manager", icon: FolderOpen, path: "/files" },
+    { id: "files-notes", label: "Files and Short Notes", icon: FolderOpen, path: "/files-notes" },
     { id: "tasks", label: "To-Do List", icon: CheckSquare, path: "/tasks" },
-    { id: "notes", label: "Short Notes", icon: StickyNote, path: "/notes" },
     { id: "calendar", label: "Calendar", icon: Calendar, path: "/calendar" },
     { id: "meetings", label: "Meetings", icon: Users, path: "/meetings" },
     { id: "journal", label: "Journal", icon: Sparkles, path: "/journal" },
-    { id: "study-plans", label: "Study Plans", icon: Target, path: "/study-plans" },
     { id: "chat", label: "AI Assistant", icon: MessageSquare, path: "/chat" },
     { id: "tools", label: "Study Tools", icon: Brain, path: "/tools" },
-    {
-      id: "flashcards",
-      label: "Flash Cards",
-      icon: BookOpen,
-      path: "/flashcards",
-    },
     {
       id: "interview",
       label: "Interview Prep",
       icon: Briefcase,
       path: "/interview",
-    },
-    {
-      id: "resume-builder",
-      label: "Resume Builder",
-      icon: FileText,
-      path: "/resume-builder",
     },
     { id: "team", label: "Team Space", icon: Users, path: "/team" },
     { id: "community", label: "Community", icon: MessageCircle, path: "/community" },
@@ -372,7 +358,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, []);
 
   return (
-    <div className="bg-white dark:bg-black h-full shadow-2xl border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-500 backdrop-blur-xl bg-opacity-95 dark:bg-opacity-90 relative overflow-hidden" style={{ width: '100%', maxWidth: '100%' }}>
+    <div className="bg-white dark:bg-black h-full lg:h-screen shadow-2xl border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-500 backdrop-blur-xl bg-opacity-95 dark:bg-opacity-90 relative overflow-hidden" style={{ width: '100%', maxWidth: '100%', maxHeight: '100vh', zIndex: 30 }}>
       {/* Three.js Rotary Phone Background - Hidden on mobile */}
       <canvas
         ref={canvasRef}
@@ -419,7 +405,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div
         className={`p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 backdrop-blur-sm bg-gradient-to-br from-white/50 to-gray-50/50 dark:from-black/50 dark:to-gray-900/50 ${
           isMobile ? "hidden lg:block" : ""
-        } relative z-20`}
+        } relative z-20 flex-shrink-0`}
       >
         <button
           onClick={() => handleNavigation("/dashboard")}
@@ -457,7 +443,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      <nav className="flex-1 px-3 sm:px-4 py-4 sm:py-6 overflow-y-auto scroll-area-mobile relative z-20" style={{ padding: 'clamp(0.75rem, 2vw, 1rem) clamp(0.75rem, 3vw, 1.5rem)' }}>
+      <nav className="flex-1 px-3 sm:px-4 py-4 sm:py-6 overflow-y-auto overflow-x-hidden scroll-area-mobile relative z-20 min-h-0" style={{ padding: 'clamp(0.75rem, 2vw, 1rem) clamp(0.75rem, 3vw, 1.5rem)', maxHeight: 'calc(100vh - 200px)' }}>
         <ul className="space-y-1 sm:space-y-2" style={{ gap: 'clamp(0.25rem, 1vw, 0.5rem)' }}>
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -590,7 +576,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </nav>
 
-      <div className="p-responsive border-t border-gray-200 dark:border-gray-700 backdrop-blur-sm bg-gradient-to-t from-white/50 to-transparent dark:from-black/50 relative z-20">
+      <div className="p-responsive border-t border-gray-200 dark:border-gray-700 backdrop-blur-sm bg-gradient-to-t from-white/50 to-transparent dark:from-black/50 relative z-20 flex-shrink-0">
         <button
           onClick={() => handleNavigation("/profile/edit")}
           className="w-full flex items-center mb-3 group hover:opacity-80 transition-all duration-300 hover:scale-[1.02] btn-touch"

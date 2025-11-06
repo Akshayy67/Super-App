@@ -153,8 +153,8 @@ export const MeetingsTimeline: React.FC = () => {
       // Reload meetings to show the new one
       await loadMeetings();
       
-      // Automatically join the meeting directly - pass skipLobby flag via URL
-      navigate(`/meeting?id=${meetingId}&skipLobby=true`);
+      // Automatically join the meeting directly
+      navigate(`/meeting?id=${meetingId}`);
     } catch (error) {
       console.error("Error creating meeting:", error);
     }
@@ -164,7 +164,7 @@ export const MeetingsTimeline: React.FC = () => {
     if (!joinMeetingId) return;
     setShowMeetingModal(null);
     setJoinMeetingId("");
-    navigate(`/meeting?id=${joinMeetingId}&skipLobby=true`);
+    navigate(`/meeting?id=${joinMeetingId}`);
   };
 
   const handleScheduleMeeting = async () => {
@@ -232,7 +232,7 @@ export const MeetingsTimeline: React.FC = () => {
   };
 
   const handleJoinVideoMeeting = (meetingId: string) => {
-    navigate(`/meeting?id=${meetingId}&skipLobby=true`);
+    navigate(`/meeting?id=${meetingId}`);
     setShowDetails(false);
     setSelectedMeeting(null);
   };

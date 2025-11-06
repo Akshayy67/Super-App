@@ -83,12 +83,28 @@ export interface Comment {
   createdAt: Timestamp;
 }
 
+export interface Report {
+  id: string;
+  commentId: string;
+  postId: string;
+  reportedUserId: string;
+  reportedUserName: string;
+  reportedBy: string;
+  reportedByName: string;
+  reason: string;
+  status: "pending" | "reviewed" | "resolved" | "dismissed";
+  createdAt: Timestamp;
+  reviewedAt?: Timestamp;
+  reviewedBy?: string;
+}
+
 class CommunityService {
   private postsCollection = collection(db, "community_posts");
   private eventsCollection = collection(db, "community_events");
   private leaderboardCollection = collection(db, "community_leaderboard");
   private resourcesCollection = collection(db, "community_resources");
   private commentsCollection = collection(db, "community_comments");
+  private reportsCollection = collection(db, "community_reports");
 
   // ==================== POSTS ====================
 
@@ -247,22 +263,22 @@ class CommunityService {
             this.postsCollection,
             orderBy("likes", "desc"),
             orderBy("timestamp", "desc"),
-            limit(50)
+            limit(100)
           );
           break;
         case "recent":
-          q = query(this.postsCollection, orderBy("timestamp", "desc"), limit(50));
+          q = query(this.postsCollection, orderBy("timestamp", "desc"), limit(100));
           break;
         case "popular":
           q = query(
             this.postsCollection,
             orderBy("views", "desc"),
             orderBy("timestamp", "desc"),
-            limit(50)
+            limit(100)
           );
           break;
         default:
-          q = query(this.postsCollection, orderBy("timestamp", "desc"), limit(50));
+          q = query(this.postsCollection, orderBy("timestamp", "desc"), limit(100));
       }
 
       return onSnapshot(q, (snapshot) => {
@@ -336,6 +352,108 @@ class CommunityService {
     } catch (error) {
       console.error("Error subscribing to comments:", error);
       return () => {};
+    }
+  }
+
+  // ==================== REPORTS ====================
+
+  async reportComment(
+    commentId: string,
+    postId: string,
+    reportedUserId: string,
+    reportedUserName: string,
+    reportedBy: string,
+    reportedByName: string,
+    reason: string
+  ): Promise<void> {
+    try {
+      // Check if user has already reported this comment
+      const existingReportsQuery = query(
+        this.reportsCollection,
+        where("commentId", "==", commentId),
+        where("reportedBy", "==", reportedBy),
+        where("status", "==", "pending")
+      );
+      const existingReports = await getDocs(existingReportsQuery);
+      
+      if (!existingReports.empty) {
+        throw new Error("You have already reported this comment");
+      }
+
+      await addDoc(this.reportsCollection, {
+        commentId,
+        postId,
+        reportedUserId,
+        reportedUserName,
+        reportedBy,
+        reportedByName,
+        reason,
+        status: "pending",
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error reporting comment:", error);
+      throw error;
+    }
+  }
+
+  subscribeToReports(
+    callback: (reports: Report[]) => void
+  ): () => void {
+    try {
+      const q = query(
+        this.reportsCollection,
+        orderBy("createdAt", "desc")
+      );
+
+      return onSnapshot(q, (snapshot) => {
+        const reports: Report[] = [];
+        snapshot.forEach((doc) => {
+          reports.push({
+            id: doc.id,
+            ...doc.data(),
+          } as Report);
+        });
+        callback(reports);
+      });
+    } catch (error) {
+      console.error("Error subscribing to reports:", error);
+      return () => {};
+    }
+  }
+
+  async updateReportStatus(
+    reportId: string,
+    status: "pending" | "reviewed" | "resolved" | "dismissed",
+    reviewedBy: string
+  ): Promise<void> {
+    try {
+      const reportRef = doc(this.reportsCollection, reportId);
+      await updateDoc(reportRef, {
+        status,
+        reviewedBy,
+        reviewedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error updating report status:", error);
+      throw error;
+    }
+  }
+
+  async deleteComment(commentId: string, postId: string): Promise<void> {
+    try {
+      // Delete the comment
+      const commentRef = doc(this.commentsCollection, commentId);
+      await deleteDoc(commentRef);
+
+      // Decrement comment count on post
+      const postRef = doc(this.postsCollection, postId);
+      await updateDoc(postRef, {
+        comments: increment(-1),
+      });
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      throw error;
     }
   }
 
@@ -504,19 +622,32 @@ class CommunityService {
       const userData = userDoc.data();
       const lastActive = userData.lastActive?.toDate();
       const now = new Date();
-
+      
+      // Normalize dates to midnight for calendar day comparison
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
       if (lastActive) {
-        const diffTime = Math.abs(now.getTime() - lastActive.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays === 1) {
+        const lastActiveDate = new Date(lastActive.getFullYear(), lastActive.getMonth(), lastActive.getDate());
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        
+        const currentStreak = userData.streak || 0;
+        
+        // Check if last active was today (already updated today)
+        if (lastActiveDate.getTime() === today.getTime()) {
+          // Already updated today, don't increment again
+          return;
+        }
+        
+        // Check if last active was yesterday (consecutive day)
+        if (lastActiveDate.getTime() === yesterday.getTime()) {
           // Continue streak
           await updateDoc(userRef, {
             streak: increment(1),
             lastActive: serverTimestamp(),
           });
-        } else if (diffDays > 1) {
-          // Reset streak
+        } else {
+          // Streak broken - reset to 1 (or if it's been more than 1 day, reset)
           await updateDoc(userRef, {
             streak: 1,
             lastActive: serverTimestamp(),

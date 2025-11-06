@@ -32,7 +32,6 @@ import { VideoMeeting as VideoMeetingType, VideoMeetingParticipant, ViewMode } f
 import { ParticipantVideo } from './ParticipantVideo';
 import { MeetingChat } from './MeetingChat';
 import { MeetingControls } from './MeetingControls';
-import { MeetingLobby } from './MeetingLobby';
 import { ParticipantsList } from './ParticipantsList';
 import { MeetingSettings } from './MeetingSettings';
 import { SharedWhiteboard } from './SharedWhiteboard';
@@ -56,7 +55,6 @@ export const VideoMeeting: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [selectedAvatarType, setSelectedAvatarType] = useState<'Innovation' | 'Professional' | 'Creative' | 'Default'>('Default');
-  const [isInLobby, setIsInLobby] = useState(true);
   const [transcript, setTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -65,7 +63,6 @@ export const VideoMeeting: React.FC = () => {
   const [copySuccess, setCopySuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [autoJoinMeetingId, setAutoJoinMeetingId] = useState<string | null>(null);
-  const [skipLobby, setSkipLobby] = useState(false);
   const hasAutoJoinedRef = useRef(false);
   const [pinnedParticipant, setPinnedParticipant] = useState<string | null>(null);
   const [pinnedSize, setPinnedSize] = useState<'small' | 'medium' | 'large'>('medium');
@@ -75,32 +72,30 @@ export const VideoMeeting: React.FC = () => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const screenVideoRef = useRef<HTMLVideoElement>(null);
 
-  // Check URL for meeting ID on mount
+  // Check URL for meeting ID on mount and auto-join
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const meetingIdFromUrl = urlParams.get('id');
-    const shouldSkipLobby = urlParams.get('skipLobby') === 'true';
     
     if (meetingIdFromUrl) {
       setAutoJoinMeetingId(meetingIdFromUrl);
-      setSkipLobby(shouldSkipLobby);
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
 
-  // Auto-join if skipLobby is true - only once
+  // Auto-join when meeting ID is present - only once
   useEffect(() => {
-    if (skipLobby && autoJoinMeetingId && user && !hasAutoJoinedRef.current) {
+    if (autoJoinMeetingId && user && !hasAutoJoinedRef.current) {
       hasAutoJoinedRef.current = true;
-      // Auto-join immediately when user is available and skipLobby is true
+      // Auto-join immediately when user is available
       const timer = setTimeout(() => {
         handleJoinMeeting(autoJoinMeetingId);
       }, 100);
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [skipLobby, autoJoinMeetingId, user]);
+  }, [autoJoinMeetingId, user]);
 
   useEffect(() => {
     return () => {
@@ -199,7 +194,7 @@ export const VideoMeeting: React.FC = () => {
   };
 
   const handleJoinMeeting = async (meetingId: string) => {
-    if (currentMeetingId === meetingId && !isInLobby) {
+    if (currentMeetingId === meetingId) {
       return;
     }
     try {
@@ -208,7 +203,6 @@ export const VideoMeeting: React.FC = () => {
     } catch (err) {
       console.error('Error in handleJoinMeeting:', err);
       setError(err instanceof Error ? err.message : 'Failed to join meeting');
-      setIsInLobby(true);
       hasAutoJoinedRef.current = false;
     }
   };
@@ -286,7 +280,6 @@ export const VideoMeeting: React.FC = () => {
       );
 
       setCurrentMeetingId(meetingId);
-      setIsInLobby(false);
 
       // Setup WebRTC signaling - this must happen after joining
       setupWebRTCSignaling(meetingId);
@@ -310,7 +303,6 @@ export const VideoMeeting: React.FC = () => {
       console.error('Error joining meeting session:', err);
       setError(err instanceof Error ? err.message : 'Failed to join meeting');
       webRTCService.stopLocalStream();
-      setIsInLobby(true);
       setCurrentMeetingId(null);
       hasAutoJoinedRef.current = false;
       throw err;
@@ -625,8 +617,6 @@ export const VideoMeeting: React.FC = () => {
 
   const handleLeaveMeeting = async () => {
     if (!user || !currentMeetingId) {
-      // If no meeting, just return to lobby
-      setIsInLobby(true);
       return;
     }
 
@@ -679,8 +669,6 @@ export const VideoMeeting: React.FC = () => {
       setCurrentMeetingId(null);
       setMeeting(null);
       
-      // Return to lobby
-      setIsInLobby(true);
       hasAutoJoinedRef.current = false;
       
       // Stop transcription if not already stopped and clean up transcript state
@@ -697,7 +685,6 @@ export const VideoMeeting: React.FC = () => {
     } catch (err) {
       console.error('Error leaving meeting:', err);
       // Even if there's an error, clean up local state
-      setIsInLobby(true);
       setCurrentMeetingId(null);
       setMeeting(null);
     }
@@ -887,7 +874,7 @@ export const VideoMeeting: React.FC = () => {
 
   const copyMeetingLink = () => {
     if (currentMeetingId) {
-      const link = `${window.location.origin}/meeting?id=${currentMeetingId}&skipLobby=true`;
+      const link = `${window.location.origin}/meeting?id=${currentMeetingId}`;
       navigator.clipboard.writeText(link);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
@@ -904,31 +891,20 @@ export const VideoMeeting: React.FC = () => {
 
   // Timeout for auto-join if it takes too long
   useEffect(() => {
-    if (skipLobby && isInLobby && autoJoinMeetingId) {
+    if (autoJoinMeetingId && !currentMeetingId) {
       const timeout = setTimeout(() => {
-        if (isInLobby && skipLobby && !currentMeetingId) {
+        if (!currentMeetingId) {
           console.error('Auto-join timeout');
           setError('Failed to join meeting: Timeout. Please try again.');
           hasAutoJoinedRef.current = false;
-          setSkipLobby(false);
         }
       }, 15000);
       return () => clearTimeout(timeout);
     }
-  }, [skipLobby, isInLobby, autoJoinMeetingId, currentMeetingId]);
+  }, [autoJoinMeetingId, currentMeetingId]);
 
-  if (isInLobby && !skipLobby) {
-    return (
-      <MeetingLobby
-        onCreateMeeting={handleCreateMeeting}
-        onJoinMeeting={handleJoinMeeting}
-        error={error}
-        autoJoinMeetingId={autoJoinMeetingId}
-      />
-    );
-  }
-  
-  if (isInLobby && skipLobby && !error) {
+  // Show loading state while joining
+  if (autoJoinMeetingId && !currentMeetingId && !error) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
         <div className="text-center">
@@ -939,7 +915,8 @@ export const VideoMeeting: React.FC = () => {
     );
   }
 
-  if (isInLobby && skipLobby && error) {
+  // Show error state if join failed
+  if (autoJoinMeetingId && !currentMeetingId && error) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
         <div className="text-center">
@@ -948,12 +925,12 @@ export const VideoMeeting: React.FC = () => {
           <button
             onClick={() => {
               setError(null);
-              setSkipLobby(false);
               hasAutoJoinedRef.current = false;
+              handleJoinMeeting(autoJoinMeetingId);
             }}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
-            Return to Lobby
+            Try Again
           </button>
         </div>
       </div>

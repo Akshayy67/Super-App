@@ -7,6 +7,7 @@ class WebRTCService {
   private screenStream: MediaStream | null = null;
   private peerConnections: Map<string, RTCPeerConnection> = new Map();
   private pendingIceCandidates: Map<string, RTCIceCandidateInit[]> = new Map();
+  private pendingAnswers: Map<string, RTCSessionDescriptionInit> = new Map(); // Store pending answers when peer connection doesn't exist
   private remoteTracks: Map<string, Map<string, MediaStreamTrack>> = new Map(); // userId -> trackKind -> track
   private remoteStreamsMap: Map<string, MediaStream> = new Map(); // userId -> combined stream
   private unmuteCallbackTimeouts: Map<string, NodeJS.Timeout> = new Map(); // Debounce unmute callbacks
@@ -15,6 +16,7 @@ class WebRTCService {
   private connectionStartTimes: Map<string, number> = new Map(); // Track when connection started
   private useRelayOnly: Map<string, boolean> = new Map(); // Force TURN relay for problematic connections
   private pendingIceRestartOffers: Map<string, string> = new Map(); // Track pending ICE restart offers by SDP fingerprint
+  private connectionTimeouts: Map<string, NodeJS.Timeout> = new Map(); // Track connection timeouts to clear them
   private configuration: RTCConfiguration = {
     iceServers: [
       // Google STUN servers (multiple for redundancy)
@@ -319,7 +321,8 @@ class WebRTCService {
       }
     };
     
-    // Add connection timeout monitoring - be more aggressive
+    // Add connection timeout monitoring - but don't delete peer connection immediately
+    // Instead, mark for relay-only and let the connection continue to receive answers/ICE candidates
     const connectionTimeout = setTimeout(() => {
       const currentState = peerConnection.connectionState;
       const currentIceState = peerConnection.iceConnectionState;
@@ -331,25 +334,41 @@ class WebRTCService {
           currentState !== 'connected' && 
           currentIceState !== 'connected' && 
           currentIceState !== 'completed') {
-        console.warn(`⏱️ Connection timeout for ${userId} after ${elapsed}ms, forcing relay-only mode`);
-        // Force relay-only mode immediately
+        console.warn(`⏱️ Connection timeout for ${userId} after ${elapsed}ms, marking for relay-only mode`);
+        // Mark for relay-only but DON'T delete the peer connection yet
+        // Keep it alive so it can still receive answers and ICE candidates
         if (!this.useRelayOnly.get(userId)) {
           this.useRelayOnly.set(userId, true);
-          // Close and recreate with relay-only
-          peerConnection.close();
-          this.peerConnections.delete(userId);
-          // Trigger immediate reconnection with relay-only
+          // Schedule a reconnection attempt, but keep the current connection alive
+          // The reconnection will happen when we're in stable state
           setTimeout(() => {
-            this.attemptReconnection(userId, true);
-          }, 100);
+            // Only attempt reconnection if still not connected
+            const pc = this.peerConnections.get(userId);
+            if (pc && pc.connectionState !== 'connected' && pc.iceConnectionState !== 'connected') {
+              // Only reconnect if we're in stable state (have received answer)
+              if (pc.signalingState === 'stable') {
+                this.attemptReconnection(userId, true);
+              } else {
+                // Still waiting for answer, don't reconnect yet
+                console.log(`⏳ Still waiting for answer from ${userId}, not reconnecting yet`);
+              }
+            }
+          }, 2000); // Give more time for answer to arrive
         }
       }
-    }, 5000); // Reduced to 5 second timeout for faster relay fallback
+    }, 5000); // 5 second timeout for faster relay fallback
+    
+    // Store timeout so we can clear it
+    this.connectionTimeouts.set(userId, connectionTimeout);
     
     // Clear timeout when connection is established
     peerConnection.addEventListener('connectionstatechange', () => {
       if (peerConnection.connectionState === 'connected') {
-        clearTimeout(connectionTimeout);
+        const timeout = this.connectionTimeouts.get(userId);
+        if (timeout) {
+          clearTimeout(timeout);
+          this.connectionTimeouts.delete(userId);
+        }
       }
     }, { once: true });
 
@@ -731,6 +750,7 @@ class WebRTCService {
     }
 
     this.peerConnections.set(userId, peerConnection);
+    
     return peerConnection;
   }
 
@@ -779,6 +799,22 @@ class WebRTCService {
       console.log(`📌 Tracking ICE restart offer for ${userId}`);
     }
     
+    // Process any pending answer that arrived before the offer was created
+    // Now that we're in "have-local-offer" state, we can process the answer
+    const pendingAnswer = this.pendingAnswers.get(userId);
+    if (pendingAnswer) {
+      console.log(`📥 Processing pending answer for ${userId} now that local offer is set`);
+      this.pendingAnswers.delete(userId);
+      // Process the answer asynchronously to avoid blocking
+      setTimeout(async () => {
+        try {
+          await this.setRemoteDescription(userId, pendingAnswer);
+        } catch (err) {
+          console.error(`❌ Error processing pending answer for ${userId}:`, err);
+        }
+      }, 100);
+    }
+    
     return offer;
   }
 
@@ -814,7 +850,16 @@ class WebRTCService {
 
   // Set remote description
   async setRemoteDescription(userId: string, description: RTCSessionDescriptionInit): Promise<void> {
-    const peerConnection = this.peerConnections.get(userId);
+    let peerConnection = this.peerConnections.get(userId);
+    
+    // If peer connection doesn't exist and this is an answer, store it for later
+    if (!peerConnection && description.type === 'answer') {
+      console.log(`📥 Storing pending answer for ${userId} (peer connection not found yet)`);
+      this.pendingAnswers.set(userId, description);
+      // Don't throw error - the answer will be processed when peer connection is created
+      return;
+    }
+    
     if (!peerConnection) {
       throw new Error('Peer connection not found');
     }
@@ -976,8 +1021,16 @@ class WebRTCService {
       peerConnection.close();
       this.peerConnections.delete(userId);
     }
+    // Clear connection timeout
+    const timeout = this.connectionTimeouts.get(userId);
+    if (timeout) {
+      clearTimeout(timeout);
+      this.connectionTimeouts.delete(userId);
+    }
     // Clean up any pending ICE candidates
     this.pendingIceCandidates.delete(userId);
+    // Clean up pending answers
+    this.pendingAnswers.delete(userId);
     // Clean up remote tracks and streams
     this.remoteTracks.delete(userId);
     this.remoteStreamsMap.delete(userId);
@@ -1129,6 +1182,12 @@ class WebRTCService {
     const peerConnection = this.peerConnections.get(userId);
     if (!peerConnection) {
       console.warn(`⚠️ No peer connection found for ${userId}, cannot reconnect`);
+      // If we have a pending answer, try creating a new peer connection
+      const pendingAnswer = this.pendingAnswers.get(userId);
+      if (pendingAnswer) {
+        console.log(`🔄 Found pending answer for ${userId}, will process when peer connection is created`);
+        // The answer will be processed when createPeerConnection is called
+      }
       return;
     }
     

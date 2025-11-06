@@ -69,6 +69,15 @@ export const InterviewOverview: React.FC = () => {
       color: "teal",
       path: "/interview/ats-score",
     },
+    {
+      id: "resume-builder",
+      title: "Resume Builder",
+      description:
+        "Create professional, ATS-optimized resumes with AI assistance and multiple templates",
+      icon: FileText,
+      color: "purple",
+      path: "/interview/resume-builder",
+    },
   ];
 
   const getColorClasses = (color: string) => {

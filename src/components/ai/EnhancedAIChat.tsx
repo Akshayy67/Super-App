@@ -870,7 +870,7 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
         // Store study plan data in sessionStorage for the study plan page to use
         sessionStorage.setItem("pendingStudyPlans", JSON.stringify(studyPlanItems));
         // Navigate to study plan page
-        window.location.href = "/study-plans?tab=new";
+        window.location.href = "/tools/study-plans/new";
         return; // Don't close modal yet, let navigation happen
       }
 

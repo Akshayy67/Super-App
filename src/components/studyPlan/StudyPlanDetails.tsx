@@ -17,6 +17,8 @@ import {
   Lightbulb,
   Link2,
   AlertCircle,
+  Network,
+  List,
 } from "lucide-react";
 import { StudyPlan } from "../../types/studyPlan";
 import { studyPlanService } from "../../utils/studyPlanService";
@@ -25,6 +27,7 @@ import { realTimeAuth } from "../../utils/realTimeAuth";
 import { calendarService } from "../../utils/calendarService";
 import { firestoreUserTasks } from "../../utils/firestoreUserTasks";
 import { DopamineSpikeCelebration } from "../ui/DopamineSpikeCelebration";
+import { StudyPlanTree } from "./StudyPlanTree";
 
 interface StudyPlanDetailsProps {
   plan: StudyPlan;
@@ -50,6 +53,7 @@ export const StudyPlanDetails: React.FC<StudyPlanDetailsProps> = ({
   const [syncingToCalendar, setSyncingToCalendar] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationTaskTitle, setCelebrationTaskTitle] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"tree" | "list">("tree");
 
   // Debug: Log plan data
   useEffect(() => {
@@ -347,17 +351,58 @@ export const StudyPlanDetails: React.FC<StudyPlanDetailsProps> = ({
     0
   );
 
+  // If tree view is selected, render the tree component
+  if (viewMode === "tree") {
+    return (
+      <StudyPlanTree
+        plan={plan}
+        onBack={onBack}
+        onPlanDeleted={onPlanDeleted}
+        onPlanUpdated={onPlanUpdated}
+        onViewModeChange={setViewMode}
+      />
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="mb-6">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 mb-4 btn-touch transition-colors duration-300 group"
-        >
-          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-medium">Back to Plans</span>
-        </button>
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 btn-touch transition-colors duration-300 group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <span className="font-medium">Back to Plans</span>
+          </button>
+          
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-2 bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode("tree")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200 ${
+                viewMode === "tree"
+                  ? "bg-blue-500 text-white shadow-md"
+                  : "text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+              }`}
+            >
+              <Network className="w-4 h-4" />
+              <span className="text-sm font-medium">Tree View</span>
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200 ${
+                viewMode === "list"
+                  ? "bg-blue-500 text-white shadow-md"
+                  : "text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+              }`}
+            >
+              <List className="w-4 h-4" />
+              <span className="text-sm font-medium">List View</span>
+            </button>
+          </div>
+        </div>
 
         <div className="relative">
           {/* Glow Effect */}

@@ -787,25 +787,24 @@ body:not(.dark):not([data-theme="dark"]),
 
 /* Mobile-friendly tabs */
 .tabs-mobile {
-  @apply flex overflow-x-auto scrollbar-hide;
-  @apply border-b border-gray-200 dark:border-slate-700;
-  scroll-snap-type: x mandatory;
+  @apply flex flex-col sm:flex-row gap-2;
+  @apply w-full;
   -webkit-overflow-scrolling: touch;
 }
 
 .tab-mobile {
-  @apply flex-shrink-0 px-3 sm:px-4 py-3 text-sm font-medium;
-  @apply border-b-2 border-transparent;
+  @apply flex-shrink-0 px-4 sm:px-4 py-3.5 sm:py-3 text-sm sm:text-base font-semibold;
+  @apply border-2 border-transparent;
   @apply transition-all duration-200;
-  @apply min-w-[100px] sm:min-w-[120px] text-center;
-  @apply min-h-[44px] flex items-center justify-center;
-  scroll-snap-align: start;
-  touch-action: manipulation;
+  @apply rounded-lg;
+  @apply min-h-[52px] sm:min-h-[44px] flex items-center justify-center;
+  @apply touch-action: manipulation;
+  @apply shadow-sm;
 }
 
 .tab-mobile.active {
-  @apply border-blue-500 text-blue-600 dark:text-blue-400;
-  @apply bg-blue-50 dark:bg-blue-900/20;
+  @apply border-blue-600;
+  @apply shadow-md;
 }
 
 .tab-mobile:not(.active) {
@@ -815,25 +814,24 @@ body:not(.dark):not([data-theme="dark"]),
 }
 
 .tab-mobile:active {
-  @apply scale-95 bg-gray-100 dark:bg-slate-600;
+  @apply scale-95;
 }
 
 /* Ensure tabs are visible on small screens */
 @media (max-width: 640px) {
   .tabs-mobile {
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
+    gap: 0.5rem;
   }
 
   .tab-mobile {
-    min-width: 90px;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-    font-size: 0.75rem;
+    min-width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    font-size: 0.875rem;
   }
 
   .tab-mobile span {
-    font-size: 0.75rem;
+    font-size: 0.875rem;
   }
 }
 
@@ -1027,6 +1025,76 @@ body:not(.dark):not([data-theme="dark"]),
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior: contain !important;
     overflow-x: hidden !important;
+  }
+
+  /* Desktop/Laptop scrolling fix - ensure sidebar and main content scroll independently */
+  @media (min-width: 1024px) {
+    /* Ensure main container doesn't scroll */
+    .h-screen.flex {
+      overflow: hidden !important;
+      height: 100vh !important;
+      max-height: 100vh !important;
+    }
+    
+    /* Sidebar scrolling fix */
+    nav.overflow-y-auto {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+      height: 100% !important;
+      max-height: 100% !important;
+    }
+    
+    nav.overflow-y-auto::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    nav.overflow-y-auto::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    nav.overflow-y-auto::-webkit-scrollbar-thumb {
+      background-color: rgba(156, 163, 175, 0.5);
+      border-radius: 3px;
+    }
+    
+    nav.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+      background-color: rgba(156, 163, 175, 0.7);
+    }
+    
+    /* Main content scrolling - more specific selector */
+    div.flex-1.overflow-y-auto {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+      height: 100% !important;
+      max-height: 100vh !important;
+    }
+    
+    div.flex-1.overflow-y-auto::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    div.flex-1.overflow-y-auto::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    div.flex-1.overflow-y-auto::-webkit-scrollbar-thumb {
+      background-color: rgba(156, 163, 175, 0.5);
+      border-radius: 4px;
+    }
+    
+    div.flex-1.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+      background-color: rgba(156, 163, 175, 0.7);
+    }
+    
+    /* Prevent scroll chaining between sidebar and main content */
+    nav.overflow-y-auto,
+    div.flex-1.overflow-y-auto {
+      overscroll-behavior: contain !important;
+    }
   }
 
   /* Cards and containers */

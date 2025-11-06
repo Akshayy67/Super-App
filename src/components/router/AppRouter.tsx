@@ -6,9 +6,11 @@ import { Dashboard } from "../dashboards/Dashboard";
 import { FileManager } from "../file/FileManager";
 import { TaskManager } from "../tasks/TaskManager";
 import { NotesManager } from "../notes/NotesManager";
+import { FilesAndNotesRouter } from "../filesAndNotes/FilesAndNotesRouter";
 import { EnhancedAIChat } from "../ai/EnhancedAIChat";
 import { StudyTools } from "../StudyTools";
 import { FlashCards } from "../FlashCards";
+import { StudyToolsRouter } from "../studyTools/StudyToolsRouter";
 import { InterviewPrep } from "../InterviewPrep/InterviewPrep";
 import { TeamSpace } from "../../team/components/TeamSpace";
 import { VideoMeeting } from "../meeting/VideoMeeting";
@@ -140,10 +142,20 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         } 
       />
       <Route 
+        path="/files-notes/*" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><FilesAndNotesRouter /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
         path="/files/*" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><FileManager /></PageTransitionWrapper>
+            <PageTransitionWrapper>
+              <Navigate to="/files-notes/files" replace />
+            </PageTransitionWrapper>
           </BlockedUserGuard>
         } 
       />
@@ -159,7 +171,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/notes/*" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><NotesManager /></PageTransitionWrapper>
+            <PageTransitionWrapper>
+              <Navigate to="/files-notes/notes" replace />
+            </PageTransitionWrapper>
           </BlockedUserGuard>
         } 
       />
@@ -175,7 +189,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/tools/*" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><StudyTools /></PageTransitionWrapper>
+            <PageTransitionWrapper><StudyToolsRouter /></PageTransitionWrapper>
           </BlockedUserGuard>
         } 
       />
@@ -183,7 +197,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/flashcards/*" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><FlashCards /></PageTransitionWrapper>
+            <PageTransitionWrapper>
+              <Navigate to="/tools/flashcards" replace />
+            </PageTransitionWrapper>
           </BlockedUserGuard>
         } 
       />
@@ -199,7 +215,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/resume-builder" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><ResumeBuilderPage /></PageTransitionWrapper>
+            <PageTransitionWrapper>
+              <Navigate to="/interview/resume-builder" replace />
+            </PageTransitionWrapper>
           </BlockedUserGuard>
         } 
       />
@@ -263,7 +281,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/study-plans" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><StudyPlanManager /></PageTransitionWrapper>
+            <PageTransitionWrapper>
+              <Navigate to="/tools/study-plans" replace />
+            </PageTransitionWrapper>
           </BlockedUserGuard>
         } 
       />

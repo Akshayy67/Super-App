@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Brain,
   FileText,
@@ -10,6 +11,8 @@ import {
   X,
   File,
   Image,
+  Target,
+  Map,
 } from "lucide-react";
 import { unifiedAIService } from "../utils/aiConfig";
 import { driveStorageUtils } from "../utils/driveStorage";
@@ -24,6 +27,7 @@ interface ToolResult {
 }
 
 export const StudyTools: React.FC = () => {
+  const navigate = useNavigate();
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [inputText, setInputText] = useState("");
   const [selectedDocument, setSelectedDocument] = useState("");
@@ -70,18 +74,38 @@ export const StudyTools: React.FC = () => {
       color: "yellow",
     },
     {
-      id: "flashcards",
-      name: "Create Flashcards",
-      description: "Automatically generate Q&A flashcards for studying",
-      icon: BookOpen,
-      color: "green",
-    },
-    {
       id: "explanation",
       name: "Explain Concepts",
       description: "Get detailed explanations of complex topics",
       icon: Brain,
       color: "purple",
+    },
+  ];
+
+  const navigationCards = [
+    {
+      id: "study-plans",
+      name: "Study Plans",
+      description: "Create and manage your personalized study plans",
+      icon: Target,
+      color: "indigo",
+      path: "/tools/study-plans",
+    },
+    {
+      id: "roadmap",
+      name: "Roadmap",
+      description: "View your learning roadmap and track progress",
+      icon: Map,
+      color: "teal",
+      path: "/tools/study-plans",
+    },
+    {
+      id: "flashcards",
+      name: "Create Flashcards",
+      description: "Create and manage your flashcard collections",
+      icon: BookOpen,
+      color: "green",
+      path: "/tools/flashcards",
     },
   ];
 
@@ -91,6 +115,8 @@ export const StudyTools: React.FC = () => {
       yellow: "bg-yellow-100 text-yellow-600 border-yellow-200",
       green: "bg-green-100 text-green-600 border-green-200",
       purple: "bg-purple-100 text-purple-600 border-purple-200",
+      indigo: "bg-indigo-100 text-indigo-600 border-indigo-200",
+      teal: "bg-teal-100 text-teal-600 border-teal-200",
     };
     return colors[color as keyof typeof colors] || colors.blue;
   };
@@ -532,7 +558,7 @@ export const StudyTools: React.FC = () => {
         </div>
 
         {/* Tool Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {tools.map((tool) => {
             const Icon = tool.icon;
             const isSelected = selectedTool === tool.id;
@@ -544,7 +570,7 @@ export const StudyTools: React.FC = () => {
                 className={`p-4 border rounded-lg text-left transition-all ${
                   isSelected
                     ? `${getColorClasses(tool.color)} border-2`
-                    : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                    : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 hover:shadow-sm"
                 }`}
               >
                 <Icon
@@ -571,6 +597,34 @@ export const StudyTools: React.FC = () => {
               </button>
             );
           })}
+        </div>
+
+        {/* Navigation Cards */}
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            Quick Access
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {navigationCards.map((card) => {
+              const Icon = card.icon;
+
+              return (
+                <button
+                  key={card.id}
+                  onClick={() => navigate(card.path)}
+                  className={`p-4 border rounded-lg text-left transition-all ${getColorClasses(card.color)} border-2 hover:shadow-md cursor-pointer`}
+                >
+                  <Icon className="w-6 h-6 mb-3" />
+                  <h3 className="font-medium mb-2 text-gray-900 dark:text-gray-100">
+                    {card.name}
+                  </h3>
+                  <p className="text-sm opacity-80 text-gray-700 dark:text-gray-300">
+                    {card.description}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

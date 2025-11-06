@@ -25,7 +25,8 @@ import {
   MoreVertical,
   Edit,
   Globe,
-  ClipboardList
+  ClipboardList,
+  Flag
 } from "lucide-react";
 import { PageLayout } from "./layout/PageLayout";
 import { 
@@ -33,7 +34,8 @@ import {
   Post as PostType, 
   Event as EventType, 
   LeaderboardUser as LeaderboardUserType,
-  Resource as ResourceType
+  Resource as ResourceType,
+  Report as ReportType
 } from "../services/communityService";
 import { realTimeAuth } from "../utils/realTimeAuth";
 import { Timestamp } from "firebase/firestore";
@@ -45,7 +47,11 @@ import { UserAvatar } from "./ui/UserAvatar";
 import { isAdmin } from "../utils/adminUtils";
 
 // Comments Section Component
-const CommentsSection: React.FC<{ postId: string; onAuthorClick?: (authorId: string) => void }> = ({ postId, onAuthorClick }) => {
+const CommentsSection: React.FC<{ 
+  postId: string; 
+  onAuthorClick?: (authorId: string) => void;
+  onReport?: (commentId: string, postId: string, reportedUserId: string, reportedUserName: string) => void;
+}> = ({ postId, onAuthorClick, onReport }) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [commentAuthorPhotos, setCommentAuthorPhotos] = useState<Record<string, string>>({});
@@ -137,9 +143,23 @@ const CommentsSection: React.FC<{ postId: string; onAuthorClick?: (authorId: str
                   >
                     {comment.author}
                   </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {formatCommentTime(comment.createdAt)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {formatCommentTime(comment.createdAt)}
+                    </span>
+                    {onReport && comment.authorId && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReport(comment.id, postId, comment.authorId, comment.author);
+                        }}
+                        className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                        title="Report comment"
+                      >
+                        <Flag className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <p className="text-sm text-gray-700 dark:text-gray-300">
                   {comment.content}
@@ -199,6 +219,7 @@ export const Community: React.FC = () => {
   // Post menu management
   const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [reportingCommentId, setReportingCommentId] = useState<string | null>(null);
   
   // Profile photos cache for posts and leaderboard
   const [postAuthorPhotos, setPostAuthorPhotos] = useState<Record<string, string>>({});
@@ -476,6 +497,44 @@ export const Community: React.FC = () => {
       alert("Failed to add comment. Please try again.");
     } finally {
       setPostingComment(false);
+    }
+  };
+
+  const handleReportComment = async (commentId: string, postId: string, reportedUserId: string, reportedUserName: string) => {
+    if (!user) return;
+    
+    // Don't allow users to report their own comments
+    if (user.id === reportedUserId) {
+      alert("You cannot report your own comment.");
+      return;
+    }
+
+    const reason = window.prompt(
+      `Report comment by ${reportedUserName}?\n\nPlease provide a reason:`,
+      ""
+    );
+
+    if (!reason || !reason.trim()) {
+      return;
+    }
+
+    setReportingCommentId(commentId);
+    try {
+      await communityService.reportComment(
+        commentId,
+        postId,
+        reportedUserId,
+        reportedUserName,
+        user.id,
+        user.username,
+        reason.trim()
+      );
+      alert("Comment reported successfully. Thank you for helping keep the community safe.");
+    } catch (error: any) {
+      console.error("Error reporting comment:", error);
+      alert(error.message || "Failed to report comment. Please try again.");
+    } finally {
+      setReportingCommentId(null);
     }
   };
 
@@ -945,7 +1004,11 @@ export const Community: React.FC = () => {
                         </div>
 
                         {/* Comments List */}
-                        <CommentsSection postId={post.id} onAuthorClick={handleAuthorClick} />
+                        <CommentsSection 
+                          postId={post.id} 
+                          onAuthorClick={handleAuthorClick}
+                          onReport={handleReportComment}
+                        />
                       </div>
                     )}
                   </div>
@@ -1183,7 +1246,12 @@ export const Community: React.FC = () => {
               <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-slate-700">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">Shared Resources</h2>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                  <button 
+                    onClick={() => {
+                      alert("To share resources with the community, please contact our support team at support@super-app.tech. We'll help you share your study materials!");
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
+                  >
                     <Plus className="w-5 h-5 mr-2" />
                     Share Resource
                   </button>

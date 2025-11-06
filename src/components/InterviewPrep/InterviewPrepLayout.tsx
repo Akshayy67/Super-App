@@ -9,6 +9,7 @@ import {
   Lightbulb,
   BarChart3,
   Brain,
+  FileText,
 } from "lucide-react";
 import { InterviewLayout } from "../layout/PageLayout";
 
@@ -74,6 +75,12 @@ export const InterviewPrepLayout: React.FC<InterviewPrepLayoutProps> = ({
       label: "ATS Score",
       icon: Brain,
       path: "/interview/ats-score",
+    },
+    {
+      id: "resume-builder",
+      label: "Resume Builder",
+      icon: FileText,
+      path: "/interview/resume-builder",
     },
   ];
 
