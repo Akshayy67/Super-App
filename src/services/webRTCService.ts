@@ -728,7 +728,7 @@ class WebRTCService {
   }
 
   // Create offer
-  async createOffer(userId: string): Promise<RTCSessionDescriptionInit> {
+  async createOffer(userId: string, iceRestart: boolean = false): Promise<RTCSessionDescriptionInit> {
     const peerConnection = this.peerConnections.get(userId);
     if (!peerConnection) {
       throw new Error('Peer connection not found');
@@ -736,7 +736,7 @@ class WebRTCService {
 
     // Ensure we have tracks before creating offer
     const senders = peerConnection.getSenders();
-    console.log(`📤 Creating offer for ${userId}, has ${senders.length} senders`);
+    console.log(`📤 Creating offer for ${userId}, has ${senders.length} senders, iceRestart: ${iceRestart}`);
     if (senders.length === 0 && this.localStream) {
       console.warn(`⚠️ No senders found, adding tracks before creating offer`);
       const tracks = this.localStream.getTracks();
@@ -750,14 +750,16 @@ class WebRTCService {
     // Add offer options to ensure video/audio are included
     const offerOptions: RTCOfferOptions = {
       offerToReceiveAudio: true,
-      offerToReceiveVideo: true
+      offerToReceiveVideo: true,
+      iceRestart: iceRestart // Explicitly set ICE restart flag
     };
     
     const offer = await peerConnection.createOffer(offerOptions);
     console.log(`📤 Offer created for ${userId}:`, {
       type: offer.type,
       hasSdp: !!offer.sdp,
-      sdpLength: offer.sdp?.length
+      sdpLength: offer.sdp?.length,
+      iceRestart: iceRestart
     });
     await peerConnection.setLocalDescription(offer);
     return offer;
@@ -802,11 +804,24 @@ class WebRTCService {
 
     // Check current state before setting remote description
     const currentState = peerConnection.signalingState;
-    console.log(`📋 Setting remote description for ${userId}, current state: ${currentState}, type: ${description.type}`);
+    const hasLocalOffer = !!peerConnection.localDescription;
+    const hasRemoteDescription = !!peerConnection.remoteDescription;
+    
+    // Detect if this is an ICE restart:
+    // - Offer in stable state = ICE restart offer
+    // - Answer in stable state with local offer = ICE restart answer
+    const isIceRestart = (description.type === 'offer' && currentState === 'stable') ||
+                         (description.type === 'answer' && currentState === 'stable' && hasLocalOffer);
+    
+    console.log(`📋 Setting remote description for ${userId}, current state: ${currentState}, type: ${description.type}, isIceRestart: ${isIceRestart}, hasLocalOffer: ${hasLocalOffer}`);
 
     // Validate state transitions
     if (description.type === 'offer') {
-      if (currentState !== 'stable' && currentState !== 'have-local-offer') {
+      // Allow ICE restart offers even in stable state
+      if (isIceRestart && currentState === 'stable') {
+        console.log('🔄 ICE restart offer detected - allowing in stable state');
+        // Skip validation, proceed to setRemoteDescription
+      } else if (currentState !== 'stable' && currentState !== 'have-local-offer') {
         console.warn(`⚠️ Cannot set remote offer in state ${currentState}, resetting connection`);
         // Close and recreate if in wrong state
         peerConnection.close();
@@ -814,7 +829,11 @@ class WebRTCService {
         throw new Error(`Cannot set remote offer: invalid state ${currentState}`);
       }
     } else if (description.type === 'answer') {
-      if (currentState !== 'have-local-offer' && currentState !== 'have-remote-offer') {
+      // Allow ICE restart answers even in stable state (if we have a local offer)
+      if (isIceRestart && currentState === 'stable' && hasLocalOffer) {
+        console.log('🔄 ICE restart answer detected - allowing in stable state');
+        // Skip validation, proceed to setRemoteDescription
+      } else if (currentState !== 'have-local-offer' && currentState !== 'have-remote-offer') {
         console.warn(`⚠️ Cannot set remote answer in state ${currentState}`);
         // If we have a local offer, we can proceed
         if (currentState !== 'have-local-offer') {
@@ -1129,10 +1148,7 @@ class WebRTCService {
       // Create a new offer/answer to restart ICE only if we're in stable state
       if (peerConnection.signalingState === 'stable') {
         // We're stable, create a new offer to restart ICE
-        peerConnection.createOffer({ iceRestart: true })
-          .then(offer => {
-            return peerConnection.setLocalDescription(offer).then(() => offer);
-          })
+        this.createOffer(userId, true) // Use our method with iceRestart flag
           .then((offer) => {
             console.log('✅ ICE restart offer created for', userId);
             // Send the ICE restart offer through callback so it can be sent via signaling

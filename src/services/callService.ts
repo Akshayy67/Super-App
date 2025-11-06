@@ -328,20 +328,21 @@ class CallService {
     
     // Check if this is an ICE restart offer
     const existingPC = webRTCService.getPeerConnection(remoteUserId);
-    const isIceRestart = existingPC && 
-                         existingPC.signalingState === 'stable' && 
-                         offer.sdp?.includes('ice-ufrag');
+    const isIceRestart = existingPC && existingPC.signalingState === 'stable';
 
     if (isIceRestart) {
       console.log('🔄 Handling ICE restart offer from', remoteUserId);
+      // For ICE restart, we reuse the existing connection
+      // The connection will be reused by createPeerConnection if it's valid
     }
 
     // Create peer connection (will reuse if exists and valid)
+    // For ICE restart, this will reuse the existing connection
     webRTCService.createPeerConnection(remoteUserId, async (candidate) => {
       await callSignalingService.sendIceCandidate(callId, (webRTCService as any).getCurrentUserId() || 'unknown', remoteUserId, candidate);
     });
 
-    // Set remote description
+    // Set remote description (will handle ICE restart automatically)
     await webRTCService.setRemoteDescription(remoteUserId, offer);
 
     // Create and send answer
@@ -354,7 +355,25 @@ class CallService {
    */
   private async handleAnswer(signal: CallSignal, remoteUserId: string): Promise<void> {
     const answer = signal.data as RTCSessionDescriptionInit;
-    await webRTCService.setRemoteDescription(remoteUserId, answer);
+    
+    try {
+      await webRTCService.setRemoteDescription(remoteUserId, answer);
+    } catch (error: any) {
+      // If answer fails due to wrong state, it might be an ICE restart answer
+      // Check if we should ignore it (already processed) or handle it
+      if (error?.message?.includes('invalid state')) {
+        const existingPC = webRTCService.getPeerConnection(remoteUserId);
+        if (existingPC && existingPC.signalingState === 'stable') {
+          // This might be a duplicate answer from ICE restart - check if it's actually an ICE restart
+          const isIceRestart = answer.sdp?.includes('ice-ufrag');
+          if (isIceRestart) {
+            console.log('🔄 ICE restart answer received but connection already stable - may be duplicate, ignoring');
+            return; // Ignore duplicate ICE restart answers
+          }
+        }
+      }
+      throw error; // Re-throw if not handled
+    }
   }
 
   /**
