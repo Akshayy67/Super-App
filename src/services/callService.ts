@@ -325,8 +325,18 @@ class CallService {
     callId: string
   ): Promise<void> {
     const offer = signal.data as RTCSessionDescriptionInit;
+    
+    // Check if this is an ICE restart offer
+    const existingPC = webRTCService.getPeerConnection(remoteUserId);
+    const isIceRestart = existingPC && 
+                         existingPC.signalingState === 'stable' && 
+                         offer.sdp?.includes('ice-ufrag');
 
-    // Create peer connection
+    if (isIceRestart) {
+      console.log('🔄 Handling ICE restart offer from', remoteUserId);
+    }
+
+    // Create peer connection (will reuse if exists and valid)
     webRTCService.createPeerConnection(remoteUserId, async (candidate) => {
       await callSignalingService.sendIceCandidate(callId, (webRTCService as any).getCurrentUserId() || 'unknown', remoteUserId, candidate);
     });

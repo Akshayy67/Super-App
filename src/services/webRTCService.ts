@@ -11,15 +11,23 @@ class WebRTCService {
   private remoteStreamsMap: Map<string, MediaStream> = new Map(); // userId -> combined stream
   private unmuteCallbackTimeouts: Map<string, NodeJS.Timeout> = new Map(); // Debounce unmute callbacks
   private reconnectionAttempts: Map<string, number> = new Map(); // Track reconnection attempts per user
-  private maxReconnectionAttempts = 3;
+  private maxReconnectionAttempts = 10; // Increased attempts for better reliability
+  private connectionStartTimes: Map<string, number> = new Map(); // Track when connection started
+  private useRelayOnly: Map<string, boolean> = new Map(); // Force TURN relay for problematic connections
   private configuration: RTCConfiguration = {
     iceServers: [
+      // Google STUN servers (multiple for redundancy)
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:stun2.l.google.com:19302' },
       { urls: 'stun:stun3.l.google.com:19302' },
       { urls: 'stun:stun4.l.google.com:19302' },
-      // Add TURN servers for NAT traversal (public TURN servers)
+      // Additional STUN servers for redundancy
+      { urls: 'stun:stun.stunprotocol.org:3478' },
+      { urls: 'stun:stun.voiparound.com' },
+      { urls: 'stun:stun.voipbuster.com' },
+      { urls: 'stun:stun.voipstunt.com' },
+      // TURN servers - multiple providers for maximum reliability
       { 
         urls: [
           'turn:openrelay.metered.ca:80',
@@ -37,11 +45,46 @@ class WebRTCService {
         ],
         username: 'b1c2d3e4f5g6h7i8j9k0',
         credential: 'b1c2d3e4f5g6h7i8j9k0'
+      },
+      // Additional free TURN servers
+      {
+        urls: [
+          'turn:openrelay.metered.ca:80?transport=udp',
+          'turn:openrelay.metered.ca:80?transport=tcp',
+          'turn:openrelay.metered.ca:443?transport=tcp',
+          'turns:openrelay.metered.ca:443?transport=tcp'
+        ],
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      },
+      // Additional public TURN servers (no authentication required)
+      {
+        urls: 'turn:relay1.expressturn.com:3478',
+        username: 'ef',
+        credential: 'ef'
+      },
+      {
+        urls: 'turn:relay2.expressturn.com:3478',
+        username: 'ef',
+        credential: 'ef'
       }
     ],
     iceCandidatePoolSize: 10, // Pre-gather candidates for faster connection
     iceTransportPolicy: 'all' // Allow both relay and direct connections
   };
+  
+  // Get configuration for a specific user (can force relay if needed)
+  private getConfigurationForUser(userId: string): RTCConfiguration {
+    const forceRelay = this.useRelayOnly.get(userId);
+    if (forceRelay) {
+      // Return configuration with relay-only policy
+      return {
+        ...this.configuration,
+        iceTransportPolicy: 'relay' // Force TURN relay only
+      };
+    }
+    return this.configuration;
+  }
 
   private onRemoteStreamCallback?: (userId: string, stream: MediaStream) => void;
   private onConnectionStateChangeCallback?: (userId: string, state: RTCPeerConnectionState) => void;
@@ -200,7 +243,12 @@ class WebRTCService {
       this.peerConnections.delete(userId);
     }
 
-    const peerConnection = new RTCPeerConnection(this.configuration);
+    // Track connection start time
+    this.connectionStartTimes.set(userId, Date.now());
+    
+    // Get configuration for this user (may force relay if previous attempts failed)
+    const config = this.getConfigurationForUser(userId);
+    const peerConnection = new RTCPeerConnection(config);
 
     // Batch ICE candidates to avoid sending too many messages, but send ALL candidates
     let lastCandidateTime = 0;
@@ -232,6 +280,15 @@ class WebRTCService {
     // Handle ICE candidates
     peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
+        // Check if this is a relay candidate (TURN server)
+        const isRelay = event.candidate.candidate.includes('relay') || 
+                       event.candidate.candidate.includes('srflx') === false;
+        
+        // Log relay candidates with priority
+        if (isRelay) {
+          console.log(`🧊 Relay ICE candidate gathered for ${userId} (TURN server)`);
+        }
+        
         // Add to queue
         candidateQueue.push(event.candidate);
         console.log(`🧊 ICE candidate gathered for ${userId}, queue size: ${candidateQueue.length}`);
@@ -260,6 +317,34 @@ class WebRTCService {
         sendCandidates();
       }
     };
+    
+    // Add connection timeout monitoring
+    const connectionTimeout = setTimeout(() => {
+      const currentState = peerConnection.connectionState;
+      const currentIceState = peerConnection.iceConnectionState;
+      const startTime = this.connectionStartTimes.get(userId);
+      const elapsed = startTime ? Date.now() - startTime : 0;
+      
+      // If we've been trying for more than 10 seconds and still not connected
+      if (elapsed > 10000 && 
+          currentState !== 'connected' && 
+          currentIceState !== 'connected' && 
+          currentIceState !== 'completed') {
+        console.warn(`⏱️ Connection timeout for ${userId} after ${elapsed}ms, forcing relay-only mode`);
+        // Force relay-only mode
+        if (!this.useRelayOnly.get(userId)) {
+          this.useRelayOnly.set(userId, true);
+          this.attemptReconnection(userId, true);
+        }
+      }
+    }, 10000); // 10 second timeout
+    
+    // Clear timeout when connection is established
+    peerConnection.addEventListener('connectionstatechange', () => {
+      if (peerConnection.connectionState === 'connected') {
+        clearTimeout(connectionTimeout);
+      }
+    }, { once: true });
 
     // Handle remote stream - tracks can arrive separately for audio/video
     // We need to collect them and create a combined stream
@@ -477,23 +562,42 @@ class WebRTCService {
         console.log('✅ Peer connection fully established with', userId);
         // Reset reconnection attempts on successful connection
         this.reconnectionAttempts.delete(userId);
+        this.useRelayOnly.delete(userId); // Clear relay-only flag on success
+        this.connectionStartTimes.delete(userId);
       } else if (state === 'failed') {
-        // Only attempt reconnection for failed state, not disconnected
-        // Disconnected might recover on its own
-        console.log(`🔄 Connection failed for ${userId}, attempting reconnection`);
-        this.attemptReconnection(userId);
+        // Immediately attempt reconnection for failed state
+        console.log(`🔄 Connection failed for ${userId}, attempting immediate reconnection`);
+        this.attemptReconnection(userId, true);
       } else if (state === 'disconnected') {
-        // Wait a bit - disconnected might recover automatically
-        setTimeout(() => {
-          const currentState = peerConnection.connectionState;
-          const currentIceState = peerConnection.iceConnectionState;
-          if (currentState === 'disconnected' && currentIceState === 'disconnected') {
-            console.log(`🔄 Still disconnected after delay, attempting reconnection for ${userId}`);
-            this.attemptReconnection(userId);
-          } else if (currentState === 'connected' || currentIceState === 'connected') {
-            console.log(`✅ Connection recovered automatically for ${userId}`);
-          }
-        }, 2000);
+        // Check how long we've been trying to connect
+        const startTime = this.connectionStartTimes.get(userId);
+        const elapsed = startTime ? Date.now() - startTime : 0;
+        
+        // If we've been trying for more than 3 seconds, be more aggressive
+        if (elapsed > 3000) {
+          console.log(`🔄 Connection disconnected for ${userId} after ${elapsed}ms, attempting reconnection`);
+          setTimeout(() => {
+            const currentState = peerConnection.connectionState;
+            const currentIceState = peerConnection.iceConnectionState;
+            if (currentState === 'disconnected' && currentIceState === 'disconnected') {
+              this.attemptReconnection(userId, true);
+            } else if (currentState === 'connected' || currentIceState === 'connected') {
+              console.log(`✅ Connection recovered automatically for ${userId}`);
+            }
+          }, 1000); // Shorter wait time
+        } else {
+          // Wait a bit - disconnected might recover automatically
+          setTimeout(() => {
+            const currentState = peerConnection.connectionState;
+            const currentIceState = peerConnection.iceConnectionState;
+            if (currentState === 'disconnected' && currentIceState === 'disconnected') {
+              console.log(`🔄 Still disconnected after delay, attempting reconnection for ${userId}`);
+              this.attemptReconnection(userId, true);
+            } else if (currentState === 'connected' || currentIceState === 'connected') {
+              console.log(`✅ Connection recovered automatically for ${userId}`);
+            }
+          }, 1500); // Reduced from 2000ms
+        }
       }
     };
     
@@ -523,14 +627,18 @@ class WebRTCService {
           localDescription: !!peerConnection.localDescription,
           remoteDescription: !!peerConnection.remoteDescription
         });
-        // Attempt reconnection for failed ICE connections
-        this.attemptReconnection(userId);
+        // Immediately attempt reconnection for failed ICE connections
+        this.attemptReconnection(userId, true);
       } else if (iceState === 'disconnected') {
         console.warn(`⚠️ ICE connection disconnected with ${userId}`);
-        // Wait longer before attempting reconnection - ICE might reconnect automatically
-        // Also check if we're in the middle of initial connection
+        // Check how long we've been trying to connect
+        const startTime = this.connectionStartTimes.get(userId);
+        const elapsed = startTime ? Date.now() - startTime : 0;
         const isInitialConnection = signalingState === 'have-local-offer' || signalingState === 'have-remote-offer' || signalingState === 'stable';
-        const waitTime = isInitialConnection ? 5000 : 3000; // Wait longer for initial connections
+        
+        // More aggressive reconnection - don't wait as long
+        // If we've been trying for more than 2 seconds, reconnect immediately
+        const waitTime = elapsed > 2000 ? 500 : (isInitialConnection ? 2000 : 1000);
         
         setTimeout(() => {
           const currentIceState = peerConnection.iceConnectionState;
@@ -544,9 +652,9 @@ class WebRTCService {
           if (currentIceState === 'disconnected' && 
               currentConnState !== 'closed' && 
               currentConnState !== 'closing' &&
-              (currentSignalingState === 'stable' || !isInitialConnection)) {
+              (currentSignalingState === 'stable' || elapsed > 3000)) {
             console.log(`🔄 ICE still disconnected after ${waitTime}ms delay, attempting reconnection for ${userId}`);
-            this.attemptReconnection(userId);
+            this.attemptReconnection(userId, true);
           } else if (currentIceState === 'connected' || currentIceState === 'completed') {
             console.log(`✅ ICE reconnected automatically for ${userId}`);
           }
@@ -820,6 +928,10 @@ class WebRTCService {
     // Clean up remote tracks and streams
     this.remoteTracks.delete(userId);
     this.remoteStreamsMap.delete(userId);
+    // Clean up connection tracking
+    this.connectionStartTimes.delete(userId);
+    this.reconnectionAttempts.delete(userId);
+    this.useRelayOnly.delete(userId);
   }
 
   // Close all connections
@@ -944,11 +1056,19 @@ class WebRTCService {
   }
 
   // Attempt to reconnect a failed peer connection
-  private attemptReconnection(userId: string): void {
+  private attemptReconnection(userId: string, immediate: boolean = false): void {
     const attempts = this.reconnectionAttempts.get(userId) || 0;
     
     if (attempts >= this.maxReconnectionAttempts) {
       console.error(`❌ Max reconnection attempts (${this.maxReconnectionAttempts}) reached for ${userId}`);
+      // After max attempts, try forcing relay-only mode
+      if (!this.useRelayOnly.get(userId)) {
+        console.log(`🔄 Forcing relay-only mode for ${userId} after ${attempts} failed attempts`);
+        this.useRelayOnly.set(userId, true);
+        this.reconnectionAttempts.delete(userId); // Reset attempts for relay-only retry
+        // Close and recreate connection with relay-only
+        this.recreateConnectionWithRelay(userId);
+      }
       return;
     }
     
@@ -965,28 +1085,44 @@ class WebRTCService {
       return;
     }
     
-    // Don't reconnect if we're still in initial connection phase
+    // Don't reconnect if we're still in initial connection phase (unless immediate flag is set)
     const signalingState = peerConnection.signalingState;
     const isInitialConnection = signalingState === 'have-local-offer' || 
                                  signalingState === 'have-remote-offer' ||
                                  signalingState === 'stable';
     
-    // If we're in initial connection and this is the first attempt, wait longer
-    if (isInitialConnection && attempts === 0) {
-      console.log(`⏳ Waiting longer for initial connection to ${userId} before reconnecting`);
-      setTimeout(() => {
-        const currentState = peerConnection.connectionState;
-        const currentIceState = peerConnection.iceConnectionState;
-        if ((currentState === 'failed' || currentIceState === 'failed') && 
-            peerConnection.signalingState === 'stable') {
-          this.attemptReconnection(userId);
-        }
-      }, 5000);
-      return;
+    // If we're in initial connection and this is the first attempt, wait a bit (unless immediate)
+    if (isInitialConnection && attempts === 0 && !immediate) {
+      const startTime = this.connectionStartTimes.get(userId);
+      const elapsed = startTime ? Date.now() - startTime : 0;
+      
+      // If we've been trying for more than 2 seconds, reconnect immediately
+      if (elapsed < 2000) {
+        console.log(`⏳ Waiting a bit longer for initial connection to ${userId} before reconnecting`);
+        setTimeout(() => {
+          const currentState = peerConnection.connectionState;
+          const currentIceState = peerConnection.iceConnectionState;
+          if ((currentState === 'failed' || currentIceState === 'failed' || 
+               currentState === 'disconnected' || currentIceState === 'disconnected') && 
+              peerConnection.signalingState === 'stable') {
+            this.attemptReconnection(userId, true);
+          }
+        }, 1500); // Reduced from 5000ms
+        return;
+      }
     }
     
     this.reconnectionAttempts.set(userId, attempts + 1);
     console.log(`🔄 Attempting reconnection ${attempts + 1}/${this.maxReconnectionAttempts} for ${userId}`);
+    
+    // After 3 failed attempts, try forcing relay-only mode
+    if (attempts >= 3 && !this.useRelayOnly.get(userId)) {
+      console.log(`🔄 Switching to relay-only mode for ${userId} after ${attempts} failed attempts`);
+      this.useRelayOnly.set(userId, true);
+      // Close and recreate with relay-only
+      this.recreateConnectionWithRelay(userId);
+      return;
+    }
     
     // Restart ICE gathering - this can help recover from connection issues
     try {
@@ -1010,13 +1146,54 @@ class WebRTCService {
           })
           .catch(err => {
             console.error('❌ Error restarting ICE for', userId, ':', err);
+            // If ICE restart fails, try recreating connection
+            setTimeout(() => {
+              if (peerConnection.connectionState !== 'connected') {
+                this.recreateConnectionWithRelay(userId);
+              }
+            }, 1000);
           });
       } else {
+        // If not stable, wait a bit and try again
         console.log(`⏳ Waiting for stable signaling state before reconnecting ${userId} (current: ${signalingState})`);
+        setTimeout(() => {
+          if (peerConnection.signalingState === 'stable' && 
+              peerConnection.connectionState !== 'connected') {
+            this.attemptReconnection(userId, true);
+          }
+        }, 1000);
       }
     } catch (err) {
       console.error('❌ Error attempting reconnection for', userId, ':', err);
+      // If reconnection fails, try recreating connection
+      setTimeout(() => {
+        if (peerConnection.connectionState !== 'connected') {
+          this.recreateConnectionWithRelay(userId);
+        }
+      }, 1000);
     }
+  }
+  
+  // Recreate connection with relay-only mode
+  private recreateConnectionWithRelay(userId: string): void {
+    const peerConnection = this.peerConnections.get(userId);
+    if (!peerConnection) {
+      return;
+    }
+    
+    // Get the ICE candidate callback (we need to recreate the connection)
+    // This is a fallback - ideally the ICE restart should work
+    console.log(`🔄 Recreating connection with relay-only for ${userId}`);
+    
+    // Close existing connection
+    peerConnection.close();
+    this.peerConnections.delete(userId);
+    
+    // Force relay-only for this user
+    this.useRelayOnly.set(userId, true);
+    
+    // Note: The actual recreation will happen when the ICE restart offer is handled
+    // or when a new offer/answer is created. This method mainly sets the flag.
   }
 
   // Get reconnection attempt count for a user

@@ -37,6 +37,7 @@
     "gsap": "^3.13.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.2",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.344.0",
     "opencv.js": "^1.2.1",
     "pdfjs-dist": "^4.10.0",
