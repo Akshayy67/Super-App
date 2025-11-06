@@ -95,13 +95,27 @@ export const LandingPage: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [currentSection, setCurrentSection] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
   const morphFunctionRef = useRef<((sectionIndex: number) => void) | null>(null);
+
+  // Detect mobile device on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Initialize Three.js WebGL background with section-specific scenes
   useEffect(() => {
     if (!canvasRef.current) return;
 
+    // Detect mobile device for performance optimization
+    const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -112,16 +126,21 @@ export const LandingPage: React.FC = () => {
     const renderer = new THREE.WebGLRenderer({
       canvas: canvasRef.current,
       alpha: true,
-      antialias: true,
+      antialias: !isMobile, // Disable antialiasing on mobile for performance
+      powerPreference: isMobile ? "low-power" : "high-performance",
     });
 
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Lower pixel ratio on mobile for better performance
+    renderer.setPixelRatio(isMobile ? Math.min(window.devicePixelRatio, 1.5) : Math.min(window.devicePixelRatio, 2));
     renderer.setClearColor(0x000000, 0); // Transparent background
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // Disable expensive features on mobile
+    if (!isMobile) {
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.5;
+    renderer.toneMappingExposure = isMobile ? 1.2 : 1.5;
     
     console.log("🎨 Three.js renderer initialized", {
       width: window.innerWidth,
@@ -424,7 +443,9 @@ export const LandingPage: React.FC = () => {
         case "particles-cloud":
           // Cloud of particles
           const particleGeometry = new THREE.BufferGeometry();
-          const particleCount = 3000;
+          // Reduce particle count on mobile for performance
+          const isMobile = window.innerWidth <= 768;
+          const particleCount = isMobile ? 1000 : 3000;
           const initialPositions = new Float32Array(particleCount * 3);
           const positions = new Float32Array(particleCount * 3);
           const colors = new Float32Array(particleCount * 3);
@@ -829,7 +850,8 @@ export const LandingPage: React.FC = () => {
         case "expanding-universe": {
           // Advanced expanding universe effect with space-time warping
           // Create expanding grid that warps like space-time
-          const gridSegments = 50;
+          const isMobile = window.innerWidth <= 768;
+          const gridSegments = isMobile ? 25 : 50; // Reduce grid complexity on mobile
           const gridGeometry = new THREE.PlaneGeometry(4000, 4000, gridSegments, gridSegments);
           const gridPositions = gridGeometry.attributes.position;
           
@@ -907,7 +929,7 @@ export const LandingPage: React.FC = () => {
           config.objects.push(gridMesh);
           
           // Create expanding particle field with morphing
-          const expandingParticleCount = 3000;
+          const expandingParticleCount = isMobile ? 1000 : 3000; // Reduce particles on mobile
           const expandingParticleGeometry = new THREE.BufferGeometry();
           const particlePositions = new Float32Array(expandingParticleCount * 3);
           const particleColors = new Float32Array(expandingParticleCount * 3);
@@ -1262,7 +1284,8 @@ export const LandingPage: React.FC = () => {
 
         case "energy-particles":
           // Magnetic particle system
-          const energyParticleCount = 2000;
+          const isMobileEnergy = window.innerWidth <= 768;
+          const energyParticleCount = isMobileEnergy ? 800 : 2000; // Reduce on mobile
           const energyParticleGeometry = new THREE.BufferGeometry();
           const energyPositions = new Float32Array(energyParticleCount * 3);
           const energyVelocities = new Float32Array(energyParticleCount * 3);
@@ -1814,9 +1837,12 @@ export const LandingPage: React.FC = () => {
     }
   };
 
-  // Handle mouse wheel
+  // Handle mouse wheel and touch gestures
   useEffect(() => {
     let isScrolling = false;
+    let touchStartY = 0;
+    let touchEndY = 0;
+    const minSwipeDistance = 50; // Minimum swipe distance in pixels
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -1834,6 +1860,37 @@ export const LandingPage: React.FC = () => {
       setTimeout(() => {
         isScrolling = false;
       }, 800);
+    };
+
+    // Touch handlers for mobile swipe gestures
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!touchStartY || !e.changedTouches[0]) return;
+      
+      touchEndY = e.changedTouches[0].clientY;
+      const swipeDistance = touchStartY - touchEndY;
+
+      if (Math.abs(swipeDistance) > minSwipeDistance) {
+        if (isScrolling) return;
+        isScrolling = true;
+
+        const delta = swipeDistance > 0 ? 1 : -1; // Swipe up = next, swipe down = previous
+        const nextSection = currentSection + delta;
+
+        if (nextSection >= 0 && nextSection < sections.length) {
+          scrollToSection(nextSection);
+        }
+
+        setTimeout(() => {
+          isScrolling = false;
+        }, 800);
+      }
+
+      touchStartY = 0;
+      touchEndY = 0;
     };
 
     // Handle keyboard navigation
@@ -1859,10 +1916,14 @@ export const LandingPage: React.FC = () => {
 
     window.addEventListener("wheel", handleWheel, { passive: false });
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
 
     return () => {
       window.removeEventListener("wheel", handleWheel);
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
     };
   }, [currentSection]);
 
@@ -1948,12 +2009,13 @@ export const LandingPage: React.FC = () => {
         className="fixed inset-0 w-full h-full pointer-events-none"
           style={{ 
             zIndex: 0, 
-            opacity: 0.3,
+            opacity: isMobile ? 0.2 : 0.3, // Lower opacity on mobile
             position: 'fixed',
             top: 0,
             left: 0,
             width: '100%',
-            height: '100%'
+            height: '100%',
+            willChange: 'opacity',
           }}
       />
 
@@ -2161,24 +2223,40 @@ export const LandingPage: React.FC = () => {
                     e.stopPropagation();
                     scrollToSection(index - 1);
                   }}
-                  className="text-sm font-medium px-4 py-4 border rounded-full transition-all duration-300 ease-in-out hover:scale-110 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center justify-center"
+                  className="text-sm font-medium px-4 py-4 border rounded-full transition-all duration-300 ease-in-out hover:scale-110 active:scale-95 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center justify-center touch-manipulation"
                   style={{ 
                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
                     color: "#b0b0b0",
                     borderColor: "rgba(176, 176, 176, 0.3)",
                     transition: "all 0.3s ease-in-out",
                     fontSize: "clamp(0.75rem, 3vw, 0.875rem)",
-                    padding: "clamp(0.625rem, 2vw, 1rem) clamp(0.875rem, 3vw, 1rem)",
-                    minWidth: "44px",
-                    minHeight: "44px",
+                    padding: "clamp(0.75rem, 2.5vw, 1rem) clamp(1rem, 3.5vw, 1.25rem)",
+                    minWidth: "48px",
+                    minHeight: "48px",
+                    touchAction: "manipulation",
+                    WebkitTapHighlightColor: "rgba(176, 176, 176, 0.2)",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "scale(1.1)";
-                    e.currentTarget.style.color = "#ffffff";
+                    if (window.innerWidth > 768) {
+                      e.currentTarget.style.transform = "scale(1.1)";
+                      e.currentTarget.style.color = "#ffffff";
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "scale(1)";
-                    e.currentTarget.style.color = "#b0b0b0";
+                    if (window.innerWidth > 768) {
+                      e.currentTarget.style.transform = "scale(1)";
+                      e.currentTarget.style.color = "#b0b0b0";
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    e.currentTarget.style.transform = "scale(0.95)";
+                    e.currentTarget.style.opacity = "0.8";
+                  }}
+                  onTouchEnd={(e) => {
+                    setTimeout(() => {
+                      e.currentTarget.style.transform = "scale(1)";
+                      e.currentTarget.style.opacity = "1";
+                    }, 150);
                   }}
                 >
                   <svg 
@@ -2206,24 +2284,40 @@ export const LandingPage: React.FC = () => {
                     e.stopPropagation();
                     scrollToSection(index + 1);
                   }}
-                  className="text-sm font-medium px-4 py-4 border rounded-full transition-all duration-300 ease-in-out hover:scale-110 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center justify-center"
+                  className="text-sm font-medium px-4 py-4 border rounded-full transition-all duration-300 ease-in-out hover:scale-110 active:scale-95 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center justify-center touch-manipulation"
                   style={{ 
                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
                     color: "#b0b0b0",
                     borderColor: "rgba(176, 176, 176, 0.3)",
                     transition: "all 0.3s ease-in-out",
                     fontSize: "clamp(0.75rem, 3vw, 0.875rem)",
-                    padding: "clamp(0.625rem, 2vw, 1rem) clamp(0.875rem, 3vw, 1rem)",
-                    minWidth: "44px",
-                    minHeight: "44px",
+                    padding: "clamp(0.75rem, 2.5vw, 1rem) clamp(1rem, 3.5vw, 1.25rem)",
+                    minWidth: "48px",
+                    minHeight: "48px",
+                    touchAction: "manipulation",
+                    WebkitTapHighlightColor: "rgba(176, 176, 176, 0.2)",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "scale(1.1)";
-                    e.currentTarget.style.color = "#ffffff";
+                    if (window.innerWidth > 768) {
+                      e.currentTarget.style.transform = "scale(1.1)";
+                      e.currentTarget.style.color = "#ffffff";
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "scale(1)";
-                    e.currentTarget.style.color = "#b0b0b0";
+                    if (window.innerWidth > 768) {
+                      e.currentTarget.style.transform = "scale(1)";
+                      e.currentTarget.style.color = "#b0b0b0";
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    e.currentTarget.style.transform = "scale(0.95)";
+                    e.currentTarget.style.opacity = "0.8";
+                  }}
+                  onTouchEnd={(e) => {
+                    setTimeout(() => {
+                      e.currentTarget.style.transform = "scale(1)";
+                      e.currentTarget.style.opacity = "1";
+                    }, 150);
                   }}
                 >
                   <svg 
@@ -2248,24 +2342,40 @@ export const LandingPage: React.FC = () => {
                     e.stopPropagation();
                     navigate("/signup");
                   }}
-                  className="text-sm font-medium px-6 py-3 border rounded-full uppercase tracking-wider transition-all duration-300 ease-in-out hover:scale-110 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center gap-2"
+                  className="text-sm font-medium px-6 py-3 border rounded-full uppercase tracking-wider transition-all duration-300 ease-in-out hover:scale-110 active:scale-95 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center gap-2 touch-manipulation"
                   style={{ 
                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
                     color: "#b0b0b0",
                     borderColor: "rgba(176, 176, 176, 0.3)",
                     transition: "all 0.3s ease-in-out",
                     fontSize: "clamp(0.75rem, 3vw, 0.875rem)",
-                    padding: "clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 4vw, 1.5rem)",
-                    minWidth: "44px",
-                    minHeight: "44px",
+                    padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.25rem, 4vw, 1.75rem)",
+                    minWidth: "48px",
+                    minHeight: "48px",
+                    touchAction: "manipulation",
+                    WebkitTapHighlightColor: "rgba(176, 176, 176, 0.2)",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "scale(1.1)";
-                    e.currentTarget.style.color = "#ffffff";
+                    if (window.innerWidth > 768) {
+                      e.currentTarget.style.transform = "scale(1.1)";
+                      e.currentTarget.style.color = "#ffffff";
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "scale(1)";
-                    e.currentTarget.style.color = "#b0b0b0";
+                    if (window.innerWidth > 768) {
+                      e.currentTarget.style.transform = "scale(1)";
+                      e.currentTarget.style.color = "#b0b0b0";
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    e.currentTarget.style.transform = "scale(0.95)";
+                    e.currentTarget.style.opacity = "0.8";
+                  }}
+                  onTouchEnd={(e) => {
+                    setTimeout(() => {
+                      e.currentTarget.style.transform = "scale(1)";
+                      e.currentTarget.style.opacity = "1";
+                    }, 150);
                   }}
                 >
                   <span>Get Started</span>
@@ -2318,24 +2428,40 @@ export const LandingPage: React.FC = () => {
           onClick={() => {
             navigate("/signup");
           }}
-          className="text-xs font-medium px-4 py-2 border rounded uppercase tracking-wider transition-all duration-300 ease-in-out hover:scale-110 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20"
+          className="text-xs font-medium px-4 py-2 border rounded uppercase tracking-wider transition-all duration-300 ease-in-out hover:scale-110 active:scale-95 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 touch-manipulation"
           style={{ 
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
             color: "#b0b0b0",
             borderColor: "rgba(176, 176, 176, 0.3)",
             transition: "all 0.3s ease-in-out",
             fontSize: "clamp(0.625rem, 2.5vw, 0.75rem)",
-            padding: "clamp(0.5rem, 2vw, 0.75rem) clamp(0.75rem, 3vw, 1rem)",
-            minWidth: "44px",
-            minHeight: "44px",
+            padding: "clamp(0.625rem, 2.5vw, 0.875rem) clamp(0.875rem, 3.5vw, 1.25rem)",
+            minWidth: "48px",
+            minHeight: "48px",
+            touchAction: "manipulation",
+            WebkitTapHighlightColor: "rgba(176, 176, 176, 0.2)",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "scale(1.1)";
-            e.currentTarget.style.color = "#ffffff";
+            if (window.innerWidth > 768) {
+              e.currentTarget.style.transform = "scale(1.1)";
+              e.currentTarget.style.color = "#ffffff";
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "scale(1)";
-            e.currentTarget.style.color = "#b0b0b0";
+            if (window.innerWidth > 768) {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.color = "#b0b0b0";
+            }
+          }}
+          onTouchStart={(e) => {
+            e.currentTarget.style.transform = "scale(0.95)";
+            e.currentTarget.style.opacity = "0.8";
+          }}
+          onTouchEnd={(e) => {
+            setTimeout(() => {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.opacity = "1";
+            }, 150);
           }}
         >
           START MY TRANSFORMATION
@@ -2358,24 +2484,40 @@ export const LandingPage: React.FC = () => {
         <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40" style={{ bottom: 'clamp(4rem, 8vh, 5rem)' }}>
           <button
             onClick={() => scrollToSection(0)}
-            className="text-xs font-medium px-6 py-3 border rounded-full uppercase tracking-wider transition-all duration-300 ease-in-out hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center gap-2"
+            className="text-xs font-medium px-6 py-3 border rounded-full uppercase tracking-wider transition-all duration-300 ease-in-out hover:opacity-100 active:scale-95 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center gap-2 touch-manipulation"
             style={{ 
               fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
               color: "#b0b0b0",
               borderColor: "rgba(176, 176, 176, 0.3)",
               transition: "all 0.3s ease-in-out",
               fontSize: "clamp(0.75rem, 3vw, 0.875rem)",
-              padding: "clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 4vw, 1.5rem)",
-              minWidth: "44px",
-              minHeight: "44px",
+              padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.25rem, 4vw, 1.75rem)",
+              minWidth: "48px",
+              minHeight: "48px",
+              touchAction: "manipulation",
+              WebkitTapHighlightColor: "rgba(176, 176, 176, 0.2)",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "scale(1.1)";
-              e.currentTarget.style.color = "#ffffff";
+              if (window.innerWidth > 768) {
+                e.currentTarget.style.transform = "scale(1.1)";
+                e.currentTarget.style.color = "#ffffff";
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "scale(1)";
-              e.currentTarget.style.color = "#b0b0b0";
+              if (window.innerWidth > 768) {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.color = "#b0b0b0";
+              }
+            }}
+            onTouchStart={(e) => {
+              e.currentTarget.style.transform = "scale(0.95)";
+              e.currentTarget.style.opacity = "0.8";
+            }}
+            onTouchEnd={(e) => {
+              setTimeout(() => {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.opacity = "1";
+              }, 150);
             }}
           >
             <svg 

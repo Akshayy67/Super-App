@@ -91,14 +91,11 @@ export const VideoMeeting: React.FC = () => {
 
   // Auto-join if skipLobby is true - only once
   useEffect(() => {
-    if (skipLobby && autoJoinMeetingId && user && !hasAutoJoinedRef.current && isInLobby) {
+    if (skipLobby && autoJoinMeetingId && user && !hasAutoJoinedRef.current) {
       hasAutoJoinedRef.current = true;
+      // Auto-join immediately when user is available and skipLobby is true
       const timer = setTimeout(() => {
-        if (isInLobby) {
-          handleJoinMeeting(autoJoinMeetingId);
-        } else {
-          hasAutoJoinedRef.current = false;
-        }
+        handleJoinMeeting(autoJoinMeetingId);
       }, 100);
       return () => clearTimeout(timer);
     }
@@ -890,7 +887,7 @@ export const VideoMeeting: React.FC = () => {
 
   const copyMeetingLink = () => {
     if (currentMeetingId) {
-      const link = `${window.location.origin}/meeting?id=${currentMeetingId}`;
+      const link = `${window.location.origin}/meeting?id=${currentMeetingId}&skipLobby=true`;
       navigator.clipboard.writeText(link);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);

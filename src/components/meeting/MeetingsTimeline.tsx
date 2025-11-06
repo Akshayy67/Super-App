@@ -164,7 +164,7 @@ export const MeetingsTimeline: React.FC = () => {
     if (!joinMeetingId) return;
     setShowMeetingModal(null);
     setJoinMeetingId("");
-    navigate(`/meeting?id=${joinMeetingId}`);
+    navigate(`/meeting?id=${joinMeetingId}&skipLobby=true`);
   };
 
   const handleScheduleMeeting = async () => {
@@ -232,7 +232,7 @@ export const MeetingsTimeline: React.FC = () => {
   };
 
   const handleJoinVideoMeeting = (meetingId: string) => {
-    navigate(`/meeting?id=${meetingId}`);
+    navigate(`/meeting?id=${meetingId}&skipLobby=true`);
     setShowDetails(false);
     setSelectedMeeting(null);
   };
