@@ -36,7 +36,10 @@ export class ResumeExport {
       .filter((s) => s.visible)
       .sort((a, b) => a.order - b.order);
 
-    for (const section of sortedSections) {
+    for (let i = 0; i < sortedSections.length; i++) {
+      const section = sortedSections[i];
+      const isLastSection = i === sortedSections.length - 1;
+
       // Check if we need a new page
       if (yPosition > pageHeight - margins.bottom - 30) {
         pdf.addPage();
@@ -46,28 +49,42 @@ export class ResumeExport {
       // Render section based on type
       switch (section.type) {
         case "header":
-          yPosition = this.renderHeader(pdf, section.content, margins.left, yPosition, contentWidth);
+          yPosition = this.renderHeader(pdf, section.content, margins.left, yPosition, contentWidth, pageHeight, margins);
           break;
         case "summary":
-          yPosition = this.renderSummary(pdf, section.content, margins.left, yPosition, contentWidth);
+          yPosition = this.renderSummary(pdf, section.content, margins.left, yPosition, contentWidth, pageHeight, margins);
           break;
         case "experience":
-          yPosition = this.renderExperience(pdf, section.content, margins.left, yPosition, contentWidth);
+          yPosition = this.renderExperience(pdf, section.content, margins.left, yPosition, contentWidth, pageHeight, margins);
           break;
         case "education":
-          yPosition = this.renderEducation(pdf, section.content, margins.left, yPosition, contentWidth);
+          yPosition = this.renderEducation(pdf, section.content, margins.left, yPosition, contentWidth, pageHeight, margins);
           break;
         case "skills":
-          yPosition = this.renderSkills(pdf, section.content, margins.left, yPosition, contentWidth);
+          yPosition = this.renderSkills(pdf, section.content, margins.left, yPosition, contentWidth, pageHeight, margins);
           break;
         case "projects":
-          yPosition = this.renderProjects(pdf, section.content, margins.left, yPosition, contentWidth);
+          yPosition = this.renderProjects(pdf, section.content, margins.left, yPosition, contentWidth, pageHeight, margins);
+          break;
+        case "certifications":
+          yPosition = this.renderCertifications(pdf, section.content, margins.left, yPosition, contentWidth, pageHeight, margins);
+          break;
+        case "awards":
+          yPosition = this.renderAwards(pdf, section.content, margins.left, yPosition, contentWidth, pageHeight, margins);
           break;
         default:
-          yPosition = this.renderGenericSection(pdf, section, margins.left, yPosition, contentWidth);
+          yPosition = this.renderGenericSection(pdf, section, margins.left, yPosition, contentWidth, pageHeight, margins);
       }
 
-      yPosition += 10; // Spacing between sections
+      // Only add spacing if not the last section
+      if (!isLastSection) {
+        // Reduce spacing after header section
+        if (section.type === "header") {
+          yPosition += 2; // Minimal spacing after header
+        } else {
+          yPosition += 6; // Normal spacing between other sections
+        }
+      }
     }
 
     // Add page numbers if enabled
@@ -95,11 +112,16 @@ export class ResumeExport {
     content: any,
     x: number,
     y: number,
-    width: number
+    width: number,
+    pageHeight: number,
+    margins: { top: number; right: number; bottom: number; left: number }
   ): number {
-    pdf.setFontSize(18);
+    // Center align header
+    const centerX = x + width / 2;
+    
+    pdf.setFontSize(20);
     pdf.setFont("helvetica", "bold");
-    pdf.text(content.fullName || "", x, y, { maxWidth: width });
+    pdf.text(content.fullName || "", centerX, y, { align: "center", maxWidth: width });
     y += 8;
 
     pdf.setFontSize(10);
@@ -109,7 +131,7 @@ export class ResumeExport {
       content.phone,
       content.location,
     ].filter(Boolean).join(" | ");
-    pdf.text(contactInfo, x, y, { maxWidth: width });
+    pdf.text(contactInfo, centerX, y, { align: "center", maxWidth: width });
     y += 5;
 
     if (content.linkedin || content.github || content.portfolio) {
@@ -118,9 +140,17 @@ export class ResumeExport {
         content.github ? `GitHub: ${content.github}` : "",
         content.portfolio ? `Portfolio: ${content.portfolio}` : "",
       ].filter(Boolean).join(" | ");
-      pdf.text(links, x, y, { maxWidth: width });
+      pdf.setFontSize(9);
+      pdf.text(links, centerX, y, { align: "center", maxWidth: width });
       y += 5;
     }
+
+    // Add border line
+    y += 3;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.5);
+    pdf.line(x, y, x + width, y);
+    y += 4; // Reduced spacing after header
 
     return y;
   }
@@ -130,20 +160,28 @@ export class ResumeExport {
     content: string,
     x: number,
     y: number,
-    width: number
+    width: number,
+    pageHeight: number,
+    margins: { top: number; right: number; bottom: number; left: number }
   ): number {
     if (!content) return y;
 
-    pdf.setFontSize(12);
+    // Section header with border
+    pdf.setFontSize(13);
     pdf.setFont("helvetica", "bold");
     pdf.text("Professional Summary", x, y);
+    y += 2;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.3);
+    pdf.line(x, y, x + width, y);
     y += 6;
 
     pdf.setFontSize(10);
     pdf.setFont("helvetica", "normal");
     const lines = pdf.splitTextToSize(content, width);
     pdf.text(lines, x, y);
-    y += lines.length * 5;
+    y += lines.length * 4.5;
+    // No extra spacing - spacing handled by section loop
 
     return y;
   }
@@ -153,13 +191,20 @@ export class ResumeExport {
     content: any[],
     x: number,
     y: number,
-    width: number
+    width: number,
+    pageHeight: number,
+    margins: { top: number; right: number; bottom: number; left: number }
   ): number {
     if (!Array.isArray(content) || content.length === 0) return y;
 
-    pdf.setFontSize(12);
+    // Section header with border
+    pdf.setFontSize(13);
     pdf.setFont("helvetica", "bold");
     pdf.text("Work Experience", x, y);
+    y += 2;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.3);
+    pdf.line(x, y, x + width, y);
     y += 8;
 
     pdf.setFontSize(10);
@@ -167,23 +212,28 @@ export class ResumeExport {
 
     for (const exp of content) {
       // Check page break
-      if (y > pdf.internal.pageSize.getHeight() - 40) {
+      if (y > pageHeight - margins.bottom - 40) {
         pdf.addPage();
-        y = 20;
+        y = margins.top;
       }
 
-      // Job title and company
+      // Job title and company on same line
       pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
       pdf.text(exp.jobTitle || "", x, y);
-      const companyText = `${exp.company || ""}${exp.location ? `, ${exp.location}` : ""}`;
+      
+      // Date range on the right
+      const dateRange = `${exp.startDate || ""} - ${exp.endDate || ""}`;
       pdf.setFont("helvetica", "normal");
-      pdf.text(companyText, x + 60, y);
+      pdf.setFontSize(9);
+      const dateWidth = pdf.getTextWidth(dateRange);
+      pdf.text(dateRange, x + width - dateWidth, y);
       y += 5;
 
-      // Date range
-      const dateRange = `${exp.startDate || ""} - ${exp.endDate || ""}`;
-      pdf.setFontSize(9);
-      pdf.text(dateRange, x, y);
+      // Company and location
+      pdf.setFontSize(10);
+      const companyText = `${exp.company || ""}${exp.location ? `, ${exp.location}` : ""}`;
+      pdf.text(companyText, x, y);
       y += 5;
 
       // Description
@@ -191,19 +241,27 @@ export class ResumeExport {
         pdf.setFontSize(10);
         const descLines = pdf.splitTextToSize(exp.description, width);
         pdf.text(descLines, x, y);
-        y += descLines.length * 5;
+        y += descLines.length * 4.5;
       }
 
       // Achievements
       if (exp.achievements && exp.achievements.length > 0) {
         pdf.setFontSize(9);
         for (const achievement of exp.achievements) {
-          pdf.text(`• ${achievement}`, x + 5, y, { maxWidth: width - 5 });
-          y += 5;
+          const achievementLines = pdf.splitTextToSize(`• ${achievement}`, width - 5);
+          pdf.text(achievementLines, x + 5, y);
+          y += achievementLines.length * 4.5;
         }
       }
 
-      y += 5; // Spacing between experiences
+      // Technologies
+      if (exp.technologies && exp.technologies.length > 0) {
+        pdf.setFontSize(8);
+        pdf.text(`Technologies: ${exp.technologies.join(", ")}`, x, y);
+        y += 4;
+      }
+
+      y += 6; // Spacing between experiences
     }
 
     return y;
@@ -214,41 +272,63 @@ export class ResumeExport {
     content: any[],
     x: number,
     y: number,
-    width: number
+    width: number,
+    pageHeight: number,
+    margins: { top: number; right: number; bottom: number; left: number }
   ): number {
     if (!Array.isArray(content) || content.length === 0) return y;
 
-    pdf.setFontSize(12);
+    // Section header with border
+    pdf.setFontSize(13);
     pdf.setFont("helvetica", "bold");
     pdf.text("Education", x, y);
+    y += 2;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.3);
+    pdf.line(x, y, x + width, y);
     y += 8;
 
     pdf.setFontSize(10);
     pdf.setFont("helvetica", "normal");
 
     for (const edu of content) {
+      // Check page break
+      if (y > pageHeight - margins.bottom - 30) {
+        pdf.addPage();
+        y = margins.top;
+      }
+
+      // Degree and date on same line
       pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
       pdf.text(edu.degree || "", x, y);
+      
+      const dateRange = `${edu.startDate || ""} - ${edu.endDate || ""}`;
       pdf.setFont("helvetica", "normal");
-      pdf.text(edu.institution || "", x + 60, y);
+      pdf.setFontSize(9);
+      const dateWidth = pdf.getTextWidth(dateRange);
+      pdf.text(dateRange, x + width - dateWidth, y);
       y += 5;
+
+      // Institution
+      pdf.setFontSize(10);
+      pdf.text(edu.institution || "", x, y);
+      y += 4;
 
       if (edu.location) {
         pdf.setFontSize(9);
         pdf.text(edu.location, x, y);
-        y += 5;
+        y += 4;
       }
 
-      const dateRange = `${edu.startDate || ""} - ${edu.endDate || ""}`;
-      pdf.text(dateRange, x, y);
-      y += 5;
-
+      // GPA or percentage
       if (edu.gpa) {
+        pdf.setFontSize(9);
         pdf.text(`GPA: ${edu.gpa}`, x, y);
-        y += 5;
+        y += 4;
       }
 
-      y += 3;
+      y += 4; // Spacing between education entries
     }
 
     return y;
@@ -259,22 +339,57 @@ export class ResumeExport {
     content: any[],
     x: number,
     y: number,
-    width: number
+    width: number,
+    pageHeight: number,
+    margins: { top: number; right: number; bottom: number; left: number }
   ): number {
     if (!Array.isArray(content) || content.length === 0) return y;
 
-    pdf.setFontSize(12);
+    // Section header with border
+    pdf.setFontSize(13);
     pdf.setFont("helvetica", "bold");
     pdf.text("Skills", x, y);
+    y += 2;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.3);
+    pdf.line(x, y, x + width, y);
     y += 8;
 
     pdf.setFontSize(10);
     pdf.setFont("helvetica", "normal");
 
-    const skillsText = content.map((s: any) => s.name).join(", ");
-    const lines = pdf.splitTextToSize(skillsText, width);
-    pdf.text(lines, x, y);
-    y += lines.length * 5;
+    // Group skills by category if available
+    const skillsByCategory: { [key: string]: string[] } = {};
+    content.forEach((skill: any) => {
+      const category = skill.category || "General";
+      if (!skillsByCategory[category]) {
+        skillsByCategory[category] = [];
+      }
+      skillsByCategory[category].push(skill.name);
+    });
+
+    // Render skills
+    Object.keys(skillsByCategory).forEach((category) => {
+      if (y > pageHeight - margins.bottom - 20) {
+        pdf.addPage();
+        y = margins.top;
+      }
+
+      if (Object.keys(skillsByCategory).length > 1) {
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(10);
+        pdf.text(`${category}:`, x, y);
+        y += 5;
+      }
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+      const skillsText = skillsByCategory[category].join(", ");
+      const lines = pdf.splitTextToSize(skillsText, width);
+      pdf.text(lines, x, y);
+      y += lines.length * 4.5;
+      y += 3;
+    });
 
     return y;
   }
@@ -284,37 +399,163 @@ export class ResumeExport {
     content: any[],
     x: number,
     y: number,
-    width: number
+    width: number,
+    pageHeight: number,
+    margins: { top: number; right: number; bottom: number; left: number }
   ): number {
     if (!Array.isArray(content) || content.length === 0) return y;
 
-    pdf.setFontSize(12);
+    // Section header with border
+    pdf.setFontSize(13);
     pdf.setFont("helvetica", "bold");
     pdf.text("Projects", x, y);
+    y += 2;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.3);
+    pdf.line(x, y, x + width, y);
     y += 8;
 
     pdf.setFontSize(10);
     pdf.setFont("helvetica", "normal");
 
     for (const proj of content) {
+      // Check page break
+      if (y > pageHeight - margins.bottom - 40) {
+        pdf.addPage();
+        y = margins.top;
+      }
+
       pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
       pdf.text(proj.name || "", x, y);
       y += 5;
 
       if (proj.description) {
         pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
         const descLines = pdf.splitTextToSize(proj.description, width);
         pdf.text(descLines, x, y);
-        y += descLines.length * 5;
+        y += descLines.length * 4.5;
       }
 
       if (proj.technologies && proj.technologies.length > 0) {
         pdf.setFontSize(9);
         pdf.text(`Technologies: ${proj.technologies.join(", ")}`, x, y);
-        y += 5;
+        y += 4;
       }
 
-      y += 5;
+      y += 6; // Spacing between projects
+    }
+
+    return y;
+  }
+
+  private static renderCertifications(
+    pdf: jsPDF,
+    content: any[],
+    x: number,
+    y: number,
+    width: number,
+    pageHeight: number,
+    margins: { top: number; right: number; bottom: number; left: number }
+  ): number {
+    if (!Array.isArray(content) || content.length === 0) return y;
+
+    // Section header with border
+    pdf.setFontSize(13);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Certifications", x, y);
+    y += 2;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.3);
+    pdf.line(x, y, x + width, y);
+    y += 8;
+
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "normal");
+
+    for (const cert of content) {
+      if (y > pageHeight - margins.bottom - 20) {
+        pdf.addPage();
+        y = margins.top;
+      }
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      pdf.text(cert.name || "", x, y);
+      y += 4;
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+      const issuerText = cert.issuer || "";
+      const dateText = cert.date ? ` • ${cert.date}` : "";
+      pdf.text(`${issuerText}${dateText}`, x, y);
+      y += 4;
+
+      if (cert.credentialId) {
+        pdf.setFontSize(8);
+        pdf.text(`Credential ID: ${cert.credentialId}`, x, y);
+        y += 4;
+      }
+
+      y += 3;
+    }
+
+    return y;
+  }
+
+  private static renderAwards(
+    pdf: jsPDF,
+    content: any[],
+    x: number,
+    y: number,
+    width: number,
+    pageHeight: number,
+    margins: { top: number; right: number; bottom: number; left: number }
+  ): number {
+    if (!Array.isArray(content) || content.length === 0) return y;
+
+    // Section header with border
+    pdf.setFontSize(13);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Honors & Awards", x, y);
+    y += 2;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.3);
+    pdf.line(x, y, x + width, y);
+    y += 8;
+
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "normal");
+
+    for (const award of content) {
+      if (y > pageHeight - margins.bottom - 30) {
+        pdf.addPage();
+        y = margins.top;
+      }
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      pdf.text(award.title || "", x, y);
+      y += 4;
+
+      if (award.issuer) {
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9);
+        const issuerText = award.issuer;
+        const dateText = award.date ? ` • ${award.date}` : "";
+        pdf.text(`${issuerText}${dateText}`, x, y);
+        y += 4;
+      }
+
+      if (award.description) {
+        pdf.setFontSize(9);
+        const descLines = pdf.splitTextToSize(award.description, width);
+        pdf.text(descLines, x, y);
+        y += descLines.length * 4;
+      }
+
+      y += 3;
     }
 
     return y;
@@ -325,11 +566,18 @@ export class ResumeExport {
     section: any,
     x: number,
     y: number,
-    width: number
+    width: number,
+    pageHeight: number,
+    margins: { top: number; right: number; bottom: number; left: number }
   ): number {
-    pdf.setFontSize(12);
+    // Section header with border
+    pdf.setFontSize(13);
     pdf.setFont("helvetica", "bold");
     pdf.text(section.title, x, y);
+    y += 2;
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.3);
+    pdf.line(x, y, x + width, y);
     y += 8;
 
     pdf.setFontSize(10);
@@ -337,7 +585,7 @@ export class ResumeExport {
     const content = JSON.stringify(section.content);
     const lines = pdf.splitTextToSize(content, width);
     pdf.text(lines, x, y);
-    y += lines.length * 5;
+    y += lines.length * 4.5;
 
     return y;
   }
@@ -364,4 +612,5 @@ export class ResumeExport {
     URL.revokeObjectURL(url);
   }
 }
+
 

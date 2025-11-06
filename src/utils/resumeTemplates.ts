@@ -142,6 +142,22 @@ export const DEFAULT_RESUME_DATA: ResumeData = {
       order: 5,
       visible: true,
     },
+    {
+      id: "certifications-1",
+      type: "certifications",
+      title: "Certifications",
+      content: [],
+      order: 6,
+      visible: true,
+    },
+    {
+      id: "awards-1",
+      type: "awards",
+      title: "Honors & Awards",
+      content: [],
+      order: 7,
+      visible: true,
+    },
   ],
   metadata: {
     createdAt: new Date().toISOString(),
