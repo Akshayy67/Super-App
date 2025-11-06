@@ -359,20 +359,18 @@ class CallService {
     try {
       await webRTCService.setRemoteDescription(remoteUserId, answer);
     } catch (error: any) {
-      // If answer fails due to wrong state, it might be an ICE restart answer
-      // Check if we should ignore it (already processed) or handle it
-      if (error?.message?.includes('invalid state')) {
+      // If answer fails due to wrong state, check if we should ignore it
+      if (error?.message?.includes('invalid state') || error?.message?.includes('wrong state')) {
         const existingPC = webRTCService.getPeerConnection(remoteUserId);
         if (existingPC && existingPC.signalingState === 'stable') {
-          // This might be a duplicate answer from ICE restart - check if it's actually an ICE restart
-          const isIceRestart = answer.sdp?.includes('ice-ufrag');
-          if (isIceRestart) {
-            console.log('🔄 ICE restart answer received but connection already stable - may be duplicate, ignoring');
-            return; // Ignore duplicate ICE restart answers
-          }
+          // Answer arrived in stable state - this is a duplicate or out-of-order answer
+          // The setRemoteDescription method will have already handled this gracefully
+          console.log('🔄 Answer received in stable state - duplicate or out-of-order, already handled');
+          return; // Silently ignore - already handled in setRemoteDescription
         }
       }
-      throw error; // Re-throw if not handled
+      // For other errors, log but don't throw - connection might still work
+      console.warn('⚠️ Error handling answer (non-fatal):', error?.message);
     }
   }
 

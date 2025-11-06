@@ -14,6 +14,7 @@ class WebRTCService {
   private maxReconnectionAttempts = 10; // Increased attempts for better reliability
   private connectionStartTimes: Map<string, number> = new Map(); // Track when connection started
   private useRelayOnly: Map<string, boolean> = new Map(); // Force TURN relay for problematic connections
+  private pendingIceRestartOffers: Map<string, string> = new Map(); // Track pending ICE restart offers by SDP fingerprint
   private configuration: RTCConfiguration = {
     iceServers: [
       // Google STUN servers (multiple for redundancy)
@@ -761,7 +762,17 @@ class WebRTCService {
       sdpLength: offer.sdp?.length,
       iceRestart: iceRestart
     });
+    
+    // Set local description BEFORE returning - this ensures state is correct
     await peerConnection.setLocalDescription(offer);
+    
+    // Track this offer if it's an ICE restart
+    if (iceRestart && offer.sdp) {
+      const fingerprint = this.getSdpFingerprint(offer.sdp);
+      this.pendingIceRestartOffers.set(userId, fingerprint);
+      console.log(`📌 Tracking ICE restart offer for ${userId}`);
+    }
+    
     return offer;
   }
 
@@ -807,19 +818,25 @@ class WebRTCService {
     const hasLocalOffer = !!peerConnection.localDescription;
     const hasRemoteDescription = !!peerConnection.remoteDescription;
     
-    // Detect if this is an ICE restart:
-    // - Offer in stable state = ICE restart offer
-    // - Answer in stable state with local offer = ICE restart answer
-    const isIceRestart = (description.type === 'offer' && currentState === 'stable') ||
-                         (description.type === 'answer' && currentState === 'stable' && hasLocalOffer);
+    // Detect if this is an ICE restart offer (offer in stable state)
+    const isIceRestartOffer = description.type === 'offer' && currentState === 'stable';
     
-    console.log(`📋 Setting remote description for ${userId}, current state: ${currentState}, type: ${description.type}, isIceRestart: ${isIceRestart}, hasLocalOffer: ${hasLocalOffer}`);
+    // For answers, we can only accept them if we're in the correct state
+    // WebRTC doesn't allow setting answer in stable state, even for ICE restarts
+    const canAcceptAnswer = currentState === 'have-local-offer' || currentState === 'have-remote-offer';
+    
+    console.log(`📋 Setting remote description for ${userId}, current state: ${currentState}, type: ${description.type}, isIceRestartOffer: ${isIceRestartOffer}, canAcceptAnswer: ${canAcceptAnswer}`);
 
     // Validate state transitions
     if (description.type === 'offer') {
       // Allow ICE restart offers even in stable state
-      if (isIceRestart && currentState === 'stable') {
+      if (isIceRestartOffer && currentState === 'stable') {
         console.log('🔄 ICE restart offer detected - allowing in stable state');
+        // Store a fingerprint of this offer to track it
+        if (description.sdp) {
+          const fingerprint = this.getSdpFingerprint(description.sdp);
+          this.pendingIceRestartOffers.set(userId, fingerprint);
+        }
         // Skip validation, proceed to setRemoteDescription
       } else if (currentState !== 'stable' && currentState !== 'have-local-offer') {
         console.warn(`⚠️ Cannot set remote offer in state ${currentState}, resetting connection`);
@@ -829,22 +846,28 @@ class WebRTCService {
         throw new Error(`Cannot set remote offer: invalid state ${currentState}`);
       }
     } else if (description.type === 'answer') {
-      // Allow ICE restart answers even in stable state (if we have a local offer)
-      if (isIceRestart && currentState === 'stable' && hasLocalOffer) {
-        console.log('🔄 ICE restart answer detected - allowing in stable state');
-        // Skip validation, proceed to setRemoteDescription
-      } else if (currentState !== 'have-local-offer' && currentState !== 'have-remote-offer') {
-        console.warn(`⚠️ Cannot set remote answer in state ${currentState}`);
-        // If we have a local offer, we can proceed
-        if (currentState !== 'have-local-offer') {
-          throw new Error(`Cannot set remote answer: invalid state ${currentState}`);
+      // CRITICAL: WebRTC browser API doesn't allow setting answer in stable state
+      // Only accept answers when we're in have-local-offer or have-remote-offer state
+      if (!canAcceptAnswer) {
+        // Check if this might be a duplicate/out-of-order answer
+        if (currentState === 'stable') {
+          console.warn(`⚠️ Received answer in stable state for ${userId} - likely duplicate or out-of-order, ignoring`);
+          // This is a duplicate or out-of-order answer - ignore it
+          return; // Silently ignore instead of throwing error
         }
+        console.warn(`⚠️ Cannot set remote answer in state ${currentState}`);
+        throw new Error(`Cannot set remote answer: invalid state ${currentState}`);
       }
     }
 
     try {
       await peerConnection.setRemoteDescription(new RTCSessionDescription(description));
       console.log(`✅ Set remote ${description.type} for ${userId}, new state: ${peerConnection.signalingState}`);
+      
+      // Clear pending ICE restart offer if this was an answer
+      if (description.type === 'answer' && this.pendingIceRestartOffers.has(userId)) {
+        this.pendingIceRestartOffers.delete(userId);
+      }
       
       // Process any pending ICE candidates for this user
       const pendingCandidates = this.pendingIceCandidates.get(userId);
@@ -861,6 +884,10 @@ class WebRTCService {
       }
     } catch (error) {
       console.error(`❌ Error setting remote description for ${userId}:`, error);
+      // Clear pending ICE restart offer on error
+      if (description.type === 'answer') {
+        this.pendingIceRestartOffers.delete(userId);
+      }
       throw error;
     }
   }
@@ -951,6 +978,7 @@ class WebRTCService {
     this.connectionStartTimes.delete(userId);
     this.reconnectionAttempts.delete(userId);
     this.useRelayOnly.delete(userId);
+    this.pendingIceRestartOffers.delete(userId);
   }
 
   // Close all connections
@@ -1215,6 +1243,15 @@ class WebRTCService {
   // Get reconnection attempt count for a user
   getReconnectionAttempts(userId: string): number {
     return this.reconnectionAttempts.get(userId) || 0;
+  }
+  
+  // Helper to get SDP fingerprint for tracking
+  private getSdpFingerprint(sdp: string): string {
+    // Extract a simple fingerprint from SDP (first few lines + ice-ufrag)
+    const lines = sdp.split('\n');
+    const ufragLine = lines.find(l => l.includes('ice-ufrag'));
+    const firstLine = lines[0] || '';
+    return `${firstLine.substring(0, 20)}_${ufragLine?.substring(0, 30) || ''}`;
   }
 }
 
