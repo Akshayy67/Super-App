@@ -19,6 +19,7 @@ import {
   Sparkles,
   Info,
   Target,
+  FileText,
 } from "lucide-react";
 import { gsap } from "gsap";
 import * as THREE from "three";
@@ -85,6 +86,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: "Interview Prep",
       icon: Briefcase,
       path: "/interview",
+    },
+    {
+      id: "resume-builder",
+      label: "Resume Builder",
+      icon: FileText,
+      path: "/resume-builder",
     },
     { id: "team", label: "Team Space", icon: Users, path: "/team" },
     { id: "community", label: "Community", icon: MessageCircle, path: "/community" },

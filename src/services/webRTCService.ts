@@ -319,26 +319,32 @@ class WebRTCService {
       }
     };
     
-    // Add connection timeout monitoring
+    // Add connection timeout monitoring - be more aggressive
     const connectionTimeout = setTimeout(() => {
       const currentState = peerConnection.connectionState;
       const currentIceState = peerConnection.iceConnectionState;
       const startTime = this.connectionStartTimes.get(userId);
       const elapsed = startTime ? Date.now() - startTime : 0;
       
-      // If we've been trying for more than 10 seconds and still not connected
-      if (elapsed > 10000 && 
+      // If we've been trying for more than 5 seconds and still not connected, force relay-only
+      if (elapsed > 5000 && 
           currentState !== 'connected' && 
           currentIceState !== 'connected' && 
           currentIceState !== 'completed') {
         console.warn(`⏱️ Connection timeout for ${userId} after ${elapsed}ms, forcing relay-only mode`);
-        // Force relay-only mode
+        // Force relay-only mode immediately
         if (!this.useRelayOnly.get(userId)) {
           this.useRelayOnly.set(userId, true);
-          this.attemptReconnection(userId, true);
+          // Close and recreate with relay-only
+          peerConnection.close();
+          this.peerConnections.delete(userId);
+          // Trigger immediate reconnection with relay-only
+          setTimeout(() => {
+            this.attemptReconnection(userId, true);
+          }, 100);
         }
       }
-    }, 10000); // 10 second timeout
+    }, 5000); // Reduced to 5 second timeout for faster relay fallback
     
     // Clear timeout when connection is established
     peerConnection.addEventListener('connectionstatechange', () => {
@@ -637,9 +643,9 @@ class WebRTCService {
         const elapsed = startTime ? Date.now() - startTime : 0;
         const isInitialConnection = signalingState === 'have-local-offer' || signalingState === 'have-remote-offer' || signalingState === 'stable';
         
-        // More aggressive reconnection - don't wait as long
-        // If we've been trying for more than 2 seconds, reconnect immediately
-        const waitTime = elapsed > 2000 ? 500 : (isInitialConnection ? 2000 : 1000);
+        // More aggressive reconnection - reconnect very quickly
+        // If we've been trying for more than 1 second, reconnect immediately
+        const waitTime = elapsed > 1000 ? 300 : (isInitialConnection ? 1000 : 500);
         
         setTimeout(() => {
           const currentIceState = peerConnection.iceConnectionState;
@@ -821,8 +827,9 @@ class WebRTCService {
     // Detect if this is an ICE restart offer (offer in stable state)
     const isIceRestartOffer = description.type === 'offer' && currentState === 'stable';
     
-    // For answers, we can only accept them if we're in the correct state
-    // WebRTC doesn't allow setting answer in stable state, even for ICE restarts
+    // CRITICAL: WebRTC browser API NEVER allows setting answer in stable state
+    // Answers can ONLY be set in "have-local-offer" or "have-remote-offer" states
+    // If we're in stable state and receive an answer, it's a duplicate/out-of-order message
     const canAcceptAnswer = currentState === 'have-local-offer' || currentState === 'have-remote-offer';
     
     console.log(`📋 Setting remote description for ${userId}, current state: ${currentState}, type: ${description.type}, isIceRestartOffer: ${isIceRestartOffer}, canAcceptAnswer: ${canAcceptAnswer}`);
@@ -846,15 +853,15 @@ class WebRTCService {
         throw new Error(`Cannot set remote offer: invalid state ${currentState}`);
       }
     } else if (description.type === 'answer') {
-      // CRITICAL: WebRTC browser API doesn't allow setting answer in stable state
-      // Only accept answers when we're in have-local-offer or have-remote-offer state
+      // CRITICAL: Answers CANNOT be set in stable state - browser API enforces this
+      // If we're in stable state, this is a duplicate/out-of-order answer - ignore it
+      if (currentState === 'stable') {
+        console.warn(`⚠️ Received answer in stable state for ${userId} - duplicate or out-of-order, ignoring silently`);
+        return; // Silently ignore - this is expected for duplicate/out-of-order messages
+      }
+      
+      // Only accept answers in the correct states
       if (!canAcceptAnswer) {
-        // Check if this might be a duplicate/out-of-order answer
-        if (currentState === 'stable') {
-          console.warn(`⚠️ Received answer in stable state for ${userId} - likely duplicate or out-of-order, ignoring`);
-          // This is a duplicate or out-of-order answer - ignore it
-          return; // Silently ignore instead of throwing error
-        }
         console.warn(`⚠️ Cannot set remote answer in state ${currentState}`);
         throw new Error(`Cannot set remote answer: invalid state ${currentState}`);
       }
@@ -1162,8 +1169,8 @@ class WebRTCService {
     this.reconnectionAttempts.set(userId, attempts + 1);
     console.log(`🔄 Attempting reconnection ${attempts + 1}/${this.maxReconnectionAttempts} for ${userId}`);
     
-    // After 3 failed attempts, try forcing relay-only mode
-    if (attempts >= 3 && !this.useRelayOnly.get(userId)) {
+    // After 2 failed attempts, try forcing relay-only mode (more aggressive)
+    if (attempts >= 2 && !this.useRelayOnly.get(userId)) {
       console.log(`🔄 Switching to relay-only mode for ${userId} after ${attempts} failed attempts`);
       this.useRelayOnly.set(userId, true);
       // Close and recreate with relay-only
@@ -1225,8 +1232,6 @@ class WebRTCService {
       return;
     }
     
-    // Get the ICE candidate callback (we need to recreate the connection)
-    // This is a fallback - ideally the ICE restart should work
     console.log(`🔄 Recreating connection with relay-only for ${userId}`);
     
     // Close existing connection
@@ -1236,8 +1241,11 @@ class WebRTCService {
     // Force relay-only for this user
     this.useRelayOnly.set(userId, true);
     
+    // Reset connection start time for new attempt
+    this.connectionStartTimes.set(userId, Date.now());
+    
     // Note: The actual recreation will happen when the ICE restart offer is handled
-    // or when a new offer/answer is created. This method mainly sets the flag.
+    // The ICE restart offer callback will trigger a new connection attempt with relay-only config
   }
 
   // Get reconnection attempt count for a user

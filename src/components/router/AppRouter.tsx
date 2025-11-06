@@ -29,6 +29,7 @@ import { SignupPage } from "../auth/SignupPage";
 import { StudyPlanManager } from "../studyPlan/StudyPlan";
 import { SubscriptionPage } from "../SubscriptionPage";
 import { ContactForm } from "../ContactForm";
+import { ResumeBuilderPage } from "../resumeBuilder/ResumeBuilderPage";
 
 interface AppRouterProps {
   invitationData: {
@@ -191,6 +192,14 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         element={
           <BlockedUserGuard>
             <PageTransitionWrapper><InterviewPrep /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/resume-builder" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><ResumeBuilderPage /></PageTransitionWrapper>
           </BlockedUserGuard>
         } 
       />
