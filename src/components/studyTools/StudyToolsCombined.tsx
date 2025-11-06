@@ -11,18 +11,12 @@ export const StudyToolsCombined: React.FC = () => {
     if (segments.length >= 2 && segments[0] === "tools") {
       return segments[1]; // Get the subroute after /tools/
     }
-    return "study-tools";
+    return "study-plans";
   };
 
   const activeTab = getActiveTab(location.pathname);
 
   const tabs = [
-    {
-      id: "study-tools",
-      label: "Study Tools",
-      icon: Brain,
-      path: "/tools/study-tools",
-    },
     {
       id: "study-plans",
       label: "Study Plans",
@@ -34,6 +28,12 @@ export const StudyToolsCombined: React.FC = () => {
       label: "Flash Cards",
       icon: BookOpen,
       path: "/tools/flashcards",
+    },
+    {
+      id: "study-tools",
+      label: "Others",
+      icon: Brain,
+      path: "/tools/study-tools",
     },
   ];
 

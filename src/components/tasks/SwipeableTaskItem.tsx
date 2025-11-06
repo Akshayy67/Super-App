@@ -206,7 +206,13 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
   return (
     <div className="relative overflow-hidden rounded-lg swipeable-task-item">
       {/* Background Actions */}
-      <div className="absolute inset-0 flex swipe-action-bg">
+      <div 
+        className="absolute inset-0 z-0 flex swipe-action-bg"
+        style={{
+          opacity: swipeOffset !== 0 ? 1 : 0,
+          pointerEvents: swipeOffset !== 0 ? 'auto' : 'none',
+        }}
+      >
         {/* Right action (complete/undo) */}
         <div
           className={`flex items-center justify-center w-20 sm:w-24 transition-all duration-200 ${
@@ -256,7 +262,7 @@ export const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
       {/* Main Task Content */}
       <div
         ref={containerRef}
-        className={`relative border rounded-lg p-3 sm:p-4 transition-all cursor-grab active:cursor-grabbing ${
+        className={`relative z-10 border rounded-lg p-3 sm:p-4 transition-all cursor-grab active:cursor-grabbing ${
           isDragging ? "shadow-lg dragging" : "hover:shadow-md"
         } ${swipeOffset !== 0 ? swipeColorClasses : baseStateClasses}`}
         style={{

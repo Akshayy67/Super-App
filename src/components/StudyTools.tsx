@@ -1,5 +1,4 @@
 import React, { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Brain,
   FileText,
@@ -11,8 +10,6 @@ import {
   X,
   File,
   Image,
-  Target,
-  Map,
 } from "lucide-react";
 import { unifiedAIService } from "../utils/aiConfig";
 import { driveStorageUtils } from "../utils/driveStorage";
@@ -27,7 +24,6 @@ interface ToolResult {
 }
 
 export const StudyTools: React.FC = () => {
-  const navigate = useNavigate();
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [inputText, setInputText] = useState("");
   const [selectedDocument, setSelectedDocument] = useState("");
@@ -79,33 +75,6 @@ export const StudyTools: React.FC = () => {
       description: "Get detailed explanations of complex topics",
       icon: Brain,
       color: "purple",
-    },
-  ];
-
-  const navigationCards = [
-    {
-      id: "study-plans",
-      name: "Study Plans",
-      description: "Create and manage your personalized study plans",
-      icon: Target,
-      color: "indigo",
-      path: "/tools/study-plans",
-    },
-    {
-      id: "roadmap",
-      name: "Roadmap",
-      description: "View your learning roadmap and track progress",
-      icon: Map,
-      color: "teal",
-      path: "/tools/study-plans",
-    },
-    {
-      id: "flashcards",
-      name: "Create Flashcards",
-      description: "Create and manage your flashcard collections",
-      icon: BookOpen,
-      color: "green",
-      path: "/tools/flashcards",
     },
   ];
 
@@ -597,34 +566,6 @@ export const StudyTools: React.FC = () => {
               </button>
             );
           })}
-        </div>
-
-        {/* Navigation Cards */}
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Quick Access
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {navigationCards.map((card) => {
-              const Icon = card.icon;
-
-              return (
-                <button
-                  key={card.id}
-                  onClick={() => navigate(card.path)}
-                  className={`p-4 border rounded-lg text-left transition-all ${getColorClasses(card.color)} border-2 hover:shadow-md cursor-pointer`}
-                >
-                  <Icon className="w-6 h-6 mb-3" />
-                  <h3 className="font-medium mb-2 text-gray-900 dark:text-gray-100">
-                    {card.name}
-                  </h3>
-                  <p className="text-sm opacity-80 text-gray-700 dark:text-gray-300">
-                    {card.description}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
         </div>
       </div>
 

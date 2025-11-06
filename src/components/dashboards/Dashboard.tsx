@@ -14,6 +14,10 @@ import {
   Settings,
   X,
   Video,
+  Sparkles,
+  Target,
+  BookOpen,
+  Mic,
 } from "lucide-react";
 import { storageUtils } from "../../utils/storage"; // still used for short notes
 import { driveStorageUtils } from "../../utils/driveStorage"; // for accurate file count (Drive or local fallback)
@@ -282,60 +286,67 @@ export const Dashboard: React.FC = () => {
                 </h2>
                 <div className="grid grid-cols-1 xs:grid-cols-2 xl:grid-cols-1 gap-3">
                   <button
-                    onClick={() => navigate("/files")}
+                    onClick={() => navigate("/files-notes/files")}
                     className="group w-full flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:border-blue-400 dark:hover:border-blue-500/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-300 text-sm"
                   >
                     <Upload className="w-5 h-5 mr-3 flex-shrink-0 group-hover:text-blue-500 transition-colors" />
-                    <span className="truncate">Upload New Files</span>
+                    <span className="truncate">Upload New</span>
                   </button>
                   <button
-                    onClick={() => navigate("/tasks")}
-                    className="group w-full flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:border-green-400 dark:hover:border-green-500/50 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-300 text-sm"
-                  >
-                    <CheckSquare className="w-5 h-5 mr-3 flex-shrink-0 group-hover:text-green-500 transition-colors" />
-                    <span className="truncate">Add New Task</span>
-                  </button>
-                  <button
-                    onClick={() => navigate("/notes")}
+                    onClick={() => navigate("/chat", { state: { chatType: "dream-to-plan" } })}
                     className="group w-full flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:border-purple-400 dark:hover:border-purple-500/50 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-300 text-sm"
                   >
-                    <StickyNote className="w-5 h-5 mr-3 flex-shrink-0 group-hover:text-purple-500 transition-colors" />
-                    <span className="truncate">Create Note</span>
+                    <Sparkles className="w-5 h-5 mr-3 flex-shrink-0 group-hover:text-purple-500 transition-colors" />
+                    <span className="truncate">Dream to Plan</span>
+                  </button>
+                  <button
+                    onClick={() => navigate("/tools/study-plans")}
+                    className="group w-full flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:border-indigo-400 dark:hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all duration-300 text-sm"
+                  >
+                    <Target className="w-5 h-5 mr-3 flex-shrink-0 group-hover:text-indigo-500 transition-colors" />
+                    <span className="truncate">Study Plan</span>
+                  </button>
+                  <button
+                    onClick={() => navigate("/journal")}
+                    className="group w-full flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:border-pink-400 dark:hover:border-pink-500/50 hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-all duration-300 text-sm"
+                  >
+                    <StickyNote className="w-5 h-5 mr-3 flex-shrink-0 group-hover:text-pink-500 transition-colors" />
+                    <span className="truncate">Journal</span>
+                  </button>
+                  <button
+                    onClick={() => navigate("/interview/mock-interview")}
+                    className="group w-full flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:border-red-400 dark:hover:border-red-500/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-300 text-sm"
+                  >
+                    <Mic className="w-5 h-5 mr-3 flex-shrink-0 group-hover:text-red-500 transition-colors" />
+                    <span className="truncate">Interview Mock</span>
+                  </button>
+                  <button
+                    onClick={() => navigate("/tools/flashcards")}
+                    className="group w-full flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:border-green-400 dark:hover:border-green-500/50 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-300 text-sm"
+                  >
+                    <BookOpen className="w-5 h-5 mr-3 flex-shrink-0 group-hover:text-green-500 transition-colors" />
+                    <span className="truncate">Flash Cards</span>
                   </button>
                   <button
                     onClick={() => navigate("/chat")}
                     className="group w-full flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:border-orange-400 dark:hover:border-orange-500/50 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all duration-300 text-sm"
                   >
                     <Brain className="w-5 h-5 mr-3 flex-shrink-0 group-hover:text-orange-500 transition-colors" />
-                    <span className="truncate">Ask AI Assistant</span>
+                    <span className="truncate">AI Assistant</span>
                   </button>
                   <button
-                    onClick={() => navigate("/video-call")}
-                    className="group w-full flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:border-red-400 dark:hover:border-red-500/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-300 text-sm"
+                    onClick={() => navigate("/calendar")}
+                    className="group w-full flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:border-cyan-400 dark:hover:border-cyan-500/50 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 transition-all duration-300 text-sm"
                   >
-                    <Video className="w-5 h-5 mr-3 flex-shrink-0 group-hover:text-red-500 transition-colors" />
-                    <span className="truncate">Start Video Call</span>
+                    <Calendar className="w-5 h-5 mr-3 flex-shrink-0 group-hover:text-cyan-500 transition-colors" />
+                    <span className="truncate">Calendar</span>
                   </button>
                   <button
-                    onClick={() => navigate("/team")}
-                    className="group w-full flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:border-indigo-400 dark:hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all duration-300 text-sm"
+                    onClick={() => navigate("/tasks")}
+                    className="group w-full flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:border-emerald-400 dark:hover:border-emerald-500/50 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-300 text-sm"
                   >
-                    <Users className="w-5 h-5 mr-3 flex-shrink-0 group-hover:text-indigo-500 transition-colors" />
-                    <span className="truncate">Team Space</span>
-                  </button>
-                  <button
-                    onClick={() => navigate("/settings")}
-                    className="group w-full flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:border-gray-400 dark:hover:border-gray-500/50 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-300 text-sm"
-                  >
-                    <Settings className="w-5 h-5 mr-3 flex-shrink-0 group-hover:text-gray-600 transition-colors" />
-                    <span className="truncate">Settings</span>
-                  </button>
-                  <button
-                    onClick={() => setShowFilePermissionsFixer(true)}
-                    className="group w-full flex items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:border-yellow-400 dark:hover:border-yellow-500/50 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-all duration-300 text-sm"
-                  >
-                    <Settings className="w-5 h-5 mr-3 flex-shrink-0 group-hover:text-yellow-500 transition-colors" />
-                    <span className="truncate">Fix File Access</span>
+                    <CheckSquare className="w-5 h-5 mr-3 flex-shrink-0 group-hover:text-emerald-500 transition-colors" />
+                    <span className="truncate">Tasks</span>
                   </button>
                 </div>
               </div>

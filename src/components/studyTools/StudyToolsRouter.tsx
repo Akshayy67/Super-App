@@ -14,7 +14,7 @@ export const StudyToolsRouter: React.FC = () => {
       >
         <Route
           index
-          element={<Navigate to="/tools/study-tools" replace />}
+          element={<Navigate to="/tools/study-plans" replace />}
         />
         <Route path="study-tools/*" element={<StudyTools />} />
         <Route path="study-plans/new" element={<StudyPlanManager />} />
@@ -23,7 +23,7 @@ export const StudyToolsRouter: React.FC = () => {
         <Route path="flashcards/*" element={<FlashCards />} />
         <Route
           path="*"
-          element={<Navigate to="/tools/study-tools" replace />}
+          element={<Navigate to="/tools/study-plans" replace />}
         />
       </Route>
     </Routes>
