@@ -8,6 +8,15 @@ const NOTES_KEY = "super_study_notes";
 const AI_ANALYSIS_KEY = "super_study_ai_analysis";
 const NOTE_FOLDERS_KEY = "super_study_note_folders";
 
+// Cache storage for notes and folders (outside object to avoid syntax issues)
+type NotesCache = { [userId: string]: { data: ShortNote[]; timestamp: number } };
+type FoldersCache = { [userId: string]: { data: NoteFolder[]; timestamp: number } };
+
+let _notesCache: NotesCache = {};
+let _foldersCache: FoldersCache = {};
+const _notesCacheTimeout: number = 5000; // 5 second cache
+const _foldersCacheTimeout: number = 5000; // 5 second cache
+
 export const storageUtils = {
   generateId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -69,17 +78,44 @@ export const storageUtils = {
     localStorage.setItem(TASKS_KEY, JSON.stringify(filtered));
   },
 
-  // Short Notes Management
-  getShortNotes(userId: string): ShortNote[] {
+  // Short Notes Management with memoization
+  getShortNotes(userId: string, useCache: boolean = true): ShortNote[] {
+    // Check cache first
+    if (useCache && _notesCache[userId]) {
+      const cached = _notesCache[userId];
+      if (Date.now() - cached.timestamp < _notesCacheTimeout) {
+        return cached.data;
+      }
+    }
+
+    // Parse from localStorage
     const notes = localStorage.getItem(NOTES_KEY);
     const allNotes: ShortNote[] = notes ? JSON.parse(notes) : [];
-    return allNotes.filter((note) => note.userId === userId);
+    const userNotes = allNotes.filter((note) => note.userId === userId);
+    
+    // Update cache
+    _notesCache[userId] = {
+      data: userNotes,
+      timestamp: Date.now()
+    };
+    
+    return userNotes;
+  },
+
+  invalidateNotesCache(userId?: string): void {
+    if (userId) {
+      delete _notesCache[userId];
+    } else {
+      _notesCache = {};
+    }
   },
 
   storeShortNote(note: ShortNote): void {
     const notes = JSON.parse(localStorage.getItem(NOTES_KEY) || "[]");
     notes.push(note);
     localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+    // Invalidate cache for this user
+    storageUtils.invalidateNotesCache(note.userId);
   },
 
   updateShortNote(noteId: string, updates: Partial<ShortNote>): void {
@@ -92,26 +128,59 @@ export const storageUtils = {
         updatedAt: new Date().toISOString(),
       };
       localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+      // Invalidate cache for this user
+      storageUtils.invalidateNotesCache(notes[index].userId);
     }
   },
 
   deleteShortNote(noteId: string): void {
     const notes = JSON.parse(localStorage.getItem(NOTES_KEY) || "[]");
+    const noteToDelete = notes.find((n: ShortNote) => n.id === noteId);
     const filtered = notes.filter((n: ShortNote) => n.id !== noteId);
     localStorage.setItem(NOTES_KEY, JSON.stringify(filtered));
+    // Invalidate cache for this user
+    if (noteToDelete) {
+      storageUtils.invalidateNotesCache(noteToDelete.userId);
+    }
   },
 
-  // Note Folders Management
-  getNoteFolders(userId: string): NoteFolder[] {
+  // Note Folders Management with memoization
+  getNoteFolders(userId: string, useCache: boolean = true): NoteFolder[] {
+    // Check cache first
+    if (useCache && _foldersCache[userId]) {
+      const cached = _foldersCache[userId];
+      if (Date.now() - cached.timestamp < _foldersCacheTimeout) {
+        return cached.data;
+      }
+    }
+
     const folders = localStorage.getItem(NOTE_FOLDERS_KEY);
     const allFolders: NoteFolder[] = folders ? JSON.parse(folders) : [];
-    return allFolders.filter((folder) => folder.userId === userId);
+    const userFolders = allFolders.filter((folder) => folder.userId === userId);
+    
+    // Update cache
+    _foldersCache[userId] = {
+      data: userFolders,
+      timestamp: Date.now()
+    };
+    
+    return userFolders;
+  },
+
+  invalidateFoldersCache(userId?: string): void {
+    if (userId) {
+      delete _foldersCache[userId];
+    } else {
+      _foldersCache = {};
+    }
   },
 
   storeNoteFolder(folder: NoteFolder): void {
     const folders = JSON.parse(localStorage.getItem(NOTE_FOLDERS_KEY) || "[]");
     folders.push(folder);
     localStorage.setItem(NOTE_FOLDERS_KEY, JSON.stringify(folders));
+    // Invalidate cache
+    storageUtils.invalidateFoldersCache(folder.userId);
   },
 
   updateNoteFolder(folderId: string, updates: Partial<NoteFolder>): void {

@@ -215,65 +215,117 @@ export const driveStorageUtils = {
     }
   },
 
-  // File Management with Google Drive
-  async getFiles(userId: string): Promise<FileItem[]> {
+  // File Management with Google Drive - OPTIMIZED for speed
+  async getFiles(userId: string, options?: { skipCache?: boolean; backgroundSync?: boolean }): Promise<FileItem[]> {
     console.log("🔍 Getting files for user:", userId);
+
+    // OPTIMIZATION: Always load from localStorage FIRST (instant, no waiting)
+    const files = localStorage.getItem(FILES_KEY);
+    const allFiles: FileItem[] = files ? JSON.parse(files) : [];
+    const userFiles = allFiles.filter((file) => file.userId === userId);
+
+    // OPTIMIZATION: If backgroundSync is true, return localStorage immediately and sync in background
+    if (options?.backgroundSync) {
+      // Start background sync
+      (async () => {
+        try {
+          if (realTimeAuth.hasGoogleDriveAccess() && !realTimeAuth.needsGoogleDriveReauth()) {
+            const result = await googleDriveService.listFiles();
+            if (result.success && result.data) {
+              const driveFiles = result.data.map((driveFile: DriveFile) =>
+                this.driveFileToFileItem(driveFile, userId)
+              );
+              this.setCachedFiles(userId, driveFiles);
+              console.log("✅ Background sync completed:", driveFiles.length, "files");
+            }
+          }
+        } catch (error) {
+          console.log("Background sync failed, using localStorage data");
+        }
+      })();
+      console.log(`⚡ Fast load: Returning ${userFiles.length} files from localStorage immediately`);
+      return userFiles;
+    }
 
     try {
       // Check if user should have Google Drive access but needs re-authentication
       if (realTimeAuth.needsGoogleDriveReauth()) {
         console.log("🔄 User needs Google Drive re-authentication");
-        throw new Error(
-          "Google Drive access expired. Please sign out and sign in again to refresh your access."
-        );
+        this.clearCache();
+        console.log(`✅ Returning ${userFiles.length} files from localStorage`);
+        return userFiles; // Return localStorage data instead of throwing
       }
 
       // Check if user has Google Drive access
       if (!realTimeAuth.hasGoogleDriveAccess()) {
         console.log("📱 No Google Drive access, using localStorage");
-        // Fallback to localStorage for users without Drive access
-        const files = localStorage.getItem(FILES_KEY);
-        const allFiles: FileItem[] = files ? JSON.parse(files) : [];
-        return allFiles.filter((file) => file.userId === userId);
+        this.clearCache();
+        console.log(`✅ Retrieved ${userFiles.length} files from localStorage`);
+        return userFiles;
       }
 
       console.log("☁️ User has Google Drive access");
 
-      // Try to get from cache first
-      const cachedFiles = this.getCachedFiles(userId);
-      if (cachedFiles) {
-        console.log("💾 Returning cached files:", cachedFiles.length);
-        return cachedFiles;
+      // Try to get from cache first (unless skipCache is true)
+      if (!options?.skipCache) {
+        const cachedFiles = this.getCachedFiles(userId);
+        if (cachedFiles && cachedFiles.length > 0) {
+          console.log("💾 Returning cached files:", cachedFiles.length);
+          return cachedFiles;
+        }
       }
 
-      // Get files from Google Drive
+      // If no cache and we have localStorage data, return it immediately
+      // and sync Drive in background
+      if (userFiles.length > 0) {
+        console.log(`⚡ Fast load: Returning ${userFiles.length} files from localStorage, syncing Drive in background`);
+        // Start background sync
+        (async () => {
+          try {
+            const result = await googleDriveService.listFiles();
+            if (result.success && result.data) {
+              const driveFiles = result.data.map((driveFile: DriveFile) =>
+                this.driveFileToFileItem(driveFile, userId)
+              );
+              this.setCachedFiles(userId, driveFiles);
+              console.log("✅ Background sync completed:", driveFiles.length, "files");
+            }
+          } catch (error) {
+            console.log("Background sync failed, using localStorage data");
+          }
+        })();
+        return userFiles;
+      }
+
+      // Only wait for Drive if we have no localStorage data
       console.log("🌐 Fetching files from Google Drive...");
       const result = await googleDriveService.listFiles();
       console.log("📁 Google Drive result:", result);
 
       if (result.success && result.data) {
-        const files = result.data.map((driveFile: DriveFile) =>
+        const driveFiles = result.data.map((driveFile: DriveFile) =>
           this.driveFileToFileItem(driveFile, userId)
         );
 
-        console.log("✅ Successfully got files from Drive:", files.length);
+        console.log("✅ Successfully got files from Drive:", driveFiles.length);
         // Cache the results
-        this.setCachedFiles(userId, files);
-        return files;
+        this.setCachedFiles(userId, driveFiles);
+        return driveFiles;
       }
 
       console.log("❌ No files returned from Google Drive");
-      // If Google Drive fails, propagate the error for better error handling
+      // If Google Drive fails, return localStorage data
       if (result.error && result.error.includes("expired")) {
-        throw new Error(result.error);
+        console.log(`✅ Fallback: Returning ${userFiles.length} files from localStorage`);
+        return userFiles;
       }
-      return [];
+      return userFiles.length > 0 ? userFiles : [];
     } catch (error) {
       console.error("Error getting files:", error);
-      // Fallback to localStorage on error
-      const files = localStorage.getItem(FILES_KEY);
-      const allFiles: FileItem[] = files ? JSON.parse(files) : [];
-      return allFiles.filter((file) => file.userId === userId);
+      this.clearCache();
+      // Always return localStorage data on error
+      console.log(`✅ Fallback: Retrieved ${userFiles.length} files from localStorage`);
+      return userFiles;
     }
   },
 
@@ -291,6 +343,10 @@ export const driveStorageUtils = {
 
     try {
       if (!realTimeAuth.hasGoogleDriveAccess()) {
+        // Clear Drive cache when using localStorage to prevent cache conflicts
+        console.log("🗑️ Clearing Drive cache (using localStorage)");
+        this.clearCache();
+        
         // Fallback to localStorage with base64 encoding
         return new Promise((resolve) => {
           const reader = new FileReader();
@@ -312,6 +368,7 @@ export const driveStorageUtils = {
             files.push(fileItem);
             localStorage.setItem(FILES_KEY, JSON.stringify(files));
 
+            console.log("✅ File uploaded to localStorage:", fileItem.name);
             resolve(fileItem);
           };
           reader.readAsDataURL(file);

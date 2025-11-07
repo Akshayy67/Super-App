@@ -538,11 +538,11 @@ export const PaymentPage: React.FC = () => {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 overflow-hidden bg-black flex flex-row"
+      className="fixed inset-0 overflow-hidden bg-black flex flex-col lg:flex-row"
     >
-      {/* Three.js Canvas - Interactive Globe on left side */}
+      {/* Three.js Canvas - Interactive Globe - Hidden on mobile portrait, shown in landscape/desktop */}
       <div 
-        className="relative w-1/2 h-full overflow-hidden" 
+        className="hidden lg:block relative w-full lg:w-1/2 h-1/3 lg:h-full overflow-hidden" 
         style={{ zIndex: 1 }}
       >
         <canvas
@@ -555,21 +555,21 @@ export const PaymentPage: React.FC = () => {
         />
       </div>
 
-      {/* Right Side - Payment Content */}
+      {/* Payment Content - Full width on mobile, half on desktop */}
       <div 
-        className="relative w-1/2 h-full overflow-y-auto px-8 md:px-16 py-12" 
+        className="relative w-full lg:w-1/2 h-full lg:h-full overflow-y-auto px-4 sm:px-6 md:px-8 lg:px-16 py-4 sm:py-6 lg:py-12" 
         style={{ 
           backgroundColor: '#000000',
           zIndex: 100,
         }}
       >
-        {/* Sign In/Out Button */}
-        <div className="absolute top-4 right-4 z-50">
+        {/* Sign In/Out Button - Mobile optimized */}
+        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-50">
           {currentUser ? (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-gray-800/80 backdrop-blur-sm rounded-lg px-3 py-2 text-white text-sm">
-                <User className="w-4 h-4" />
-                <span className="max-w-[200px] truncate">{currentUser.email || currentUser.username}</span>
+            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-1 sm:gap-2 bg-gray-800/80 backdrop-blur-sm rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-white text-xs sm:text-sm">
+                <User className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="max-w-[120px] sm:max-w-[200px] truncate">{currentUser.email || currentUser.username}</span>
               </div>
               <button
                 onClick={async () => {
@@ -587,10 +587,11 @@ export const PaymentPage: React.FC = () => {
                     alert('Failed to sign out. Please try again.');
                   }
                 }}
-                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                className="flex items-center gap-1 sm:gap-2 bg-red-600 hover:bg-red-700 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm font-medium"
               >
-                <LogOut className="w-4 h-4" />
-                Sign Out
+                <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Sign Out</span>
+                <span className="sm:hidden">Out</span>
               </button>
             </div>
           ) : (
@@ -599,41 +600,42 @@ export const PaymentPage: React.FC = () => {
                 // Redirect to landing page to sign in
                 window.location.href = '/';
               }}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+              className="flex items-center gap-1 sm:gap-2 bg-blue-600 hover:bg-blue-700 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm font-medium"
             >
-              <LogIn className="w-4 h-4" />
-              Sign In
+              <LogIn className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Sign In</span>
+              <span className="sm:hidden">In</span>
             </button>
           )}
         </div>
         
         <div className="payment-content max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 mb-4">
-              <Crown className="w-8 h-8 text-yellow-400" />
-              <h1 className="text-5xl md:text-6xl font-black text-white">
+          {/* Header - Mobile optimized */}
+          <div className="text-center mb-6 sm:mb-8 lg:mb-12">
+            <div className="inline-flex items-center gap-1 sm:gap-2 mb-2 sm:mb-4">
+              <Crown className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-yellow-400 flex-shrink-0" />
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-white" style={{ fontSize: 'clamp(1.5rem, 8vw, 3.75rem)' }}>
                 GO PREMIUM
               </h1>
-              <Crown className="w-8 h-8 text-yellow-400" />
+              <Crown className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-yellow-400 flex-shrink-0" />
             </div>
-            <p className="text-xl md:text-2xl text-gray-300 mb-2">
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-300 mb-1 sm:mb-2" style={{ fontSize: 'clamp(1rem, 4vw, 1.5rem)' }}>
               Unlock the full potential of Super Study
             </p>
-            <p className="text-lg text-gray-400">
+            <p className="text-sm sm:text-base lg:text-lg text-gray-400" style={{ fontSize: 'clamp(0.875rem, 3vw, 1.125rem)' }}>
               Join thousands of students already using premium features
             </p>
           </div>
 
-          {/* Special Offers Banner */}
-          <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500/50 rounded-xl p-6 mb-8 animate-pulse">
-            <div className="flex items-center gap-3">
-              <Sparkles className="w-6 h-6 text-yellow-400" />
-              <div>
-                <h3 className="text-2xl md:text-3xl font-black mb-1 bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(251,191,36,0.8)] animate-pulse">
+          {/* Special Offers Banner - Mobile optimized */}
+          <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500/50 rounded-lg sm:rounded-xl p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 lg:mb-8">
+            <div className="flex items-start gap-2 sm:gap-3">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-black mb-1 bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent" style={{ fontSize: 'clamp(1rem, 5vw, 1.875rem)' }}>
                   🎉 LAUNCH SPECIAL - LIMITED TIME!
                 </h3>
-                <p className="text-gray-200">
+                <p className="text-xs sm:text-sm lg:text-base text-gray-200 leading-relaxed" style={{ fontSize: 'clamp(0.75rem, 3vw, 1rem)' }}>
                   Monthly: ₹299 (70% OFF) • Student: ₹99 (90% OFF) • Use referral code for FREE premium!
                 </p>
               </div>

@@ -14,6 +14,7 @@ import { realTimeAuth } from "./utils/realTimeAuth";
 import { Menu, X } from "lucide-react";
 import { GlobalNoteCreator } from "./components/notes/GlobalNoteCreator";
 import { useGlobalCopyListener } from "./hooks/useGlobalCopyListener";
+import { useGlobalScreenshotListener } from "./hooks/useGlobalScreenshotListener";
 import { ThemeToggle } from "./components/ui/ThemeToggle";
 import { ThemeProvider } from "./components/ui/ThemeProvider";
 import { AuthWrapper } from "./components/auth/AuthWrapper";
@@ -48,6 +49,13 @@ const AuthenticatedApp: React.FC = () => {
 
   // Global copy listener for note creation
   const { copyEvent, isModalVisible, closeModal } = useGlobalCopyListener();
+  
+  // Global screenshot listener for note creation
+  const { 
+    screenshotEvent, 
+    isModalVisible: isScreenshotModalVisible, 
+    closeModal: closeScreenshotModal 
+  } = useGlobalScreenshotListener();
   
   // Global Pomodoro state
   const { isEducationVisible, hideEducation } = useGlobalPomodoro();
@@ -191,13 +199,24 @@ const AuthenticatedApp: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      {/* Global Note Creator Modal */}
+      {/* Global Note Creator Modal - Copy Text */}
       {isModalVisible && copyEvent && (
         <GlobalNoteCreator
           isVisible={isModalVisible}
           onClose={closeModal}
           copiedText={copyEvent.text}
           sourceContext={copyEvent.sourceContext}
+        />
+      )}
+
+      {/* Global Note Creator Modal - Screenshot */}
+      {isScreenshotModalVisible && screenshotEvent && (
+        <GlobalNoteCreator
+          isVisible={isScreenshotModalVisible}
+          onClose={closeScreenshotModal}
+          screenshotImage={screenshotEvent.image}
+          sourceContext={screenshotEvent.sourceContext}
+          screenshotMethod={screenshotEvent.method}
         />
       )}
 

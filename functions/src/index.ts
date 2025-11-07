@@ -1,13 +1,17 @@
 /**
- * Firebase Cloud Functions for Razorpay Payment Processing
+ * Firebase Cloud Functions
  * 
  * This file contains callable functions for:
- * 1. Creating Razorpay orders
- * 2. Verifying payment signatures
+ * 1. Razorpay Payment Processing
+ * 2. Meeting & Call Management
+ * 3. TURN Server Credentials
+ * 4. Meeting Analytics
  * 
  * Environment Variables Required (set in Firebase Console):
  * - RAZORPAY_KEY_ID=rzp_live_RckdrRyNNy8thO
  * - RAZORPAY_KEY_SECRET=wzVq4ZV7Q0vw0IIpFyJkZjRj
+ * - TURN_USERNAME (optional, for TURN server)
+ * - TURN_PASSWORD (optional, for TURN server)
  */
 
 import * as functions from "firebase-functions";
@@ -269,4 +273,289 @@ export const verifyRazorpayPayment = functions.https.onCall(async (data, context
     );
   }
 });
+
+/**
+ * Get TURN Server Credentials
+ * Returns TURN server credentials for WebRTC connections
+ */
+export const getTurnCredentials = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "User must be authenticated"
+    );
+  }
+
+  try {
+    // Generate temporary TURN credentials
+    // In production, use a TURN server service like Twilio, Xirsys, or self-hosted
+    const username = process.env.TURN_USERNAME || `user_${context.auth.uid}_${Date.now()}`;
+    const password = process.env.TURN_PASSWORD || `pass_${Date.now()}`;
+    
+    // Default TURN servers (using free/public servers - replace with your own for production)
+    const turnServers = [
+      {
+        urls: "stun:stun.l.google.com:19302",
+        username: "",
+        credential: ""
+      },
+      {
+        urls: "stun:stun1.l.google.com:19302",
+        username: "",
+        credential: ""
+      }
+    ];
+
+    // If you have TURN server credentials, add them here
+    if (process.env.TURN_USERNAME && process.env.TURN_PASSWORD) {
+      turnServers.push({
+        urls: process.env.TURN_SERVER_URL || "turn:your-turn-server.com:3478",
+        username: username,
+        credential: password
+      });
+    }
+
+    return {
+      success: true,
+      servers: turnServers,
+      username: username,
+      credential: password
+    };
+  } catch (error: any) {
+    console.error("❌ Error getting TURN credentials:", error);
+    throw new functions.https.HttpsError(
+      "internal",
+      `Failed to get TURN credentials: ${error.message || "Unknown error"}`
+    );
+  }
+});
+
+/**
+ * Create Team Meeting
+ * Creates a scheduled or instant team meeting
+ */
+export const createTeamMeeting = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "User must be authenticated"
+    );
+  }
+
+  const { teamId, title, description, scheduledTime, isInstant } = data;
+
+  if (!teamId || !title) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Missing required fields: teamId, title"
+    );
+  }
+
+  try {
+    // Verify user is a member of the team
+    const teamRef = admin.firestore().collection("teams").doc(teamId);
+    const teamDoc = await teamRef.get();
+    
+    if (!teamDoc.exists) {
+      throw new functions.https.HttpsError(
+        "not-found",
+        "Team not found"
+      );
+    }
+
+    const teamData = teamDoc.data();
+    const members = teamData?.members || [];
+    const isMember = members.some((m: any) => m.id === context.auth.uid);
+
+    if (!isMember) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "User is not a member of this team"
+      );
+    }
+
+    // Generate meeting ID
+    const meetingId = `meeting_${teamId}_${Date.now()}`;
+    const meetingData = {
+      meetingId,
+      teamId,
+      title,
+      description: description || "",
+      hostId: context.auth.uid,
+      hostName: context.auth.token.name || context.auth.token.email || "Unknown",
+      scheduledTime: scheduledTime ? admin.firestore.Timestamp.fromDate(new Date(scheduledTime)) : admin.firestore.FieldValue.serverTimestamp(),
+      isInstant: isInstant || false,
+      status: isInstant ? "active" : "scheduled",
+      participants: [{
+        userId: context.auth.uid,
+        name: context.auth.token.name || context.auth.token.email || "Unknown",
+        email: context.auth.token.email || "",
+        joinedAt: admin.firestore.FieldValue.serverTimestamp(),
+        isHost: true
+      }],
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+
+    await admin.firestore().collection("teamMeetings").doc(meetingId).set(meetingData);
+
+    // Notify team members if scheduled
+    if (!isInstant && scheduledTime) {
+      const notificationData = {
+        type: "meeting_scheduled",
+        teamId,
+        meetingId,
+        title,
+        scheduledTime: admin.firestore.Timestamp.fromDate(new Date(scheduledTime)),
+        hostName: context.auth.token.name || context.auth.token.email || "Unknown",
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+
+      // Create notifications for all team members except host
+      const notificationPromises = members
+        .filter((m: any) => m.id !== context.auth.uid)
+        .map((member: any) => 
+          admin.firestore().collection("notifications").add({
+            ...notificationData,
+            userId: member.id
+          })
+        );
+
+      await Promise.all(notificationPromises);
+    }
+
+    console.log("✅ Team meeting created:", meetingId);
+
+    return {
+      success: true,
+      meetingId,
+      meeting: meetingData
+    };
+  } catch (error: any) {
+    console.error("❌ Error creating team meeting:", error);
+    
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+
+    throw new functions.https.HttpsError(
+      "internal",
+      `Failed to create meeting: ${error.message || "Unknown error"}`
+    );
+  }
+});
+
+/**
+ * Log Call Analytics
+ * Logs call events for analytics
+ */
+export const logCallEvent = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "User must be authenticated"
+    );
+  }
+
+  const { callId, eventType, callType, duration, participantCount, metadata } = data;
+
+  if (!callId || !eventType) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Missing required fields: callId, eventType"
+    );
+  }
+
+  try {
+    const eventData = {
+      callId,
+      userId: context.auth.uid,
+      eventType, // 'started', 'ended', 'failed', 'quality_change'
+      callType: callType || "unknown", // 'video', 'audio', 'meeting'
+      duration: duration || 0,
+      participantCount: participantCount || 1,
+      metadata: metadata || {},
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    };
+
+    await admin.firestore().collection("callAnalytics").add(eventData);
+
+    return {
+      success: true
+    };
+  } catch (error: any) {
+    console.error("❌ Error logging call event:", error);
+    // Don't throw error for analytics - it's non-critical
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+});
+
+/**
+ * Send Meeting Reminder
+ * Scheduled function to send meeting reminders
+ */
+export const sendMeetingReminders = functions.pubsub
+  .schedule("every 15 minutes")
+  .onRun(async (context) => {
+    try {
+      const now = admin.firestore.Timestamp.now();
+      const fifteenMinutesFromNow = admin.firestore.Timestamp.fromMillis(
+        now.toMillis() + 15 * 60 * 1000
+      );
+
+      // Find meetings starting in the next 15 minutes
+      const meetingsQuery = admin
+        .firestore()
+        .collection("teamMeetings")
+        .where("status", "==", "scheduled")
+        .where("scheduledTime", ">=", now)
+        .where("scheduledTime", "<=", fifteenMinutesFromNow);
+
+      const meetingsSnapshot = await meetingsQuery.get();
+
+      const reminderPromises: Promise<any>[] = [];
+
+      meetingsSnapshot.forEach((doc) => {
+        const meeting = doc.data();
+        const teamId = meeting.teamId;
+
+        // Get team members
+        admin
+          .firestore()
+          .collection("teams")
+          .doc(teamId)
+          .get()
+          .then((teamDoc) => {
+            const teamData = teamDoc.data();
+            const members = teamData?.members || [];
+
+            members.forEach((member: any) => {
+              // Create reminder notification
+              reminderPromises.push(
+                admin.firestore().collection("notifications").add({
+                  type: "meeting_reminder",
+                  userId: member.id,
+                  teamId,
+                  meetingId: meeting.meetingId,
+                  title: meeting.title,
+                  scheduledTime: meeting.scheduledTime,
+                  createdAt: admin.firestore.FieldValue.serverTimestamp()
+                })
+              );
+            });
+          });
+      });
+
+      await Promise.all(reminderPromises);
+
+      console.log(`✅ Sent ${reminderPromises.length} meeting reminders`);
+      return null;
+    } catch (error: any) {
+      console.error("❌ Error sending meeting reminders:", error);
+      return null;
+    }
+  });
 

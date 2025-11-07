@@ -20,6 +20,9 @@ import {
   ExternalLink,
   Sparkles,
   AlertCircle,
+  Edit3,
+  Trash2,
+  Circle,
 } from "lucide-react";
 import { Task } from "../../types";
 import { firestoreUserTasks } from "../../utils/firestoreUserTasks";
@@ -41,6 +44,154 @@ import { TodoReminderButton } from "./TodoReminderButton";
 import { DopamineSpikeCelebration } from "../ui/DopamineSpikeCelebration";
 import { todoDayDetailsService, DayDetails } from "../../utils/todoDayDetailsService";
 import { unifiedAIService } from "../../utils/aiConfig";
+
+// Compact Task Item Component - shows only title, expands on click
+interface CompactTaskItemProps {
+  task: Task;
+  onToggleStatus: (task: Task) => void;
+  onEdit: (task: Task) => void;
+  onDelete: (taskId: string) => void;
+  onGetSuggestions: () => void;
+  getPriorityColor: (priority: string) => string;
+  loadingSuggestions: boolean;
+}
+
+const CompactTaskItem: React.FC<CompactTaskItemProps> = ({
+  task,
+  onToggleStatus,
+  onEdit,
+  onDelete,
+  onGetSuggestions,
+  getPriorityColor,
+  loadingSuggestions,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isOverdue = isAfter(startOfDay(new Date(task.dueDate)), startOfDay(new Date())) === false && !isToday(new Date(task.dueDate));
+  const isTaskToday = isToday(new Date(task.dueDate));
+  const isTaskTomorrow = isTomorrow(new Date(task.dueDate));
+
+  return (
+    <div className="border rounded-lg p-3 sm:p-4 mb-2 bg-white dark:bg-slate-800">
+      <div className="flex items-start gap-3">
+        <button
+          onClick={() => onToggleStatus(task)}
+          className={`mt-1 transition-all ${
+            task.status === "completed"
+              ? "text-green-600"
+              : "text-blue-600"
+          }`}
+        >
+          {task.status === "completed" ? (
+            <CheckCircle2 className="w-5 h-5" />
+          ) : (
+            <Circle className="w-5 h-5" />
+          )}
+        </button>
+        
+        <div className="flex-1 min-w-0">
+          <div 
+            className="flex items-center justify-between cursor-pointer"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            <h3
+              className={`font-medium text-responsive-base sm:text-base flex-1 ${
+                task.status === "completed"
+                  ? "text-gray-500 line-through"
+                  : "text-gray-900 dark:text-gray-100"
+              }`}
+              style={{ fontSize: 'clamp(0.875rem, 3vw, 1rem)' }}
+            >
+              {task.title}
+              {isOverdue && (
+                <AlertTriangle className="inline w-4 h-4 text-red-500 ml-2" />
+              )}
+            </h3>
+            
+            <div className="flex items-center gap-2 ml-2">
+              {task.status !== "completed" && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onGetSuggestions();
+                  }}
+                  disabled={loadingSuggestions}
+                  className="p-2 rounded-full bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-purple-600 dark:text-purple-400 transition-colors disabled:opacity-50"
+                  title="Get AI Suggestions"
+                >
+                  {loadingSuggestions ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-purple-600 border-t-transparent"></div>
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(task);
+                }}
+                className="p-1 text-gray-400 hover:text-gray-600"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(task.id);
+                }}
+                className="p-1 text-gray-400 hover:text-red-600"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+              <ChevronDown 
+                className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+              />
+            </div>
+          </div>
+          
+          {isExpanded && (
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
+              {task.description && (
+                <p className="text-responsive-sm text-gray-600 dark:text-gray-400" style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}>
+                  {task.description}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                {task.status === "pending" && isOverdue && (
+                  <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-500 text-white">
+                    Overdue
+                  </span>
+                )}
+                {task.status === "pending" && !isOverdue && isTaskToday && (
+                  <span className="px-2 py-1 rounded-full text-xs font-semibold bg-orange-500 text-white">
+                    Today
+                  </span>
+                )}
+                {task.status === "pending" && !isOverdue && !isTaskToday && isTaskTomorrow && (
+                  <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-500 text-white">
+                    Tomorrow
+                  </span>
+                )}
+                {task.subject && (
+                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs rounded-full">
+                    {task.subject}
+                  </span>
+                )}
+                <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(task.priority)}`}>
+                  {task.priority} priority
+                </span>
+                <div className="flex items-center text-xs text-gray-500">
+                  <Calendar className="w-3 h-3 mr-1" />
+                  {format(new Date(task.dueDate), "MMM dd, yyyy")}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const TaskManager: React.FC = () => {
   const user = realTimeAuth.getCurrentUser();
@@ -1826,34 +1977,16 @@ Return ONLY the JSON object, no additional text.`;
                     {/* Regular Todo List */}
                     {grouped.today.length > 0 ? (
                       grouped.today.map((task) => (
-                        <div key={task.id} className="space-y-2">
-                          <SwipeableTaskItem
-                            task={task}
-                            onToggleStatus={toggleTaskStatus}
-                            onEdit={startEditing}
-                            onDelete={deleteTask}
-                            getPriorityColor={getPriorityColor}
-                          />
-                          {task.status !== "completed" && (
-                            <button
-                              onClick={() => generateTaskSuggestions(task)}
-                              disabled={loadingSuggestions.has(task.id)}
-                              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-all duration-200 border border-purple-200 dark:border-purple-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {loadingSuggestions.has(task.id) ? (
-                                <>
-                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-purple-600 dark:border-purple-400 border-t-transparent"></div>
-                                  <span>Getting suggestions...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Lightbulb className="w-4 h-4" />
-                                  <span>Get Suggestions</span>
-                                </>
-                              )}
-                            </button>
-                          )}
-                        </div>
+                        <CompactTaskItem
+                          key={task.id}
+                          task={task}
+                          onToggleStatus={toggleTaskStatus}
+                          onEdit={startEditing}
+                          onDelete={deleteTask}
+                          onGetSuggestions={() => generateTaskSuggestions(task)}
+                          getPriorityColor={getPriorityColor}
+                          loadingSuggestions={loadingSuggestions.has(task.id)}
+                        />
                       ))
                     ) : (
                       <div className="text-center py-8 px-4 bg-orange-50/50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-800">

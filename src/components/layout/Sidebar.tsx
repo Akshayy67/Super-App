@@ -358,7 +358,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, []);
 
   return (
-    <div className="bg-white dark:bg-black h-full lg:h-screen shadow-2xl border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-500 backdrop-blur-xl bg-opacity-95 dark:bg-opacity-90 relative overflow-hidden" style={{ width: '100%', maxWidth: '100%', maxHeight: '100vh', zIndex: 30 }}>
+    <div className="bg-white dark:bg-black h-full lg:h-screen shadow-2xl border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-500 backdrop-blur-xl bg-opacity-95 dark:bg-opacity-90 relative" style={{ width: '100%', maxWidth: '100%', height: '100%', maxHeight: '100vh', zIndex: 30, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       {/* Three.js Rotary Phone Background - Hidden on mobile */}
       <canvas
         ref={canvasRef}
@@ -443,7 +443,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      <nav className="flex-1 px-3 sm:px-4 py-4 sm:py-6 overflow-y-auto overflow-x-hidden scroll-area-mobile relative z-20 min-h-0" style={{ padding: 'clamp(0.75rem, 2vw, 1rem) clamp(0.75rem, 3vw, 1.5rem)', maxHeight: 'calc(100vh - 200px)' }}>
+      <nav className="flex-1 px-3 sm:px-4 py-4 sm:py-6 overflow-y-auto overflow-x-hidden scroll-area-mobile relative z-20" style={{ padding: 'clamp(0.75rem, 2vw, 1rem) clamp(0.75rem, 3vw, 1.5rem)', flex: '1 1 0%', minHeight: 0, maxHeight: '100%', overflowY: 'auto' }}>
         <ul className="space-y-1 sm:space-y-2" style={{ gap: 'clamp(0.25rem, 1vw, 0.5rem)' }}>
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -577,7 +577,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       {/* Footer with Profile and Sign Out - Visible on both mobile and desktop */}
-      <div className="p-responsive border-t border-gray-200 dark:border-gray-700 backdrop-blur-sm bg-gradient-to-t from-white/50 to-transparent dark:from-black/50 relative z-20 flex-shrink-0 safe-area-bottom">
+      <div className="border-t border-gray-200 dark:border-gray-700 backdrop-blur-sm bg-white dark:bg-black bg-gradient-to-t from-white/50 to-transparent dark:from-black/50 relative z-30 flex-shrink-0 safe-area-bottom" style={{ padding: 'clamp(0.75rem, 2vw, 1rem) clamp(0.75rem, 3vw, 1.5rem)', minHeight: 'auto', flexShrink: 0 }}>
         <button
           onClick={() => handleNavigation("/profile/edit")}
           className="w-full flex items-center mb-3 group hover:opacity-80 transition-all duration-300 hover:scale-[1.02] btn-touch"
@@ -602,6 +602,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={onLogout}
           className="btn-touch w-full flex items-center justify-center px-3 py-2.5 sm:py-2 text-responsive-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-300 hover:scale-[1.02] group border border-transparent hover:border-red-200 dark:hover:border-red-800 font-medium"
+          style={{ minHeight: '44px' }}
         >
           <LogOut className="w-4 h-4 sm:w-5 sm:h-5 mr-2 flex-shrink-0 transition-transform duration-300 group-hover:rotate-12" />
           <span className="truncate">Sign Out</span>

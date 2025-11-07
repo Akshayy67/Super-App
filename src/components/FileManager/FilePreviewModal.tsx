@@ -41,6 +41,25 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
 }) => {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [shareMenuPosition, setShareMenuPosition] = useState({ x: 0, y: 0 });
+  const [isMobilePortrait, setIsMobilePortrait] = useState(false);
+
+  // Detect mobile portrait orientation
+  React.useEffect(() => {
+    const checkOrientation = () => {
+      const isMobile = window.innerWidth < 1024;
+      const isPortrait = window.innerHeight > window.innerWidth;
+      setIsMobilePortrait(isMobile && isPortrait);
+    };
+
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    
+    return () => {
+      window.removeEventListener('resize', checkOrientation);
+      window.removeEventListener('orientationchange', checkOrientation);
+    };
+  }, []);
 
   if (!previewFile) return null;
 
@@ -141,13 +160,35 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
           </div>
         </div>
 
-        {/* Side-by-side layout when AI Analysis is open */}
+        {/* Side-by-side layout when AI Analysis is open - only in landscape mode on mobile */}
         {showAIChat ? (
-          <div className="flex flex-1 overflow-hidden min-h-0">
-            <div
-              className="h-full overflow-auto border-r border-gray-200"
-              style={{ width: "60%", minWidth: 0 }}
-            >
+          <div className={`flex flex-1 overflow-hidden min-h-0 ${isMobilePortrait ? 'flex-col' : ''}`}>
+            {isMobilePortrait ? (
+              // Mobile portrait: Show AI chat full screen with back button
+              <div className="h-full overflow-auto w-full">
+                <div className="sticky top-0 bg-white border-b border-gray-200 p-3 flex items-center justify-between z-10">
+                  <button
+                    onClick={() => setShowAIChat(false)}
+                    className="flex items-center text-blue-600 hover:text-blue-700"
+                  >
+                    <X className="w-5 h-5 mr-2" />
+                    <span>Back to Preview</span>
+                  </button>
+                </div>
+                {/* @ts-ignore */}
+                <AIChat
+                  file={previewFile}
+                  fileContent={previewContent}
+                  initialPrompt={"Summarize this file"}
+                />
+              </div>
+            ) : (
+              // Desktop or mobile landscape: Show side-by-side
+              <>
+                <div
+                  className="h-full overflow-auto border-r border-gray-200"
+                  style={{ width: "60%", minWidth: 0 }}
+                >
               {/* File preview content */}
               {/* ...existing file preview rendering logic... */}
               {previewContent === "Loading file content..." ? (
@@ -402,18 +443,20 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                 </div>
               )}
             </div>
-            <div
-              className="h-full overflow-auto"
-              style={{ width: "40%", minWidth: 0 }}
-            >
-              {/* AIChat component side-by-side */}
-              {/* @ts-ignore */}
-              <AIChat
-                file={previewFile}
-                fileContent={previewContent}
-                initialPrompt={"Summarize this file"}
-              />
-            </div>
+                <div
+                  className="h-full overflow-auto"
+                  style={{ width: "40%", minWidth: 0 }}
+                >
+                  {/* AIChat component side-by-side */}
+                  {/* @ts-ignore */}
+                  <AIChat
+                    file={previewFile}
+                    fileContent={previewContent}
+                    initialPrompt={"Summarize this file"}
+                  />
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div className="flex-1 overflow-hidden bg-white">
@@ -533,7 +576,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                   </div>
                 </div>
                 {/* PDF Viewer */}
-                <div className="flex-1 bg-gray-200 relative">
+                <div className="flex-1 bg-gray-200 relative" data-component="pdf-viewer">
                   <object
                     data={
                       previewContent.startsWith("http")
@@ -555,6 +598,8 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                       style={{ minHeight: "600px" }}
                       sandbox="allow-same-origin allow-scripts allow-downloads"
                       allow="fullscreen"
+                      data-pdf-viewer="true"
+                      data-component="file-content"
                     />
                   </object>
                 </div>

@@ -1,7 +1,19 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring, animate } from "framer-motion";
-import { Sparkles, Target } from "lucide-react";
+import { Cloud, Wand2, Zap } from "lucide-react";
 import { DreamToPlanModal } from "./DreamToPlanModal";
+
+// Rotating helpful messages
+const helpMessages = [
+  "Need help?",
+  "Let me assist ✨",
+  "I'm here to help!",
+  "Want some guidance?",
+  "How can I help?",
+  "Ready to help!",
+  "Here to support you 🌟",
+  "What can I do for you?",
+];
 
 interface DreamToPlanButtonProps {
   position?: "bottom-right" | "bottom-left" | "top-right" | "top-left" | "auto" | "draggable";
@@ -28,6 +40,7 @@ export const DreamToPlanButton: React.FC<DreamToPlanButtonProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [currentHelpMessage, setCurrentHelpMessage] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const isHoveredRef = useRef(false);
   const isDraggingRef = useRef(false);
@@ -213,6 +226,16 @@ export const DreamToPlanButton: React.FC<DreamToPlanButtonProps> = ({
     isHoveredRef.current = isHovered;
   }, [isHovered]);
 
+  // Rotate help messages
+  useEffect(() => {
+    if (isHovered) {
+      const interval = setInterval(() => {
+        setCurrentHelpMessage((prev) => (prev + 1) % helpMessages.length);
+      }, 2500); // Change message every 2.5 seconds
+      return () => clearInterval(interval);
+    }
+  }, [isHovered]);
+
   // Get the actual position for rendering
   const getButtonPosition = () => {
     if (finalPosition === "draggable" && dragPosition) {
@@ -241,13 +264,49 @@ export const DreamToPlanButton: React.FC<DreamToPlanButtonProps> = ({
   if (variant === "inline") {
     return (
       <>
-        <button
+        <motion.button
           onClick={() => setIsOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white rounded-lg font-heading font-medium transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+          className="relative inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-500 via-cyan-500 to-sky-500 hover:from-blue-600 hover:via-cyan-600 hover:to-sky-600 text-white rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-0.5 backdrop-blur-sm border-2 border-white/20 overflow-hidden group"
+          style={{
+            boxShadow: '0 10px 30px rgba(59, 130, 246, 0.4), 0 0 20px rgba(6, 182, 212, 0.3)',
+          }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
         >
-          <Sparkles className="w-4 h-4" />
-          <span>Dream to Plan AI</span>
-        </button>
+          {/* Sparkle effect */}
+          <motion.div
+            className="absolute inset-0 opacity-0 group-hover:opacity-100"
+            animate={{
+              background: [
+                'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%)',
+                'radial-gradient(circle at 80% 50%, rgba(255,255,255,0.3) 0%, transparent 50%)',
+                'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%)',
+              ],
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+          />
+          <div className="relative z-10 flex items-center gap-2">
+            <div className="relative">
+              <Cloud className="w-5 h-5" />
+              {/* Sparkle on cloud */}
+              <motion.div
+                className="absolute -top-0.5 -right-0.5"
+                animate={{
+                  rotate: [0, 360],
+                  scale: [1, 1.2, 1],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+              >
+                <Zap className="w-2.5 h-2.5 text-yellow-200" />
+              </motion.div>
+            </div>
+            <span className="font-semibold">Dream to Plan AI</span>
+          </div>
+        </motion.button>
         <DreamToPlanModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
       </>
     );
@@ -271,20 +330,192 @@ export const DreamToPlanButton: React.FC<DreamToPlanButtonProps> = ({
         }}
         transition={{ delay: 1, type: "spring", stiffness: 200 }}
       >
-        <div className="relative">
-          {/* Pulse animation */}
+        <div className="relative" style={{ overflow: 'visible', width: '300px', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+          {/* Dreamy glow layers - centered on button */}
           <motion.div
-            className={`absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full ${sizeClasses[finalSize]} opacity-20`}
+            className={`absolute bg-gradient-to-r from-blue-400/30 via-cyan-400/30 to-sky-400/30 rounded-full ${sizeClasses[finalSize]} blur-xl`}
+            style={{
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
             animate={{
-              scale: [1, 1.5, 1],
-              opacity: [0.2, 0, 0.2],
+              scale: [1, 1.3, 1],
+              opacity: [0.3, 0.6, 0.3],
             }}
             transition={{
-              duration: 2,
+              duration: 3,
               repeat: Infinity,
               ease: "easeInOut",
             }}
           />
+          
+          {/* Secondary glow */}
+          <motion.div
+            className={`absolute bg-gradient-to-br from-blue-300/40 to-cyan-300/40 rounded-full ${sizeClasses[finalSize]} blur-lg`}
+            style={{
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+            animate={{
+              scale: [1.2, 1, 1.2],
+              opacity: [0.2, 0.4, 0.2],
+            }}
+            transition={{
+              duration: 2.5,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+
+          {/* Soft cloud-like pulse */}
+          <motion.div
+            className={`absolute bg-gradient-to-r from-blue-200/50 to-cyan-200/50 rounded-full ${sizeClasses[finalSize]}`}
+            style={{
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+            animate={{
+              scale: [1, 1.4, 1],
+              opacity: [0.1, 0, 0.1],
+            }}
+            transition={{
+              duration: 2.5,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+
+          {/* Dream bubbles emerging from button on hover - outside button */}
+          <AnimatePresence>
+            {isHovered && (
+              <>
+                {[...Array(5)].map((_, i) => {
+                  const angle = (i * 360) / 5;
+                  const radians = (angle * Math.PI) / 180;
+                  const baseDistance = 70;
+                  const maxDistance = 120;
+                  return (
+                    <motion.div
+                      key={i}
+                      className="absolute"
+                      initial={{ 
+                        scale: 0.2,
+                        opacity: 0.9 
+                      }}
+                      animate={{ 
+                        x: [0, Math.cos(radians) * baseDistance, Math.cos(radians) * maxDistance],
+                        y: [0, Math.sin(radians) * baseDistance, Math.sin(radians) * maxDistance],
+                        scale: [0.2, 0.8, 1.5, 2, 2.5],
+                        opacity: [0.9, 1, 0.8, 0.4, 0],
+                      }}
+                      exit={{ 
+                        scale: 0,
+                        opacity: 0 
+                      }}
+                      transition={{
+                        duration: 3,
+                        delay: i * 0.2,
+                        repeat: Infinity,
+                        ease: "easeOut",
+                        times: [0, 0.3, 0.6, 0.8, 1],
+                      }}
+                      style={{
+                        left: '50%',
+                        top: '50%',
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                    >
+                      {/* Dream bubble shape */}
+                      <div className="relative">
+                        {/* Main bubble */}
+                        <motion.div 
+                          className="w-10 h-10 bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-md rounded-full border-2 border-white/50 shadow-xl"
+                          animate={{
+                            scale: [1, 1.2, 1],
+                          }}
+                          transition={{
+                            duration: 1.5,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                          }}
+                        />
+                        {/* Smaller bubble */}
+                        <motion.div 
+                          className="absolute -top-2 -right-2 w-5 h-5 bg-white/30 backdrop-blur-sm rounded-full border border-white/40"
+                          animate={{
+                            scale: [1, 1.3, 1],
+                          }}
+                          transition={{
+                            duration: 1.2,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: 0.3,
+                          }}
+                        />
+                        {/* Tiny bubble */}
+                        <motion.div 
+                          className="absolute top-3 -left-2 w-4 h-4 bg-white/25 backdrop-blur-sm rounded-full"
+                          animate={{
+                            scale: [1, 1.4, 1],
+                          }}
+                          transition={{
+                            duration: 1,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: 0.6,
+                          }}
+                        />
+                      </div>
+                    </motion.div>
+                  );
+                })}
+                
+                {/* Floating dream clouds */}
+                {[...Array(3)].map((_, i) => {
+                  const startAngle = (i * 120) * Math.PI / 180;
+                  const distance = 60 + i * 20;
+                  return (
+                    <motion.div
+                      key={`cloud-${i}`}
+                      className="absolute"
+                      initial={{ 
+                        x: 0, 
+                        y: 0, 
+                        scale: 0,
+                        opacity: 0 
+                      }}
+                      animate={{ 
+                        x: Math.cos(startAngle) * distance,
+                        y: Math.sin(startAngle) * distance,
+                        scale: [0, 1.2, 1.5],
+                        opacity: [0, 0.7, 0],
+                      }}
+                      exit={{ 
+                        scale: 0,
+                        opacity: 0 
+                      }}
+                      transition={{
+                        duration: 3,
+                        delay: i * 0.2,
+                        repeat: Infinity,
+                        ease: "easeOut",
+                      }}
+                      style={{
+                        left: '50%',
+                        top: '50%',
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                    >
+                      <Cloud className="w-6 h-6 text-white/60 drop-shadow-lg" />
+                    </motion.div>
+                  );
+                })}
+              </>
+            )}
+          </AnimatePresence>
 
           <motion.button
             ref={buttonRef}
@@ -296,6 +527,8 @@ export const DreamToPlanButton: React.FC<DreamToPlanButtonProps> = ({
             onMouseEnter={() => {
               setIsHovered(true);
               isHoveredRef.current = true;
+              // Reset to first message on hover
+              setCurrentHelpMessage(0);
             }}
             onMouseLeave={() => {
               setIsHovered(false);
@@ -303,27 +536,93 @@ export const DreamToPlanButton: React.FC<DreamToPlanButtonProps> = ({
             }}
             onMouseDown={handleMouseDown}
             onTouchStart={handleTouchStart}
-            className={`relative ${sizeClasses[finalSize]} bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 group`}
-            whileHover={{ scale: 1.1 }}
+            className={`relative ${sizeClasses[finalSize]} bg-gradient-to-br from-blue-500 via-cyan-500 to-sky-500 hover:from-blue-600 hover:via-cyan-600 hover:to-sky-600 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 group backdrop-blur-sm border-2 border-white/20 z-10`}
+            style={{
+              boxShadow: isHovered 
+                ? '0 0 30px rgba(59, 130, 246, 0.6), 0 0 60px rgba(6, 182, 212, 0.4), 0 0 90px rgba(14, 165, 233, 0.3)'
+                : '0 0 20px rgba(59, 130, 246, 0.4), 0 0 40px rgba(6, 182, 212, 0.3)',
+              pointerEvents: 'auto',
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+            whileHover={{ scale: 1.15, rotate: [0, -5, 5, 0] }}
             whileTap={{ scale: 0.95 }}
+            animate={{
+              y: [0, -5, 0],
+            }}
+            transition={{
+              y: {
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut",
+              },
+            }}
           >
-            <Sparkles className={`${iconSizes[finalSize]} text-white`} />
+
+            {/* Dream icon - Cloud with sparkle */}
+            <motion.div
+              className="relative z-10"
+              animate={{
+                scale: isHovered ? [1, 1.1, 1] : 1,
+                y: isHovered ? [0, -2, 0] : 0,
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: isHovered ? Infinity : 0,
+                ease: "easeInOut",
+              }}
+            >
+              <div className="relative">
+                <Cloud className={`${iconSizes[finalSize]} text-white drop-shadow-lg`} />
+                {/* Sparkle on cloud */}
+                <motion.div
+                  className="absolute -top-1 -right-1"
+                  animate={{
+                    rotate: [0, 360],
+                    scale: [1, 1.2, 1],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                >
+                  <Zap className="w-3 h-3 text-yellow-200 drop-shadow-lg" />
+                </motion.div>
+              </div>
+            </motion.div>
             
-            {/* Tooltip */}
-            <AnimatePresence>
+            {/* Dreamy tooltip with rotating messages */}
+            <AnimatePresence mode="wait">
               {isHovered && finalShowLabel && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.8, x: currentPosition.includes("right") ? 10 : -10 }}
-                  animate={{ opacity: 1, scale: 1, x: currentPosition.includes("right") ? -10 : 10 }}
-                  exit={{ opacity: 0, scale: 0.8, x: currentPosition.includes("right") ? 10 : -10 }}
+                  key={currentHelpMessage}
+                  initial={{ opacity: 0, scale: 0.8, y: 10, x: currentPosition.includes("right") ? 10 : -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0, x: currentPosition.includes("right") ? -10 : 10 }}
+                  exit={{ opacity: 0, scale: 0.8, y: -10, x: currentPosition.includes("right") ? 10 : -10 }}
+                  transition={{ duration: 0.3 }}
                   className={`absolute ${
-                    currentPosition.includes("right") ? "right-full mr-3" : "left-full ml-3"
-                  } top-1/2 transform -translate-y-1/2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-3 py-2 rounded-lg text-sm font-body font-medium whitespace-nowrap shadow-lg`}
+                    currentPosition.includes("right") ? "right-full mr-4" : "left-full ml-4"
+                  } top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-blue-600/95 to-cyan-600/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl text-sm font-medium whitespace-nowrap shadow-2xl border border-white/20`}
+                  style={{
+                    boxShadow: '0 10px 40px rgba(59, 130, 246, 0.5), 0 0 20px rgba(6, 182, 212, 0.3)',
+                  }}
                 >
-                  Dream to Plan AI
+                  <div className="flex items-center gap-2">
+                    <motion.div
+                      animate={{ rotate: [0, 360] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    >
+                      <Wand2 className="w-4 h-4" />
+                    </motion.div>
+                    <span>{helpMessages[currentHelpMessage]}</span>
+                  </div>
+                  {/* Arrow */}
                   <div
-                    className={`absolute top-1/2 transform -translate-y-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-100 rotate-45 ${
-                      currentPosition.includes("right") ? "-right-1" : "-left-1"
+                    className={`absolute top-1/2 transform -translate-y-1/2 w-3 h-3 bg-gradient-to-r from-blue-600/95 to-cyan-600/95 rotate-45 border-r border-b border-white/20 ${
+                      currentPosition.includes("right") ? "-right-1.5" : "-left-1.5"
                     }`}
                   />
                 </motion.div>

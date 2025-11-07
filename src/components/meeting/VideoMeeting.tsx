@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { videoMeetingService } from '../../services/videoMeetingService';
 import { webRTCService } from '../../services/webRTCService';
-import { webRTCSignalingService } from '../../services/webRTCSignalingService';
+import { unifiedSignalingService } from '../../services/unifiedSignalingService';
 import { realTimeAuth } from '../../utils/realTimeAuth';
 import { LoadingGlobe } from '../ui/LoadingGlobe';
 import { VideoMeeting as VideoMeetingType, VideoMeetingParticipant, ViewMode } from '../../types/videoMeeting';
@@ -39,7 +39,7 @@ import { SharedWhiteboard } from './SharedWhiteboard';
 import { AvatarSelector } from './AvatarSelector';
 import { meetingTranscriptionService } from '../../services/meetingTranscriptionService';
 
-export const VideoMeeting: React.FC = () => {
+export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: propMeetingId }) => {
   const [meeting, setMeeting] = useState<VideoMeetingType | null>(null);
   const [currentMeetingId, setCurrentMeetingId] = useState<string | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -73,17 +73,21 @@ export const VideoMeeting: React.FC = () => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const screenVideoRef = useRef<HTMLVideoElement>(null);
 
-  // Check URL for meeting ID on mount and auto-join
+  // Check URL for meeting ID on mount and auto-join, or use prop
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const meetingIdFromUrl = urlParams.get('id');
-    
-    if (meetingIdFromUrl) {
-      setAutoJoinMeetingId(meetingIdFromUrl);
-      // Clean up URL
-      window.history.replaceState({}, '', window.location.pathname);
+    if (propMeetingId) {
+      setAutoJoinMeetingId(propMeetingId);
+    } else {
+      const urlParams = new URLSearchParams(window.location.search);
+      const meetingIdFromUrl = urlParams.get('id');
+      
+      if (meetingIdFromUrl) {
+        setAutoJoinMeetingId(meetingIdFromUrl);
+        // Clean up URL
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     }
-  }, []);
+  }, [propMeetingId]);
 
   // Auto-join when meeting ID is present - only once
   useEffect(() => {
@@ -313,25 +317,57 @@ export const VideoMeeting: React.FC = () => {
   const setupWebRTCSignaling = (meetingId: string) => {
     if (!user) return;
 
-    const unsubscribe = webRTCSignalingService.subscribeToSignals(
-      meetingId,
-      user.id,
-      async (signal) => {
-        try {
-          if (signal.type === 'offer') {
-            await handleOffer(signal.senderId, signal.data, meetingId);
-          } else if (signal.type === 'answer') {
-            await handleAnswer(signal.senderId, signal.data, meetingId);
-          } else if (signal.type === 'ice-candidate') {
-            await handleIceCandidate(signal.senderId, signal.data);
-          }
-        } catch (err) {
-          console.error('Error handling signal:', err);
-        }
-      }
-    );
+    // Subscribe to participants to set up signaling for each
+    const setupSignalingForParticipant = async (participantId: string) => {
+      if (participantId === user!.id) return; // Skip self
 
-    return unsubscribe;
+      const cleanup = await unifiedSignalingService.initializeSignaling(
+        meetingId,
+        user!.id,
+        participantId,
+        {
+          onOffer: async (offer, from) => {
+            try {
+              await handleOffer(from, offer, meetingId);
+            } catch (err) {
+              console.error('Error handling offer:', err);
+            }
+          },
+          onAnswer: async (answer, from) => {
+            try {
+              await handleAnswer(from, answer, meetingId);
+            } catch (err) {
+              console.error('Error handling answer:', err);
+            }
+          },
+          onIceCandidate: async (candidate, from) => {
+            try {
+              await handleIceCandidate(from, candidate);
+            } catch (err) {
+              console.error('Error handling ICE candidate:', err);
+            }
+          },
+          onError: (error) => {
+            console.error('Signaling error:', error);
+            setError(error.message);
+          }
+        }
+      );
+
+      return cleanup;
+    };
+
+    // Set up signaling for all existing participants
+    if (meeting?.participants) {
+      Object.keys(meeting.participants).forEach(async (participantId) => {
+        await setupSignalingForParticipant(participantId);
+      });
+    }
+
+    // Return cleanup function that will be called when meeting ends
+    return () => {
+      unifiedSignalingService.cleanup(meetingId, user.id);
+    };
   };
 
   const handleOffer = async (senderId: string, offer: RTCSessionDescriptionInit, meetingId: string) => {
@@ -403,7 +439,7 @@ export const VideoMeeting: React.FC = () => {
       webRTCService.createPeerConnection(senderId, async (candidate) => {
         console.log('🧊 Sending ICE candidate in response to:', senderId);
         try {
-          await webRTCSignalingService.sendIceCandidate(
+          await unifiedSignalingService.sendIceCandidate(
             meetingId,
             user.id,
             senderId,
@@ -421,7 +457,7 @@ export const VideoMeeting: React.FC = () => {
       const answer = await webRTCService.createAnswer(senderId);
       
       console.log('📤 Sending answer to:', senderId);
-      await webRTCSignalingService.sendAnswer(
+      await unifiedSignalingService.sendAnswer(
         meetingId,
         user.id,
         senderId,
@@ -582,7 +618,7 @@ export const VideoMeeting: React.FC = () => {
       webRTCService.createPeerConnection(participantId, async (candidate) => {
         console.log('🧊 Sending ICE candidate to:', participantId);
         try {
-          await webRTCSignalingService.sendIceCandidate(
+          await unifiedSignalingService.sendIceCandidate(
             currentMeetingId,
             user.id,
             participantId,
@@ -597,7 +633,7 @@ export const VideoMeeting: React.FC = () => {
       console.log('📤 Creating offer for:', participantId);
       const offer = await webRTCService.createOffer(participantId);
       console.log('📤 Sending offer to:', participantId, '- offer type:', offer.type);
-      await webRTCSignalingService.sendOffer(
+      await unifiedSignalingService.sendOffer(
         currentMeetingId,
         user.id,
         participantId,

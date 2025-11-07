@@ -195,11 +195,13 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
     if (file.mimeType === "application/pdf") {
       try {
         return (
-          <div className="h-full w-full">
+          <div className="h-full w-full" data-component="pdf-viewer">
             <iframe
               src={file.content}
               className="w-full h-full border-0"
               title={`PDF Preview: ${file.name}`}
+              data-pdf-viewer="true"
+              data-component="file-content"
               onError={() => {
                 console.error("PDF iframe failed to load");
               }}

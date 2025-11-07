@@ -8,8 +8,6 @@ import {
   Activity,
   Share2,
   Mail,
-  ExternalLink,
-  Eye,
   Edit3,
   Shield,
   Hash,
@@ -34,6 +32,8 @@ import {
   Calendar,
   Brain,
   Code,
+  Phone,
+  Video,
 } from "lucide-react";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import {
@@ -54,12 +54,17 @@ import { FileItem } from "../../types";
 import { ShareMenu } from "../../components/sharing/ShareMenu";
 import { extractTextFromPdfDataUrl } from "../../utils/pdfText";
 import { TeamFileManager } from "./TeamFileManager";
-import { StudyTeam } from "./StudyTeam";
 import { DoubtDiscussionComponent } from "./DoubtDiscussion";
 import { PairTasks } from "./PairTasks";
 import { autoFileAccessChecker } from "../../utils/autoFileAccessChecker";
 import { filePreviewService } from "../../utils/filePreviewService";
 import { TeamQuiz } from "./TeamQuiz";
+import { CallManager } from "../../components/call/CallManager";
+import { TeamMeetingModal } from "../../components/call/TeamMeetingModal";
+import { callService } from "../../services/callService";
+import { teamMeetingService } from "../../services/teamMeetingService";
+import { videoMeetingService } from "../../services/videoMeetingService";
+import { VideoMeeting } from "../../components/meeting/VideoMeeting";
 
 // Study motivational quotes
 const STUDY_QUOTES = [
@@ -74,27 +79,6 @@ const STUDY_QUOTES = [
 ];
 
 // Helper functions for team type styling
-const getTeamTypeColors = (teamType: "general" | "study") => {
-  if (teamType === "study") {
-    return {
-      primary: "bg-purple-600 hover:bg-purple-700",
-      secondary: "bg-indigo-600 hover:bg-indigo-700",
-      accent: "bg-emerald-600 hover:bg-emerald-700",
-      text: "text-purple-600",
-      bg: "bg-purple-50 dark:bg-purple-900/20",
-      border: "border-purple-200 dark:border-purple-800",
-    };
-  }
-  return {
-    primary: "bg-blue-600 hover:bg-blue-700",
-    secondary: "bg-green-600 hover:bg-green-700",
-    accent: "bg-orange-600 hover:bg-orange-700",
-    text: "text-blue-600",
-    bg: "bg-blue-50 dark:bg-blue-900/20",
-    border: "border-blue-200 dark:border-blue-800",
-  };
-};
-
 const getRandomStudyQuote = () => {
   return STUDY_QUOTES[Math.floor(Math.random() * STUDY_QUOTES.length)];
 };
@@ -220,8 +204,6 @@ export const TeamSpace: React.FC<{
   const [newTeamType, setNewTeamType] = useState<"general" | "study">(
     "general"
   );
-  const [showExitRequestsPanel, setShowExitRequestsPanel] = useState(false);
-  const [pendingExitRequests, setPendingExitRequests] = useState<any[]>([]);
 
   // File preview state
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
@@ -233,6 +215,11 @@ export const TeamSpace: React.FC<{
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [shareMenuPosition, setShareMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedFileForShare, setSelectedFileForShare] = useState<any>(null);
+
+  // Call and meeting state
+  const [showTeamMeetingModal, setShowTeamMeetingModal] = useState(false);
+  const [activeMeetingId, setActiveMeetingId] = useState<string | null>(null);
+  const [showVideoMeeting, setShowVideoMeeting] = useState(false);
 
   const user = realTimeAuth.getCurrentUser();
 
@@ -1111,16 +1098,6 @@ export const TeamSpace: React.FC<{
     return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + " " + sizes[i];
   };
 
-  const handleShareFile = (file: any, event: React.MouseEvent) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    setShareMenuPosition({
-      x: rect.left,
-      y: rect.bottom + 5,
-    });
-    setSelectedFileForShare(file);
-    setShowShareMenu(true);
-  };
-
   const handleAddTaskToProject = (project: TeamProject) => {
     setSelectedProjectForTask(project);
     setShowAddTaskModal(true);
@@ -1141,7 +1118,8 @@ export const TeamSpace: React.FC<{
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-slate-900 h-full mobile-viewport team-space-container flex transition-colors duration-300">
+    <React.Fragment>
+    <div className="bg-gray-50 dark:bg-slate-900 h-full mobile-viewport team-space-container flex transition-colors duration-300" data-component="team-space">
       {/* Sidebar */}
       <div className="hidden lg:flex lg:w-64 xl:w-72 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex-col team-sidebar">
         <div className="p-responsive border-b border-gray-200 dark:border-slate-700">
@@ -1338,41 +1316,47 @@ export const TeamSpace: React.FC<{
                 {/* Email test panel removed for production */}
               </div>
             </div>
-
-            {/* Tabs */}
-            <div className="tabs-mobile mt-6">
-              {getTabConfig(selectedTeam?.teamType || "general").map(
-                (tabConfig) => {
-                  const IconComponent = tabConfig.icon;
-                  const isActive = activeTab === tabConfig.key;
-                  const colors = getTeamTypeColors(
-                    selectedTeam?.teamType || "general"
-                  );
-
-                  return (
-                    <button
-                      key={tabConfig.key}
-                      onClick={() => setActiveTab(tabConfig.key as any)}
-                      className={`tab-mobile btn-touch flex items-center gap-2 ${
-                        isActive ? "active" : ""
-                      } ${
-                        isActive
-                          ? selectedTeam?.teamType === "study"
-                            ? "border-purple-600 text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20"
-                            : "border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
-                          : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-slate-700"
-                      }`}
-                    >
-                      <IconComponent className="w-4 h-4 flex-shrink-0" />
-                      <span className="text-responsive-sm font-medium truncate">
-                        {tabConfig.label}
-                      </span>
-                    </button>
-                  );
-                }
-              )}
-            </div>
           </div>
+
+          {/* Tabs - Mobile responsive with scroll */}
+            <div className="mt-6 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <div className="flex gap-2 pb-2">
+                {getTabConfig(selectedTeam?.teamType || "general").map(
+                  (tabConfig) => {
+                    const IconComponent = tabConfig.icon;
+                    const isActive = activeTab === tabConfig.key;
+
+                    return (
+                      <button
+                        key={tabConfig.key}
+                        onClick={() => {
+                          console.log('Tab clicked:', tabConfig.key);
+                          setActiveTab(tabConfig.key as any);
+                        }}
+                        className={`tab-mobile btn-touch flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-3 rounded-lg border-2 flex-shrink-0 whitespace-nowrap ${
+                          isActive ? "active" : ""
+                        } ${
+                          isActive
+                            ? selectedTeam?.teamType === "study"
+                              ? "border-purple-600 text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20"
+                              : "border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
+                            : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-slate-700"
+                        }`}
+                        style={{ minWidth: 'fit-content' }}
+                      >
+                        <IconComponent className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-responsive-sm font-medium hidden sm:inline" style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}>
+                          {tabConfig.label}
+                        </span>
+                        <span className="text-responsive-sm font-medium sm:hidden" style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}>
+                          {tabConfig.label.split(' ')[0]}
+                        </span>
+                      </button>
+                    );
+                  }
+                )}
+              </div>
+            </div>
 
           {/* Tab Content */}
           <div className="flex-1 overflow-y-auto scroll-area-mobile mobile-content team-main-content">
@@ -1465,6 +1449,69 @@ export const TeamSpace: React.FC<{
                             <MessageSquare className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 dark:text-purple-400" />
                           )}
                         </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Team Meetings Section */}
+                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
+                    <div className="p-4 border-b border-gray-200 dark:border-slate-700">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                          <Video className="w-5 h-5 mr-2 text-blue-500" />
+                          Team Meetings
+                        </h2>
+                        <button
+                          onClick={() => setShowTeamMeetingModal(true)}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors text-sm"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>New Meeting</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        Start instant meetings or schedule them for later. All team members can join.
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={async () => {
+                            try {
+                              const currentUser = realTimeAuth.getCurrentUser();
+                              if (!currentUser) {
+                                alert('Please log in to start a meeting');
+                                return;
+                              }
+                              // Create video meeting directly for instant meetings
+                              const meetingId = await videoMeetingService.createMeeting(
+                                currentUser.id,
+                                currentUser.username || currentUser.email || 'Host',
+                                `${selectedTeam!.name} Meeting`,
+                                `Team meeting for ${selectedTeam!.name}`
+                              );
+                              // Also create a team meeting record for tracking
+                              try {
+                                await teamMeetingService.createMeeting(
+                                  selectedTeam!.id,
+                                  `${selectedTeam!.name} Meeting`,
+                                  { isInstant: true }
+                                );
+                              } catch (err) {
+                                console.warn('Failed to create team meeting record:', err);
+                              }
+                              setActiveMeetingId(meetingId);
+                              setShowVideoMeeting(true);
+                            } catch (error: any) {
+                              console.error('Error creating instant meeting:', error);
+                              alert(error.message || 'Failed to create meeting');
+                            }
+                          }}
+                          className="flex-1 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center justify-center gap-2 transition-colors"
+                        >
+                          <Video className="w-5 h-5" />
+                          <span>Start Instant Meeting</span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1631,6 +1678,42 @@ export const TeamSpace: React.FC<{
                           </div>
                           {/* Action buttons */}
                           <div className="flex items-center gap-1 flex-shrink-0">
+                            {/* Call buttons for other members */}
+                            {member.id !== user?.id && member.isOnline && (
+                              <>
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const userName = member.name;
+                                      await callService.startCall(member.id, 'audio', userName);
+                                    } catch (error: any) {
+                                      console.error('Error starting call:', error);
+                                      alert(error.message || 'Failed to start call');
+                                    }
+                                  }}
+                                  className="btn-touch p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors"
+                                  title={`Call ${member.name}`}
+                                >
+                                  <Phone className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const userName = member.name;
+                                      await callService.startCall(member.id, 'video', userName);
+                                    } catch (error: any) {
+                                      console.error('Error starting video call:', error);
+                                      alert(error.message || 'Failed to start video call');
+                                    }
+                                  }}
+                                  className="btn-touch p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                                  title={`Video call ${member.name}`}
+                                >
+                                  <Video className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+
                             {/* Exit team button for current user (non-owners) */}
                             {member.id === user?.id &&
                               member.role !== "owner" && (
@@ -2222,7 +2305,7 @@ export const TeamSpace: React.FC<{
                 <DoubtDiscussionComponent
                   teamId={selectedTeam.id}
                   userId={user.id}
-                  userName={user.displayName || user.email || 'Anonymous'}
+                  userName={user.username || user.email || 'Anonymous'}
                   userRole={selectedTeam.members[user.id]?.role || 'member'}
                   className="h-full"
                 />
@@ -2412,7 +2495,7 @@ export const TeamSpace: React.FC<{
 
       {/* Create Team Modal */}
       {showCreateTeam && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Create New Team
@@ -3115,6 +3198,41 @@ export const TeamSpace: React.FC<{
           position={shareMenuPosition}
         />
       )}
+
+      {/* Call Manager - Handles incoming calls */}
+      <CallManager />
+
+      {/* Team Meeting Modal */}
+      {showTeamMeetingModal && selectedTeam && (
+        <TeamMeetingModal
+          isOpen={showTeamMeetingModal}
+          onClose={() => setShowTeamMeetingModal(false)}
+          teamId={selectedTeam.id}
+          onJoinMeeting={(meetingId) => {
+            setActiveMeetingId(meetingId);
+            setShowVideoMeeting(true);
+            setShowTeamMeetingModal(false);
+          }}
+        />
+      )}
+
+      {/* Video Meeting Component */}
+      {showVideoMeeting && activeMeetingId && (
+        <div className="fixed inset-0 z-50">
+          <VideoMeeting meetingId={activeMeetingId} />
+          <button
+            onClick={() => {
+              setShowVideoMeeting(false);
+              setActiveMeetingId(null);
+            }}
+            className="absolute top-4 right-4 z-50 p-3 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg"
+            title="Close Meeting"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
     </div>
+    </React.Fragment>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, Target, BookOpen, Calendar, Briefcase, Send, Loader2 } from "lucide-react";
+import { X, Sparkles, Target, BookOpen, Calendar, Briefcase, Send, Loader2, ShoppingBag, Video } from "lucide-react";
 import { EnhancedAIChat } from "../ai/EnhancedAIChat";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +24,20 @@ const suggestedPrompts = [
     icon: BookOpen,
     color: "from-purple-500 to-pink-500",
     type: "todo",
+  },
+  {
+    id: "ecom-team",
+    text: "Create an ecommerce team",
+    icon: ShoppingBag,
+    color: "from-emerald-500 to-teal-500",
+    type: "team",
+  },
+  {
+    id: "meeting",
+    text: "Schedule a meeting",
+    icon: Video,
+    color: "from-violet-500 to-purple-500",
+    type: "meeting",
   },
   {
     id: "interview",

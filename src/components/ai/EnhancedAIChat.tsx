@@ -768,8 +768,27 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
           setIsLoading(false);
         } else {
           // Regular flow for non-dream-to-plan modes
+          // Request well-structured text with proper formatting, but keep it simple
+          const enhancedPrompt = `${userMessage}
+
+Please format your response with clear structure and proper alignment. Use plain text with:
+- Clear section headings (use ALL CAPS or lines ending with colons)
+- Proper paragraph breaks (blank lines between paragraphs)
+- Bullet points using "-" or "*" at the start of lines
+- Numbered lists using "1.", "2.", "3." etc.
+- Use **bold text** for important terms
+- Use \`code\` for inline code snippets
+- Use triple backticks for code blocks
+- For tables, use markdown table format:
+  | Column 1 | Column 2 | Column 3 |
+  |----------|----------|----------|
+  | Data 1   | Data 2   | Data 3   |
+  | Data 4   | Data 5   | Data 6   |
+
+Keep responses well-organized, properly spaced, and easy to read. Ensure good text alignment and readability.`;
+
           const response = await unifiedAIService.generateResponse(
-            userMessage,
+            enhancedPrompt,
             fullContext,
             useConversationContext ? conversationHistory : undefined
           );
@@ -850,6 +869,700 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
   };
+
+  // Sanitize HTML content to prevent XSS attacks
+  const sanitizeHTML = (html: string): string => {
+    // Remove script tags and their content
+    html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    // Remove style tags and their content
+    html = html.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+    // Remove event handlers (onclick, onerror, etc.)
+    html = html.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
+    // Remove javascript: protocol
+    html = html.replace(/javascript:/gi, '');
+    // Remove data: protocol (except for images, which we'll handle separately)
+    html = html.replace(/data:text\/html/gi, '');
+    // Remove iframe tags
+    html = html.replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '');
+    // Remove object tags
+    html = html.replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '');
+    // Remove embed tags
+    html = html.replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '');
+    // Remove form tags
+    html = html.replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, '');
+    // Remove input tags
+    html = html.replace(/<input\b[^<]*>/gi, '');
+    // Remove button tags (to prevent form submission)
+    html = html.replace(/<button\b[^<]*(?:(?!<\/button>)<[^<]*)*<\/button>/gi, '');
+    // Remove link tags (to prevent external resource loading)
+    html = html.replace(/<link\b[^<]*>/gi, '');
+    // Remove meta tags
+    html = html.replace(/<meta\b[^<]*>/gi, '');
+    // Remove base tags
+    html = html.replace(/<base\b[^<]*>/gi, '');
+    // Remove img tags (to prevent loading external images, unless specifically needed)
+    // We'll keep img tags but remove src with data: or javascript: protocols
+    html = html.replace(/<img\b[^>]*src\s*=\s*["'](javascript:|data:text\/html)[^"']*["'][^>]*>/gi, '');
+    // Remove any remaining event handlers from attributes
+    html = html.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
+    return html.trim();
+  };
+
+  // Check if content appears to be HTML
+  const isHTML = (content: string): boolean => {
+    const trimmed = content.trim();
+    // Check if it starts with HTML tags or contains HTML tag patterns
+    // Look for common HTML tags that indicate HTML structure
+    const htmlTagPattern = /<(h[1-6]|p|div|ul|ol|li|strong|em|b|i|code|pre|br|span|section|article|header|footer|nav|main)[\s>]/i;
+    
+    // Check if content starts with HTML tag or has HTML tags
+    if (htmlTagPattern.test(trimmed)) {
+      // Make sure it's not just a code block showing HTML
+      // If there are closing tags and proper structure, it's HTML
+      const hasOpeningAndClosingTags = /<[a-z]+[^>]*>[\s\S]*<\/[a-z]+>/i.test(trimmed);
+      const hasSelfClosingTags = /<(br|hr|img|input|meta|link)[\s>]/i.test(trimmed);
+      return hasOpeningAndClosingTags || hasSelfClosingTags || trimmed.startsWith('<');
+    }
+    return false;
+  };
+
+  // Format message content with HTML or markdown-like rendering
+  const formatMessageContent = (content: string, messageId: string = '') => {
+    if (!content) return null;
+
+    // Extract HTML from markdown code blocks if present (```html ... ```)
+    let processedContent = content.trim();
+    const htmlCodeBlockMatch = processedContent.match(/```html\n?([\s\S]*?)```/i);
+    if (htmlCodeBlockMatch) {
+      processedContent = htmlCodeBlockMatch[1].trim();
+    } else {
+      // Also check for generic code blocks that might contain HTML
+      const genericCodeBlockMatch = processedContent.match(/```\n?([\s\S]*?)```/);
+      if (genericCodeBlockMatch && isHTML(genericCodeBlockMatch[1])) {
+        processedContent = genericCodeBlockMatch[1].trim();
+      }
+    }
+
+    // Check if content is HTML and render it safely
+    if (isHTML(processedContent)) {
+      const sanitized = sanitizeHTML(processedContent);
+      return (
+        <div
+          key={`${messageId}-html`}
+          className="ai-html-content select-text"
+          style={{
+            userSelect: 'text',
+            WebkitUserSelect: 'text',
+            MozUserSelect: 'text',
+            msUserSelect: 'text',
+            color: 'inherit',
+            lineHeight: '1.6',
+            wordWrap: 'break-word',
+          }}
+          dangerouslySetInnerHTML={{ 
+            __html: `<style>
+              .ai-html-content h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; margin-top: 1.5rem; color: inherit; line-height: 1.3; }
+              .ai-html-content h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; margin-top: 1.25rem; color: inherit; line-height: 1.3; }
+              .ai-html-content h3 { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem; color: inherit; line-height: 1.3; }
+              .ai-html-content h4 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 0.75rem; color: inherit; line-height: 1.3; }
+              .ai-html-content p { margin-bottom: 0.75rem; line-height: 1.6; color: inherit; text-align: left; }
+              .ai-html-content ul { list-style-type: disc; list-style-position: inside; margin-bottom: 0.75rem; margin-left: 1.5rem; padding-left: 0.5rem; color: inherit; }
+              .ai-html-content ol { list-style-type: decimal; list-style-position: inside; margin-bottom: 0.75rem; margin-left: 1.5rem; padding-left: 0.5rem; color: inherit; }
+              .ai-html-content li { margin-bottom: 0.25rem; color: inherit; line-height: 1.5; }
+              .ai-html-content strong, .ai-html-content b { font-weight: 700; color: inherit; }
+              .ai-html-content em, .ai-html-content i { font-style: italic; color: inherit; }
+              .ai-html-content code { background-color: rgba(243, 244, 246, 0.8); padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.875rem; color: inherit; }
+              .ai-html-content pre { background-color: rgba(243, 244, 246, 0.8); padding: 0.75rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 0.75rem; }
+              .ai-html-content pre code { background-color: transparent; padding: 0; font-size: 0.875rem; white-space: pre; display: block; }
+              .ai-html-content br { display: block; margin-bottom: 0.5rem; }
+              .ai-html-content table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin: 1rem 0; 
+                font-size: 0.875rem;
+                background-color: transparent;
+                overflow-x: auto;
+                display: block;
+              }
+              .ai-html-content table thead { 
+                background-color: rgba(243, 244, 246, 0.5); 
+              }
+              @media (prefers-color-scheme: dark) {
+                .ai-html-content table thead { 
+                  background-color: rgba(30, 41, 59, 0.5); 
+                }
+              }
+              .ai-html-content table th { 
+                padding: 0.75rem; 
+                text-align: left; 
+                font-weight: 600; 
+                border: 1px solid rgba(209, 213, 219, 0.5);
+                color: inherit;
+              }
+              @media (prefers-color-scheme: dark) {
+                .ai-html-content table th { 
+                  border-color: rgba(71, 85, 105, 0.5);
+                }
+              }
+              .ai-html-content table td { 
+                padding: 0.75rem; 
+                border: 1px solid rgba(209, 213, 219, 0.5);
+                color: inherit;
+              }
+              @media (prefers-color-scheme: dark) {
+                .ai-html-content table td { 
+                  border-color: rgba(71, 85, 105, 0.5);
+                }
+              }
+              .ai-html-content table tbody tr:nth-child(even) { 
+                background-color: rgba(249, 250, 251, 0.5); 
+              }
+              @media (prefers-color-scheme: dark) {
+                .ai-html-content table tbody tr:nth-child(even) { 
+                  background-color: rgba(15, 23, 42, 0.3); 
+                }
+              }
+              .ai-html-content table tbody tr:hover { 
+                background-color: rgba(243, 244, 246, 0.8); 
+              }
+              @media (prefers-color-scheme: dark) {
+                .ai-html-content table tbody tr:hover { 
+                  background-color: rgba(30, 41, 59, 0.6); 
+                }
+              }
+              .ai-html-content, .ai-html-content * { 
+                user-select: text !important; 
+                -webkit-user-select: text !important; 
+                -moz-user-select: text !important; 
+                -ms-user-select: text !important; 
+                cursor: text;
+                text-align: left;
+              }
+              @media (prefers-color-scheme: dark) {
+                .ai-html-content code { background-color: rgba(30, 41, 59, 0.8); }
+                .ai-html-content pre { background-color: rgba(30, 41, 59, 0.8); }
+              }
+            </style>
+            <div class="ai-html-content">${sanitized}</div>`
+          }}
+        />
+      );
+    }
+
+    // Fall back to markdown/plain text rendering
+    // Use processed content (might have been extracted from code blocks)
+    content = processedContent;
+
+    // Create a unique key generator for this message using messageId
+    let messageKeySeed = 0;
+    const messageBaseId = messageId || `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const getInlineKey = (prefix: string = '') => `${messageBaseId}-${prefix}-${messageKeySeed++}`;
+    
+    const formatInlineText = (text: string, parentKey: string = ''): React.ReactNode => {
+      if (!text) return null;
+      
+      // Process formatting in order: code (to avoid conflicts), bold, italic, links
+      let processedText = text;
+      const keyGen = () => getInlineKey();
+
+      // First, protect code blocks (inline code with backticks)
+      const codeBlocks: { id: string; content: string; key: string }[] = [];
+      processedText = processedText.replace(/`([^`]+)`/g, (_match, code) => {
+        const id = `__CODE_${codeBlocks.length}__`;
+        codeBlocks.push({ id, content: code, key: keyGen() });
+        return id;
+      });
+
+      // Helper to restore code blocks and format text
+      const restoreCodeBlocks = (seg: string, baseKey: string): React.ReactNode[] => {
+        if (!seg) return [];
+        
+        const parts: React.ReactNode[] = [];
+        let remaining = seg;
+        let partIdx = 0;
+
+        // Find and replace code block placeholders
+        for (const code of codeBlocks) {
+          const pos = remaining.indexOf(code.id);
+          if (pos !== -1) {
+            // Add text before code
+            if (pos > 0) {
+              parts.push(<span key={`${baseKey}-text-${partIdx++}`}>{remaining.substring(0, pos)}</span>);
+            }
+            // Add code
+            parts.push(
+              <code key={code.key} className="bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-mono text-sm text-gray-900 dark:text-gray-100">
+                {code.content}
+              </code>
+            );
+            remaining = remaining.substring(pos + code.id.length);
+          }
+        }
+        
+        // Add remaining text
+        if (remaining) {
+          parts.push(<span key={`${baseKey}-text-${partIdx++}`}>{remaining}</span>);
+        }
+
+        return parts.length > 0 ? parts : [<span key={`${baseKey}-text-0`}>{seg}</span>];
+      };
+
+      // Process bold (**text**) - but not single * which might be italic
+      let result: React.ReactNode[] = [];
+      const boldRegex = /\*\*([^*]+?)\*\*/g;
+      let lastIndex = 0;
+      let match;
+      let hasBold = false;
+      let boldIdx = 0;
+
+      // Reset regex lastIndex
+      boldRegex.lastIndex = 0;
+      while ((match = boldRegex.exec(processedText)) !== null) {
+        hasBold = true;
+        const currentKey = `${parentKey || 'inline'}-bold-${boldIdx++}`;
+        
+        // Add text before bold
+        if (match.index > lastIndex) {
+          const beforeText = processedText.substring(lastIndex, match.index);
+          result.push(...restoreCodeBlocks(beforeText, `${currentKey}-before`));
+        }
+        // Add bold text
+        result.push(
+          <strong key={`${currentKey}-strong`} className="font-bold text-gray-900 dark:text-gray-100">
+            {restoreCodeBlocks(match[1], `${currentKey}-content`)}
+          </strong>
+        );
+        lastIndex = match.index + match[0].length;
+      }
+      
+      // Add remaining text
+      if (lastIndex < processedText.length) {
+        result.push(...restoreCodeBlocks(processedText.substring(lastIndex), `${parentKey || 'inline'}-remaining`));
+      } else if (!hasBold) {
+        // No bold found, just restore code blocks
+        result.push(...restoreCodeBlocks(processedText, `${parentKey || 'inline'}-plain`));
+      }
+
+      return result.length > 0 ? <>{result}</> : <>{text}</>;
+      };
+
+      // Split into blocks (paragraphs, lists, headings, code blocks, tables)
+      const lines = content.split('\n');
+      const elements: React.ReactNode[] = [];
+      let currentParagraph: string[] = [];
+      let currentList: string[] = [];
+      let currentTable: string[] = [];
+      let inCodeBlock = false;
+      let codeBlockLines: string[] = [];
+      let elementCounter = 0; // Counter for unique element keys
+
+      // Helper to parse markdown table
+      const parseTable = (tableLines: string[]): React.ReactNode => {
+        if (tableLines.length < 1) return null;
+
+        // Find separator line (contains dashes and pipes)
+        let headerEndIndex = -1;
+        for (let i = 0; i < tableLines.length; i++) {
+          if (tableLines[i].match(/^\s*\|[\s\-:|]+\|\s*$/)) {
+            headerEndIndex = i;
+            break;
+          }
+        }
+
+        // If no separator found, treat first row as header
+        let headerRowIndex = 0;
+        let dataStartIndex = 1;
+        if (headerEndIndex >= 0) {
+          headerRowIndex = 0;
+          dataStartIndex = headerEndIndex + 1;
+        }
+
+        // Parse header row
+        const headerRow = tableLines[headerRowIndex];
+        if (!headerRow || !headerRow.includes('|')) return null;
+        
+        const headers = headerRow.split('|').map(h => h.trim()).filter(h => h);
+        if (headers.length === 0) return null;
+
+        // Parse data rows
+        const dataRows: string[][] = [];
+        for (let i = dataStartIndex; i < tableLines.length; i++) {
+          const row = tableLines[i];
+          if (row.trim() && row.includes('|')) {
+            // Skip separator rows
+            if (row.match(/^\s*\|[\s\-:|]+\|\s*$/)) continue;
+            
+            const allCells = row.split('|').map(cell => cell.trim());
+            // Filter out empty cells at start/end, but keep middle empty cells
+            const cells = allCells.slice(1, -1).length > 0 
+              ? allCells.slice(1, -1) 
+              : allCells.filter((_cell, idx) => idx > 0 && idx <= headers.length);
+            
+            // Pad or trim to match header count
+            while (cells.length < headers.length) {
+              cells.push('');
+            }
+            if (cells.length > headers.length) {
+              cells.splice(headers.length);
+            }
+            
+            if (cells.length > 0) {
+              dataRows.push(cells);
+            }
+          }
+        }
+
+        const tableKey = `${messageBaseId}-table-${elementCounter++}`;
+        return (
+          <div key={tableKey} className="overflow-x-auto my-4" style={{ userSelect: 'text' }}>
+            <table className="min-w-full border-collapse border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800">
+              <thead className="bg-gray-100 dark:bg-slate-700">
+                <tr>
+                  {headers.map((header, idx) => (
+                    <th
+                      key={`${tableKey}-th-${idx}`}
+                      className="px-4 py-2 text-left font-semibold text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600"
+                      style={{ userSelect: 'text', textAlign: 'left' }}
+                    >
+                      {formatInlineText(header, `${tableKey}-th-${idx}`)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {dataRows.map((row, rowIdx) => (
+                  <tr
+                    key={`${tableKey}-tr-${rowIdx}`}
+                    className={rowIdx % 2 === 0 ? "bg-white dark:bg-slate-800" : "bg-gray-50 dark:bg-slate-700/50"}
+                  >
+                    {headers.map((_, cellIdx) => (
+                      <td
+                        key={`${tableKey}-td-${rowIdx}-${cellIdx}`}
+                        className="px-4 py-2 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600"
+                        style={{ userSelect: 'text', textAlign: 'left' }}
+                      >
+                        {formatInlineText(row[cellIdx] || '', `${tableKey}-td-${rowIdx}-${cellIdx}`)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      };
+
+      const flushTable = () => {
+        if (currentTable.length > 0) {
+          const table = parseTable(currentTable);
+          if (table) {
+            elements.push(table);
+          }
+          currentTable = [];
+        }
+      };
+
+      const flushParagraph = () => {
+        if (currentParagraph.length > 0) {
+          const text = currentParagraph.join(' ');
+          const paraKey = `${messageBaseId}-p-${elementCounter++}`;
+          elements.push(
+            <p 
+              key={paraKey} 
+              className="mb-3 text-gray-900 dark:text-gray-100 leading-relaxed text-left select-text"
+              style={{
+                userSelect: 'text',
+                textAlign: 'left',
+              }}
+            >
+              {formatInlineText(text, paraKey)}
+            </p>
+          );
+          currentParagraph = [];
+        }
+      };
+
+      const flushList = () => {
+        if (currentList.length > 0) {
+          const isOrdered = currentList[0].match(/^\d+\.\s/);
+          const listKey = `${messageBaseId}-list-${elementCounter++}`;
+          const listItems = currentList.map((item, idx) => {
+            const text = item.replace(/^[-*+]\s/, '').replace(/^\d+\.\s/, '');
+            const itemKey = `${listKey}-item-${idx}`;
+            return (
+              <li 
+                key={itemKey} 
+                className="mb-1 select-text text-left"
+                style={{ userSelect: 'text', textAlign: 'left' }}
+              >
+                {formatInlineText(text, itemKey)}
+              </li>
+            );
+          });
+          elements.push(
+            isOrdered ? (
+              <ol 
+                key={listKey} 
+                className="list-decimal list-inside mb-3 space-y-1 ml-4 text-gray-900 dark:text-gray-100 text-left select-text"
+                style={{
+                  userSelect: 'text',
+                  textAlign: 'left',
+                }}
+              >
+                {listItems}
+              </ol>
+            ) : (
+              <ul 
+                key={listKey} 
+                className="list-disc list-inside mb-3 space-y-1 ml-4 text-gray-900 dark:text-gray-100 text-left select-text"
+                style={{
+                  userSelect: 'text',
+                  textAlign: 'left',
+                }}
+              >
+                {listItems}
+              </ul>
+            )
+          );
+          currentList = [];
+        }
+      };
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        // Tables - detect markdown table format (| col1 | col2 |)
+        const isTableRow = trimmed.includes('|') && trimmed.split('|').length > 2;
+        const isTableSeparator = trimmed.match(/^\s*\|[\s\-:|]+\|\s*$/);
+
+        if (isTableRow || isTableSeparator) {
+          flushParagraph();
+          flushList();
+          currentTable.push(line);
+          continue;
+        } else if (currentTable.length > 0) {
+          // End of table
+          flushTable();
+        }
+
+        // Code blocks
+        if (trimmed.startsWith('```')) {
+          flushParagraph();
+          flushList();
+          flushTable();
+          if (inCodeBlock) {
+            // End code block
+            const codeKey = `${messageBaseId}-code-${elementCounter++}`;
+            elements.push(
+            <pre 
+              key={codeKey} 
+              className="bg-gray-100 dark:bg-slate-800 p-3 rounded-lg overflow-x-auto mb-3 select-text"
+              style={{ userSelect: 'text', textAlign: 'left' }}
+            >
+              <code className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre block select-text">
+                {codeBlockLines.join('\n')}
+              </code>
+            </pre>
+            );
+            codeBlockLines = [];
+            inCodeBlock = false;
+          } else {
+            // Start code block
+            inCodeBlock = true;
+          }
+          continue;
+        }
+
+        if (inCodeBlock) {
+          codeBlockLines.push(line);
+          continue;
+        }
+
+        // Headings
+        if (trimmed.startsWith('### ')) {
+          flushParagraph();
+          flushList();
+          flushTable();
+          elements.push(
+            <h3 
+              key={`${messageBaseId}-h3-${elementCounter++}`} 
+              className="text-base font-bold text-gray-900 dark:text-gray-100 mt-4 mb-2 text-left select-text"
+              style={{ userSelect: 'text', textAlign: 'left' }}
+            >
+              {trimmed.substring(4)}
+            </h3>
+          );
+          continue;
+        }
+        if (trimmed.startsWith('## ')) {
+          flushParagraph();
+          flushList();
+          flushTable();
+          elements.push(
+            <h2 
+              key={`${messageBaseId}-h2-${elementCounter++}`} 
+              className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-4 mb-2 text-left select-text"
+              style={{ userSelect: 'text', textAlign: 'left' }}
+            >
+              {trimmed.substring(3)}
+            </h2>
+          );
+          continue;
+        }
+        if (trimmed.startsWith('# ')) {
+          flushParagraph();
+          flushList();
+          flushTable();
+          elements.push(
+            <h1 
+              key={`${messageBaseId}-h1-${elementCounter++}`} 
+              className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-4 mb-2 text-left select-text"
+              style={{ userSelect: 'text', textAlign: 'left' }}
+            >
+              {trimmed.substring(2)}
+            </h1>
+          );
+          continue;
+        }
+
+        // Lists
+        if (trimmed.match(/^[-*+]\s/) || trimmed.match(/^\d+\.\s/)) {
+          flushParagraph();
+          flushTable();
+          currentList.push(trimmed);
+          continue;
+        }
+
+        // Empty line
+        if (trimmed === '') {
+          flushParagraph();
+          flushList();
+          flushTable();
+          continue;
+        }
+
+        // Regular paragraph text
+        if (currentList.length > 0) {
+          flushList();
+        }
+        currentParagraph.push(trimmed);
+      }
+
+      // Flush remaining
+      flushParagraph();
+      flushList();
+      flushTable();
+      if (inCodeBlock && codeBlockLines.length > 0) {
+        elements.push(
+          <pre 
+            key={`${messageBaseId}-code-${elementCounter++}`} 
+            className="bg-gray-100 dark:bg-slate-800 p-3 rounded-lg overflow-x-auto mb-3 select-text"
+            style={{ userSelect: 'text', textAlign: 'left' }}
+          >
+            <code className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre block select-text">
+              {codeBlockLines.join('\n')}
+            </code>
+          </pre>
+        );
+      }
+
+      // If no elements were created, render original content with better structure
+      if (elements.length === 0) {
+        // Try to add basic structure to plain text
+        const plainLines = content.split('\n').filter(l => l.trim());
+        if (plainLines.length > 1) {
+          // Detect if it looks like a list (lines starting with numbers, dashes, bullets)
+          const looksLikeList = plainLines.some(line => {
+            const trimmed = line.trim();
+            return /^(\d+[\.\)]\s|[-•*]\s|[\u2022\u2023\u25E6]\s)/.test(trimmed);
+          });
+          
+          if (looksLikeList) {
+            // Treat as a list
+            const listItems = plainLines.map(line => {
+              const trimmed = line.trim();
+              // Remove common list markers
+              return trimmed.replace(/^(\d+[\.\)]\s|[-•*]\s|[\u2022\u2023\u25E6]\s)/, '');
+            });
+            const listKey = `${messageBaseId}-auto-list`;
+            return (
+              <ul key={listKey} className="list-disc list-inside mb-3 space-y-2 ml-4 text-gray-900 dark:text-gray-100">
+                {listItems.map((item, idx) => (
+                  <li key={`${listKey}-item-${idx}`} className="mb-1">
+                    {formatInlineText(item, `${listKey}-item-${idx}`)}
+                  </li>
+                ))}
+              </ul>
+            );
+          }
+          
+          // Multiple lines - treat as paragraphs with better spacing
+          return (
+            <div 
+              className="space-y-3 select-text"
+              style={{
+                userSelect: 'text',
+                WebkitUserSelect: 'text',
+                MozUserSelect: 'text',
+                msUserSelect: 'text',
+                textAlign: 'left',
+              }}
+            >
+              {plainLines.map((line, idx) => {
+                const trimmed = line.trim();
+                // Detect if line looks like a heading (all caps, or ends with colon, or short line)
+                const looksLikeHeading = trimmed.length < 80 && (
+                  trimmed === trimmed.toUpperCase() || 
+                  trimmed.endsWith(':') ||
+                  trimmed.split(' ').length <= 6
+                );
+                
+                return looksLikeHeading ? (
+                  <h3 key={`${messageBaseId}-plain-h-${idx}`} className="text-base font-semibold text-gray-900 dark:text-gray-100 mt-4 mb-2 text-left">
+                    {formatInlineText(trimmed.replace(':', ''), `${messageBaseId}-plain-h-${idx}`)}
+                  </h3>
+                ) : (
+                  <p key={`${messageBaseId}-plain-${idx}`} className="mb-3 text-gray-900 dark:text-gray-100 leading-relaxed text-left">
+                    {formatInlineText(trimmed, `${messageBaseId}-plain-${idx}`)}
+                  </p>
+                );
+              })}
+            </div>
+          );
+        }
+        return (
+          <p 
+            key={`${messageBaseId}-single`} 
+            className="mb-3 text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap text-left select-text"
+            style={{
+              userSelect: 'text',
+              WebkitUserSelect: 'text',
+              MozUserSelect: 'text',
+              msUserSelect: 'text',
+              textAlign: 'left',
+            }}
+          >
+            {formatInlineText(content, `${messageBaseId}-single`)}
+          </p>
+        );
+      }
+
+      return (
+        <div 
+          className="space-y-2 select-text"
+          style={{
+            userSelect: 'text',
+            WebkitUserSelect: 'text',
+            MozUserSelect: 'text',
+            msUserSelect: 'text',
+            textAlign: 'left',
+          }}
+        >
+          {elements}
+        </div>
+      );
+    };
 
   const getChatTypeIcon = (chatType?: ChatType) => {
     switch (chatType) {
@@ -1360,7 +2073,20 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
                       </span>
                     </div>
                   )}
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  <div 
+                    className="prose prose-sm dark:prose-invert max-w-none select-text"
+                    style={{
+                      userSelect: 'text',
+                      WebkitUserSelect: 'text',
+                      MozUserSelect: 'text',
+                      msUserSelect: 'text',
+                      textAlign: 'left',
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                    }}
+                  >
+                    {formatMessageContent(message.content, message.id)}
+                  </div>
                   {message.context && (
                     <p className="text-xs mt-2 opacity-75">{message.context}</p>
                   )}

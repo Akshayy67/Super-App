@@ -17,7 +17,7 @@ import {
   ZoomOut,
   Share2,
 } from "lucide-react";
-import { FileItem } from "../types";
+import { FileItem } from "../../types";
 import { GeneralLayout } from "../layout/PageLayout";
 import { driveStorageUtils } from "../../utils/driveStorage";
 import { realTimeAuth } from "../../utils/realTimeAuth";
@@ -125,16 +125,20 @@ export const FileManager: React.FC<FileManagerProps> = () => {
   const loadFiles = async () => {
     if (!user) return;
     console.log("🔄 FileManager: Loading files...");
+    
+    // OPTIMIZATION: Use backgroundSync for instant loading
     try {
-      const allFiles = await driveStorageUtils.getFiles(user.id);
-      console.log("📁 FileManager: Received files:", allFiles);
+      const allFiles = await driveStorageUtils.getFiles(user.id, { 
+        backgroundSync: true // This returns localStorage immediately, syncs Drive in background
+      });
+      console.log("📁 FileManager: Received files (fast load):", allFiles.length);
       setFiles(allFiles);
 
-      // Update storage status after loading files
+      // Update storage status
       const status = driveStorageUtils.getStorageStatus();
       setStorageStatus({ ...status, needsReauth: false, error: undefined });
       console.log(
-        "✅ FileManager: Files state updated, count:",
+        "✅ FileManager: Files loaded instantly, count:",
         allFiles.length,
         "Storage type:",
         status.type
@@ -144,9 +148,7 @@ export const FileManager: React.FC<FileManagerProps> = () => {
 
       // Check if it's a Google Drive authentication error
       if (error instanceof Error && error.message.includes("expired")) {
-        // Handle session expired errors
         if (!handleSessionExpired(error)) {
-          // If not a session expired error, show generic error
           setStorageStatus((prev) => ({
             ...prev,
             needsReauth: true,
@@ -656,6 +658,22 @@ export const FileManager: React.FC<FileManagerProps> = () => {
     setSelectedFile(null);
   };
 
+  // Add this function to handle enabling Drive access
+  const handleEnableDriveAccess = async () => {
+    try {
+      const result = await realTimeAuth.requestGoogleDriveAccess();
+      if (result.success) {
+        alert("Please sign in again with Google and make sure to check the Drive access checkbox. You will be redirected to the sign-in page.");
+        // The logout in requestGoogleDriveAccess will redirect
+      } else {
+        alert(`Failed to enable Drive access: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error enabling Drive access:", error);
+      alert("An error occurred. Please try signing out and signing in again with Google.");
+    }
+  };
+
   return (
     <GeneralLayout>
       <div
@@ -742,13 +760,52 @@ export const FileManager: React.FC<FileManagerProps> = () => {
               </div>
             )}
 
+          {/* Enable Google Drive Access Prompt - for users who never granted it */}
+          {user &&
+            !realTimeAuth.hasGoogleDriveAccess() &&
+            !realTimeAuth.shouldHaveGoogleDriveAccess() && (
+              <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mx-6 mt-4 rounded-r-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <svg
+                        className="w-5 h-5 text-blue-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                        />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-blue-800">
+                        <strong>Enable Google Drive Sync:</strong> Sync your files to Google Drive
+                        for cloud backup and access across devices.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleEnableDriveAccess}
+                    className="ml-4 text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors font-medium"
+                  >
+                    Enable Drive Access
+                  </button>
+                </div>
+              </div>
+            )}
+
           <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
             <div className="flex-1 min-w-0">
-              <h2 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              <h2 className="text-responsive-xl font-bold text-gray-900 dark:text-gray-100 mb-2" style={{ fontSize: 'clamp(1.25rem, 5vw, 1.5rem)' }}>
                 File Manager
               </h2>
               <div className="flex items-center space-x-2">
-                <span className="text-responsive-sm text-gray-600 dark:text-gray-400">
+                <span className="text-responsive-sm text-gray-600 dark:text-gray-400" style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}>
                   Storage:
                 </span>
                 <div
@@ -979,13 +1036,14 @@ export const FileManager: React.FC<FileManagerProps> = () => {
                       )}
                       <div className="flex-1 min-w-0">
                         <h3
-                          className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm"
+                          className="font-medium text-gray-900 dark:text-gray-100 truncate text-responsive-base sm:text-sm"
                           title={file.name}
+                          style={{ fontSize: 'clamp(0.875rem, 3vw, 1rem)' }}
                         >
                           {file.name}
                         </h3>
                         {file.type === "file" && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-responsive-xs text-gray-500 dark:text-gray-400" style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}>
                             {formatFileSize(file.size)}
                           </p>
                         )}

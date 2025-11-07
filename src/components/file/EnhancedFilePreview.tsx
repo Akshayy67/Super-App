@@ -147,11 +147,13 @@ export const EnhancedFilePreview: React.FC<EnhancedFilePreviewProps> = ({
 
       case 'pdf':
         return (
-          <div className="h-full w-full">
+          <div className="h-full w-full" data-component="pdf-viewer">
             <iframe
               src={previewContent}
               className="w-full h-full border-0"
               title={`PDF Preview: ${file.name}`}
+              data-pdf-viewer="true"
+              data-component="file-content"
               onError={() => {
                 console.error('PDF iframe failed to load');
               }}

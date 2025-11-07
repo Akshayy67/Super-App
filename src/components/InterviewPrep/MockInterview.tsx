@@ -2542,15 +2542,15 @@ Important:
           {/* Video/Interview Area */}
           <div className="flex-1 p-4 lg:p-6 min-w-0">
             <div className="h-full flex flex-col space-y-6">
-              {/* Interview Status Indicator */}
+              {/* Interview Status Indicator - Mobile responsive */}
               {callStatus === CallStatus.ACTIVE && (
-                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl shadow-lg mb-4">
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
-                    <span className="font-semibold text-lg">
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 sm:px-4 lg:px-6 py-2 sm:py-2.5 lg:py-3 rounded-lg sm:rounded-xl shadow-lg mb-3 sm:mb-4">
+                  <div className="flex items-center justify-center space-x-1.5 sm:space-x-2">
+                    <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full animate-pulse"></div>
+                    <span className="font-semibold text-sm sm:text-base lg:text-lg" style={{ fontSize: 'clamp(0.875rem, 3vw, 1.125rem)' }}>
                       Interview Session Active
                     </span>
-                    <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+                    <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full animate-pulse"></div>
                   </div>
                 </div>
               )}
@@ -2603,8 +2603,8 @@ Important:
                 </div>
               )}
 
-              {/* Interview Video Area - Same video element will be shown here */}
-              <div className="flex-1 bg-gray-900 rounded-xl flex items-center justify-center relative overflow-hidden max-w-7xl mx-auto w-full aspect-video lg:aspect-[16/10] xl:aspect-[4/3] min-h-[500px] lg:min-h-[600px] xl:min-h-[700px]">
+              {/* Interview Video Area - Mobile responsive */}
+              <div className="flex-1 bg-gray-900 rounded-lg sm:rounded-xl flex items-center justify-center relative overflow-hidden max-w-7xl mx-auto w-full aspect-video min-h-[250px] sm:min-h-[300px] md:min-h-[400px] lg:min-h-[500px] xl:min-h-[600px]">
                 {/* Video element - always present in DOM for interview mode */}
                 <video
                   ref={setVideoRef}
@@ -2651,23 +2651,23 @@ Important:
 
                 {isCameraActive ? (
                   <div className="w-full h-full relative">
-                    {/* Camera Status Overlay */}
-                    <div className="absolute top-4 left-4 flex items-center space-x-2 z-20">
-                      <div className="bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2">
-                        <div className="flex items-center space-x-2">
-                          <Camera className="w-4 h-4 text-white" />
-                          <span className="text-white text-sm font-medium">
+                    {/* Camera Status Overlay - Mobile responsive */}
+                    <div className="absolute top-2 left-2 sm:top-4 sm:left-4 flex flex-col sm:flex-row items-start sm:items-center gap-2 z-20">
+                      <div className="bg-black/50 backdrop-blur-sm rounded-lg px-2 sm:px-3 py-1.5 sm:py-2">
+                        <div className="flex items-center space-x-1.5 sm:space-x-2">
+                          <Camera className="w-3 h-3 sm:w-4 sm:h-4 text-white flex-shrink-0" />
+                          <span className="text-white text-xs sm:text-sm font-medium whitespace-nowrap" style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}>
                             Camera Active
                           </span>
                         </div>
                       </div>
 
-                      {/* Face Detection Status */}
+                      {/* Face Detection Status - Mobile responsive */}
                       {enableFaceDetection && (
-                        <div className="bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2">
-                          <div className="flex items-center space-x-2">
-                            <Target className="w-3 h-3 text-white" />
-                            <span className="text-white text-sm font-medium">
+                        <div className="bg-black/50 backdrop-blur-sm rounded-lg px-2 sm:px-3 py-1.5 sm:py-2">
+                          <div className="flex items-center space-x-1.5 sm:space-x-2">
+                            <Target className="w-3 h-3 text-white flex-shrink-0" />
+                            <span className="text-white text-xs sm:text-sm font-medium whitespace-nowrap" style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}>
                               {faceDetection.hasActiveFaces
                                 ? `${faceDetection.faceCount} face${
                                     faceDetection.faceCount !== 1 ? "s" : ""
@@ -2675,18 +2675,18 @@ Important:
                                 : "Scanning..."}
                             </span>
                             {faceDetection.eyeContactDetected && (
-                              <span className="text-green-400 text-sm">✅</span>
+                              <span className="text-green-400 text-xs sm:text-sm">✅</span>
                             )}
                           </div>
                         </div>
                       )}
                     </div>
 
-                    {/* Recording Indicator */}
+                    {/* Recording Indicator - Mobile responsive */}
                     {isRecording && (
-                      <div className="absolute top-4 right-4 flex items-center space-x-2">
-                        <div className="bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2">
-                          <div className="flex items-center space-x-2">
+                      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex items-center space-x-1.5 sm:space-x-2 z-20">
+                        <div className="bg-black/50 backdrop-blur-sm rounded-lg px-2 sm:px-3 py-1.5 sm:py-2">
+                          <div className="flex items-center space-x-1.5 sm:space-x-2">
                             <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
                             <span className="text-white text-sm font-medium">
                               Recording
@@ -3105,47 +3105,52 @@ Important:
           </div>
         )}
 
-        {/* Tab Navigation */}
-        <div className="mb-8">
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-2 rounded-2xl shadow-inner">
-            <div className="flex space-x-2">
+        {/* Tab Navigation - Mobile responsive */}
+        <div className="mb-4 sm:mb-6 lg:mb-8">
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700 p-1.5 sm:p-2 rounded-xl sm:rounded-2xl shadow-inner">
+            <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
               <button
                 onClick={() => setActiveTab("templates")}
-                className={`flex-1 py-4 px-6 rounded-xl text-sm font-semibold transition-all duration-300 transform ${
+                className={`flex-shrink-0 py-2 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
                   activeTab === "templates"
-                    ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg scale-105 border-2 border-blue-200 dark:border-blue-600"
+                    ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg border-2 border-blue-200 dark:border-blue-600"
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-slate-700/50"
                 }`}
+                style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}
               >
-                <div className="flex items-center justify-center space-x-2">
-                  <Target className="w-5 h-5" />
-                  <span>Interview Templates</span>
+                <div className="flex items-center justify-center gap-1 sm:gap-2">
+                  <Target className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                  <span className="hidden xs:inline">Interview Templates</span>
+                  <span className="xs:hidden">Templates</span>
                 </div>
               </button>
               <button
                 onClick={() => setActiveTab("custom")}
-                className={`flex-1 py-4 px-6 rounded-xl text-sm font-semibold transition-all duration-300 transform ${
+                className={`flex-shrink-0 py-2 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
                   activeTab === "custom"
-                    ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg scale-105 border-2 border-purple-200 dark:border-purple-600"
+                    ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg border-2 border-purple-200 dark:border-purple-600"
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-slate-700/50"
                 }`}
+                style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}
               >
-                <div className="flex items-center justify-center space-x-2">
-                  <Settings className="w-5 h-5" />
+                <div className="flex items-center justify-center gap-1 sm:gap-2">
+                  <Settings className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                   <span>Custom Interview</span>
                 </div>
               </button>
               <button
                 onClick={() => setActiveTab("resume")}
-                className={`flex-1 py-4 px-6 rounded-xl text-sm font-semibold transition-all duration-300 transform ${
+                className={`flex-shrink-0 py-2 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
                   activeTab === "resume"
-                    ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg scale-105 border-2 border-green-200 dark:border-green-600"
+                    ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg border-2 border-green-200 dark:border-green-600"
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-slate-700/50"
                 }`}
+                style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}
               >
-                <div className="flex items-center justify-center space-x-2">
-                  <FileText className="w-5 h-5" />
-                  <span>Resume-Based Interview</span>
+                <div className="flex items-center justify-center gap-1 sm:gap-2">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                  <span className="hidden sm:inline">Resume-Based Interview</span>
+                  <span className="sm:hidden">Resume</span>
                 </div>
               </button>
             </div>

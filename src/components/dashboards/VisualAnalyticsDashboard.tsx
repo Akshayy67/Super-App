@@ -757,33 +757,37 @@ export const VisualAnalyticsDashboard: React.FC<
 
         {/* Tab Navigation */}
         <div className="flex space-x-1 mb-6">
-          {[
-            { id: "overview", label: "Overview", icon: BarChart3 },
-            { id: "trends", label: "Trends", icon: TrendingUp },
-            { id: "skills", label: "Skills", icon: Target },
-            { id: "improvement", label: "Improvement", icon: Lightbulb },
-            {
-              id: "detailed-history",
-              label: "Question History",
-              icon: BookOpen,
-            },
-            { id: "data-management", label: "Data Management", icon: Settings },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === tab.id
-                  ? "bg-blue-600 text-white"
-                  : isDarkMode
-                  ? "bg-gray-800 text-gray-300 hover:bg-gray-700"
-                  : "bg-white text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          ))}
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2" style={{ WebkitOverflowScrolling: 'touch' }}>
+            {[
+              { id: "overview", label: "Overview", icon: BarChart3 },
+              { id: "trends", label: "Trends", icon: TrendingUp },
+              { id: "skills", label: "Skills", icon: Target },
+              { id: "improvement", label: "Improvement", icon: Lightbulb },
+              {
+                id: "detailed-history",
+                label: "Question History",
+                icon: BookOpen,
+              },
+              { id: "data-management", label: "Data Management", icon: Settings },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap flex-shrink-0 text-responsive-sm ${
+                  activeTab === tab.id
+                    ? "bg-blue-600 text-white"
+                    : isDarkMode
+                    ? "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                    : "bg-white text-gray-600 hover:bg-gray-100"
+                }`}
+                style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)', minWidth: 'fit-content' }}
+              >
+                <tab.icon className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Empty State - No Interview Data */}

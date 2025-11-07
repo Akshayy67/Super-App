@@ -551,6 +551,49 @@ class RealTimeAuthService {
   isGuestUser(): boolean {
     return this.currentUser?.id.startsWith("guest_") || false;
   }
+
+  /**
+   * Request Google Drive access for users who didn't grant it initially
+   * This signs the user out and prompts them to sign in again with Drive access
+   */
+  async requestGoogleDriveAccess(): Promise<{ success: boolean; error?: string }> {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        return { success: false, error: "User not authenticated" };
+      }
+
+      // Check if user already has Drive access
+      if (this.hasGoogleDriveAccess()) {
+        return { success: true, error: "Google Drive access already granted" };
+      }
+
+      console.log("🔄 Requesting Google Drive access...");
+
+      // Store that user wants Drive access
+      sessionStorage.setItem("request_drive_access", "true");
+      
+      // Store current session info
+      const currentEmail = user.email;
+      sessionStorage.setItem("preserve_session", "true");
+      sessionStorage.setItem("user_email", currentEmail || "");
+      
+      // Sign out and redirect to sign-in
+      // User will need to sign in again and grant Drive access
+      await this.logout();
+      
+      return {
+        success: true,
+        error: "Please sign in again with Google and grant Drive access"
+      };
+    } catch (error: any) {
+      console.error("Error requesting Drive access:", error);
+      return {
+        success: false,
+        error: error.message || "Failed to request Drive access"
+      };
+    }
+  }
 }
 
 // Export singleton instance

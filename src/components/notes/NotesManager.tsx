@@ -24,11 +24,13 @@ import { driveStorageUtils } from "../../utils/driveStorage";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import { format } from "date-fns";
 import { GeneralLayout } from "../layout/PageLayout";
+import { NoteContentRenderer } from "./NoteContentRenderer";
 
 export const NotesManager: React.FC = () => {
   const [notes, setNotes] = useState<ShortNote[]>([]);
   const [folders, setFolders] = useState<NoteFolder[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [showEditor, setShowEditor] = useState(false);
   const [editingNote, setEditingNote] = useState<ShortNote | null>(null);
   const [noteForm, setNoteForm] = useState({
@@ -45,6 +47,7 @@ export const NotesManager: React.FC = () => {
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
   const [showMoveModal, setShowMoveModal] = useState(false);
+  const [showContentPreview, setShowContentPreview] = useState(false);
 
   const user = realTimeAuth.getCurrentUser();
 
@@ -54,39 +57,64 @@ export const NotesManager: React.FC = () => {
     }
   }, [user]);
 
+  // Debounce search query for performance (300ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const loadData = async () => {
     if (!user) return;
 
-    try {
-      // Try to load from Google Drive first
-      const driveNotes = await driveStorageUtils.loadShortNotesFromDrive(
-        user.id
-      );
-      if (driveNotes.length > 0) {
-        console.log("📱 Loaded notes from Google Drive:", driveNotes.length);
-        setNotes(
-          driveNotes.sort(
-            (a, b) =>
-              new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-          )
-        );
-      }
-    } catch (error) {
-      console.log("📱 Falling back to localStorage for notes");
-    }
-
-    // Fallback to localStorage
+    // OPTIMIZATION: Load from localStorage FIRST (instant) - no waiting!
     const userNotes = storageUtils.getShortNotes(user.id);
+    const userFolders = storageUtils.getNoteFolders(user.id);
+    
+    // Update UI immediately with localStorage data
     setNotes(
       userNotes.sort(
         (a, b) =>
           new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
       )
     );
-
-    // Load folders
-    const userFolders = storageUtils.getNoteFolders(user.id);
     setFolders(userFolders);
+
+    // OPTIMIZATION: Sync from Drive in background (non-blocking)
+    // This happens after UI is updated, so user doesn't wait
+    (async () => {
+      try {
+        const driveNotes = await driveStorageUtils.loadShortNotesFromDrive(
+          user.id
+        );
+        if (driveNotes.length > 0) {
+          console.log("📱 Synced notes from Google Drive:", driveNotes.length);
+          // Only update if Drive has newer data or more notes
+          const localLatest = userNotes.length > 0 
+            ? new Date(userNotes[0].updatedAt).getTime() 
+            : 0;
+          const driveLatest = driveNotes.length > 0
+            ? new Date(driveNotes.sort((a, b) => 
+                new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+              )[0].updatedAt).getTime()
+            : 0;
+          
+          // Update if Drive has newer data or more comprehensive data
+          if (driveLatest > localLatest || driveNotes.length > userNotes.length) {
+            setNotes(
+              driveNotes.sort(
+                (a, b) =>
+                  new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+              )
+            );
+          }
+        }
+      } catch (error) {
+        console.log("📱 Background sync from Drive failed, using localStorage");
+        // Silent fail - localStorage data is already shown
+      }
+    })();
   };
 
   const syncNotesToDrive = async () => {
@@ -107,7 +135,8 @@ export const NotesManager: React.FC = () => {
     }
   };
 
-  const getFilteredNotes = () => {
+  // Memoized filtered notes for performance - uses debounced search
+  const filteredNotes = React.useMemo(() => {
     let filtered = notes;
 
     // Filter by folder
@@ -121,9 +150,9 @@ export const NotesManager: React.FC = () => {
       }
     }
 
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+    // Filter by search query (using debounced query)
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.toLowerCase();
       filtered = filtered.filter(
         (note) =>
           note.title.toLowerCase().includes(query) ||
@@ -133,7 +162,10 @@ export const NotesManager: React.FC = () => {
     }
 
     return filtered;
-  };
+  }, [notes, selectedFolderId, debouncedSearchQuery]);
+
+  // Function for backward compatibility
+  const getFilteredNotes = () => filteredNotes;
 
   const resetForm = () => {
     setNoteForm({
@@ -222,6 +254,7 @@ export const NotesManager: React.FC = () => {
       folderId: note.folderId || "",
     });
     setShowEditor(true);
+    setShowContentPreview(true); // Show preview with images when viewing/editing
   };
 
   const deleteShortNote = async (noteId: string) => {
@@ -629,9 +662,13 @@ export const NotesManager: React.FC = () => {
                   </div>
 
                   <div className="mb-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                      {truncateContent(note.content)}
-                    </p>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                      <NoteContentRenderer 
+                        content={note.content} 
+                        maxLength={150}
+                        showImages={true}
+                      />
+                    </div>
                   </div>
 
                   {note.tags.length > 0 && (
@@ -663,7 +700,7 @@ export const NotesManager: React.FC = () => {
                         onClick={() => startEditing(note)}
                         className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
                       >
-                        Read more
+                        View
                       </button>
                     )}
                   </div>
@@ -758,18 +795,36 @@ export const NotesManager: React.FC = () => {
                 </div>
 
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Content *
-                  </label>
-                  <textarea
-                    value={noteForm.content}
-                    onChange={(e) =>
-                      setNoteForm({ ...noteForm, content: e.target.value })
-                    }
-                    rows={12}
-                    className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
-                    placeholder="Write your short note content here..."
-                  />
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Content *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowContentPreview(!showContentPreview)}
+                      className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                      {showContentPreview ? "Edit" : "Preview"}
+                    </button>
+                  </div>
+                  {showContentPreview ? (
+                    <div className="w-full min-h-[200px] px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 overflow-auto">
+                      <NoteContentRenderer 
+                        content={noteForm.content} 
+                        showImages={true}
+                      />
+                    </div>
+                  ) : (
+                    <textarea
+                      value={noteForm.content}
+                      onChange={(e) =>
+                        setNoteForm({ ...noteForm, content: e.target.value })
+                      }
+                      rows={12}
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                      placeholder="Write your short note content here... You can use markdown format for images: ![alt text](data:image/...)"
+                    />
+                  )}
                 </div>
               </div>
 

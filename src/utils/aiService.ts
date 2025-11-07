@@ -44,8 +44,8 @@ const REQUEST_CACHE = new Map<
 const PENDING_REQUESTS = new Map<string, Promise<any>>();
 
 const CACHE_TTL = {
-  AI_ANALYSIS: 5 * 60 * 1000, // 5 minutes for AI analysis
-  GENERAL: 2 * 60 * 1000, // 2 minutes for general requests
+  AI_ANALYSIS: 30 * 1000, // 30 seconds for AI analysis (reduced to prevent stale responses)
+  GENERAL: 10 * 1000, // 10 seconds for general requests (reduced significantly)
 };
 
 // Rate limiting helper
@@ -151,8 +151,19 @@ const retryRequest = async <T>(
 };
 
 // Cache management functions
-const getCacheKey = (prompt: string, context?: string): string => {
-  return btoa(prompt + (context || "")).slice(0, 50); // Base64 encode and truncate
+const getCacheKey = (prompt: string, context?: string, conversationHistory?: Array<{ role: string; content: string }>): string => {
+  // Include prompt, context, and recent conversation history in cache key for better differentiation
+  // Use first 200 chars of prompt to ensure uniqueness while keeping key manageable
+  const promptHash = prompt.substring(0, 200);
+  const contextHash = context ? context.substring(0, 100) : '';
+  const historyHash = conversationHistory && conversationHistory.length > 0
+    ? conversationHistory.slice(-3).map(m => `${m.role}:${m.content.substring(0, 50)}`).join('|')
+    : '';
+  // Create a unique key based on all factors - this ensures different prompts get different cache entries
+  const fullKey = `${promptHash}|${contextHash}|${historyHash}`;
+  // Use a more robust hash that includes more of the key - don't truncate too much
+  const hash = btoa(fullKey);
+  return hash.substring(0, Math.min(hash.length, 120)); // Use up to 120 chars for better uniqueness
 };
 
 const getCachedResult = (cacheKey: string): any | null => {
@@ -431,10 +442,14 @@ export const aiService = {
         fullPrompt = `File context: ${context}\n\n${fullPrompt}`;
       }
 
-      // Check cache first
-      const cacheKey = getCacheKey(fullPrompt, context);
+      // Check cache first - use original prompt for cache key, not fullPrompt
+      // This ensures different prompts get different cache entries
+      // For chat messages, disable aggressive caching to ensure fresh responses
+      const cacheKey = getCacheKey(prompt, context, conversationHistory);
       const cachedResult = getCachedResult(cacheKey);
-      if (cachedResult) {
+      // Only use cache for file analysis, not for general chat (to prevent stale responses)
+      if (cachedResult && context && context.length > 100) {
+        // Only use cache for file-based queries with substantial context
         return cachedResult;
       }
 
@@ -442,7 +457,10 @@ export const aiService = {
       return await deduplicateRequest(cacheKey, async () => {
         const model = import.meta.env.VITE_GEMINI_MODEL || "gemini-2.0-flash";
 
-        // Build conversation context if provided
+        // Rebuild fullPrompt inside the request (same logic as above)
+        let requestPrompt = prompt;
+
+        // Build conversation context if provided (inside request)
         if (conversationHistory && conversationHistory.length > 0) {
           const conversationContext = conversationHistory
             .map(
@@ -451,12 +469,12 @@ export const aiService = {
             )
             .join("\n\n");
 
-          fullPrompt = `Previous conversation:\n${conversationContext}\n\nCurrent message: ${prompt}\n\nPlease respond naturally, taking into account the conversation history. If the user refers to "that", "above", "earlier", "previous", etc., use the conversation context to understand what they're referring to.`;
+          requestPrompt = `Previous conversation:\n${conversationContext}\n\nCurrent message: ${prompt}\n\nPlease respond naturally, taking into account the conversation history. If the user refers to "that", "above", "earlier", "previous", etc., use the conversation context to understand what they're referring to.`;
         }
 
         // Add file context if provided
         if (context) {
-          fullPrompt = `File context: ${context}\n\n${fullPrompt}`;
+          requestPrompt = `File context: ${context}\n\n${requestPrompt}`;
         }
 
         // Use retry logic with rate limiting for the API call
@@ -473,7 +491,7 @@ export const aiService = {
                   {
                     parts: [
                       {
-                        text: fullPrompt,
+                        text: requestPrompt,
                       },
                     ],
                   },
@@ -577,8 +595,8 @@ export const aiService = {
             data: result.candidates[0].content.parts[0].text,
           };
 
-          // Cache successful response
-          setCachedResult(cacheKey, response, CACHE_TTL.AI_ANALYSIS);
+          // Cache successful response with shorter TTL to prevent stale responses
+          setCachedResult(cacheKey, response, CACHE_TTL.GENERAL);
           return response;
         }
 

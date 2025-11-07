@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, FileText, Tag, Save, Copy, Check, Folder } from "lucide-react";
+import { X, FileText, Tag, Save, Copy, Check, Folder, Image as ImageIcon, Camera } from "lucide-react";
 import { ShortNote, NoteFolder } from "../types";
 import { storageUtils } from "../../utils/storage";
 import { realTimeAuth } from "../../utils/realTimeAuth";
@@ -7,15 +7,19 @@ import { realTimeAuth } from "../../utils/realTimeAuth";
 interface GlobalNoteCreatorProps {
   isVisible: boolean;
   onClose: () => void;
-  copiedText: string;
+  copiedText?: string;
+  screenshotImage?: string;
   sourceContext?: string;
+  screenshotMethod?: 'printscreen' | 'snipping-tool' | 'mobile' | 'clipboard';
 }
 
 export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
   isVisible,
   onClose,
   copiedText,
+  screenshotImage,
   sourceContext = "Copied Text",
+  screenshotMethod,
 }) => {
   const [noteForm, setNoteForm] = useState({
     title: "",
@@ -27,6 +31,7 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showCopiedIndicator, setShowCopiedIndicator] = useState(false);
+  const isScreenshot = !!screenshotImage;
 
   const user = realTimeAuth.getCurrentUser();
 
@@ -38,17 +43,31 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
   }, [user]);
 
   useEffect(() => {
-    if (isVisible && copiedText) {
-      // Auto-populate the content with the copied text
-      setNoteForm({
-        title: `${sourceContext} - ${new Date().toLocaleDateString()}`,
-        content: copiedText,
-        tags: "",
-        folderId: "",
-      });
-      setSaveSuccess(false);
+    if (isVisible) {
+      if (screenshotImage) {
+        // Auto-populate for screenshot
+        const methodLabel = screenshotMethod === 'printscreen' ? 'Print Screen' :
+                           screenshotMethod === 'snipping-tool' ? 'Snipping Tool' :
+                           screenshotMethod === 'mobile' ? 'Mobile Screenshot' : 'Screenshot';
+        setNoteForm({
+          title: `${sourceContext} - ${new Date().toLocaleDateString()}`,
+          content: `![${methodLabel}](${screenshotImage})\n\n`, // Markdown image format
+          tags: "",
+          folderId: "",
+        });
+        setSaveSuccess(false);
+      } else if (copiedText) {
+        // Auto-populate the content with the copied text
+        setNoteForm({
+          title: `${sourceContext} - ${new Date().toLocaleDateString()}`,
+          content: copiedText,
+          tags: "",
+          folderId: "",
+        });
+        setSaveSuccess(false);
+      }
     }
-  }, [isVisible, copiedText, sourceContext]);
+  }, [isVisible, copiedText, screenshotImage, sourceContext, screenshotMethod]);
 
   const handleSaveNote = async () => {
     if (!user || !noteForm.title.trim()) {
@@ -63,10 +82,17 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
         .map((tag) => tag.trim())
         .filter((tag) => tag.length > 0);
 
+      // If it's a screenshot, embed the image in the content
+      let finalContent = noteForm.content.trim();
+      if (screenshotImage && !finalContent.includes(screenshotImage)) {
+        // Ensure screenshot is embedded in markdown format
+        finalContent = `![Screenshot](${screenshotImage})\n\n${finalContent}`;
+      }
+
       const newNote: ShortNote = {
         id: storageUtils.generateId(),
         title: noteForm.title.trim(),
-        content: noteForm.content.trim(),
+        content: finalContent,
         tags,
         userId: user.id,
         folderId: noteForm.folderId || undefined,
@@ -103,7 +129,16 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
 
   const handleCopyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(copiedText);
+      if (screenshotImage) {
+        // Copy image to clipboard
+        const response = await fetch(screenshotImage);
+        const blob = await response.blob();
+        await navigator.clipboard.write([
+          new ClipboardItem({ [blob.type]: blob })
+        ]);
+      } else if (copiedText) {
+        await navigator.clipboard.writeText(copiedText);
+      }
       setShowCopiedIndicator(true);
       setTimeout(() => setShowCopiedIndicator(false), 2000);
     } catch (error) {
@@ -119,6 +154,16 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
     }
   };
 
+  const downloadScreenshot = () => {
+    if (!screenshotImage) return;
+    const link = document.createElement('a');
+    link.href = screenshotImage;
+    link.download = `screenshot-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (!isVisible) return null;
 
   return (
@@ -127,9 +172,13 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center space-x-2">
-            <FileText className="w-5 h-5 text-blue-600" />
+            {isScreenshot ? (
+              <Camera className="w-5 h-5 text-blue-600" />
+            ) : (
+              <FileText className="w-5 h-5 text-blue-600" />
+            )}
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Create Note from Copied Text
+              {isScreenshot ? "Create Note from Screenshot" : "Create Note from Copied Text"}
             </h2>
           </div>
           <button
@@ -148,25 +197,59 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Source: {sourceContext}
-              </span>
-              <button
-                onClick={handleCopyToClipboard}
-                className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-700 transition-colors"
-              >
-                {showCopiedIndicator ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    <span>Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    <span>Copy Again</span>
-                  </>
+                {isScreenshot && screenshotMethod && (
+                  <span className="ml-2 text-xs text-gray-500">
+                    ({screenshotMethod === 'printscreen' ? 'Print Screen' :
+                       screenshotMethod === 'snipping-tool' ? 'Snipping Tool' :
+                       screenshotMethod === 'mobile' ? 'Mobile' : 'Clipboard'})
+                  </span>
                 )}
-              </button>
+              </span>
+              <div className="flex items-center space-x-2">
+                {isScreenshot && (
+                  <button
+                    onClick={downloadScreenshot}
+                    className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    <span>Download</span>
+                  </button>
+                )}
+                <button
+                  onClick={handleCopyToClipboard}
+                  className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  {showCopiedIndicator ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      <span>{isScreenshot ? "Copy Image" : "Copy Again"}</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Screenshot Preview */}
+          {isScreenshot && screenshotImage && (
+            <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Screenshot Preview
+              </label>
+              <div className="relative max-h-64 overflow-auto rounded border border-gray-300 dark:border-slate-600">
+                <img
+                  src={screenshotImage}
+                  alt="Screenshot"
+                  className="w-full h-auto"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Title Input */}
           <div>
@@ -218,9 +301,19 @@ export const GlobalNoteCreator: React.FC<GlobalNoteCreatorProps> = ({
                 setNoteForm({ ...noteForm, content: e.target.value })
               }
               rows={8}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
-              placeholder="Note content..."
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 font-mono text-sm"
+              placeholder="Note content... Screenshots will appear as images automatically."
             />
+            {/* Preview of content with images */}
+            {noteForm.content && noteForm.content.includes('![') && (
+              <div className="mt-2 p-2 border border-gray-200 dark:border-slate-600 rounded-md bg-gray-50 dark:bg-slate-700/50">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Preview:</div>
+                <NoteContentRenderer 
+                  content={noteForm.content} 
+                  showImages={true}
+                />
+              </div>
+            )}
           </div>
 
           {/* Tags Input */}

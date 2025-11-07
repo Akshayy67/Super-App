@@ -3,6 +3,7 @@ import { initializeApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
+import { getDatabase, Database } from "firebase/database";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -43,6 +44,7 @@ console.log("Initializing Firebase...");
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
+let database: Database;
 let storage: FirebaseStorage;
 let googleProvider: GoogleAuthProvider;
 
@@ -63,6 +65,15 @@ try {
   storage = getStorage(app);
   console.log("✅ Firebase Storage initialized");
   
+  // Initialize Firebase Realtime Database for real-time signaling
+  try {
+    database = getDatabase(app);
+    console.log("✅ Firebase Realtime Database initialized");
+  } catch (error) {
+    console.warn("⚠️ Firebase Realtime Database initialization failed (may need to enable in Firebase Console):", error);
+    // Continue without Realtime Database - will fall back to Firestore
+  }
+  
   // Configure Google Auth Provider with necessary scopes
   googleProvider = new GoogleAuthProvider();
   googleProvider.addScope("https://www.googleapis.com/auth/userinfo.email");
@@ -81,7 +92,7 @@ try {
 }
 
 // Export the initialized services
-export { auth, db, storage, googleProvider };
+export { auth, db, database, storage, googleProvider };
 
 // Set the client ID for Google OAuth (optional, Firebase handles this automatically)
 // but we can access it for debugging
