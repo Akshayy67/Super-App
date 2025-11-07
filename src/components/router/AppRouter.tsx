@@ -25,7 +25,9 @@ import { ProfileEditPage } from "../profile/ProfileEditPage";
 import { ProfileViewPage } from "../profile/ProfileViewPage";
 import { BlockedUsersPage } from "../BlockedUsersPage";
 import { BlockedUserGuard } from "./BlockedUserGuard";
+import { PremiumGuard } from "./PremiumGuard";
 import { PaymentPage } from "../PaymentPage";
+import { PaymentSuccess } from "../PaymentSuccess";
 import { AboutUsPage } from "../AboutUsPage";
 import { SignupPage } from "../auth/SignupPage";
 import { StudyPlanManager } from "../studyPlan/StudyPlan";
@@ -116,6 +118,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
       
       {/* Payment Page */}
       <Route path="/payment" element={<PaymentPage />} />
+      
+      {/* Payment Success Page - Handles Razorpay callback */}
+      <Route path="/payment-success" element={<PaymentSuccess />} />
 
       {/* Admin Routes - Protected */}
       <Route 
@@ -132,12 +137,14 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
       {/* Blocked Users Page */}
       <Route path="/blocked" element={<BlockedUsersPage />} />
 
-      {/* Protected Routes - Check if user is blocked */}
+      {/* Protected Routes - Check if user is blocked AND premium */}
       <Route 
         path="/dashboard" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><Dashboard /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><Dashboard /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -145,7 +152,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/files-notes/*" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><FilesAndNotesRouter /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><FilesAndNotesRouter /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -153,9 +162,11 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/files/*" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper>
-              <Navigate to="/files-notes/files" replace />
-            </PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper>
+                <Navigate to="/files-notes/files" replace />
+              </PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -163,7 +174,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/tasks/*" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><TaskManager /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><TaskManager /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -171,9 +184,11 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/notes/*" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper>
-              <Navigate to="/files-notes/notes" replace />
-            </PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper>
+                <Navigate to="/files-notes/notes" replace />
+              </PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -181,7 +196,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/chat/*" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><EnhancedAIChat /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><EnhancedAIChat /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -189,7 +206,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/tools/*" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><StudyToolsRouter /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><StudyToolsRouter /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -197,9 +216,11 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/flashcards/*" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper>
-              <Navigate to="/tools/flashcards" replace />
-            </PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper>
+                <Navigate to="/tools/flashcards" replace />
+              </PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -207,7 +228,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/interview/*" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><InterviewPrep /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><InterviewPrep /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -215,9 +238,11 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/resume-builder" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper>
-              <Navigate to="/interview/resume-builder" replace />
-            </PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper>
+                <Navigate to="/interview/resume-builder" replace />
+              </PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -225,7 +250,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/team/*"
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><TeamSpace invitationData={invitationData} /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><TeamSpace invitationData={invitationData} /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         }
       />
@@ -233,7 +260,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/meeting" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><VideoMeeting /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><VideoMeeting /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -241,7 +270,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/meetings" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><MeetingsTimeline /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><MeetingsTimeline /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -249,7 +280,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/community" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><Community /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><Community /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -257,7 +290,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/settings" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><SettingsPage /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><SettingsPage /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -265,7 +300,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/calendar" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><Calendar /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><Calendar /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -273,7 +310,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/journal" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><JournalManager /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><JournalManager /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -281,9 +320,11 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/study-plans" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper>
-              <Navigate to="/tools/study-plans" replace />
-            </PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper>
+                <Navigate to="/tools/study-plans" replace />
+              </PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -291,7 +332,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/profile/edit" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><ProfileEditPage /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><ProfileEditPage /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -299,7 +342,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/profile/:useremail" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><ProfileViewPage /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><ProfileViewPage /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />

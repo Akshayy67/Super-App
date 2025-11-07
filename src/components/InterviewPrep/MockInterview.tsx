@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Video,
   Mic,
@@ -86,6 +87,9 @@ interface SavedMessage {
 }
 
 export const MockInterview: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  
   const [activeSession, setActiveSession] = useState<InterviewSession | null>(
     null
   );
@@ -99,8 +103,15 @@ export const MockInterview: React.FC = () => {
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("general");
   const [activeTab, setActiveTab] = useState<"templates" | "custom" | "resume">(
-    "templates"
+    (tabParam === "custom" || tabParam === "resume") ? tabParam : "templates"
   );
+  
+  // Update active tab when URL parameter changes
+  useEffect(() => {
+    if (tabParam === "custom" || tabParam === "resume") {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
   const [showJAMSession, setShowJAMSession] = useState(false);
 
   // Custom interview configuration
@@ -551,17 +562,6 @@ export const MockInterview: React.FC = () => {
   // Different question sets for each interview type
   const questionSets = {
     general: [
-      {
-        id: "gen-1",
-        question: "Tell me about yourself and your background.",
-        category: "general",
-        timeLimit: 120,
-        hints: [
-          "Keep it professional",
-          "2-3 minutes max",
-          "End with why this role",
-        ],
-      },
       {
         id: "gen-2",
         question: "Why are you interested in this position?",
@@ -2525,10 +2525,6 @@ Important:
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                Question {activeSession.currentQuestionIndex + 1} of{" "}
-                {activeSession.questions.length}
-              </span>
-              <span className="text-sm text-gray-600 dark:text-gray-400">
                 {Math.round(progress)}% Complete
               </span>
             </div>
@@ -2800,17 +2796,7 @@ Important:
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Connecting...</span>
                   </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => handleNextQuestion()}
-                      className="flex items-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      <SkipForward className="w-5 h-5" />
-                      <span>Next Question</span>
-                    </button>
-                  </>
-                )}
+                ) : null}
               </div>
 
               {/* End Interview Button - Prominently displayed below video */}
@@ -2852,12 +2838,6 @@ Important:
             <div className="space-y-6">
               {/* Current Question */}
               <div>
-                <div className="flex items-center space-x-2 mb-3">
-                  <Bot className="w-5 h-5 text-blue-600" />
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                    Interview Question
-                  </h3>
-                </div>
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                   <p className="text-gray-900 dark:text-gray-100 font-medium">
                     {currentQuestion.question}

@@ -704,7 +704,7 @@ export const CommunityQuiz: React.FC = () => {
                 <p>No submissions yet. Be the first to take this quiz!</p>
               </div>
             ) : (
-              leaderboard.map((entry, idx) => (
+              leaderboard.slice(0, 3).map((entry, idx) => (
                 <div
                   key={entry.userId}
                   className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-colors ${

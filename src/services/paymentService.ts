@@ -1,10 +1,12 @@
 /**
  * Payment Service
- * Handles payment gateway integration with Razorpay
+ * Handles payment gateway integration with Razorpay using Firebase Cloud Functions
  */
 
 import { realTimeAuth } from "../utils/realTimeAuth";
-import { createPremiumUser, updatePremiumSubscription } from "./premiumUserService";
+import { createPremiumUser } from "./premiumUserService";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import app from "../config/firebase";
 
 // Razorpay script loader
 declare global {
@@ -49,56 +51,43 @@ const loadRazorpayScript = (): Promise<void> => {
 };
 
 /**
- * Create payment order (backend API call)
- * This should be called from your backend to create an order
+ * Create payment order using Firebase Cloud Functions
  */
 const createOrder = async (options: PaymentOptions): Promise<{ orderId: string; amount: number }> => {
   try {
-    // TODO: Replace with your actual backend API endpoint
-    // For now, we'll create a mock order ID
-    // In production, call: POST /api/payments/create-order
-    const response = await fetch("/api/payments/create-order", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        amount: options.amount,
-        currency: options.currency,
-        planType: options.planType,
-        userId: options.userId,
-        userEmail: options.userEmail,
-      }),
+    // Initialize Firebase Functions
+    const functions = getFunctions(app);
+    const createOrderFunction = httpsCallable(functions, "createRazorpayOrder");
+
+    // Call Firebase Cloud Function
+    const result = await createOrderFunction({
+      amount: options.amount,
+      currency: options.currency || "INR",
+      planType: options.planType,
+      userId: options.userId,
+      userEmail: options.userEmail,
     });
 
-    if (!response.ok) {
-      // Fallback: Create mock order for development
-      console.warn("Backend API not available, using mock order");
-      return {
-        orderId: `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        amount: options.amount,
-      };
+    const data = result.data as { success: boolean; orderId: string; amount: number; currency: string };
+
+    if (!data.success || !data.orderId) {
+      throw new Error("Failed to create order");
     }
 
-    const data = await response.json();
     return {
       orderId: data.orderId,
       amount: data.amount,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating order:", error);
-    // Fallback for development
-    return {
-      orderId: `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      amount: options.amount,
-    };
+    throw new Error(error.message || "Failed to create payment order");
   }
 };
 
 /**
- * Verify payment (backend API call)
+ * Verify payment using Firebase Cloud Functions
  */
-const verifyPayment = async (
+export const verifyPayment = async (
   paymentId: string,
   orderId: string,
   signature: string,
@@ -106,35 +95,24 @@ const verifyPayment = async (
   userId: string
 ): Promise<boolean> => {
   try {
-    // TODO: Replace with your actual backend API endpoint
-    const response = await fetch("/api/payments/verify", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        paymentId,
-        orderId,
-        signature,
-        planType,
-        userId,
-      }),
+    // Initialize Firebase Functions
+    const functions = getFunctions(app);
+    const verifyPaymentFunction = httpsCallable(functions, "verifyRazorpayPayment");
+
+    // Call Firebase Cloud Function
+    const result = await verifyPaymentFunction({
+      paymentId,
+      orderId,
+      signature,
+      planType,
+      userId,
     });
 
-    if (!response.ok) {
-      console.error("Payment verification failed");
-      return false;
-    }
+    const data = result.data as { success: boolean; verified: boolean };
 
-    const data = await response.json();
-    return data.verified === true;
-  } catch (error) {
+    return data.success === true && data.verified === true;
+  } catch (error: any) {
     console.error("Error verifying payment:", error);
-    // For development, accept payment if signature exists
-    if (signature) {
-      console.warn("Backend verification not available, accepting payment for development");
-      return true;
-    }
     return false;
   }
 };
@@ -156,10 +134,20 @@ export const initiatePayment = async (
     // Create order
     const { orderId, amount } = await createOrder(options);
 
-    // Get Razorpay key from environment
-    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_1DP5mmOlF5G5ag"; // Default test key
+    // Get Razorpay key from environment (Live key)
+    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+    
+    if (!razorpayKey) {
+      throw new Error("Razorpay Key ID not configured. Please set VITE_RAZORPAY_KEY_ID in your .env file");
+    }
+
+    // Build callback URL with payment details
+    const baseUrl = window.location.origin;
+    const callbackUrl = `${baseUrl}/payment-success?plan=${options.planType}`;
 
     return new Promise((resolve) => {
+      let isResolved = false;
+      
       const razorpayOptions = {
         key: razorpayKey,
         amount: amount,
@@ -167,80 +155,61 @@ export const initiatePayment = async (
         name: "Super Study App",
         description: `Premium ${options.planType} subscription`,
         order_id: orderId,
-        handler: async function (response: any) {
-          try {
-            // Verify payment
-            const verified = await verifyPayment(
-              response.razorpay_payment_id,
-              response.razorpay_order_id,
-              response.razorpay_signature,
-              options.planType,
-              options.userId
-            );
-
-            if (verified) {
-              // Update user premium status
-              const user = realTimeAuth.getCurrentUser();
-              if (user) {
-                try {
-                  await createPremiumUser(
-                    user.id,
-                    user.email,
-                    options.planType,
-                    options.planType === "student"
-                  );
-                  console.log("✅ Premium status updated successfully");
-                } catch (error) {
-                  console.error("Error updating premium status:", error);
-                }
-              }
-
-              resolve({
-                success: true,
-                paymentId: response.razorpay_payment_id,
-                orderId: response.razorpay_order_id,
-              });
-            } else {
-              resolve({
-                success: false,
-                error: "Payment verification failed",
-              });
-            }
-          } catch (error: any) {
-            console.error("Payment handler error:", error);
-            resolve({
-              success: false,
-              error: error.message || "Payment processing failed",
-            });
-          }
-        },
+        callback_url: callbackUrl, // Use callback URL instead of handler
         prefill: {
           name: options.userName,
           email: options.userEmail,
+        },
+        notes: {
+          planType: options.planType,
+          userId: options.userId,
         },
         theme: {
           color: "#4F46E5",
         },
         modal: {
           ondismiss: function () {
-            resolve({
-              success: false,
-              error: "Payment cancelled by user",
-            });
+            if (!isResolved) {
+              isResolved = true;
+              resolve({
+                success: false,
+                error: "Payment is cancelled by user",
+              });
+            }
           },
         },
       };
 
       const razorpay = new window.Razorpay(razorpayOptions);
+      
+      // Handle payment failure
       razorpay.on("payment.failed", function (response: any) {
         console.error("Payment failed:", response.error);
-        resolve({
-          success: false,
-          error: response.error.description || "Payment failed",
-        });
+        if (!isResolved) {
+          isResolved = true;
+          // Redirect to payment success page with error details
+          const errorUrl = `${baseUrl}/payment-success?error_code=${response.error.code}&error_description=${encodeURIComponent(response.error.description || 'Payment failed')}`;
+          window.location.href = errorUrl;
+          resolve({
+            success: false,
+            error: response.error.description || "Payment failed",
+          });
+        }
       });
 
+      // Open Razorpay checkout
       razorpay.open();
+      
+      // Return success immediately (actual verification happens in callback)
+      // The callback URL will handle the verification and redirect
+      // Only resolve if not already resolved (to handle cancellation)
+      if (!isResolved) {
+        resolve({
+          success: true,
+          paymentId: "",
+          orderId: orderId,
+        });
+      }
     });
   } catch (error: any) {
     console.error("Payment initiation error:", error);
@@ -253,10 +222,12 @@ export const initiatePayment = async (
 
 /**
  * Handle payment success
+ * Note: Premium status is automatically updated by verifyRazorpayPayment Cloud Function
+ * This function is kept as a fallback/verification method
  */
 export const handlePaymentSuccess = async (
-  paymentId: string,
-  orderId: string,
+  _paymentId: string,
+  _orderId: string,
   planType: "monthly" | "yearly" | "student"
 ): Promise<void> => {
   const user = realTimeAuth.getCurrentUser();
@@ -264,13 +235,15 @@ export const handlePaymentSuccess = async (
     throw new Error("User not authenticated");
   }
 
-  // Update premium status
+  // Premium status should already be updated by Cloud Function
+  // This is just a verification/fallback
   try {
     await createPremiumUser(user.id, user.email, planType, planType === "student");
-    console.log("✅ Premium subscription activated");
+    console.log("✅ Premium subscription verified/activated");
   } catch (error) {
     console.error("Error activating premium:", error);
-    throw error;
+    // Don't throw - Cloud Function should have already handled this
+    console.warn("Premium status may have already been updated by Cloud Function");
   }
 };
 

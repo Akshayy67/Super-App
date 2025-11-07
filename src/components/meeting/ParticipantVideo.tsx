@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, VideoOff, Monitor, Hand, Crown, Pin, X, Minimize2, Maximize2 } from 'lucide-react';
 import { VideoMeetingParticipant } from '../../types/videoMeeting';
+import { LoadingGlobe } from '../ui/LoadingGlobe';
 
 interface ParticipantVideoProps {
   participant: VideoMeetingParticipant;
@@ -29,8 +30,8 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
   if (!participant) {
     return (
       <div className={`relative rounded-lg overflow-hidden bg-gray-900 group ${className}`}>
-        <div className="w-full h-full flex items-center justify-center bg-gray-900">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2"></div>
+        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900">
+          <LoadingGlobe size={32} color="rgb(255, 255, 255)" className="mb-2" />
           <div className="text-white text-sm">Loading...</div>
         </div>
       </div>
@@ -350,7 +351,7 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
         />
       ) : !participant.isCameraOff && !stream ? (
         <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2"></div>
+          <LoadingGlobe size={32} color="rgb(255, 255, 255)" className="mb-2" />
           <div className="text-white text-sm">Connecting...</div>
           <div className="text-gray-400 text-xs mt-1">{participant.name}</div>
         </div>

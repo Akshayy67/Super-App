@@ -1,23 +1,51 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import * as THREE from 'three';
 import { gsap } from 'gsap';
-import { Check, Star, Sparkles, Gift, Users, TrendingUp, Zap, Crown, Loader2 } from 'lucide-react';
+import { Check, Star, Sparkles, Gift, TrendingUp, Crown, Loader2, LogIn, LogOut, User, Briefcase, Target, BookOpen, MessageSquare, Rocket } from 'lucide-react';
 import { realTimeAuth } from '../utils/realTimeAuth';
-import { initiatePayment } from '../services/paymentService';
 
 export const PaymentPage: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const navigate = useNavigate();
   const [isLoaded, setIsLoaded] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly' | 'student'>('monthly');
   const [referralCode, setReferralCode] = useState('');
   const [referralApplied, setReferralApplied] = useState(false);
+  const [discountCode, setDiscountCode] = useState<string | null>(null);
+  const [discountPercentage, setDiscountPercentage] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const mouseDownRef = useRef(false);
   const mouseRef = useRef({ x: 0, y: 0, targetRotationX: 0, targetRotationY: 0, rotationX: 0, rotationY: 0 });
+
+  // Check current user on mount and auth changes
+  useEffect(() => {
+    const checkUser = () => {
+      const user = realTimeAuth.getCurrentUser();
+      setCurrentUser(user);
+    };
+    
+    checkUser();
+    
+    // Listen for auth state changes
+    const unsubscribe = realTimeAuth.onAuthStateChange((user) => {
+      setCurrentUser(user);
+    });
+    
+    return () => unsubscribe();
+  }, []);
+
+  // Prevent redirects away from payment page while user is on it
+  useEffect(() => {
+    // Add a flag to prevent App.tsx from redirecting away from payment page
+    sessionStorage.setItem('onPaymentPage', 'true');
+    
+    return () => {
+      // Remove flag when leaving payment page
+      sessionStorage.removeItem('onPaymentPage');
+    };
+  }, []);
 
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
@@ -289,40 +317,76 @@ export const PaymentPage: React.FC = () => {
 
   const handleReferralCode = async () => {
     if (!referralCode.trim()) {
-      alert('Please enter a referral code');
+      alert('Please enter a referral or voucher code');
       return;
     }
     
     try {
       const user = realTimeAuth.getCurrentUser();
       if (!user) {
-        alert('Please sign in to use a referral code');
+        alert('Please sign in to use a code');
         return;
       }
 
-      // Import and use the referral code service
-      const { redeemReferralCode } = await import('../services/referralCodeService');
+      // Import referral code service
+      const { 
+        redeemReferralCode, 
+        validateDiscountCode 
+      } = await import('../services/referralCodeService');
       
+      // First, try to validate as discount code
+      const discountValidation = await validateDiscountCode(referralCode.trim());
+      
+      if (discountValidation.valid) {
+        // It's a discount code - store it for use during payment
+        setDiscountCode(referralCode.trim().toUpperCase());
+        setDiscountPercentage(discountValidation.discountPercentage || 50);
+        setReferralApplied(true);
+        alert(`✅ Discount code applied! You'll get ${discountValidation.discountPercentage}% off when you proceed to payment!`);
+        return;
+      } else if (discountValidation.error) {
+        // Show specific error for discount codes
+        alert(discountValidation.error);
+        return;
+      }
+      
+      // If not a discount code, try to redeem as referral/voucher (pass selected plan type)
       const result = await redeemReferralCode(
         referralCode.trim(),
         user.id,
-        user.email
+        user.email,
+        selectedPlan
       );
 
       if (result.success) {
         setReferralApplied(true);
-        alert(`🎉 Referral code applied! You now have ${result.premiumMonths} month${result.premiumMonths !== 1 ? 's' : ''} of premium access for free!`);
+        const codeTypeLabel = result.codeType === "voucher" ? "Voucher" : "Referral code";
+        alert(`🎉 ${codeTypeLabel} applied! You now have ${result.premiumMonths} month${result.premiumMonths !== 1 ? 's' : ''} of premium access for free!`);
         
         // Redirect to dashboard after a short delay
         setTimeout(() => {
           window.location.href = '/dashboard';
         }, 1500);
       } else {
-        alert(result.error || 'Invalid referral code. Please check and try again.');
+        // Check if it's a discount code error
+        if (result.error?.includes('discount code')) {
+          // Try validating as discount code
+          const discountCheck = await validateDiscountCode(referralCode.trim());
+          if (discountCheck.valid) {
+            setDiscountCode(referralCode.trim().toUpperCase());
+            setDiscountPercentage(discountCheck.discountPercentage || 50);
+            setReferralApplied(true);
+            alert(`✅ Discount code applied! You'll get ${discountCheck.discountPercentage}% off when you proceed to payment!`);
+          } else {
+            alert(discountCheck.error || 'Invalid code. Please check and try again.');
+          }
+        } else {
+          alert(result.error || 'Invalid code. Please check and try again.');
+        }
       }
     } catch (error: any) {
-      console.error('Referral code error:', error);
-      alert(error.message || 'Failed to apply referral code. Please try again.');
+      console.error('Code error:', error);
+      alert(error.message || 'Failed to apply code. Please try again.');
     }
   };
 
@@ -331,16 +395,136 @@ export const PaymentPage: React.FC = () => {
     setPaymentError(null);
 
     try {
-      const user = realTimeAuth.getCurrentUser();
+      // Wait a bit for auth state to be ready, then check user
+      let user = realTimeAuth.getCurrentUser();
       if (!user) {
-        throw new Error('Please sign in to continue');
+        // Wait a moment and try again (auth state might still be initializing)
+        await new Promise(resolve => setTimeout(resolve, 500));
+        user = realTimeAuth.getCurrentUser();
+      }
+      
+      if (!user) {
+        throw new Error('Please sign in to continue. If you are already signed in, please refresh the page.');
       }
 
-      // Skip payment validation - just redirect to dashboard
-      console.log(`✅ Plan selected: ${planType} - Skipping payment validation, redirecting to dashboard`);
+      // For student plan, prompt user to submit verification request (but allow payment to proceed)
+      if (planType === 'student') {
+        const { isVerifiedStudent, getStudentVerificationByUserId } = await import('../services/studentVerificationService');
+        const isVerified = await isVerifiedStudent(user.id);
+        
+        if (!isVerified) {
+          // Check if there's a verification request
+          const verification = await getStudentVerificationByUserId(user.id);
+          
+          if (!verification) {
+            // No verification request exists - prompt user to submit one
+            const submit = window.confirm(
+              'Student discount requires manual verification.\n\n' +
+              '📧 You will receive email updates about your verification status.\n' +
+              '⏱️ Approval typically takes 1-7 business days.\n' +
+              '🚀 Need faster approval? Email: support@super-app.tech\n\n' +
+              'You can proceed with payment, but your student status will need to be verified by our team.\n\n' +
+              'Would you like to submit a verification request now? (You can also do this after payment)'
+            );
+            
+            if (submit) {
+              const email = window.prompt('Enter your Email ID:', user.email || '');
+              const mobileNumber = window.prompt('Enter your Mobile Number (with country code, e.g., +91XXXXXXXXXX):');
+              const studentId = window.prompt('Enter your Student ID:');
+              const institution = window.prompt('Enter your School/University name:');
+              const notes = window.prompt('Additional notes (optional):');
+              
+              if (email && mobileNumber && studentId && institution) {
+                const { createStudentVerificationRequest } = await import('../services/studentVerificationService');
+                await createStudentVerificationRequest(
+                  user.id,
+                  email,
+                  mobileNumber,
+                  studentId,
+                  institution,
+                  notes || undefined
+                );
+                alert(
+                  '✅ Student verification request submitted!\n\n' +
+                  '📧 Please check your email for confirmation.\n\n' +
+                  '⏱️ Approval typically takes 1-7 business days.\n\n' +
+                  '🚀 Need faster approval or have questions?\n' +
+                  'Email us at: support@super-app.tech\n\n' +
+                  'You can proceed with payment now.'
+                );
+              } else {
+                alert(
+                  '⚠️ Email, Mobile Number, Student ID, and Institution are required.\n\n' +
+                  'Verification request cancelled. You can still proceed with payment and submit verification later.\n\n' +
+                  '📧 For help or faster approval, email: support@super-app.tech'
+                );
+              }
+            }
+            // Continue with payment even if verification request wasn't submitted
+          } else if (verification.status === 'rejected') {
+            const proceed = window.confirm(
+              `Your previous student verification was rejected. ${verification.rejectionReason ? 'Reason: ' + verification.rejectionReason : ''}\n\n` +
+              '📧 Approval typically takes 1-7 business days.\n' +
+              '🚀 Need faster approval or have questions? Email: support@super-app.tech\n\n' +
+              'Would you like to proceed with payment anyway? You can submit a new verification request after payment.'
+            );
+            if (!proceed) {
+              setIsProcessing(false);
+              return;
+            }
+          }
+          // If pending or no verification, allow payment to proceed (will be verified manually by admin)
+        }
+      }
+
+      // Get plan details
+      const plan = plans[planType];
+      let amount = plan.price * 100; // Convert to paise
       
-      // Redirect to dashboard immediately
-      window.location.href = '/dashboard';
+      // Apply discount if discount code is applied
+      if (discountCode && discountPercentage) {
+        const discountAmount = Math.round(amount * (discountPercentage / 100));
+        amount = amount - discountAmount;
+        console.log(`💰 Applying ${discountPercentage}% discount: Original ₹${plan.price}, Discounted ₹${amount / 100}`);
+      }
+
+      // Import payment service
+      const { initiatePayment } = await import('../services/paymentService');
+      
+      // Initiate payment (will redirect to callback URL on success/failure)
+      const result = await initiatePayment({
+        amount: amount,
+        currency: 'INR',
+        planType: planType,
+        userId: user.id,
+        userEmail: user.email || '',
+        userName: user.username || user.email || 'User',
+      });
+      
+      // If discount code was used, mark it as applied (will be finalized after payment success)
+      if (discountCode && result.success) {
+        // Store discount code in sessionStorage to apply after payment verification
+        sessionStorage.setItem('pendingDiscountCode', discountCode);
+      }
+
+      if (result.success) {
+        // Payment modal opened - user will be redirected to callback URL
+        // The callback URL (/payment-success) will handle verification
+        console.log('✅ Payment modal opened. User will be redirected after payment.');
+        // Don't redirect here - Razorpay will handle redirect via callback_url
+        // Note: If user cancels, the promise will resolve with success: false and error message
+      } else {
+        // Payment was cancelled or failed to open
+        const errorMessage = result.error || 'Failed to open payment gateway. Please try again.';
+        if (errorMessage.includes('cancelled')) {
+          // Show cancellation message specifically
+          setPaymentError('Payment is cancelled by user');
+        } else {
+          setPaymentError(errorMessage);
+        }
+        setIsProcessing(false);
+        return; // Don't throw error, just show the message
+      }
     } catch (error: any) {
       console.error('Payment error:', error);
       setPaymentError(error.message || 'An error occurred. Please try again.');
@@ -379,6 +563,50 @@ export const PaymentPage: React.FC = () => {
           zIndex: 100,
         }}
       >
+        {/* Sign In/Out Button */}
+        <div className="absolute top-4 right-4 z-50">
+          {currentUser ? (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-gray-800/80 backdrop-blur-sm rounded-lg px-3 py-2 text-white text-sm">
+                <User className="w-4 h-4" />
+                <span className="max-w-[200px] truncate">{currentUser.email || currentUser.username}</span>
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    await realTimeAuth.logout();
+                    setCurrentUser(null);
+                    setReferralApplied(false);
+                    setDiscountCode(null);
+                    setDiscountPercentage(null);
+                    setReferralCode('');
+                    // Redirect to landing page
+                    window.location.href = '/';
+                  } catch (error) {
+                    console.error('Logout error:', error);
+                    alert('Failed to sign out. Please try again.');
+                  }
+                }}
+                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                // Redirect to landing page to sign in
+                window.location.href = '/';
+              }}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+            >
+              <LogIn className="w-4 h-4" />
+              Sign In
+            </button>
+          )}
+        </div>
+        
         <div className="payment-content max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-12">
@@ -402,7 +630,7 @@ export const PaymentPage: React.FC = () => {
             <div className="flex items-center gap-3">
               <Sparkles className="w-6 h-6 text-yellow-400" />
               <div>
-                <h3 className="text-xl font-bold text-white mb-1">
+                <h3 className="text-2xl md:text-3xl font-black mb-1 bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(251,191,36,0.8)] animate-pulse">
                   🎉 LAUNCH SPECIAL - LIMITED TIME!
                 </h3>
                 <p className="text-gray-200">
@@ -536,26 +764,42 @@ export const PaymentPage: React.FC = () => {
           <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-xl p-6 mb-8">
             <div className="flex items-center gap-3 mb-4">
               <Gift className="w-6 h-6 text-purple-400" />
-              <h3 className="text-xl font-bold text-white">Have a Referral Code?</h3>
+              <h3 className="text-xl font-bold text-white">Have a Referral or Voucher Code?</h3>
             </div>
             <p className="text-gray-300 mb-4">
-              Enter a referral code to get <span className="font-bold text-yellow-400">Premium for FREE</span>!
+              Have a referral or voucher code? Enter it below to unlock premium benefits!
             </p>
             {referralApplied ? (
               <div className="bg-green-900/50 border-2 border-green-500 rounded-lg p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <Check className="w-6 h-6 text-green-400" />
-                  <p className="text-lg font-bold text-green-400">Referral Code Applied!</p>
+                  {discountCode ? (
+                    <>
+                      <p className="text-lg font-bold text-green-400">Discount Code Applied!</p>
+                      <p className="text-gray-300 mt-2">
+                        You'll get <span className="font-bold text-yellow-400">{discountPercentage}% OFF</span> when you proceed to payment!
+                      </p>
+                      <p className="text-sm text-gray-400 mt-1">Code: <code className="font-mono">{discountCode}</code></p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-lg font-bold text-green-400">Referral or Voucher Code Applied!</p>
+                      <p className="text-gray-300">You now have premium access for free!</p>
+                    </>
+                  )}
                 </div>
-                <p className="text-gray-300">You now have premium access for free!</p>
               </div>
             ) : (
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-gray-400">
+                  Referral or Voucher Code
+                </label>
               <div className="flex items-center gap-4">
                 <input
                   type="text"
                   value={referralCode}
                   onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                  placeholder="Enter referral code here"
+                    placeholder="Enter referral or voucher code here"
                   className="flex-1 bg-gray-800 border-2 border-gray-700 rounded-lg px-4 py-3 text-white font-mono text-lg focus:outline-none focus:border-purple-500 transition-all"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
@@ -569,6 +813,7 @@ export const PaymentPage: React.FC = () => {
                 >
                   Apply Code
                 </button>
+                </div>
               </div>
             )}
           </div>
@@ -576,14 +821,14 @@ export const PaymentPage: React.FC = () => {
           {/* Premium Features List */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {[
-              { icon: Zap, text: 'Unlimited AI Interactions' },
-              { icon: Star, text: 'Advanced Interview Analytics' },
-              { icon: TrendingUp, text: 'Real-time Collaboration' },
-              { icon: Sparkles, text: 'Priority AI Processing' },
-              { icon: Gift, text: 'Exclusive Study Materials' },
-              { icon: Crown, text: 'Premium Badge & Profile' },
+              { icon: Briefcase, text: 'Priority AI Processing' },
+              { icon: Target, text: 'Dream Job to Action Plan AI' },
+              { icon: BookOpen, text: 'Personalized Study Plans' },
+              { icon: TrendingUp, text: 'Career Path Recommendations' },
+              { icon: MessageSquare, text: 'Unlimited AI Interview Prep' },
+              { icon: Rocket, text: 'Advanced Interview Analytics' },
             ].map((feature, idx) => (
-              <div key={idx} className="flex items-center gap-3 bg-gray-900 rounded-lg p-4">
+              <div key={idx} className="flex items-center gap-3 bg-gray-900 rounded-lg p-4 hover:bg-gray-800 transition-colors">
                 <feature.icon className="w-6 h-6 text-blue-400 flex-shrink-0" />
                 <span className="text-gray-300 font-medium">{feature.text}</span>
               </div>
@@ -609,9 +854,24 @@ export const PaymentPage: React.FC = () => {
                 </>
               ) : (
                 <>
-                  Subscribe Now - ₹{plans[selectedPlan].price}
-                  {selectedPlan === 'yearly' && '/year'}
-                  {selectedPlan !== 'yearly' && '/month'}
+                  {discountCode && discountPercentage ? (
+                    <>
+                      Subscribe Now - 
+                      <span className="line-through opacity-75 ml-1">₹{plans[selectedPlan].price}</span>
+                      <span className="ml-2">
+                        ₹{Math.round(plans[selectedPlan].price * (1 - discountPercentage / 100))}
+                      </span>
+                      <span className="text-yellow-300 text-sm ml-1">({discountPercentage}% OFF)</span>
+                      {selectedPlan === 'yearly' && '/year'}
+                      {selectedPlan !== 'yearly' && '/month'}
+                    </>
+                  ) : (
+                    <>
+                      Subscribe Now - ₹{plans[selectedPlan].price}
+                      {selectedPlan === 'yearly' && '/year'}
+                      {selectedPlan !== 'yearly' && '/month'}
+                    </>
+                  )}
                 </>
               )}
             </button>

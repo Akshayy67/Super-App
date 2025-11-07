@@ -1169,7 +1169,7 @@ export const Community: React.FC = () => {
                 )}
 
                 <div className="space-y-3">
-                  {leaderboard.map((lbUser, index) => (
+                  {leaderboard.slice(0, 3).map((lbUser, index) => (
                     <div key={lbUser.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-slate-700 rounded-lg hover:shadow-md transition-shadow">
                       <div className="flex items-center space-x-4">
                         <div className={`text-2xl font-bold w-8 ${getRankColor(index + 1)}`}>

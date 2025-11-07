@@ -25,6 +25,8 @@ import {
   Gift,
   Copy,
   Check,
+  Star,
+  XCircle,
 } from "lucide-react";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import { 
@@ -58,6 +60,17 @@ import {
   getAllReferralCodes,
   ReferralCode,
 } from "../../services/referralCodeService";
+import {
+  getAllPremiumUsers,
+  PremiumUser,
+} from "../../services/premiumUserService";
+import {
+  getAllPendingStudentVerifications,
+  getAllStudentVerifications,
+  approveStudentVerification,
+  rejectStudentVerification,
+  StudentVerification,
+} from "../../services/studentVerificationService";
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -84,19 +97,43 @@ export const AdminDashboard: React.FC = () => {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [reports, setReports] = useState<ReportType[]>([]);
   const [updatingReportId, setUpdatingReportId] = useState<string | null>(null);
+  const [premiumUsers, setPremiumUsers] = useState<PremiumUser[]>([]);
+  const [loadingPremiumUsers, setLoadingPremiumUsers] = useState(false);
+  const [studentVerifications, setStudentVerifications] = useState<StudentVerification[]>([]);
+  const [loadingStudentVerifications, setLoadingStudentVerifications] = useState(false);
+  const [processingVerificationId, setProcessingVerificationId] = useState<string | null>(null);
 
   const user = realTimeAuth.getCurrentUser();
 
   // Check admin access
   useEffect(() => {
-    if (!user || user.email !== "akshayjuluri6704@gmail.com") {
-      navigate("/dashboard");
-      return;
-    }
+    // Wait a bit for user to be available
+    const checkAdminAccess = async () => {
+      // Give it time for auth state to initialize
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const currentUser = realTimeAuth.getCurrentUser();
+      if (!currentUser) {
+        // Wait a bit more
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const retryUser = realTimeAuth.getCurrentUser();
+        if (!retryUser || retryUser.email !== "akshayjuluri6704@gmail.com") {
+          console.log("⚠️ AdminDashboard - Not admin or no user, redirecting");
+          navigate("/dashboard");
+          return;
+        }
+      } else if (currentUser.email !== "akshayjuluri6704@gmail.com") {
+        console.log("⚠️ AdminDashboard - Not admin user, redirecting");
+        navigate("/dashboard");
+        return;
+      }
 
-    // Check if user is authenticated with ATS backend
-    setIsATSAuthenticated(ATSService.isAuthenticated());
-  }, [user, navigate]);
+      // Check if user is authenticated with ATS backend
+      setIsATSAuthenticated(ATSService.isAuthenticated());
+    };
+
+    checkAdminAccess();
+  }, [navigate]);
 
   // Load admin data
   useEffect(() => {
@@ -116,18 +153,122 @@ export const AdminDashboard: React.FC = () => {
         return; // Don't load any ATS data when on Firebase tab
       }
       
-      // Only load ATS backend data if authenticated AND not on Firebase/reports tab
-      if (isATSAuthenticated && activeTab !== "firebase" && activeTab !== "reports") {
+      // Load Premium Users tab data (doesn't require ATS)
+      if (activeTab === "premium") {
+        loadPremiumUsers();
+        return;
+      }
+      
+      // Load Student Verifications tab data (doesn't require ATS)
+      if (activeTab === "students") {
+        loadStudentVerifications();
+        return;
+      }
+      
+      // Only load ATS backend data if authenticated AND on a tab that requires ATS
+      const atsRequiredTabs = ["overview", "users", "analytics", "settings", "content"];
+      if (isATSAuthenticated && atsRequiredTabs.includes(activeTab)) {
         loadAdminData();
       } else {
-        // Clear ATS-related state if not authenticated
-        setStats(null);
-        setUsers(null);
-        setAnalytics(null);
-        setSystemHealth(null);
+        // Clear ATS-related state if not authenticated or on non-ATS tab
+        if (!isATSAuthenticated || !atsRequiredTabs.includes(activeTab)) {
+          setStats(null);
+          setUsers(null);
+          setAnalytics(null);
+          setSystemHealth(null);
+        }
       }
     }
   }, [user, activeTab, currentPage, searchTerm, isATSAuthenticated]);
+
+  // Load Student Verifications data
+  const loadStudentVerifications = async () => {
+    try {
+      setLoadingStudentVerifications(true);
+      setLoading(true);
+      setError(null);
+      
+      const verifications = await getAllStudentVerifications();
+      // Sort by submitted date (newest first)
+      verifications.sort((a, b) => {
+        const aTime = a.submittedAt?.toMillis?.() || (a.submittedAt ? new Date(a.submittedAt).getTime() : 0);
+        const bTime = b.submittedAt?.toMillis?.() || (b.submittedAt ? new Date(b.submittedAt).getTime() : 0);
+        return bTime - aTime;
+      });
+      setStudentVerifications(verifications);
+    } catch (error: any) {
+      console.error("Error loading student verifications:", error);
+      setError(error.message || "Failed to load student verifications");
+    } finally {
+      setLoadingStudentVerifications(false);
+      setLoading(false);
+    }
+  };
+
+  // Handle approve student verification
+  const handleApproveStudent = async (verificationId: string) => {
+    if (!user) return;
+    
+    if (!window.confirm("Are you sure you want to approve this student verification?")) {
+      return;
+    }
+    
+    try {
+      setProcessingVerificationId(verificationId);
+      await approveStudentVerification(verificationId, user.id);
+      await loadStudentVerifications();
+      await loadPremiumUsers(); // Refresh premium users list
+      alert("✅ Student verification approved!");
+    } catch (error: any) {
+      console.error("Error approving student verification:", error);
+      alert(error.message || "Failed to approve student verification");
+    } finally {
+      setProcessingVerificationId(null);
+    }
+  };
+
+  // Handle reject student verification
+  const handleRejectStudent = async (verificationId: string) => {
+    if (!user) return;
+    
+    const reason = window.prompt("Enter rejection reason (optional):");
+    if (reason === null) return; // User cancelled
+    
+    if (!window.confirm("Are you sure you want to reject this student verification?")) {
+      return;
+    }
+    
+    try {
+      setProcessingVerificationId(verificationId);
+      await rejectStudentVerification(verificationId, user.id, reason || undefined);
+      await loadStudentVerifications();
+      await loadPremiumUsers(); // Refresh premium users list
+      alert("❌ Student verification rejected!");
+    } catch (error: any) {
+      console.error("Error rejecting student verification:", error);
+      alert(error.message || "Failed to reject student verification");
+    } finally {
+      setProcessingVerificationId(null);
+    }
+  };
+
+  // Load Premium Users data
+  const loadPremiumUsers = async () => {
+    try {
+      setLoadingPremiumUsers(true);
+      setLoading(true);
+      setError(null);
+      
+      const premiumUsersData = await getAllPremiumUsers();
+      setPremiumUsers(premiumUsersData);
+    } catch (error: any) {
+      console.error("Error loading premium users:", error);
+      setError(error.message || "Failed to load premium users");
+    } finally {
+      setLoadingPremiumUsers(false);
+      setLoading(false);
+    }
+  };
 
   // Load Firebase data separately (doesn't require ATS)
   const loadFirebaseData = async () => {
@@ -170,18 +311,57 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const [codeType, setCodeType] = useState<"referral" | "discount" | "voucher">("referral");
+  const [voucherName, setVoucherName] = useState("");
+  const [codeDescription, setCodeDescription] = useState("");
+
   // Generate new referral code
   const handleGenerateCode = async () => {
     if (!user) return;
     
+    // Validate voucher name if voucher type
+    if (codeType === "voucher" && !voucherName.trim()) {
+      alert("Please enter a voucher name/prefix");
+      return;
+    }
+    
     try {
       setGeneratingCode(true);
-      const newCode = await createReferralCode(user.id, 1); // 1 month premium
+      
+      const options: any = {
+        type: codeType,
+      };
+      
+      if (codeType === "referral") {
+        options.premiumMonths = 1;
+      } else if (codeType === "discount") {
+        options.discountPercentage = 50;
+      } else       if (codeType === "voucher") {
+        options.voucherName = voucherName.trim();
+      }
+      
+      if (codeDescription.trim()) {
+        options.description = codeDescription.trim();
+      }
+      
+      // Set worksForStudent for vouchers and discounts
+      if (codeType === "voucher" || codeType === "discount") {
+        options.worksForStudent = worksForStudent;
+      }
+      
+      const newCode = await createReferralCode(user.id, options);
       await loadReferralCodes(); // Reload codes to show the new one
-      alert(`Referral code generated: ${newCode}`);
+      
+      const typeLabel = codeType === "referral" ? "Referral code" : codeType === "discount" ? "50% Discount code" : "Special voucher";
+      alert(`${typeLabel} generated: ${newCode}`);
+      
+      // Reset form
+      setVoucherName("");
+      setCodeDescription("");
+      setWorksForStudent(true);
     } catch (error: any) {
-      console.error("Error generating referral code:", error);
-      alert(error.message || "Failed to generate referral code");
+      console.error("Error generating code:", error);
+      alert(error.message || "Failed to generate code");
     } finally {
       setGeneratingCode(false);
     }
@@ -264,12 +444,22 @@ export const AdminDashboard: React.FC = () => {
     // STRICT CHECK: Don't load ATS backend data if not authenticated
     if (!isATSAuthenticated) {
       console.log("🚫 Skipping ATS backend data load - not authenticated");
+      setLoading(false);
       return;
     }
 
-    // Double-check: Don't load if on Firebase tab
-    if (activeTab === "firebase") {
-      console.log("🚫 Skipping ATS backend data load - on Firebase tab");
+    // Double-check: Don't load if on Firebase, reports, or premium tab
+    if (activeTab === "firebase" || activeTab === "reports" || activeTab === "premium" || activeTab === "students") {
+      console.log("🚫 Skipping ATS backend data load - on non-ATS tab:", activeTab);
+      setLoading(false);
+      return;
+    }
+
+    // Only load for tabs that require ATS
+    const atsRequiredTabs = ["overview", "users", "analytics", "settings", "content"];
+    if (!atsRequiredTabs.includes(activeTab)) {
+      console.log("🚫 Skipping ATS backend data load - tab doesn't require ATS:", activeTab);
+      setLoading(false);
       return;
     }
 
@@ -299,9 +489,11 @@ export const AdminDashboard: React.FC = () => {
     } catch (err) {
       console.error("Admin data loading error:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to load admin data";
-      // Don't show ATS auth errors if user hasn't authenticated
+      // Don't show ATS auth errors if user hasn't authenticated - just log it
       if (errorMessage.includes("authentication token") || errorMessage.includes("ATS backend")) {
-        setError("ATS backend authentication required. Please authenticate or use Firebase Admin features.");
+        console.log("⚠️ ATS backend authentication required for this tab. Use Firebase Admin or Premium Users tabs instead.");
+        // Don't set error - just silently fail for non-authenticated users
+        setError(null);
       } else {
         setError(errorMessage);
       }
@@ -450,6 +642,8 @@ export const AdminDashboard: React.FC = () => {
 
   const tabs = [
     { id: "firebase", label: "Firebase Admin", icon: Database, requiresATS: false },
+    { id: "premium", label: "Premium Users", icon: Gift, requiresATS: false },
+    { id: "students", label: "Student Verifications", icon: BookOpen, requiresATS: false },
     { id: "reports", label: "Reports", icon: AlertTriangle, requiresATS: false },
     { id: "overview", label: "Overview", icon: BarChart3, requiresATS: true },
     { id: "users", label: "User Management", icon: Users, requiresATS: true },
@@ -488,9 +682,13 @@ export const AdminDashboard: React.FC = () => {
                 <button
                   onClick={() => {
                     if (!isATSAuthenticated) {
-                      // Only refresh Firebase data if not authenticated
+                      // Only refresh Firebase/Premium data if not authenticated
                       if (activeTab === "firebase") {
                         loadFirebaseData();
+                      } else if (activeTab === "premium") {
+                        loadPremiumUsers();
+                      } else if (activeTab === "students") {
+                        loadStudentVerifications();
                       }
                       return;
                     }
@@ -1319,13 +1517,119 @@ export const AdminDashboard: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Gift className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                     <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                      Referral Codes
+                      Referral Codes & Vouchers
                     </h3>
                   </div>
+                </div>
+
+                {/* Code Generation Options */}
+                <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <button
+                      onClick={() => setCodeType("referral")}
+                      className={`px-4 py-3 rounded-lg font-medium transition-all ${
+                        codeType === "referral"
+                          ? "bg-purple-600 text-white shadow-lg"
+                          : "bg-white dark:bg-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-500"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Gift className="w-4 h-4" />
+                        <span>Referral Code</span>
+                      </div>
+                      <p className="text-xs mt-1 opacity-90">1 Month Premium</p>
+                    </button>
+                    
+                    <button
+                      onClick={() => setCodeType("discount")}
+                      className={`px-4 py-3 rounded-lg font-medium transition-all ${
+                        codeType === "discount"
+                          ? "bg-green-600 text-white shadow-lg"
+                          : "bg-white dark:bg-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-500"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4" />
+                        <span>50% Discount</span>
+                      </div>
+                      <p className="text-xs mt-1 opacity-90">Half Price</p>
+                    </button>
+                    
+                    <button
+                      onClick={() => setCodeType("voucher")}
+                      className={`px-4 py-3 rounded-lg font-medium transition-all ${
+                        codeType === "voucher"
+                          ? "bg-blue-600 text-white shadow-lg"
+                          : "bg-white dark:bg-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-500"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Star className="w-4 h-4" />
+                        <span>Special Voucher</span>
+                      </div>
+                      <p className="text-xs mt-1 opacity-90">Custom Name</p>
+                    </button>
+                  </div>
+
+                  {codeType === "voucher" && (
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Voucher Name/Prefix
+                      </label>
+                      <input
+                        type="text"
+                        value={voucherName}
+                        onChange={(e) => setVoucherName(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                        placeholder="e.g., SUMMER2024, WELCOME, SPECIAL"
+                        maxLength={8}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        This will be used as prefix for the voucher code (max 8 characters, alphanumeric only)
+                      </p>
+                    </div>
+                  )}
+
+                  {(codeType === "voucher" || codeType === "discount") && (
+                    <div className="mb-4">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={worksForStudent}
+                          onChange={(e) => setWorksForStudent(e.target.checked)}
+                          className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        <div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Works for Student Plans
+                          </span>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {worksForStudent 
+                              ? "This code can be used with student discount plans"
+                              : "This code will NOT work with student discount plans"}
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  )}
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Description (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={codeDescription}
+                      onChange={(e) => setCodeDescription(e.target.value)}
+                      placeholder="e.g., Summer Sale, Welcome Bonus, Special Offer"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
                   <button
                     onClick={handleGenerateCode}
-                    disabled={generatingCode}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={generatingCode || (codeType === "voucher" && !voucherName.trim())}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
                   >
                     {generatingCode ? (
                       <>
@@ -1335,14 +1639,18 @@ export const AdminDashboard: React.FC = () => {
                     ) : (
                       <>
                         <Gift className="w-4 h-4" />
-                        Generate Code
+                        Generate {codeType === "referral" ? "Referral Code" : codeType === "discount" ? "50% Discount Code" : "Special Voucher"}
                       </>
                     )}
                   </button>
                 </div>
 
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Generate one-time referral codes that grant 1 month of premium access when redeemed.
+                  {codeType === "referral" 
+                    ? "Generate referral codes that grant 1 month of premium access when redeemed."
+                    : codeType === "discount"
+                    ? "Generate discount codes that provide 50% off on any subscription plan."
+                    : "Generate special vouchers with custom names/prefixes for promotional campaigns."}
                 </p>
 
                 {referralCodes.length === 0 ? (
@@ -1357,8 +1665,9 @@ export const AdminDashboard: React.FC = () => {
                       <thead className="bg-gray-50 dark:bg-slate-700">
                         <tr>
                           <th className="px-4 py-2 text-left">Code</th>
+                          <th className="px-4 py-2 text-left">Type</th>
                           <th className="px-4 py-2 text-left">Status</th>
-                          <th className="px-4 py-2 text-left">Premium Months</th>
+                          <th className="px-4 py-2 text-left">Benefit</th>
                           <th className="px-4 py-2 text-left">Created</th>
                           <th className="px-4 py-2 text-left">Used By</th>
                           <th className="px-4 py-2 text-left">Actions</th>
@@ -1378,12 +1687,32 @@ export const AdminDashboard: React.FC = () => {
                             ? formatDate(new Date(code.usedAt).toISOString())
                             : null;
 
+                          const codeType = code.type || "referral";
+                          
                           return (
                             <tr key={code.code}>
                               <td className="px-4 py-2">
                                 <code className="font-mono text-sm font-bold text-purple-600 dark:text-purple-400">
                                   {code.code}
                                 </code>
+                                {code.description && (
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {code.description}
+                                  </p>
+                                )}
+                              </td>
+                              <td className="px-4 py-2">
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    codeType === "referral"
+                                      ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+                                      : codeType === "discount"
+                                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                      : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                                  }`}
+                                >
+                                  {codeType === "referral" ? "Referral" : codeType === "discount" ? "50% Off" : "Voucher"}
+                                </span>
                               </td>
                               <td className="px-4 py-2">
                                 <span
@@ -1397,7 +1726,24 @@ export const AdminDashboard: React.FC = () => {
                                 </span>
                               </td>
                               <td className="px-4 py-2 text-gray-600 dark:text-gray-400">
-                                {code.premiumMonths || 1} month{code.premiumMonths !== 1 ? "s" : ""}
+                                <div>
+                                  {codeType === "referral" 
+                                    ? `${code.premiumMonths || 1} month${(code.premiumMonths || 1) !== 1 ? "s" : ""} premium`
+                                    : codeType === "discount"
+                                    ? `${code.discountPercentage || 50}% discount`
+                                    : code.voucherName 
+                                      ? `Voucher: ${code.voucherName}`
+                                      : "Special voucher"}
+                                  {(codeType === "voucher" || codeType === "discount") && (
+                                    <div className="text-xs mt-1">
+                                      {code.worksForStudent === false ? (
+                                        <span className="text-orange-600 dark:text-orange-400">⚠️ Excludes Student Plans</span>
+                                      ) : (
+                                        <span className="text-green-600 dark:text-green-400">✓ Works for Students</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               </td>
                               <td className="px-4 py-2 text-gray-600 dark:text-gray-400">
                                 {createdDate}
@@ -1423,6 +1769,426 @@ export const AdminDashboard: React.FC = () => {
                                     </>
                                   )}
                                 </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && activeTab === "premium" && (
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                      Premium Users
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      View all premium users and their subscription details
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {premiumUsers.length}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Total Premium
+                      </div>
+                    </div>
+                    <button
+                      onClick={loadPremiumUsers}
+                      disabled={loadingPremiumUsers}
+                      className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-50"
+                      title="Refresh"
+                    >
+                      <RefreshCw className={`w-5 h-5 ${loadingPremiumUsers ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {loadingPremiumUsers ? (
+                  <div className="text-center py-12">
+                    <RefreshCw className="w-8 h-8 mx-auto mb-4 text-blue-600 animate-spin" />
+                    <p className="text-gray-600 dark:text-gray-400">Loading premium users...</p>
+                  </div>
+                ) : premiumUsers.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Gift className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      No premium users yet
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Premium users will appear here once they subscribe
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-slate-700">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            User Email
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Plan Type
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Start Date
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Valid Till
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Payment ID
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {premiumUsers.map((premiumUser) => {
+                          const startDate = premiumUser.subscriptionStartDate
+                            ? new Date(premiumUser.subscriptionStartDate)
+                            : null;
+                          const endDate = premiumUser.subscriptionEndDate
+                            ? new Date(premiumUser.subscriptionEndDate)
+                            : null;
+                          const now = new Date();
+                          const isExpired = endDate ? endDate < now : false;
+                          const isLifetime = !endDate || premiumUser.subscriptionType === "lifetime";
+                          const daysRemaining = endDate
+                            ? Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+                            : null;
+
+                          return (
+                            <tr
+                              key={premiumUser.userId}
+                              className={`hover:bg-gray-50 dark:hover:bg-slate-700 ${
+                                isExpired ? "bg-red-50 dark:bg-red-900/20" : ""
+                              }`}
+                            >
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                  {premiumUser.email}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  {premiumUser.userId.slice(0, 20)}...
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    premiumUser.subscriptionType === "lifetime"
+                                      ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                                      : premiumUser.subscriptionType === "yearly"
+                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                                      : premiumUser.subscriptionType === "student"
+                                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                                  }`}
+                                >
+                                  {premiumUser.subscriptionType
+                                    ? premiumUser.subscriptionType.charAt(0).toUpperCase() +
+                                      premiumUser.subscriptionType.slice(1)
+                                    : "N/A"}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                {startDate
+                                  ? startDate.toLocaleDateString("en-US", {
+                                      year: "numeric",
+                                      month: "short",
+                                      day: "numeric",
+                                    })
+                                  : "N/A"}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {isLifetime ? (
+                                  <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    Lifetime
+                                  </span>
+                                ) : endDate ? (
+                                  <div>
+                                    <div
+                                      className={`text-sm font-medium ${
+                                        isExpired
+                                          ? "text-red-600 dark:text-red-400"
+                                          : daysRemaining && daysRemaining <= 7
+                                          ? "text-yellow-600 dark:text-yellow-400"
+                                          : "text-gray-900 dark:text-gray-100"
+                                      }`}
+                                    >
+                                      {endDate.toLocaleDateString("en-US", {
+                                        year: "numeric",
+                                        month: "short",
+                                        day: "numeric",
+                                      })}
+                                    </div>
+                                    {daysRemaining !== null && (
+                                      <div
+                                        className={`text-xs ${
+                                          isExpired
+                                            ? "text-red-500 dark:text-red-400"
+                                            : daysRemaining <= 7
+                                            ? "text-yellow-500 dark:text-yellow-400"
+                                            : "text-gray-500 dark:text-gray-400"
+                                        }`}
+                                      >
+                                        {isExpired
+                                          ? `Expired ${Math.abs(daysRemaining)} day${Math.abs(daysRemaining) !== 1 ? "s" : ""} ago`
+                                          : `${daysRemaining} day${daysRemaining !== 1 ? "s" : ""} remaining`}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-sm text-gray-400 dark:text-gray-500">N/A</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {premiumUser.isPremium ? (
+                                  <span
+                                    className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
+                                      isExpired
+                                        ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                                        : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                                    }`}
+                                  >
+                                    {isExpired ? (
+                                      <>
+                                        <AlertTriangle className="w-3 h-3 mr-1" />
+                                        Expired
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle className="w-3 h-3 mr-1" />
+                                        Active
+                                      </>
+                                    )}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300">
+                                    Inactive
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                                  {premiumUser.paymentId || premiumUser.lastPaymentId
+                                    ? (premiumUser.paymentId || premiumUser.lastPaymentId).slice(0, 20) + "..."
+                                    : "N/A"}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && activeTab === "students" && (
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                      Student Verification Requests
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Review and approve/reject student discount verification requests
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {studentVerifications.filter(v => v.status === "pending").length}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Pending
+                      </div>
+                    </div>
+                    <button
+                      onClick={loadStudentVerifications}
+                      disabled={loadingStudentVerifications}
+                      className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-50"
+                      title="Refresh"
+                    >
+                      <RefreshCw className={`w-5 h-5 ${loadingStudentVerifications ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {loadingStudentVerifications ? (
+                  <div className="text-center py-12">
+                    <RefreshCw className="w-8 h-8 mx-auto mb-4 text-blue-600 animate-spin" />
+                    <p className="text-gray-600 dark:text-gray-400">Loading student verifications...</p>
+                  </div>
+                ) : studentVerifications.length === 0 ? (
+                  <div className="text-center py-12">
+                    <BookOpen className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      No student verification requests yet
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Student verification requests will appear here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-slate-700">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Email
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Mobile Number
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Student ID
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Institution
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Submitted
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {studentVerifications.map((verification) => {
+                          const submittedDate = verification.submittedAt?.toDate?.() 
+                            ? verification.submittedAt.toDate() 
+                            : verification.submittedAt 
+                            ? new Date(verification.submittedAt) 
+                            : new Date();
+                          
+                          const reviewedDate = verification.reviewedAt?.toDate?.() 
+                            ? verification.reviewedAt.toDate() 
+                            : verification.reviewedAt 
+                            ? new Date(verification.reviewedAt) 
+                            : null;
+
+                          return (
+                            <tr
+                              key={verification.id}
+                              className={`hover:bg-gray-50 dark:hover:bg-slate-700 ${
+                                verification.status === "pending" 
+                                  ? "bg-yellow-50 dark:bg-yellow-900/20" 
+                                  : verification.status === "rejected"
+                                  ? "bg-red-50 dark:bg-red-900/20"
+                                  : ""
+                              }`}
+                            >
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                  {verification.email}
+                                </div>
+                                {verification.notes && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Notes: {verification.notes}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900 dark:text-gray-100">
+                                  {verification.mobileNumber || "N/A"}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900 dark:text-gray-100">
+                                  {verification.studentId || "N/A"}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900 dark:text-gray-100">
+                                  {verification.institution || "N/A"}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                  {formatDate(submittedDate.toISOString())}
+                                </div>
+                                {reviewedDate && (
+                                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                    Reviewed: {formatDate(reviewedDate.toISOString())}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
+                                    verification.status === "pending"
+                                      ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                                      : verification.status === "approved"
+                                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                                      : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                                  }`}
+                                >
+                                  {verification.status === "pending" ? (
+                                    <>
+                                      <Clock className="w-3 h-3 mr-1" />
+                                      Pending
+                                    </>
+                                  ) : verification.status === "approved" ? (
+                                    <>
+                                      <CheckCircle className="w-3 h-3 mr-1" />
+                                      Approved
+                                    </>
+                                  ) : (
+                                    <>
+                                      <XCircle className="w-3 h-3 mr-1" />
+                                      Rejected
+                                    </>
+                                  )}
+                                </span>
+                                {verification.rejectionReason && (
+                                  <div className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                    Reason: {verification.rejectionReason}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                {verification.status === "pending" ? (
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleApproveStudent(verification.id)}
+                                      disabled={processingVerificationId === verification.id}
+                                      className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
+                                    >
+                                      {processingVerificationId === verification.id ? "Processing..." : "Approve"}
+                                    </button>
+                                    <button
+                                      onClick={() => handleRejectStudent(verification.id)}
+                                      disabled={processingVerificationId === verification.id}
+                                      className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400 dark:text-gray-500 text-xs">
+                                    {verification.reviewedBy ? `Reviewed by admin` : "N/A"}
+                                  </span>
+                                )}
                               </td>
                             </tr>
                           );

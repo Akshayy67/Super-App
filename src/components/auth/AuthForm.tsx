@@ -87,11 +87,30 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
               window.location.href = "/blocked";
             }, 100);
           } else {
-            // Redirect to payment page after successful authentication
+            // Check premium status and redirect accordingly
             onAuthSuccess();
-            setTimeout(() => {
-              window.location.href = "/payment";
-            }, 100);
+            setTimeout(async () => {
+              try {
+                const user = realTimeAuth.getCurrentUser();
+                if (user) {
+                  const { isPremiumUser } = await import("../../services/premiumUserService");
+                  const isPremium = await isPremiumUser(user.id);
+                  
+                  if (isPremium) {
+                    // User is premium - go to dashboard
+                    window.location.href = "/dashboard";
+                  } else {
+                    // User is not premium - go to payment
+                    window.location.href = "/payment";
+                  }
+                } else {
+                  window.location.href = "/payment";
+                }
+              } catch (error) {
+                console.error("Error checking premium status:", error);
+                window.location.href = "/payment";
+              }
+            }, 200);
           }
         }
       } catch (error) {
@@ -126,11 +145,30 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
           return;
         }
         
-        // Redirect to payment page after successful authentication
+        // Check premium status and redirect accordingly
         onAuthSuccess();
-        setTimeout(() => {
-          window.location.href = "/payment";
-        }, 100);
+        setTimeout(async () => {
+          try {
+            const user = realTimeAuth.getCurrentUser();
+            if (user) {
+              const { isPremiumUser } = await import("../../services/premiumUserService");
+              const isPremium = await isPremiumUser(user.id);
+              
+              if (isPremium) {
+                // User is premium - go to dashboard
+                window.location.href = "/dashboard";
+              } else {
+                // User is not premium - go to payment
+                window.location.href = "/payment";
+              }
+            } else {
+              window.location.href = "/payment";
+            }
+          } catch (error) {
+            console.error("Error checking premium status:", error);
+            window.location.href = "/payment";
+          }
+        }, 200);
       } else {
         // Only show error if message is provided (demo sign-in handles popup-closed automatically)
         if (result.message) {

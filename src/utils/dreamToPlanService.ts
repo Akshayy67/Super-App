@@ -84,6 +84,18 @@ CRITICAL INSTRUCTIONS - Detect these action types:
    - "remind me", "don't forget", "remember to"
    - Example: "Remind me to call mom" → type: "reminder"
 
+6. "interview" type - Use when user says:
+   - "prepare for interview", "interview prep", "practice interview", "mock interview", "interview practice"
+   - "I want to take interview", "I need to prepare for interview", "help me with interview"
+   - Examples:
+     * "I want to prepare for interview" → type: "interview"
+     * "I need interview prep" → type: "interview"
+     * "help me practice for interview" → type: "interview"
+   - Extract interview details if mentioned:
+     * role: Target role (e.g., "Software Engineer", "Data Scientist")
+     * difficulty: "easy", "medium", "hard" (default: "medium")
+     * focusAreas: Technical, behavioral, etc.
+
 STRICT RULES:
 - If user says "create a team" or "make a team" or "team which works on" → MUST use type "team"
 - If user says "schedule a meeting" or "meet with" → MUST use type "meeting"
@@ -118,8 +130,8 @@ Please respond in the following JSON format:
   "motivationInsights": "Provide insights about the user's motivation, mood, and emotional state",
   "actionItems": [
     {
-      "text": "Action item text (e.g., 'Create team for e-commerce website' or 'Complete OS assignment' or 'Create study plan for DSA')",
-      "type": "todo|meeting|reminder|event|team|study_plan",
+      "text": "Action item text (e.g., 'Create team for e-commerce website' or 'Complete OS assignment' or 'Create study plan for DSA' or 'Prepare for interview')",
+      "type": "todo|meeting|reminder|event|team|study_plan|interview",
       "suggestedDate": "YYYY-MM-DD HH:MM or null (extract dates like '3rd november' → '2024-11-03 00:00', '5th november' → '2024-11-05 00:00')",
       "teamName": "Team name if type is team (extract from user message or infer from purpose)",
       "studyPlanData": {
@@ -128,6 +140,11 @@ Please respond in the following JSON format:
         "difficulty": "beginner|intermediate|advanced",
         "dailyHours": 3,
         "currentLevel": "Current level if mentioned, or null"
+      },
+      "interviewData": {
+        "role": "Target role if mentioned (e.g., 'Software Engineer', 'Data Scientist')",
+        "difficulty": "easy|medium|hard",
+        "focusAreas": ["technical", "behavioral", etc.]
       }
     }
   ]

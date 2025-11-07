@@ -28,6 +28,7 @@ import { videoMeetingService } from '../../services/videoMeetingService';
 import { webRTCService } from '../../services/webRTCService';
 import { webRTCSignalingService } from '../../services/webRTCSignalingService';
 import { realTimeAuth } from '../../utils/realTimeAuth';
+import { LoadingGlobe } from '../ui/LoadingGlobe';
 import { VideoMeeting as VideoMeetingType, VideoMeetingParticipant, ViewMode } from '../../types/videoMeeting';
 import { ParticipantVideo } from './ParticipantVideo';
 import { MeetingChat } from './MeetingChat';
@@ -908,7 +909,7 @@ export const VideoMeeting: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <LoadingGlobe size={48} color="rgb(255, 255, 255)" className="mx-auto mb-4" />
           <p>Joining meeting...</p>
         </div>
       </div>
@@ -941,7 +942,7 @@ export const VideoMeeting: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <LoadingGlobe size={48} color="rgb(255, 255, 255)" className="mx-auto mb-4" />
           <p>Loading meeting...</p>
         </div>
       </div>

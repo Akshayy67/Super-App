@@ -26,7 +26,7 @@ export interface PremiumUser {
 }
 
 /**
- * Check if a user is premium
+ * Check if a user is premium (includes expiration check)
  */
 export async function isPremiumUser(userId: string): Promise<boolean> {
   try {
@@ -35,7 +35,25 @@ export async function isPremiumUser(userId: string): Promise<boolean> {
       return false;
     }
     const data = premiumDoc.data();
-    return data.isPremium === true;
+    
+    // Check if premium is active
+    if (data.isPremium !== true) {
+      return false;
+    }
+    
+    // Check if subscription has expired (unless it's lifetime)
+    if (data.subscriptionType !== "lifetime" && data.subscriptionEndDate) {
+      const endDate = new Date(data.subscriptionEndDate);
+      const now = new Date();
+      if (endDate < now) {
+        // Subscription expired - revoke premium
+        console.log(`⚠️ Subscription expired for user ${userId}, revoking premium`);
+        await revokePremium(userId);
+        return false;
+      }
+    }
+    
+    return true;
   } catch (error) {
     console.error("Error checking if user is premium:", error);
     return false;
@@ -236,5 +254,74 @@ async function ensureCreatorPremium(userId: string, email: string): Promise<void
  */
 export function isCreatorEmail(email: string): boolean {
   return email.toLowerCase() === CREATOR_EMAIL.toLowerCase();
+}
+
+/**
+ * Get all premium users
+ */
+export async function getAllPremiumUsers(): Promise<PremiumUser[]> {
+  try {
+    const premiumUsersRef = collection(db, PREMIUM_USERS_COLLECTION);
+    const querySnapshot = await getDocs(premiumUsersRef);
+    
+    const premiumUsers: PremiumUser[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      
+      // Convert Firestore Timestamps to ISO strings if needed
+      const processedData: any = { ...data };
+      if (data.subscriptionStartDate?.toDate) {
+        processedData.subscriptionStartDate = data.subscriptionStartDate.toDate().toISOString();
+      } else if (data.subscriptionStartDate?.seconds) {
+        processedData.subscriptionStartDate = new Date(data.subscriptionStartDate.seconds * 1000).toISOString();
+      }
+      
+      if (data.subscriptionEndDate?.toDate) {
+        processedData.subscriptionEndDate = data.subscriptionEndDate.toDate().toISOString();
+      } else if (data.subscriptionEndDate?.seconds) {
+        processedData.subscriptionEndDate = new Date(data.subscriptionEndDate.seconds * 1000).toISOString();
+      }
+      
+      if (data.createdAt?.toDate) {
+        processedData.createdAt = data.createdAt.toDate().toISOString();
+      } else if (data.createdAt?.seconds) {
+        processedData.createdAt = new Date(data.createdAt.seconds * 1000).toISOString();
+      }
+      
+      if (data.updatedAt?.toDate) {
+        processedData.updatedAt = data.updatedAt.toDate().toISOString();
+      } else if (data.updatedAt?.seconds) {
+        processedData.updatedAt = new Date(data.updatedAt.seconds * 1000).toISOString();
+      }
+      
+      premiumUsers.push({
+        userId: doc.id,
+        ...processedData,
+      } as PremiumUser);
+    });
+    
+    // Sort by subscription end date (expired first, then by date)
+    premiumUsers.sort((a, b) => {
+      if (!a.subscriptionEndDate && !b.subscriptionEndDate) return 0;
+      if (!a.subscriptionEndDate) return 1; // Lifetime subscriptions last
+      if (!b.subscriptionEndDate) return -1;
+      
+      const dateA = new Date(a.subscriptionEndDate).getTime();
+      const dateB = new Date(b.subscriptionEndDate).getTime();
+      const now = Date.now();
+      
+      // Expired subscriptions first
+      if (dateA < now && dateB >= now) return -1;
+      if (dateA >= now && dateB < now) return 1;
+      
+      // Then sort by date (earliest first)
+      return dateA - dateB;
+    });
+    
+    return premiumUsers;
+  } catch (error) {
+    console.error("Error getting all premium users:", error);
+    return [];
+  }
 }
 

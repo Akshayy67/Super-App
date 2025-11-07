@@ -9,6 +9,7 @@ import {
   questionsBySubject,
   getQuestionsBySubject,
 } from "./bank";
+import { LoadingGlobe } from "../ui/LoadingGlobe";
 
 interface QuestionCategory {
   id: string;
@@ -783,7 +784,7 @@ export const QuestionBank: React.FC = () => {
       {/* Loading State */}
       {isLoading && (
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 text-center border border-gray-200 dark:border-slate-700 shadow-sm">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <LoadingGlobe size={48} className="mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             Loading Questions...
           </h3>

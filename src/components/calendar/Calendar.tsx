@@ -22,6 +22,7 @@ import { realTimeAuth } from "../../utils/realTimeAuth";
 import { firestoreUserTasks } from "../../utils/firestoreUserTasks";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfDay, endOfDay, differenceInDays } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { LoadingGlobe } from "../ui/LoadingGlobe";
 
 export const Calendar: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -566,7 +567,7 @@ export const Calendar: React.FC = () => {
 
       {loading && (
         <div className="absolute inset-0 bg-white/50 dark:bg-black/50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
+          <LoadingGlobe size={32} />
         </div>
       )}
     </div>

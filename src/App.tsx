@@ -21,6 +21,7 @@ import { FeedbackButton } from "./components/feedback/FeedbackButton";
 import { FeedbackProvider } from "./components/feedback/FeedbackContext";
 import { ContextualFeedback } from "./components/feedback/SmartFeedbackPrompt";
 import { DragInstructionTooltip } from "./components/feedback/DragInstructionTooltip";
+import { DreamToPlanButton } from "./components/dreamToPlan/DreamToPlanButton";
 import { useTodoReminders } from "./hooks/useTodoReminders";
 import { User } from "./types";
 import { dailyTaskReminderService } from "./services/dailyTaskReminderService";
@@ -57,15 +58,21 @@ const AuthenticatedApp: React.FC = () => {
       const user = realTimeAuth.getCurrentUser();
       if (!user || !user.email) return;
 
-      // Don't check if already on blocked, payment, about, or admin page
+      // Don't check if already on blocked, payment, about, landing, signup, or admin page
+      // Also check sessionStorage flag to prevent redirects while on payment page
       if (location.pathname === "/blocked" || 
           location.pathname === "/payment" || 
           location.pathname === "/about" ||
-          location.pathname.startsWith("/admin")) {
+          location.pathname === "/" ||
+          location.pathname === "/landing" ||
+          location.pathname === "/signup" ||
+          location.pathname.startsWith("/admin") ||
+          sessionStorage.getItem('onPaymentPage') === 'true') {
         return;
       }
 
       try {
+        // Check if user is blocked
         const { isUserBlockedByEmail } = await import("./services/blockedUsersService");
         const isBlocked = await isUserBlockedByEmail(user.email);
         if (isBlocked) {
@@ -73,8 +80,16 @@ const AuthenticatedApp: React.FC = () => {
           return;
         }
 
-        // Premium check disabled - all users have access
-        console.log("✅ Premium check disabled - allowing access");
+        // Check if user is premium
+        const { isPremiumUser } = await import("./services/premiumUserService");
+        const isPremium = await isPremiumUser(user.id);
+        if (!isPremium) {
+          console.log("⚠️ User is not premium, redirecting to payment page");
+          navigate("/payment", { replace: true });
+          return;
+        }
+
+        console.log("✅ User is premium - allowing access");
       } catch (error) {
         console.error("Error checking user status:", error);
       }
@@ -281,6 +296,9 @@ const AuthenticatedApp: React.FC = () => {
         {/* Global Feedback Button - Only show on non-auth pages */}
         {!isAuthPage && <FeedbackButton position="draggable" />}
         
+        {/* Global Dream to Plan AI Button - Only show on non-auth pages */}
+        {!isAuthPage && <DreamToPlanButton position="bottom-left" />}
+        
         {/* Contextual Feedback Prompts - Only show on non-auth pages */}
         {!isAuthPage && <ContextualFeedback />}
         
@@ -407,6 +425,7 @@ function App() {
       const currentUser = realTimeAuth.getCurrentUser();
       if (currentUser?.email) {
         try {
+          // Check if user is blocked
           const { isUserBlockedByEmail } = await import("./services/blockedUsersService");
           const isBlocked = await isUserBlockedByEmail(currentUser.email);
           if (isBlocked) {
@@ -414,13 +433,22 @@ function App() {
             return;
           }
 
-          // Redirect to payment page after login (don't set isAuthenticated yet)
-          console.log("✅ Redirecting to payment page");
-          window.location.href = "/payment";
-          return;
+          // Check if user is premium
+          const { isPremiumUser } = await import("./services/premiumUserService");
+          const isPremium = await isPremiumUser(currentUser.id);
+          
+          if (isPremium) {
+            // User is premium - redirect to dashboard
+            console.log("✅ User is premium, redirecting to dashboard");
+            window.location.href = "/dashboard";
+          } else {
+            // User is not premium - redirect to payment page
+            console.log("⚠️ User is not premium, redirecting to payment page");
+            window.location.href = "/payment";
+          }
         } catch (error) {
           console.error("Error checking user status:", error);
-          // Still redirect to payment page even if check fails
+          // If check fails, redirect to payment page to be safe
           window.location.href = "/payment";
         }
       } else {

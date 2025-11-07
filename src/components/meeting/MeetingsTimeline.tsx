@@ -29,6 +29,7 @@ import { useNavigate } from "react-router-dom";
 import { format, isPast, isToday } from "date-fns";
 import type { VideoMeeting } from "../../types/videoMeeting";
 import { SharedWhiteboard } from "./SharedWhiteboard";
+import { LoadingGlobe } from "../ui/LoadingGlobe";
 
 type UnifiedMeeting = {
   id: string;
@@ -413,7 +414,7 @@ export const MeetingsTimeline: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <LoadingGlobe size={32} />
       </div>
     );
   }

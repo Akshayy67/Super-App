@@ -21,72 +21,80 @@ const sections: Section[] = [
     preheading: "WELCOME TO THE WORLD'S FIRST AI ACADEMIC ECOSYSTEM",
     title: "STUDY SMARTER. ACHIEVE MORE. EVERY SINGLE DAY.",
     subtitle: 
-      "Discover a new way to learn — where AI adapts to you, plans with you, and grows beside you. " +
-      "Say goodbye to chaos, guesswork, and burnout. " +
-      "Experience clarity, focus, and progress like never before. " +
-      "Your roadmap, your rhythm, your results — all powered by AI built for learners who want more.",
-    quote: "The future of learning isn't about studying harder — it's about learning smarter.",
+      "You've been learning the hard way. It's time to study smarter — with AI that understands you, plans for you, and pushes you toward your dream job. " +
+      "Discover a revolutionary ecosystem built to guide your every step. " +
+      "Join 10,000+ students who turned chaos into clarity and unlocked the results they once only imagined.",
+    quote: "✨ Start your AI journey today — because your future deserves smarter effort, not harder struggle.",
     author: "AI Academic Ecosystem — Launch Edition",
   },
   { 
     id: "welcome", 
-    title: "STUDY SMARTER. ACHIEVE MORE. EVERY SINGLE DAY.",
-    subtitle: "Get a personalized plan that turns chaos into progress. You no longer feel stuck, inconsistent, or unsure where to begin—because now, every step is clear. Follow a roadmap built around you. Stop guessing what to study. Start building unstoppable consistency. Watch motivation return as your plan grows with you."
+    title: "WE UNDERSTAND YOUR STRUGGLE.",
+    subtitle: 
+      "Managing studies, deadlines, and motivation isn't easy — and you shouldn't have to do it alone. " +
+      "That's why we built a system that feels human. Get a personalized plan that turns chaos into progress. " +
+      "Stop guessing what to study and start seeing results that compound every single day."
   },
   { 
-    id: "dream-to-plan", 
-    title: "FROM CHAOS TO CLARITY IN SECONDS",
-    subtitle: "Stop drowning in scattered notes and endless to-dos. Write your dreams once—and watch them turn into a clear, actionable plan. Your ideas become steps. Your vision becomes direction. Feel the calm as structure replaces confusion, and every goal becomes something you can actually reach."
+    id: "ai-study-roadmaps",
+    title: "YOUR AI STUDY COMPANION — PLAN SMART. EXECUTE BETTER. GROW FASTER.",
+    subtitle: 
+      "Your AI-powered roadmap adapts to your goals, schedule, and skills. Each concept, topic, and deadline is organized, tracked, and intelligently adjusted for maximum learning impact. " +
+      "It's not just a plan — it's your personal growth engine, designed to save time, boost consistency, and multiply results."
   },
   { 
-    id: "ai-interview", 
-    title: "CONFIDENCE THAT SPEAKS FOR ITSELF",
-    subtitle: "No more pre-interview panic. Each session sharpens your confidence. See exactly where you improve. Watch weak spots turn into strengths. Track your growth in real-time—and walk into every interview knowing you're fully prepared to shine."
+    id: "team-collaboration",
+    title: "LEARN, BUILD, AND GROW TOGETHER.",
+    subtitle: 
+      "Success is faster when it's shared. Collaborate seamlessly with teammates through integrated file sharing, live projects, group quizzes, and real-time doubt discussions. " +
+      "Experience pair programming that sparks creativity and accelerates understanding. " +
+      "This isn't just studying — it's evolving together with a community that supports and inspires growth."
   },
   { 
-    id: "unified-ecosystem", 
-    title: "ONE PLATFORM. ZERO STRESS. INFINITE FOCUS.",
-    subtitle: "Forget switching between apps and losing track of your progress. Everything now connects effortlessly. Your study notes sync with your insights. Your flashcards understand your learning rhythm. Your schedule adapts in real time. Feel the relief as chaos turns into calm, and focus finally feels natural."
-  },
-  { 
-    id: "ai-scribe", 
-    title: "NEVER LOSE A MOMENT OF WISDOM",
-    subtitle: "Meetings, classes, brainstorms—nothing slips away. Every word is transcribed. Every insight remembered. Every action captured. Find anything in seconds. Feel the clarity and control that comes from having every thought, every idea, right when you need it."
-  },
-  { 
-    id: "video-collab", 
-    title: "COLLABORATE WITHOUT BARRIERS",
-    subtitle: "No lag. No lost connection. Just smooth, effortless collaboration. Study together, build together, and connect deeply—no matter where you are. Feel the flow of teamwork that keeps ideas alive and learning exciting."
-  },
-  { 
-    id: "pair-programming", 
-    title: "BUILD TOGETHER. LEARN TOGETHER. GROW TOGETHER.",
-    subtitle: "Say goodbye to coding alone. Experience the spark of real-time creation. Watch ideas evolve as you collaborate. Solve problems faster. Grow through shared learning. Feel the joy of building something meaningful—together."
+    id: "job-hunt", 
+    title: "TURN YOUR LEARNING INTO A CAREER ADVANTAGE.",
+    subtitle: 
+      "Stop waiting for opportunities — let AI find them for you. " +
+      "Our intelligent job assistant scans top platforms, tailors your resume, and helps you prepare with realistic AI-driven interviews. " +
+      "Track every application, sharpen your skills, and get hired faster. " +
+      "You've worked hard to learn — now it's time to make it count."
   },
   { 
     id: "smart-learning", 
     title: "REMEMBER WHAT MATTERS. FOR LIFE.",
-    subtitle: "Stop forgetting what you studied last week. Learn at your perfect pace—not too fast, never too slow. Retain more every day. Feel the power of true mastery as knowledge finally sticks. Turn short-term studying into lifelong understanding."
+    subtitle: 
+      "Learn deeply, not just quickly. Master concepts at your perfect pace with adaptive AI that reinforces long-term retention. " +
+      "Say goodbye to cramming — and turn short-term studying into lifelong understanding."
   },
   { 
-    id: "study-plans", 
-    title: "YOUR PATH TO SUCCESS, PERSONALIZED.",
-    subtitle: "No more blank calendars or chaotic study sessions. Your roadmap understands your rhythm. Every topic, deadline, and goal—perfectly organized. Watch your progress unfold. Feel momentum replace stress. See dreams turn into a clear, achievable journey."
-  },
-  { 
-    id: "roadmaps", 
-    title: "SEE YOUR FUTURE. BUILD IT STEP BY STEP.",
-    subtitle: "You know your destination—now see the path. Every milestone mapped, every skill identified, every obstacle anticipated. Feel the thrill of direction as big dreams become small, doable actions. Experience progress you can actually measure."
+    id: "unified-ecosystem", 
+    title: "ONE PLATFORM. ZERO STRESS. INFINITE FOCUS.",
+    subtitle: 
+      "Everything connects — your notes, progress, study plans, and goals. " +
+      "Forget juggling multiple apps. Experience calm, control, and clarity as your entire academic journey flows inside one intelligent, unified system."
   },
   { 
     id: "working-professionals", 
-    title: "BALANCE WORK AND GROWTH. WITHOUT THE SACRIFICE.",
-    subtitle: "You handle deadlines, meetings, and learning—all at once. Now, growth fits your lifestyle. Your study plan flexes with your work. Your roadmap adapts to your time. Feel steady progress without burnout. Achieve balance without compromise."
+    title: "BALANCE WORK AND GROWTH WITHOUT COMPROMISE.",
+    subtitle: 
+      "You're ambitious — managing work, deadlines, and self-improvement all at once. " +
+      "Now, your AI roadmap adapts to your lifestyle. Stay consistent, learn efficiently, and grow steadily — without burnout or sacrifice."
+  },
+  { 
+    id: "ai-interview", 
+    title: "CONFIDENCE THAT SPEAKS FOR ITSELF.",
+    subtitle: 
+      "Each AI interview session helps you refine your communication and problem-solving. " +
+      "Get personalized feedback, eliminate weak spots, and track your improvement. " +
+      "Walk into every interview prepared, confident, and ready to stand out."
   },
   { 
     id: "begin", 
-    title: "YOUR TRANSFORMATION STARTS NOW.",
-    subtitle: "You've imagined a better way to learn—a system that finally works. It's here. Join thousands turning chaos into clarity. Begin your journey today and be part of the revolution. Your focused, confident future starts now.",
+    title: "YOUR FUTURE DESERVES THIS INVESTMENT.",
+    subtitle: 
+      "You've been learning the hard way. Now, learn the right way — with AI that learns *you*. " +
+      "Join thousands already mastering focus, confidence, and results. " +
+      "Don't wait for another year to pass in confusion — start your transformation today and make this the moment everything changes."
   },
 ];
 
@@ -1555,21 +1563,18 @@ export const LandingPage: React.FC = () => {
       return config;
     };
 
-    // Define scene types for each section
+    // Define scene types for each section - each section gets a unique background
     const sceneTypes = [
-      "energy-particles",       // HERO: STUDY SMARTER. ACHIEVE MORE. EVERY SINGLE DAY.
-      "interactive-grid",       // WELCOME: STUDY SMARTER. ACHIEVE MORE. EVERY SINGLE DAY.
-      "interactive-grid",       // FROM CHAOS TO CLARITY IN SECONDS
-      "neural-network",         // CONFIDENCE THAT SPEAKS FOR ITSELF
-      "particle-trail",         // ONE PLATFORM. ZERO STRESS. INFINITE FOCUS.
-      "particles-cloud",        // NEVER LOSE A MOMENT OF WISDOM
-      "geometric-morph",        // COLLABORATE WITHOUT BARRIERS
-      "connecting-dots",        // BUILD TOGETHER. LEARN TOGETHER. GROW TOGETHER.
-      "solar-system",           // REMEMBER WHAT MATTERS. FOR LIFE.
-      "waves",                  // YOUR PATH TO SUCCESS, PERSONALIZED.
-      "expanding-universe",     // SEE YOUR FUTURE. BUILD IT STEP BY STEP.
-      "fluid-morph",            // BALANCE WORK AND GROWTH. WITHOUT THE SACRIFICE.
-      "energy-particles",       // YOUR TRANSFORMATION STARTS NOW.
+      "energy-particles",       // 0: HERO - STUDY SMARTER. ACHIEVE MORE. EVERY SINGLE DAY.
+      "interactive-grid",       // 1: WELCOME - WE UNDERSTAND YOUR STRUGGLE.
+      "expanding-universe",     // 2: AI STUDY ROADMAPS - YOUR AI STUDY COMPANION
+      "connecting-dots",        // 3: TEAM COLLABORATION - LEARN, BUILD, AND GROW TOGETHER
+      "particle-trail",         // 4: JOB HUNT - TURN YOUR LEARNING INTO A CAREER ADVANTAGE
+      "solar-system",          // 5: SMART LEARNING - REMEMBER WHAT MATTERS. FOR LIFE.
+      "neural-network",        // 6: UNIFIED ECOSYSTEM - ONE PLATFORM. ZERO STRESS. INFINITE FOCUS.
+      "fluid-morph",           // 7: WORKING PROFESSIONALS - BALANCE WORK AND GROWTH WITHOUT COMPROMISE
+      "geometric-morph",       // 8: AI INTERVIEW - CONFIDENCE THAT SPEAKS FOR ITSELF
+      "waves",                 // 9: BEGIN - YOUR FUTURE DESERVES THIS INVESTMENT
     ];
 
     // Current active scene config

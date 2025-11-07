@@ -1,6 +1,10 @@
 /**
  * Payment Routes
  * Handles payment gateway integration (Razorpay)
+ * 
+ * Required Environment Variables (server-side):
+ * - RAZORPAY_KEY_ID=rzp_live_RckdrRyNNy8thO
+ * - RAZORPAY_KEY_SECRET=wzVq4ZV7Q0vw0IIpFyJkZjRj
  */
 
 import { Router } from "express";

@@ -28,6 +28,7 @@ import {
 } from "../types/detailedInterviewData";
 import { unifiedAnalyticsStorage } from "../utils/unifiedAnalyticsStorage";
 import { useTheme } from "../utils/themeManager";
+import { LoadingGlobe } from "./ui/LoadingGlobe";
 
 interface DetailedInterviewHistoryProps {
   onClose?: () => void;
@@ -192,8 +193,8 @@ export const DetailedInterviewHistory: React.FC<
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
-        <span className="ml-3 text-gray-600 dark:text-gray-400">Loading interview history...</span>
+        <LoadingGlobe size={32} className="mr-3" />
+        <span className="text-gray-600 dark:text-gray-400">Loading interview history...</span>
       </div>
     );
   }

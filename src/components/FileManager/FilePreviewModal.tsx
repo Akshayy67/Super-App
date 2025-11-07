@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { FileItem } from "../../types";
 import { ShareMenu } from "../sharing/ShareMenu";
+import { LoadingGlobe } from "../ui/LoadingGlobe";
 
 interface FilePreviewModalProps {
   previewFile: (FileItem & { storageType?: string; url?: string }) | null;
@@ -151,7 +152,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
               {/* ...existing file preview rendering logic... */}
               {previewContent === "Loading file content..." ? (
                 <div className="flex flex-col items-center justify-center h-96 text-gray-500">
-                  <div className="animate-spin w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full mb-4"></div>
+                  <LoadingGlobe size={32} className="mb-4" />
                   <p className="text-lg font-medium">Loading preview...</p>
                   <p className="text-sm">Fetching file content</p>
                 </div>
@@ -419,7 +420,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
             {/* ...existing file preview rendering logic... */}
             {previewContent === "Loading file content..." ? (
               <div className="flex flex-col items-center justify-center h-96 text-gray-500">
-                <div className="animate-spin w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full mb-4"></div>
+                <LoadingGlobe size={32} className="mb-4" />
                 <p className="text-lg font-medium">Loading preview...</p>
                 <p className="text-sm">Fetching file content</p>
               </div>

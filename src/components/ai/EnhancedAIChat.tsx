@@ -57,12 +57,14 @@ interface EnhancedAIChatProps {
   file?: any;
   fileContent?: string;
   initialPrompt?: string;
+  initialChatType?: ChatType;
 }
 
 export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
   file,
   fileContent,
   initialPrompt,
+  initialChatType,
 }) => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string>("");
@@ -138,17 +140,31 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
 
   // Initialize with a default session
   useEffect(() => {
-    const defaultSession: ChatSession = {
-      id: "default",
-      name: "New Chat",
-      messages: [],
-      createdAt: new Date().toISOString(),
-      lastUpdated: new Date().toISOString(),
-    };
-    setSessions([defaultSession]);
-    setCurrentSessionId("default");
-    setShowChatTypeModal(true);
-  }, []);
+    if (sessions.length === 0) {
+      const defaultSession: ChatSession = {
+        id: "default",
+        name: initialChatType 
+          ? `${initialChatType.charAt(0).toUpperCase() + initialChatType.slice(1).replace(/-/g, ' ')} Chat`
+          : "New Chat",
+        messages: initialChatType ? [
+          {
+            id: "1",
+            type: "ai",
+            content: getChatTypeGreeting(initialChatType),
+            timestamp: new Date().toISOString(),
+          },
+        ] : [],
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        chatType: initialChatType,
+      };
+      setSessions([defaultSession]);
+      setCurrentSessionId("default");
+      if (!initialChatType) {
+        setShowChatTypeModal(true);
+      }
+    }
+  }, [initialChatType]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -712,6 +728,16 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
                 autoCreateReminders: false,
               }
             );
+
+            // Check for interview intents first - navigate directly to interview prep
+            const interviewItems = dreamToPlanResult.actionItems.filter(item => item.type === "interview");
+            if (interviewItems.length > 0) {
+              // Navigate to interview prep page with custom interview tab
+              window.location.href = "/interview/mock-interview?tab=custom";
+              setInputMessage("");
+              setIsLoading(false);
+              return;
+            }
 
             // If we found actionable items, show the dream-to-plan modal immediately (NO AI chat response)
             if (
