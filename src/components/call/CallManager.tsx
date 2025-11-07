@@ -38,7 +38,18 @@ export const CallManager: React.FC = () => {
     // Subscribe to call state changes
     const unsubscribeCallState = callService.onCallStateChange((state) => {
       setCallState(state);
-      setIsCallActive(state.callId !== null && state.isConnected);
+      const wasActive = isCallActive;
+      const isNowActive = state.callId !== null && state.isConnected;
+      setIsCallActive(isNowActive);
+      
+      // If call was active and now disconnected, update state
+      if (wasActive && !isNowActive && (state.connectionState === 'closed' || state.connectionState === 'failed')) {
+        // Call ended - reset state
+        setTimeout(() => {
+          setCallState(null);
+          setRemoteUser(null);
+        }, 1000);
+      }
     });
 
     return () => {

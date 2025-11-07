@@ -332,7 +332,7 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
   const showVideo = stream && hasVideoTracks;
 
   return (
-    <div className={`relative rounded-lg overflow-hidden bg-gray-900 group ${className}`}>
+    <div className={`relative rounded-lg overflow-hidden bg-gray-900 group ${className}`} style={{ minHeight: '300px', aspectRatio: '16/9' }}>
       {/* Video or Avatar */}
       {showVideo ? (
         <video
@@ -341,7 +341,11 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
           playsInline
           muted={isLocal}
           className={`w-full h-full ${participant.isScreenSharing ? 'object-contain bg-black' : 'object-cover'} ${isLocal && !participant.isScreenSharing ? 'mirror' : ''}`}
-          style={{ transform: isLocal && !participant.isScreenSharing ? 'scaleX(-1)' : 'none' }}
+          style={{ 
+            transform: isLocal && !participant.isScreenSharing ? 'scaleX(-1)' : 'none',
+            minHeight: '300px',
+            backgroundColor: '#000'
+          }}
           onPlay={() => console.log('▶️ Video started playing for', participant.name)}
           onPause={() => console.warn('⏸️ Video paused for', participant.name)}
           onError={(e) => console.error('❌ Video error for', participant.name, ':', e)}
@@ -350,7 +354,7 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
           onStalled={() => console.warn('⚠️ Video stalled for', participant.name)}
         />
       ) : !participant.isCameraOff && !stream ? (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900">
+        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900" style={{ minHeight: '300px' }}>
           <LoadingGlobe size={32} color="rgb(255, 255, 255)" className="mb-2" />
           <div className="text-white text-sm">Connecting...</div>
           <div className="text-gray-400 text-xs mt-1">{participant.name}</div>
@@ -364,7 +368,7 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
             : participant.avatarType === 'Creative'
             ? 'bg-gradient-to-br from-orange-500 via-red-500 to-pink-500'
             : 'bg-gradient-to-br from-blue-600 to-purple-600'
-        }`}>
+        }`} style={{ minHeight: '300px' }}>
           {participant.avatar ? (
             <img
               src={participant.avatar}

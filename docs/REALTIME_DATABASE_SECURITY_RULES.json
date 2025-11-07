@@ -1,0 +1,22 @@
+{
+  "rules": {
+    "signaling": {
+      "$connectionId": {
+        "$userId": {
+          ".read": "auth != null && $userId === auth.uid",
+          ".write": "auth != null",
+          "$messageId": {
+            ".validate": "newData.hasChildren(['type', 'senderId', 'recipientId', 'data', 'timestamp', 'messageId']) && newData.child('senderId').val() === auth.uid"
+          }
+        }
+      }
+    },
+    "heartbeats": {
+      "$userId": {
+        ".read": "auth != null && $userId === auth.uid",
+        ".write": "auth != null && $userId === auth.uid"
+      }
+    }
+  }
+}
+

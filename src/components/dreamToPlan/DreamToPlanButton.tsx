@@ -119,9 +119,11 @@ export const DreamToPlanButton: React.FC<DreamToPlanButtonProps> = ({
     } else if (finalPosition === "draggable" && !dragPosition) {
       // Set default position for dream to plan button (bottom-left) if no saved position
       // Offset from feedback button to prevent clash
-      const setDefaultPosition = () => {
-        const defaultX = 20; // 20px from left
-        const defaultY = Math.max(20, window.innerHeight - 80); // 80px from bottom (same height as feedback button)
+        const setDefaultPosition = () => {
+        // Better mobile positioning - ensure it's always visible
+        const isMobile = window.innerWidth < 640;
+        const defaultX = isMobile ? 16 : 20; // Closer to edge on mobile
+        const defaultY = Math.max(16, window.innerHeight - (isMobile ? 90 : 100)); // Account for button size
         setDragPosition({ x: defaultX, y: defaultY });
       };
       // Wait for window to be available
@@ -239,19 +241,28 @@ export const DreamToPlanButton: React.FC<DreamToPlanButtonProps> = ({
   // Get the actual position for rendering
   const getButtonPosition = () => {
     if (finalPosition === "draggable" && dragPosition) {
+      // Ensure button is within viewport bounds
+      const maxX = window.innerWidth - 80;
+      const maxY = window.innerHeight - 80;
+      const boundedX = Math.max(10, Math.min(dragPosition.x, maxX));
+      const boundedY = Math.max(10, Math.min(dragPosition.y, maxY));
+      
       return {
         position: "fixed" as const,
-        left: `${dragPosition.x}px`,
-        top: `${dragPosition.y}px`,
+        left: `${boundedX}px`,
+        top: `${boundedY}px`,
         transform: "none",
       };
     }
-    return {};
+    // For non-draggable, ensure it's visible on mobile
+    return {
+      position: "fixed" as const,
+    };
   };
 
   const sizeClasses = {
     sm: "w-12 h-12",
-    md: "w-14 h-14",
+    md: "w-14 h-14 sm:w-16 sm:h-16", // Larger on desktop
     lg: "w-16 h-16",
   };
 
@@ -316,7 +327,7 @@ export const DreamToPlanButton: React.FC<DreamToPlanButtonProps> = ({
     <>
       {/* Floating Dream to Plan AI Button */}
       <motion.div
-        className={`fixed ${finalPosition === "draggable" ? "" : positionClasses[currentPosition]} z-40 ${isDragging ? "cursor-grabbing" : draggable && finalPosition === "draggable" ? "cursor-grab" : ""}`}
+        className={`fixed ${finalPosition === "draggable" ? "" : positionClasses[currentPosition]} z-[60] ${isDragging ? "cursor-grabbing" : draggable && finalPosition === "draggable" ? "cursor-grab" : ""}`}
         style={{
           ...getButtonPosition(),
           x: smoothButtonX,
@@ -330,7 +341,7 @@ export const DreamToPlanButton: React.FC<DreamToPlanButtonProps> = ({
         }}
         transition={{ delay: 1, type: "spring", stiffness: 200 }}
       >
-        <div className="relative" style={{ overflow: 'visible', width: '300px', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+        <div className="relative" style={{ overflow: 'visible', width: '100%', height: '100%', minWidth: '70px', minHeight: '70px', maxWidth: '300px', maxHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
           {/* Dreamy glow layers - centered on button */}
           <motion.div
             className={`absolute bg-gradient-to-r from-blue-400/30 via-cyan-400/30 to-sky-400/30 rounded-full ${sizeClasses[finalSize]} blur-xl`}
@@ -536,7 +547,7 @@ export const DreamToPlanButton: React.FC<DreamToPlanButtonProps> = ({
             }}
             onMouseDown={handleMouseDown}
             onTouchStart={handleTouchStart}
-            className={`relative ${sizeClasses[finalSize]} bg-gradient-to-br from-blue-500 via-cyan-500 to-sky-500 hover:from-blue-600 hover:via-cyan-600 hover:to-sky-600 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 group backdrop-blur-sm border-2 border-white/20 z-10`}
+            className={`relative ${sizeClasses[finalSize]} bg-gradient-to-br from-blue-500 via-cyan-500 to-sky-500 hover:from-blue-600 hover:via-cyan-600 hover:to-sky-600 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 group backdrop-blur-sm border-2 border-white/20`}
             style={{
               boxShadow: isHovered 
                 ? '0 0 30px rgba(59, 130, 246, 0.6), 0 0 60px rgba(6, 182, 212, 0.4), 0 0 90px rgba(14, 165, 233, 0.3)'
@@ -546,6 +557,9 @@ export const DreamToPlanButton: React.FC<DreamToPlanButtonProps> = ({
               left: '50%',
               top: '50%',
               transform: 'translate(-50%, -50%)',
+              zIndex: 20,
+              minWidth: '56px',
+              minHeight: '56px',
             }}
             whileHover={{ scale: 1.15, rotate: [0, -5, 5, 0] }}
             whileTap={{ scale: 0.95 }}

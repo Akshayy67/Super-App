@@ -601,7 +601,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
         <button
           onClick={onLogout}
-          className="btn-touch w-full flex items-center justify-center px-3 py-2.5 sm:py-2 text-responsive-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-300 hover:scale-[1.02] group border border-transparent hover:border-red-200 dark:hover:border-red-800 font-medium"
+          className="btn-touch w-full flex items-center justify-center px-3 py-2.5 sm:py-2 text-responsive-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-all duration-300 hover:scale-[1.02] group border border-red-200 dark:border-red-800 font-medium"
           style={{ minHeight: '44px' }}
         >
           <LogOut className="w-4 h-4 sm:w-5 sm:h-5 mr-2 flex-shrink-0 transition-transform duration-300 group-hover:rotate-12" />

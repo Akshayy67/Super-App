@@ -25,18 +25,18 @@ Go to **Realtime Database → Rules** and paste:
     "signaling": {
       "$connectionId": {
         "$userId": {
-          ".read": "$userId === auth.uid",
-          ".write": "$userId === auth.uid",
+          ".read": "auth != null && $userId === auth.uid",
+          ".write": "auth != null",
           "$messageId": {
-            ".validate": "newData.hasChildren(['type', 'senderId', 'recipientId', 'data', 'timestamp'])"
+            ".validate": "newData.hasChildren(['type', 'senderId', 'recipientId', 'data', 'timestamp', 'messageId']) && newData.child('senderId').val() === auth.uid"
           }
         }
       }
     },
     "heartbeats": {
       "$userId": {
-        ".read": "$userId === auth.uid",
-        ".write": "$userId === auth.uid"
+        ".read": "auth != null && $userId === auth.uid",
+        ".write": "auth != null && $userId === auth.uid"
       }
     }
   }

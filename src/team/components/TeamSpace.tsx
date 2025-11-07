@@ -3218,14 +3218,14 @@ export const TeamSpace: React.FC<{
 
       {/* Video Meeting Component */}
       {showVideoMeeting && activeMeetingId && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-[90]">
           <VideoMeeting meetingId={activeMeetingId} />
           <button
             onClick={() => {
               setShowVideoMeeting(false);
               setActiveMeetingId(null);
             }}
-            className="absolute top-4 right-4 z-50 p-3 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg"
+            className="absolute top-4 right-4 z-[95] p-3 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-transform hover:scale-110"
             title="Close Meeting"
           >
             <X className="w-5 h-5" />

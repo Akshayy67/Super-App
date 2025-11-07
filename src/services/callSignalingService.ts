@@ -34,8 +34,8 @@ export interface CallSignal {
   callId: string;
   senderId: string;
   recipientId: string;
-  type: 'offer' | 'answer' | 'ice-candidate';
-  data: any; // Encrypted SDP or ICE candidate
+  type: 'offer' | 'answer' | 'ice-candidate' | 'hangup';
+  data: any; // Encrypted SDP or ICE candidate (or empty for hangup)
   timestamp: Timestamp | any;
 }
 
@@ -339,7 +339,33 @@ class CallSignalingService {
   }
 
   /**
-   * Listen for call signals (offers, answers, ICE candidates)
+   * Send hangup signal
+   */
+  async sendHangup(
+    callId: string,
+    senderId: string,
+    recipientId: string
+  ): Promise<void> {
+    try {
+      const signalId = `${callId}_hangup_${Date.now()}`;
+
+      await setDoc(doc(this.callSignalsCollection, signalId), {
+        callId,
+        senderId,
+        recipientId,
+        type: 'hangup',
+        data: {}, // No data needed for hangup
+        timestamp: serverTimestamp(),
+      });
+
+      console.log('📞 Sent hangup signal:', signalId);
+    } catch (error) {
+      console.error('❌ Error sending hangup signal:', error);
+    }
+  }
+
+  /**
+   * Listen for call signals (offers, answers, ICE candidates, hangup)
    */
   subscribeToCallSignals(
     callId: string,
@@ -365,7 +391,19 @@ class CallSignalingService {
             timestamp: data.timestamp,
           };
 
-          // Decrypt the signal data
+          // Handle hangup signals without decryption
+          if (signal.type === 'hangup') {
+            callback(signal);
+            // Delete signal after processing
+            try {
+              await deleteDoc(change.doc.ref);
+            } catch (error) {
+              console.error('❌ Error deleting hangup signal:', error);
+            }
+            return;
+          }
+
+          // Decrypt the signal data for other signal types
           try {
             const key = e2eEncryptionService.getCachedKey(callId);
             if (!key) {

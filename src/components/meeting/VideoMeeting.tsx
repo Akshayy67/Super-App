@@ -1046,15 +1046,18 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
               </div>
               
               {/* Grid of other participants on right */}
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 h-full overflow-auto">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 h-full overflow-auto auto-rows-fr">
                 {/* Show local video if not pinned */}
                 {pinnedParticipant !== user.id && (
-                  <ParticipantVideo
-                    participant={currentParticipant}
-                    stream={isScreenSharing ? screenStream : localStream}
-                    isLocal
-                    onPin={() => handlePinParticipant(user.id)}
-                  />
+                  <div className="min-h-[300px]">
+                    <ParticipantVideo
+                      participant={currentParticipant}
+                      stream={isScreenSharing ? screenStream : localStream}
+                      isLocal
+                      onPin={() => handlePinParticipant(user.id)}
+                      className="h-full w-full"
+                    />
+                  </div>
                 )}
 
                 {/* Remote participants */}
@@ -1069,12 +1072,14 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
                     }
                     
                     return (
-                      <ParticipantVideo
-                        key={userId}
-                        participant={participant}
-                        stream={stream}
-                        onPin={() => handlePinParticipant(userId)}
-                      />
+                      <div key={userId} className="min-h-[300px]">
+                        <ParticipantVideo
+                          participant={participant}
+                          stream={stream}
+                          onPin={() => handlePinParticipant(userId)}
+                          className="h-full w-full"
+                        />
+                      </div>
                     );
                   })}
               </div>
@@ -1083,14 +1088,17 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
             // Normal grid layout
             <div className="flex-1 p-4 h-full overflow-auto">
               {viewMode === 'grid' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 h-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 h-full auto-rows-fr">
                   {/* Local video */}
-                  <ParticipantVideo
-                    participant={currentParticipant}
-                    stream={isScreenSharing ? screenStream : localStream}
-                    isLocal
-                    onPin={() => handlePinParticipant(user.id)}
-                  />
+                  <div className="min-h-[300px]">
+                    <ParticipantVideo
+                      participant={currentParticipant}
+                      stream={isScreenSharing ? screenStream : localStream}
+                      isLocal
+                      onPin={() => handlePinParticipant(user.id)}
+                      className="h-full w-full"
+                    />
+                  </div>
 
                   {/* Remote participants */}
                   {Object.keys(meeting.participants)
@@ -1104,12 +1112,14 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
                       }
                       
                       return (
-                        <ParticipantVideo
-                          key={userId}
-                          participant={participant}
-                          stream={stream}
-                          onPin={() => handlePinParticipant(userId)}
-                        />
+                        <div key={userId} className="min-h-[300px]">
+                          <ParticipantVideo
+                            participant={participant}
+                            stream={stream}
+                            onPin={() => handlePinParticipant(userId)}
+                            className="h-full w-full"
+                          />
+                        </div>
                       );
                     })}
                 </div>

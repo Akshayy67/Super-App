@@ -85,10 +85,19 @@ class CallService {
           this.currentCall.isConnected = state === 'connected';
           this.notifyStateChange();
 
-          if (state === 'closed' || state === 'failed') {
-            // Don't end call immediately on failed - let reconnection attempt
-            if (state === 'closed') {
-              this.endCall();
+          // Handle disconnection
+          if (state === 'closed' || state === 'failed' || state === 'disconnected') {
+            console.log('📞 Connection lost:', state);
+            // If connection is closed or failed, end the call
+            if (state === 'closed' || state === 'failed') {
+              setTimeout(() => {
+                // Give a moment for reconnection, then end call if still disconnected
+                const currentState = this.currentCall.connectionState;
+                if (currentState === 'closed' || currentState === 'failed' || currentState === 'disconnected') {
+                  console.log('📞 Ending call due to connection loss');
+                  this.endCall();
+                }
+              }, 2000); // Wait 2 seconds for potential reconnection
             }
           }
         }
@@ -169,10 +178,19 @@ class CallService {
           this.currentCall.isConnected = state === 'connected';
           this.notifyStateChange();
 
-          if (state === 'closed' || state === 'failed') {
-            // Don't end call immediately on failed - let reconnection attempt
-            if (state === 'closed') {
-              this.endCall();
+          // Handle disconnection
+          if (state === 'closed' || state === 'failed' || state === 'disconnected') {
+            console.log('📞 Connection lost:', state);
+            // If connection is closed or failed, end the call
+            if (state === 'closed' || state === 'failed') {
+              setTimeout(() => {
+                // Give a moment for reconnection, then end call if still disconnected
+                const currentState = this.currentCall.connectionState;
+                if (currentState === 'closed' || currentState === 'failed' || currentState === 'disconnected') {
+                  console.log('📞 Ending call due to connection loss');
+                  this.endCall();
+                }
+              }, 2000); // Wait 2 seconds for potential reconnection
             }
           }
         }
@@ -203,11 +221,20 @@ class CallService {
    * End the current call
    */
   async endCall(): Promise<void> {
-    if (this.currentCall.callId) {
+    if (this.currentCall.callId && this.currentCall.remoteUserId) {
       try {
+        // Send hangup signal to remote user
+        const userId = (webRTCService as any).getCurrentUserId() || 'unknown';
+        await callSignalingService.sendHangup(
+          this.currentCall.callId,
+          userId,
+          this.currentCall.remoteUserId
+        );
+        
+        // Update call status in database
         await callSignalingService.endCall(
           this.currentCall.callId,
-          (webRTCService as any).getCurrentUserId() || 'unknown'
+          userId
         );
       } catch (error) {
         console.error('❌ Error ending call in signaling:', error);
@@ -310,9 +337,33 @@ class CallService {
         await this.handleAnswer(signal, remoteUserId);
       } else if (signal.type === 'ice-candidate') {
         await this.handleIceCandidate(signal, remoteUserId);
+      } else if (signal.type === 'hangup') {
+        // Remote user hung up
+        console.log('📞 Remote user hung up:', remoteUserId);
+        this.handleRemoteHangup();
       }
     } catch (error) {
       console.error('❌ Error handling signal:', error);
+    }
+  }
+
+  /**
+   * Handle remote hangup
+   */
+  private async handleRemoteHangup(): Promise<void> {
+    console.log('📞 Handling remote hangup');
+    try {
+      // Update call state immediately
+      this.currentCall.connectionState = 'closed';
+      this.currentCall.isConnected = false;
+      this.notifyStateChange();
+      
+      // Clean up resources
+      await this.endCall();
+    } catch (error) {
+      console.error('❌ Error ending call after remote hangup:', error);
+      // Still cleanup even if there's an error
+      this.cleanup();
     }
   }
 
