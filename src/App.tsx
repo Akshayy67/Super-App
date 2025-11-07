@@ -52,7 +52,7 @@ const AuthenticatedApp: React.FC = () => {
   // Global Pomodoro state
   const { isEducationVisible, hideEducation } = useGlobalPomodoro();
 
-  // Check if user is blocked or premium and redirect
+  // Check if user is blocked and redirect (premium check is handled by PremiumGuard)
   useEffect(() => {
     const checkUserStatus = async () => {
       const user = realTimeAuth.getCurrentUser();
@@ -62,6 +62,7 @@ const AuthenticatedApp: React.FC = () => {
       // Also check sessionStorage flag to prevent redirects while on payment page
       if (location.pathname === "/blocked" || 
           location.pathname === "/payment" || 
+          location.pathname === "/payment-success" ||
           location.pathname === "/about" ||
           location.pathname === "/" ||
           location.pathname === "/landing" ||
@@ -72,24 +73,13 @@ const AuthenticatedApp: React.FC = () => {
       }
 
       try {
-        // Check if user is blocked
+        // Only check if user is blocked - premium check is handled by PremiumGuard
         const { isUserBlockedByEmail } = await import("./services/blockedUsersService");
         const isBlocked = await isUserBlockedByEmail(user.email);
         if (isBlocked) {
           navigate("/blocked", { replace: true });
           return;
         }
-
-        // Check if user is premium
-        const { isPremiumUser } = await import("./services/premiumUserService");
-        const isPremium = await isPremiumUser(user.id);
-        if (!isPremium) {
-          console.log("⚠️ User is not premium, redirecting to payment page");
-          navigate("/payment", { replace: true });
-          return;
-        }
-
-        console.log("✅ User is premium - allowing access");
       } catch (error) {
         console.error("Error checking user status:", error);
       }
@@ -297,7 +287,7 @@ const AuthenticatedApp: React.FC = () => {
         {!isAuthPage && <FeedbackButton position="draggable" />}
         
         {/* Global Dream to Plan AI Button - Only show on non-auth pages */}
-        {!isAuthPage && <DreamToPlanButton position="bottom-left" />}
+        {!isAuthPage && <DreamToPlanButton position="draggable" />}
         
         {/* Contextual Feedback Prompts - Only show on non-auth pages */}
         {!isAuthPage && <ContextualFeedback />}

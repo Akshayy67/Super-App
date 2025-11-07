@@ -63,6 +63,7 @@ import {
 import {
   getAllPremiumUsers,
   PremiumUser,
+  updatePremiumEndDate,
 } from "../../services/premiumUserService";
 import {
   getAllPendingStudentVerifications,
@@ -102,6 +103,8 @@ export const AdminDashboard: React.FC = () => {
   const [studentVerifications, setStudentVerifications] = useState<StudentVerification[]>([]);
   const [loadingStudentVerifications, setLoadingStudentVerifications] = useState(false);
   const [processingVerificationId, setProcessingVerificationId] = useState<string | null>(null);
+  const [editingPremiumUserId, setEditingPremiumUserId] = useState<string | null>(null);
+  const [newPremiumEndDate, setNewPremiumEndDate] = useState<string>("");
 
   const user = realTimeAuth.getCurrentUser();
 
@@ -267,6 +270,36 @@ export const AdminDashboard: React.FC = () => {
     } finally {
       setLoadingPremiumUsers(false);
       setLoading(false);
+    }
+  };
+
+  // Handle update premium end date
+  const handleUpdatePremiumEndDate = async (userId: string) => {
+    if (!user) return;
+    
+    try {
+      let endDate: string | null = null;
+      
+      if (newPremiumEndDate.trim() === "" || newPremiumEndDate.toLowerCase() === "lifetime") {
+        endDate = null; // Set as lifetime
+      } else {
+        // Validate date format
+        const dateObj = new Date(newPremiumEndDate);
+        if (isNaN(dateObj.getTime())) {
+          alert("Invalid date format. Please use YYYY-MM-DD format or 'lifetime'");
+          return;
+        }
+        endDate = dateObj.toISOString();
+      }
+      
+      await updatePremiumEndDate(userId, endDate);
+      await loadPremiumUsers(); // Refresh list
+      setEditingPremiumUserId(null);
+      setNewPremiumEndDate("");
+      alert("✅ Premium end date updated successfully!");
+    } catch (error: any) {
+      console.error("Error updating premium end date:", error);
+      alert(error.message || "Failed to update premium end date");
     }
   };
 
@@ -1851,6 +1884,9 @@ export const AdminDashboard: React.FC = () => {
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             Payment ID
                           </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -1986,6 +2022,57 @@ export const AdminDashboard: React.FC = () => {
                                     ? (premiumUser.paymentId || premiumUser.lastPaymentId).slice(0, 20) + "..."
                                     : "N/A"}
                                 </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {editingPremiumUserId === premiumUser.userId ? (
+                                  <div className="flex flex-col gap-2">
+                                    <input
+                                      type="text"
+                                      value={newPremiumEndDate}
+                                      onChange={(e) => setNewPremiumEndDate(e.target.value)}
+                                      className="px-2 py-1 text-xs border rounded dark:bg-slate-700 dark:border-slate-600 w-40"
+                                      placeholder="YYYY-MM-DD or 'lifetime'"
+                                    />
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                      Enter date (YYYY-MM-DD) or "lifetime"
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => handleUpdatePremiumEndDate(premiumUser.userId)}
+                                        className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                                      >
+                                        Save
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setEditingPremiumUserId(null);
+                                          setNewPremiumEndDate("");
+                                        }}
+                                        className="px-2 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-700"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setEditingPremiumUserId(premiumUser.userId);
+                                        if (isLifetime || !endDate) {
+                                          setNewPremiumEndDate("lifetime");
+                                        } else {
+                                          setNewPremiumEndDate(endDate.toISOString().split('T')[0]);
+                                        }
+                                      }}
+                                      className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1"
+                                      title="Edit Premium End Date"
+                                    >
+                                      <Settings className="w-3 h-3" />
+                                      Edit Date
+                                    </button>
+                                  </div>
+                                )}
                               </td>
                             </tr>
                           );

@@ -20,12 +20,22 @@ export const SignupPage: React.FC = () => {
             navigate("/blocked", { replace: true });
             return;
           }
-          // Premium check disabled - all users have access
-          navigate("/dashboard", { replace: true });
+          
+          // Check premium status and redirect accordingly
+          const { isPremiumUser } = await import("../../services/premiumUserService");
+          const isPremium = await isPremiumUser(currentUser.id);
+          
+          if (isPremium) {
+            // User is premium - go to dashboard
+            navigate("/dashboard", { replace: true });
+          } else {
+            // User is not premium - go to payment
+            navigate("/payment", { replace: true });
+          }
         } catch (error) {
           console.error("Error checking user status:", error);
-          // Still redirect to dashboard even if check fails
-          navigate("/dashboard", { replace: true });
+          // If check fails, redirect to payment to be safe
+          navigate("/payment", { replace: true });
         }
       }
     };
@@ -58,13 +68,23 @@ export const SignupPage: React.FC = () => {
             return;
           }
 
-          // Premium check disabled - all users have access
-          console.log("✅ Premium check disabled - redirecting to dashboard");
-          navigate("/dashboard", { replace: true });
+          // Check premium status and redirect accordingly
+          const { isPremiumUser } = await import("../../services/premiumUserService");
+          const isPremium = await isPremiumUser(currentUser.id);
+          
+          if (isPremium) {
+            // User is premium - go to dashboard
+            console.log("✅ User is premium - redirecting to dashboard");
+            navigate("/dashboard", { replace: true });
+          } else {
+            // User is not premium - go to payment
+            console.log("⚠️ User is not premium - redirecting to payment");
+            navigate("/payment", { replace: true });
+          }
         } catch (error) {
           console.error("Error checking user status:", error);
-          // Still redirect to dashboard even if check fails
-          navigate("/dashboard", { replace: true });
+          // If check fails, redirect to payment to be safe
+          navigate("/payment", { replace: true });
         }
       }
     }, 200);

@@ -257,6 +257,48 @@ export function isCreatorEmail(email: string): boolean {
 }
 
 /**
+ * Update premium subscription end date (admin only)
+ */
+export async function updatePremiumEndDate(
+  userId: string,
+  endDate: string | null // ISO string or null for lifetime
+): Promise<void> {
+  try {
+    const premiumRef = doc(db, PREMIUM_USERS_COLLECTION, userId);
+    const premiumDoc = await getDoc(premiumRef);
+    
+    if (!premiumDoc.exists()) {
+      throw new Error("Premium user record not found");
+    }
+    
+    const updates: any = {
+      updatedAt: new Date().toISOString(),
+    };
+    
+    if (endDate === null) {
+      // Set as lifetime - remove subscriptionEndDate
+      updates.subscriptionEndDate = deleteField();
+      updates.subscriptionType = "lifetime";
+    } else {
+      // Set specific end date
+      updates.subscriptionEndDate = endDate;
+      // Ensure isPremium is true if setting a future date
+      const endDateObj = new Date(endDate);
+      const now = new Date();
+      if (endDateObj > now) {
+        updates.isPremium = true;
+      }
+    }
+    
+    await updateDoc(premiumRef, updates);
+    console.log(`✅ Updated premium end date for user ${userId}`);
+  } catch (error) {
+    console.error("Error updating premium end date:", error);
+    throw error;
+  }
+}
+
+/**
  * Get all premium users
  */
 export async function getAllPremiumUsers(): Promise<PremiumUser[]> {

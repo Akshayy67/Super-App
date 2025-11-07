@@ -139,6 +139,7 @@ export async function getAllStudentVerifications(): Promise<StudentVerification[
 
 /**
  * Approve student verification (admin only)
+ * Sends email to student with payment gateway link instead of granting premium
  */
 export async function approveStudentVerification(
   verificationId: string,
@@ -161,7 +162,7 @@ export async function approveStudentVerification(
       reviewedBy: adminUserId,
     });
     
-    // Update premium user record to mark as verified student
+    // Mark student as verified but DON'T grant premium - they need to pay
     const premiumRef = doc(db, PREMIUM_USERS_COLLECTION, verification.userId);
     const premiumDoc = await getDoc(premiumRef);
     
@@ -171,20 +172,57 @@ export async function approveStudentVerification(
         updatedAt: new Date().toISOString(),
       });
     } else {
-      // Create premium user record if it doesn't exist
+      // Create record marking student as verified but NOT premium
       await setDoc(premiumRef, {
         userId: verification.userId,
         email: verification.email,
-        isPremium: true,
+        isPremium: false, // NOT granting premium - they need to pay
         subscriptionType: "student",
-        subscriptionStartDate: new Date().toISOString(),
         studentVerified: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
     }
     
-    console.log(`✅ Student verification approved for ${verification.email}`);
+    // Send email to student with payment gateway link
+    try {
+      const { EmailJSService } = await import("../utils/emailJSService");
+      const emailService = new EmailJSService();
+      
+      const paymentUrl = `${window.location.origin}/payment?studentApproved=true`;
+      const emailSubject = "🎓 Student Verification Approved - Complete Your Payment";
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #4F46E5;">Congratulations! Your Student Verification Has Been Approved</h2>
+          <p>Dear Student,</p>
+          <p>Great news! Your student verification request has been approved by our admin team.</p>
+          <p>To complete your student subscription and unlock premium features, please complete your payment:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${paymentUrl}" style="background-color: #4F46E5; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+              Complete Payment Now
+            </a>
+          </div>
+          <p>Or copy and paste this link into your browser:</p>
+          <p style="color: #6B7280; word-break: break-all;">${paymentUrl}</p>
+          <p>Thank you for choosing Super Study!</p>
+          <p>Best regards,<br>Super Study Team</p>
+        </div>
+      `;
+      
+      await emailService.sendTeamInvite({
+        to: verification.email,
+        subject: emailSubject,
+        html: emailHtml,
+        text: `Your student verification has been approved. Please complete your payment at: ${paymentUrl}`,
+      });
+      
+      console.log(`✅ Approval email sent to ${verification.email}`);
+    } catch (emailError) {
+      console.error("Error sending approval email:", emailError);
+      // Don't throw - approval should still succeed even if email fails
+    }
+    
+    console.log(`✅ Student verification approved for ${verification.email} - email sent with payment link`);
   } catch (error) {
     console.error("Error approving student verification:", error);
     throw error;

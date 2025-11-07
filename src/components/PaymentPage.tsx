@@ -550,9 +550,6 @@ export const PaymentPage: React.FC = () => {
             transition: 'opacity 1s ease-in',
           }}
         />
-        <p className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white/50 text-sm font-light pointer-events-none" style={{ textShadow: '0 2px 10px rgba(0, 0, 0, 0.8)', zIndex: 10 }}>
-          Drag to rotate • Scroll to zoom
-        </p>
       </div>
 
       {/* Right Side - Payment Content */}
