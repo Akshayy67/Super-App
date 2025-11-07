@@ -127,16 +127,31 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
           const currentParticipantIds = Object.keys(updatedMeeting.participants).filter(id => id !== user.id);
           
           if (isFirstUpdate) {
-            // First time receiving meeting data - connect to all existing participants
+            // First time receiving meeting data - set up signaling and connect to all existing participants
             console.log('🔗 First meeting update, connecting to all participants:', currentParticipantIds);
-            currentParticipantIds.forEach((participantId, index) => {
-              // Stagger connections to avoid overwhelming the system
-              setTimeout(() => {
-                if (currentMeetingId && !connectingParticipantsRef.current.has(participantId)) {
-                  connectToParticipant(participantId);
-                }
-              }, index * 500 + 500);
+            
+            // Set up signaling for all participants first
+            const setupPromises = currentParticipantIds.map(async (participantId) => {
+              try {
+                await ensureSignalingSetup(participantId);
+              } catch (error) {
+                console.error('❌ Error setting up signaling for participant:', participantId, error);
+              }
             });
+            
+            // Wait for signaling setup, then connect immediately (parallel)
+            Promise.all(setupPromises).then(() => {
+              // Connect to all participants in parallel - minimal delay
+              currentParticipantIds.forEach((participantId, index) => {
+                // Very small stagger (50ms) to avoid race conditions, but connect quickly
+                setTimeout(() => {
+                  if (currentMeetingId && !connectingParticipantsRef.current.has(participantId)) {
+                    connectToParticipant(participantId);
+                  }
+                }, index * 50); // Reduced from 500ms to 50ms
+              });
+            });
+            
             isFirstUpdate = false;
           } else if (prevMeeting) {
             // Connect to new participants only
@@ -145,12 +160,24 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
             
             if (newParticipants.length > 0) {
               console.log('🆕 New participants joined:', newParticipants);
-              newParticipants.forEach((participantId, index) => {
-                setTimeout(() => {
+              
+              // Set up signaling for new participants first
+              const setupPromises = newParticipants.map(async (participantId) => {
+                try {
+                  await ensureSignalingSetup(participantId);
+                } catch (error) {
+                  console.error('❌ Error setting up signaling for participant:', participantId, error);
+                }
+              });
+              
+              // Wait for signaling setup, then connect immediately
+              Promise.all(setupPromises).then(() => {
+                // Connect immediately - no delay for new participants
+                newParticipants.forEach((participantId) => {
                   if (currentMeetingId && !connectingParticipantsRef.current.has(participantId)) {
                     connectToParticipant(participantId);
                   }
-                }, index * 500 + 500);
+                });
               });
             }
           }
@@ -164,6 +191,12 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
       return () => {
         unsubscribe();
         connectingParticipantsRef.current.clear();
+        // Clean up signaling
+        signalingCleanupRef.current.forEach((cleanup) => {
+          cleanup();
+        });
+        signalingCleanupRef.current.clear();
+        signalingSetupRef.current.clear();
       };
     }
   }, [currentMeetingId, user, localStream]);
@@ -287,7 +320,8 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
       setCurrentMeetingId(meetingId);
 
       // Setup WebRTC signaling - this must happen after joining
-      setupWebRTCSignaling(meetingId);
+      // Wait for meeting data before setting up signaling
+      // Signaling will be set up when meeting data is received
 
       // Start transcription (only if not already transcribing)
       if (!isTranscribing) {
@@ -314,58 +348,32 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
     }
   };
 
-  const setupWebRTCSignaling = (meetingId: string) => {
+  const setupWebRTCSignaling = async (meetingId: string) => {
     if (!user) return;
-
-    // Subscribe to participants to set up signaling for each
-    const setupSignalingForParticipant = async (participantId: string) => {
-      if (participantId === user!.id) return; // Skip self
-
-      const cleanup = await unifiedSignalingService.initializeSignaling(
-        meetingId,
-        user!.id,
-        participantId,
-        {
-          onOffer: async (offer, from) => {
-            try {
-              await handleOffer(from, offer, meetingId);
-            } catch (err) {
-              console.error('Error handling offer:', err);
-            }
-          },
-          onAnswer: async (answer, from) => {
-            try {
-              await handleAnswer(from, answer, meetingId);
-            } catch (err) {
-              console.error('Error handling answer:', err);
-            }
-          },
-          onIceCandidate: async (candidate, from) => {
-            try {
-              await handleIceCandidate(from, candidate);
-            } catch (err) {
-              console.error('Error handling ICE candidate:', err);
-            }
-          },
-          onError: (error) => {
-            console.error('Signaling error:', error);
-            setError(error.message);
-          }
-        }
-      );
-
-      return cleanup;
-    };
 
     // Set up signaling for all existing participants
     if (meeting?.participants) {
-      Object.keys(meeting.participants).forEach(async (participantId) => {
-        await setupSignalingForParticipant(participantId);
-      });
+      const participantIds = Object.keys(meeting.participants).filter(id => id !== user.id);
+      console.log('🔧 Setting up signaling for existing participants:', participantIds);
+      
+      // Set up signaling for each participant
+      for (const participantId of participantIds) {
+        try {
+          await ensureSignalingSetup(participantId);
+        } catch (error) {
+          console.error('❌ Error setting up signaling for participant:', participantId, error);
+        }
+      }
     }
 
     // Return cleanup function that will be called when meeting ends
     return () => {
+      // Clean up all signaling
+      signalingCleanupRef.current.forEach((cleanup) => {
+        cleanup();
+      });
+      signalingCleanupRef.current.clear();
+      signalingSetupRef.current.clear();
       unifiedSignalingService.cleanup(meetingId, user.id);
     };
   };
@@ -549,6 +557,65 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
   };
 
   const connectingParticipantsRef = useRef<Set<string>>(new Set());
+  const signalingSetupRef = useRef<Set<string>>(new Set());
+  const signalingCleanupRef = useRef<Map<string, () => void>>(new Map());
+
+  // Set up signaling for a participant
+  const ensureSignalingSetup = async (participantId: string): Promise<void> => {
+    if (!user || !currentMeetingId || participantId === user.id) {
+      return;
+    }
+
+    // Check if signaling is already set up
+    if (signalingSetupRef.current.has(participantId)) {
+      return;
+    }
+
+    console.log('🔧 Setting up signaling for participant:', participantId);
+    signalingSetupRef.current.add(participantId);
+
+    try {
+      const cleanup = await unifiedSignalingService.initializeSignaling(
+        currentMeetingId,
+        user.id,
+        participantId,
+        {
+          onOffer: async (offer, from) => {
+            try {
+              await handleOffer(from, offer, currentMeetingId);
+            } catch (err) {
+              console.error('Error handling offer:', err);
+            }
+          },
+          onAnswer: async (answer, from) => {
+            try {
+              await handleAnswer(from, answer, currentMeetingId);
+            } catch (err) {
+              console.error('Error handling answer:', err);
+            }
+          },
+          onIceCandidate: async (candidate, from) => {
+            try {
+              await handleIceCandidate(from, candidate);
+            } catch (err) {
+              console.error('Error handling ICE candidate:', err);
+            }
+          },
+          onError: (error) => {
+            console.error('Signaling error:', error);
+            setError(error.message);
+          }
+        }
+      );
+
+      signalingCleanupRef.current.set(participantId, cleanup);
+      console.log('✅ Signaling set up for participant:', participantId);
+    } catch (error) {
+      console.error('❌ Error setting up signaling for participant:', participantId, error);
+      signalingSetupRef.current.delete(participantId);
+      throw error;
+    }
+  };
 
   const connectToParticipant = async (participantId: string) => {
     if (!user || !currentMeetingId || !localStream) {
@@ -557,6 +624,14 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
         hasMeetingId: !!currentMeetingId,
         hasLocalStream: !!localStream
       });
+      return;
+    }
+
+    // Ensure signaling is set up first
+    try {
+      await ensureSignalingSetup(participantId);
+    } catch (error) {
+      console.error('❌ Failed to set up signaling for participant:', participantId, error);
       return;
     }
 
@@ -592,8 +667,8 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
     try {
       console.log('🔗 Connecting to participant:', participantId);
       
-      // Check again after a short delay - if we received an offer in the meantime, abort
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Quick check if we received an offer in the meantime (reduced delay)
+      await new Promise(resolve => setTimeout(resolve, 50)); // Reduced from 100ms to 50ms
       
       const checkPC = webRTCService.getPeerConnection(participantId);
       if (checkPC && checkPC.signalingState === 'have-remote-offer') {
@@ -641,10 +716,10 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
       );
       
       console.log('✅ Connection initiated to', participantId);
-      // Mark as connected after a delay to allow for connection establishment
+      // Mark as connected after a shorter delay to allow for connection establishment
       setTimeout(() => {
         connectingParticipantsRef.current.delete(participantId);
-      }, 5000);
+      }, 2000); // Reduced from 5000ms to 2000ms
     } catch (err) {
       console.error('❌ Error connecting to participant:', participantId, err);
       webRTCService.closePeerConnection(participantId);

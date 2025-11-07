@@ -118,12 +118,13 @@ class CallService {
         }
       });
 
-      // Initiate connection after a short delay to ensure signaling is set up
+      // Initiate connection immediately - signaling is already set up
+      // Small delay only to ensure everything is ready
       setTimeout(() => {
         this.initiateConnection(recipientId, callId).catch((error) => {
           console.error('Error initiating connection:', error);
         });
-      }, 500);
+      }, 100); // Reduced from 500ms to 100ms
 
       return callId;
     } catch (error) {

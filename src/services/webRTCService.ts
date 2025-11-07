@@ -329,8 +329,8 @@ class WebRTCService {
       const startTime = this.connectionStartTimes.get(userId);
       const elapsed = startTime ? Date.now() - startTime : 0;
       
-      // If we've been trying for more than 5 seconds and still not connected, force relay-only
-      if (elapsed > 5000 && 
+      // If we've been trying for more than 3 seconds and still not connected, check status
+      if (elapsed > 3000 && 
           currentState !== 'connected' && 
           currentIceState !== 'connected' && 
           currentIceState !== 'completed') {
@@ -353,10 +353,10 @@ class WebRTCService {
                 console.log(`⏳ Still waiting for answer from ${userId}, not reconnecting yet`);
               }
             }
-          }, 2000); // Give more time for answer to arrive
+          }, 1000); // Reduced from 2000ms to 1000ms for faster reconnection
         }
       }
-    }, 5000); // 5 second timeout for faster relay fallback
+    }, 3000); // Reduced from 5000ms to 3000ms for faster timeout check
     
     // Store timeout so we can clear it
     this.connectionTimeouts.set(userId, connectionTimeout);
