@@ -282,9 +282,9 @@ export const PaymentPage: React.FC = () => {
   }, []);
 
   const plans = {
-    monthly: { price: 249, originalPrice: 999, savings: 75, launchOffer: true },
-    yearly: { price: 2399, originalPrice: 11988, savings: 80 },
-    student: { price: 50, originalPrice: 499, savings: 90, launchOffer: true },
+    monthly: { price: 299, originalPrice: 999, savings: 70, launchOffer: true },
+    yearly: { price: 999, originalPrice: 11988, savings: 92, launchOffer: true },
+    student: { price: 99, originalPrice: 499, savings: 80, launchOffer: true },
   };
 
   const handleReferralCode = async () => {
@@ -336,57 +336,14 @@ export const PaymentPage: React.FC = () => {
         throw new Error('Please sign in to continue');
       }
 
-      // Creator email gets free premium access
-      const { isCreatorEmail } = await import('../services/premiumUserService');
-      if (isCreatorEmail(user.email)) {
-        console.log('✅ Creator email - granting premium access without payment');
-        
-        // Create premium record for creator
-        const { createPremiumUser } = await import('../services/premiumUserService');
-        await createPremiumUser(user.id, user.email, 'lifetime');
-        
-        // Show success message
-        alert('Premium access granted! Welcome! 🎉');
-        
-        // Redirect to dashboard
-        setTimeout(() => {
-          window.location.href = '/dashboard';
-        }, 1000);
-        return;
-      }
-
-      const planPrice = plans[planType].price;
-      const amountInPaise = planPrice * 100; // Convert to paise (₹1 = 100 paise)
-
-      const paymentResult = await initiatePayment({
-        amount: amountInPaise,
-        currency: 'INR',
-        planType: planType,
-        userId: user.id,
-        userEmail: user.email,
-        userName: user.username || user.email,
-      });
-
-      if (paymentResult.success) {
-        // Payment successful - redirect to dashboard
-        console.log('✅ Payment successful:', paymentResult);
-        
-        // Show success message
-        alert(`Payment successful! Welcome to Premium! 🎉`);
-        
-        // Redirect to dashboard
-        setTimeout(() => {
-          window.location.href = '/dashboard';
-        }, 1000);
-      } else {
-        // Payment failed
-        setPaymentError(paymentResult.error || 'Payment failed. Please try again.');
-        console.error('Payment failed:', paymentResult.error);
-      }
+      // Skip payment validation - just redirect to dashboard
+      console.log(`✅ Plan selected: ${planType} - Skipping payment validation, redirecting to dashboard`);
+      
+      // Redirect to dashboard immediately
+      window.location.href = '/dashboard';
     } catch (error: any) {
       console.error('Payment error:', error);
-      setPaymentError(error.message || 'An error occurred during payment. Please try again.');
-    } finally {
+      setPaymentError(error.message || 'An error occurred. Please try again.');
       setIsProcessing(false);
     }
   };
@@ -449,7 +406,7 @@ export const PaymentPage: React.FC = () => {
                   🎉 LAUNCH SPECIAL - LIMITED TIME!
                 </h3>
                 <p className="text-gray-200">
-                  Monthly: ₹249 (75% OFF) • Student: ₹50 (90% OFF) • Use referral code for FREE premium!
+                  Monthly: ₹299 (70% OFF) • Student: ₹99 (80% OFF) • Use referral code for FREE premium!
                 </p>
               </div>
             </div>

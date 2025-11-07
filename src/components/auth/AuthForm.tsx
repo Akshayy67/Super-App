@@ -87,7 +87,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
               window.location.href = "/blocked";
             }, 100);
           } else {
+            // Redirect to payment page after successful authentication
             onAuthSuccess();
+            setTimeout(() => {
+              window.location.href = "/payment";
+            }, 100);
           }
         }
       } catch (error) {
@@ -122,8 +126,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
           return;
         }
         
-        // Call onAuthSuccess - let the parent component handle redirects
+        // Redirect to payment page after successful authentication
         onAuthSuccess();
+        setTimeout(() => {
+          window.location.href = "/payment";
+        }, 100);
       } else {
         // Only show error if message is provided (demo sign-in handles popup-closed automatically)
         if (result.message) {

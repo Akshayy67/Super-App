@@ -10,6 +10,7 @@ import {
   BarChart3,
   Brain,
   FileText,
+  Sparkles,
 } from "lucide-react";
 import { InterviewLayout } from "../layout/PageLayout";
 
@@ -81,6 +82,12 @@ export const InterviewPrepLayout: React.FC<InterviewPrepLayoutProps> = ({
       label: "Resume Builder",
       icon: FileText,
       path: "/interview/resume-builder",
+    },
+    {
+      id: "job-match",
+      label: "Job Match",
+      icon: Sparkles,
+      path: "/interview/job-match",
     },
   ];
 

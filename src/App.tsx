@@ -3,6 +3,8 @@ import {
   BrowserRouter as Router,
   useNavigate,
   useLocation,
+  Routes,
+  Route,
 } from "react-router-dom";
 import { AuthForm } from "./components/auth/AuthForm";
 import { Sidebar } from "./components/layout/Sidebar";
@@ -303,10 +305,40 @@ const AuthenticatedApp: React.FC = () => {
   );
 };
 
+// Component to check current location
+const AppContent: React.FC<{
+  isAuthenticated: boolean;
+  showPaymentGateway: boolean;
+}> = ({ isAuthenticated, showPaymentGateway }) => {
+  const location = useLocation();
+  
+  // Always show AppRouter if on payment page
+  if (location.pathname === '/payment') {
+    return (
+      <ErrorBoundary>
+        <AppRouter invitationData={null} />
+      </ErrorBoundary>
+    );
+  }
+  
+  // Show AuthenticatedApp if authenticated and not showing payment gateway
+  if (isAuthenticated && !showPaymentGateway) {
+    return <AuthenticatedApp />;
+  }
+  
+  // Otherwise show AppRouter
+  return (
+    <ErrorBoundary>
+      <AppRouter invitationData={null} />
+    </ErrorBoundary>
+  );
+};
+
 // Main App component with authentication and routing
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showPaymentGateway, setShowPaymentGateway] = useState(false);
 
   // Initialize todo reminders for authenticated user
   useTodoReminders(user);
@@ -317,8 +349,40 @@ function App() {
     const unsubscribe = realTimeAuth.onAuthStateChange((currentUser) => {
       console.log("👤 Auth state changed:", { user: !!currentUser, userId: currentUser?.id });
       setUser(currentUser);
-      setIsAuthenticated(!!currentUser);
+      // Check if payment gateway should be shown before authenticating
+      const shouldShowPayment = sessionStorage.getItem('showPaymentGateway') === 'true';
+      if (shouldShowPayment && currentUser) {
+        console.log("💳 Payment gateway flag detected - showing payment gateway");
+        setShowPaymentGateway(true);
+        // Don't set isAuthenticated yet - wait for payment gateway to complete
+        return;
+      }
+      // Only set authenticated if payment gateway is not active
+      if (!shouldShowPayment) {
+        setIsAuthenticated(!!currentUser);
+      }
     });
+
+    // Check for payment gateway flag on mount (after auth state is set up)
+    const checkPaymentGateway = () => {
+      const shouldShowPayment = sessionStorage.getItem('showPaymentGateway') === 'true';
+      const currentUser = realTimeAuth.getCurrentUser();
+      if (shouldShowPayment && currentUser) {
+        console.log("💳 Payment gateway flag found on mount - showing payment gateway");
+        setShowPaymentGateway(true);
+        // Don't set isAuthenticated - wait for payment gateway to complete
+      } else if (currentUser && !shouldShowPayment) {
+        // User is authenticated and payment gateway is not needed
+        console.log("✅ User authenticated on mount - setting authenticated state");
+        setIsAuthenticated(true);
+      } else if (!currentUser) {
+        // No user - not authenticated
+        setIsAuthenticated(false);
+      }
+    };
+    
+    // Check after a short delay to ensure auth state is initialized
+    setTimeout(checkPaymentGateway, 100);
 
     // Start daily task reminder service (sends emails at 8am daily)
     console.log("📧 Starting daily task reminder service...");
@@ -333,7 +397,9 @@ function App() {
 
   const handleAuthSuccess = async () => {
     console.log("🎉 Auth success handler called");
-    setIsAuthenticated(true);
+    // Clear payment gateway flag
+    sessionStorage.removeItem('showPaymentGateway');
+    setShowPaymentGateway(false);
     
     // Check if user is blocked or premium after authentication
     // Small delay to ensure auth state is updated
@@ -348,13 +414,18 @@ function App() {
             return;
           }
 
-          // Premium check disabled - all users have access
-          console.log("✅ Premium check disabled - redirecting to dashboard");
-          window.location.href = "/dashboard";
+          // Redirect to payment page after login (don't set isAuthenticated yet)
+          console.log("✅ Redirecting to payment page");
+          window.location.href = "/payment";
           return;
         } catch (error) {
           console.error("Error checking user status:", error);
+          // Still redirect to payment page even if check fails
+          window.location.href = "/payment";
         }
+      } else {
+        // No user found, redirect to home
+        window.location.href = "/";
       }
     }, 200);
   };
@@ -364,13 +435,10 @@ function App() {
       <FeedbackProvider>
         <GlobalPomodoroProvider>
           <Router>
-            {isAuthenticated ? (
-              <AuthenticatedApp />
-            ) : (
-              <ErrorBoundary>
-                <AppRouter invitationData={null} />
-              </ErrorBoundary>
-            )}
+            <AppContent 
+              isAuthenticated={isAuthenticated} 
+              showPaymentGateway={showPaymentGateway} 
+            />
           </Router>
         </GlobalPomodoroProvider>
       </FeedbackProvider>
