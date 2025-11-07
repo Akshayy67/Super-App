@@ -2222,64 +2222,64 @@ export const LandingPage: React.FC = () => {
               {/* Get Started Button - Only on last section, positioned below text */}
               {index === sections.length - 1 && (
                 <div className="mt-12 flex justify-center items-center">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
                       navigate("/signup");
-                    }}
+                  }}
                     className="text-sm font-medium px-6 py-3 border rounded-full uppercase tracking-wider transition-all duration-300 ease-in-out hover:scale-110 active:scale-95 hover:opacity-100 hover:bg-white/10 hover:border-white/60 hover:shadow-lg hover:shadow-white/20 flex items-center gap-2 touch-manipulation"
-                    style={{ 
-                      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
-                      color: "#b0b0b0",
-                      borderColor: "rgba(176, 176, 176, 0.3)",
-                      transition: "all 0.3s ease-in-out",
-                      fontSize: "clamp(0.75rem, 3vw, 0.875rem)",
+                  style={{ 
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+                    color: "#b0b0b0",
+                    borderColor: "rgba(176, 176, 176, 0.3)",
+                    transition: "all 0.3s ease-in-out",
+                    fontSize: "clamp(0.75rem, 3vw, 0.875rem)",
                       padding: "clamp(0.875rem, 2.5vw, 1rem) clamp(1.25rem, 4vw, 1.75rem)",
-                      minWidth: "48px",
-                      minHeight: "48px",
-                      touchAction: "manipulation",
-                      WebkitTapHighlightColor: "rgba(176, 176, 176, 0.2)",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (window.innerWidth > 768) {
-                        e.currentTarget.style.transform = "scale(1.1)";
-                        e.currentTarget.style.color = "#ffffff";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (window.innerWidth > 768) {
-                        e.currentTarget.style.transform = "scale(1)";
-                        e.currentTarget.style.color = "#b0b0b0";
-                      }
-                    }}
-                    onTouchStart={(e) => {
-                      e.currentTarget.style.transform = "scale(0.95)";
-                      e.currentTarget.style.opacity = "0.8";
-                    }}
-                    onTouchEnd={(e) => {
-                      setTimeout(() => {
-                        e.currentTarget.style.transform = "scale(1)";
-                        e.currentTarget.style.opacity = "1";
-                      }, 150);
-                    }}
-                  >
+                    minWidth: "48px",
+                    minHeight: "48px",
+                    touchAction: "manipulation",
+                    WebkitTapHighlightColor: "rgba(176, 176, 176, 0.2)",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (window.innerWidth > 768) {
+                      e.currentTarget.style.transform = "scale(1.1)";
+                      e.currentTarget.style.color = "#ffffff";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (window.innerWidth > 768) {
+                      e.currentTarget.style.transform = "scale(1)";
+                      e.currentTarget.style.color = "#b0b0b0";
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    e.currentTarget.style.transform = "scale(0.95)";
+                    e.currentTarget.style.opacity = "0.8";
+                  }}
+                  onTouchEnd={(e) => {
+                    setTimeout(() => {
+                      e.currentTarget.style.transform = "scale(1)";
+                      e.currentTarget.style.opacity = "1";
+                    }, 150);
+                  }}
+                >
                     <span>Get Started</span>
-                    <svg 
+                  <svg 
                       width="16" 
                       height="16" 
-                      viewBox="0 0 24 24" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      strokeWidth="2" 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round"
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
                       style={{ width: 'clamp(14px, 4vw, 16px)', height: 'clamp(14px, 4vw, 16px)' }}
-                    >
+                  >
                       <path d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-              )}
+                  </svg>
+                </button>
+              </div>
+            )}
             </div>
 
             {/* Previous Button - Positioned at Top */}

@@ -38,13 +38,12 @@ class UnifiedAnalyticsStorage {
         const now = Date.now();
         const validDeletions: { id: string; timestamp: number }[] = [];
         
-        // Only keep deletions from the last 5 minutes
+        // Keep ALL deletions permanently - never expire them
+        // This ensures deleted interviews never come back, even if they still exist in Firestore
         data.forEach((item: { id: string; timestamp: number }) => {
-          if (now - item.timestamp < 300000) { // 5 minutes
-            this.recentDeletions.add(item.id);
-            this.deletionTimestamps.set(item.id, item.timestamp);
-            validDeletions.push(item);
-          }
+          this.recentDeletions.add(item.id);
+          this.deletionTimestamps.set(item.id, item.timestamp);
+          validDeletions.push(item);
         });
         
         // Save back only valid deletions
@@ -293,25 +292,30 @@ class UnifiedAnalyticsStorage {
           // Filter out recently deleted items to prevent them from being restored
           // This handles Firestore eventual consistency and page refreshes
           console.log(`🔍 Checking ${migratedCloudData.length} cloud interviews against ${this.recentDeletions.size} tracked deletions`);
+          
+          // Log all tracked deletions for debugging
+          if (this.recentDeletions.size > 0) {
+            console.log(`📋 Tracked deletions:`, Array.from(this.recentDeletions));
+            this.deletionTimestamps.forEach((timestamp, id) => {
+              const age = Math.round((Date.now() - timestamp) / 1000);
+              console.log(`  - ${id}: deleted ${age}s ago`);
+            });
+          }
+          
           const filteredCloudData = migratedCloudData.filter((data) => {
             if (this.recentDeletions.has(data.id)) {
               const deletionTime = this.deletionTimestamps.get(data.id) || 0;
               const timeSinceDeletion = Date.now() - deletionTime;
               
-              // If deleted less than 5 minutes ago, exclude it (handles eventual consistency and refreshes)
-              if (timeSinceDeletion < 300000) { // 5 minutes
-                console.log(
-                  `🚫 Excluding recently deleted interview ${data.id} from cloud sync (deleted ${Math.round(timeSinceDeletion / 1000)}s ago)`
-                );
-                return false;
-              }
-              // Remove from tracking after 5 minutes (deletion should be fully propagated by then)
-              this.recentDeletions.delete(data.id);
-              this.deletionTimestamps.delete(data.id);
-              this.savePersistedDeletions(); // Update persisted tracking
+              // ALWAYS exclude deleted items - never restore them, even if they still exist in Firestore
+              // This is a permanent filter until the user explicitly restores them
               console.log(
-                `✅ Removed ${data.id} from deletion tracking (deleted ${Math.round(timeSinceDeletion / 1000)}s ago)`
+                `🚫 PERMANENTLY EXCLUDING deleted interview ${data.id} from cloud sync (deleted ${Math.round(timeSinceDeletion / 1000)}s ago)`
               );
+              console.log(
+                `⚠️ Interview ${data.id} still exists in Firestore but will be filtered out due to deletion tracking`
+              );
+              return false;
             }
             return true;
           });
@@ -476,29 +480,19 @@ class UnifiedAnalyticsStorage {
       return false;
     }
 
-    // Mark as recently deleted to prevent cloud sync from restoring it
-    // Keep this for 5 minutes to handle Firestore eventual consistency and page refreshes
+    // Mark as permanently deleted to prevent cloud sync from restoring it
+    // This is a permanent filter - deleted interviews will NEVER be restored from cloud
     this.recentDeletions.add(id);
     this.deletionTimestamps.set(id, Date.now());
     
     // Persist deletion tracking to localStorage (survives page refresh)
     this.savePersistedDeletions();
-    
-    // Clean up old deletion records (older than 5 minutes)
-    const now = Date.now();
-    this.deletionTimestamps.forEach((timestamp, deletedId) => {
-      if (now - timestamp > 300000) { // 5 minutes
-        this.recentDeletions.delete(deletedId);
-        this.deletionTimestamps.delete(deletedId);
-      }
-    });
-    
-    // Save after cleanup
-    this.savePersistedDeletions();
+    console.log(`📋 Marked ${id} as PERMANENTLY deleted - will never be restored from cloud`);
 
     // If authenticated and online, also delete from cloud
     if (this.currentUser && this.isOnline) {
       try {
+        console.log(`☁️ Attempting to delete interview ${id} from cloud...`);
         const cloudSuccess = await cloudAnalyticsStorage.deletePerformanceData(
           id,
           this.currentUser.uid
@@ -506,14 +500,37 @@ class UnifiedAnalyticsStorage {
         
         if (cloudSuccess) {
           console.log(`✅ Interview ${id} deleted from both local and cloud`);
+          
+          // Verify deletion after a short delay (Firestore eventual consistency)
+          setTimeout(async () => {
+            try {
+              const verifyData = await cloudAnalyticsStorage.getPerformanceHistory(this.currentUser!.uid);
+              const stillExists = verifyData.some(data => data.id === id);
+              if (stillExists) {
+                console.warn(`⚠️ Interview ${id} still exists in cloud after deletion (Firestore eventual consistency)`);
+                // Keep it in deletion tracking longer
+                this.deletionTimestamps.set(id, Date.now());
+                this.savePersistedDeletions();
+              } else {
+                console.log(`✅ Verified: Interview ${id} successfully removed from cloud`);
+              }
+            } catch (verifyError) {
+              console.warn(`⚠️ Could not verify cloud deletion for ${id}:`, verifyError);
+            }
+          }, 2000);
         } else {
-          console.warn(`⚠️ Interview ${id} deleted locally but cloud deletion returned false`);
-          // Still return true since local deletion succeeded
+          console.warn(`⚠️ Interview ${id} deleted locally but cloud deletion returned false - will be filtered on reload`);
+          // Keep deletion tracking active longer since cloud deletion failed
+          this.deletionTimestamps.set(id, Date.now());
+          this.savePersistedDeletions();
         }
       } catch (error) {
         console.error(`❌ Failed to delete interview ${id} from cloud:`, error);
+        // Keep deletion tracking active longer since cloud deletion failed
+        this.deletionTimestamps.set(id, Date.now());
+        this.savePersistedDeletions();
         // Still return true since local deletion succeeded
-        // Cloud deletion will be retried on next sync
+        // Cloud deletion will be filtered on reload via deletion tracking
       }
     } else {
       console.log(`📱 Interview ${id} deleted from local storage (offline or not authenticated)`);

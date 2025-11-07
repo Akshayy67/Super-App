@@ -103,6 +103,18 @@ export const DreamToPlanButton: React.FC<DreamToPlanButtonProps> = ({
       } catch (error) {
         console.error("Failed to parse saved position:", error);
       }
+    } else if (finalPosition === "draggable" && !dragPosition) {
+      // Set default position for dream to plan button (bottom-left) if no saved position
+      // Offset from feedback button to prevent clash
+      const setDefaultPosition = () => {
+        const defaultX = 20; // 20px from left
+        const defaultY = Math.max(20, window.innerHeight - 80); // 80px from bottom (same height as feedback button)
+        setDragPosition({ x: defaultX, y: defaultY });
+      };
+      // Wait for window to be available
+      if (typeof window !== 'undefined') {
+        setDefaultPosition();
+      }
     }
   }, [finalPosition]);
 

@@ -197,10 +197,29 @@ export const InterviewDataManager: React.FC<InterviewDataManagerProps> = ({
         logAndPersist(`⚠️ Reloaded data count (${reloadedData.length}) doesn't match expected (${remainingInterviews.length}), keeping current state`);
       }
 
+      // Trigger a storage event to notify other components (like analytics hook)
+      // This ensures the analytics dashboard picks up the deletion immediately
+      try {
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'interview_performance_history',
+          newValue: JSON.stringify(reloadedData),
+          oldValue: JSON.stringify(interviews),
+          storageArea: localStorage,
+        }));
+        logAndPersist("📡 Storage event dispatched to notify other components");
+      } catch (error) {
+        console.warn("Failed to dispatch storage event:", error);
+      }
+
       // Notify parent component after a short delay to allow state to settle
       setTimeout(() => {
         onDataChange?.();
       }, 300);
+      
+      // Also reload interviews in this component to ensure UI is in sync
+      setTimeout(() => {
+        loadInterviews();
+      }, 500);
 
       const successCount = deleteResults.filter((result) => result.success).length;
 

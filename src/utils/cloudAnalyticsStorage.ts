@@ -223,64 +223,107 @@ class CloudAnalyticsStorage {
     interviewId: string,
     userId: string
   ): Promise<boolean> {
-    try {
-      const docRef = doc(db, this.COLLECTION_NAME, interviewId);
-      
-      // First, try to get the document to verify it exists and belongs to user
-      const docSnap = await getDoc(docRef);
-      
-      if (!docSnap.exists()) {
-        console.log(`ℹ️ Interview ${interviewId} not found in cloud (may already be deleted)`);
-        return true; // Return true since it's effectively deleted
-      }
-      
-      const data = docSnap.data() as CloudAnalyticsData;
-      
-      // Verify ownership
-      if (data.userId !== userId) {
-        console.warn(`❌ Cannot delete: Interview ${interviewId} belongs to different user`);
+    const docRef = doc(db, this.COLLECTION_NAME, interviewId);
+    const maxRetries = 3;
+    
+    for (let retry = 0; retry < maxRetries; retry++) {
+      try {
+        // First, try to get the document to verify it exists and belongs to user
+        const docSnap = await getDoc(docRef);
+        
+        if (!docSnap.exists()) {
+          console.log(`ℹ️ Interview ${interviewId} not found in cloud (already deleted)`);
+          return true; // Return true since it's effectively deleted
+        }
+        
+        const data = docSnap.data() as CloudAnalyticsData;
+        
+        // Verify ownership
+        if (data.userId !== userId) {
+          console.warn(`❌ Cannot delete: Interview ${interviewId} belongs to different user`);
+          return false;
+        }
+
+        // Try direct deleteDoc first (simpler and more reliable)
+        try {
+          await deleteDoc(docRef);
+          console.log(`🗑️ Direct deleteDoc called for interview ${interviewId}`);
+        } catch (directDeleteError: any) {
+          // If direct delete fails, try batch delete
+          console.log(`⚠️ Direct delete failed, trying batch delete:`, directDeleteError?.message);
+          const batch = writeBatch(db);
+          batch.delete(docRef);
+          await batch.commit();
+          console.log(`🗑️ Batch delete committed for interview ${interviewId}`);
+        }
+        
+        // Wait for Firestore to process the deletion
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Verify deletion with retries
+        let verified = false;
+        for (let verifyAttempt = 0; verifyAttempt < 5; verifyAttempt++) {
+          const verifySnap = await getDoc(docRef);
+          if (!verifySnap.exists()) {
+            verified = true;
+            console.log(`✅ Verified deletion of ${interviewId} on verification attempt ${verifyAttempt + 1}`);
+            break;
+          }
+          console.log(`⏳ Verification attempt ${verifyAttempt + 1}/5: Interview ${interviewId} still exists, waiting...`);
+          if (verifyAttempt < 4) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          }
+        }
+        
+        if (verified) {
+          console.log(`✅ Interview ${interviewId} successfully deleted from Firestore`);
+          return true;
+        }
+        
+        // If not verified and this isn't the last retry, try again
+        if (retry < maxRetries - 1) {
+          console.log(`⚠️ Deletion not verified, retrying (${retry + 1}/${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue;
+        }
+        
+        // Last retry failed - log error but still return true (deletion tracking will handle it)
+        console.error(`❌ Interview ${interviewId} still exists in Firestore after ${maxRetries} deletion attempts!`);
+        console.error(`⚠️ This may indicate a Firestore permissions issue. Check security rules.`);
+        console.error(`⚠️ Interview will be filtered from UI via deletion tracking.`);
+        return true; // Return true so deletion tracking stays active
+        
+      } catch (error: any) {
+        console.error(`❌ Failed to delete interview ${interviewId} from cloud (attempt ${retry + 1}/${maxRetries}):`, error);
+        console.error("Error details:", {
+          code: error?.code,
+          message: error?.message,
+          interviewId,
+          userId,
+        });
+        
+        // If it's a permissions error, log it clearly
+        if (error?.code === 'permission-denied') {
+          console.error(`🚫 PERMISSION DENIED: Cannot delete interview ${interviewId}`);
+          console.error(`🚫 Check Firestore security rules for 'interview_analytics' collection`);
+          console.error(`🚫 Rule should allow: allow delete: if request.auth != null && resource.data.userId == request.auth.uid;`);
+          // Don't retry on permission errors
+          return false;
+        }
+        
+        // If this isn't the last retry, wait and try again
+        if (retry < maxRetries - 1) {
+          console.log(`⏳ Retrying deletion in 2 seconds...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue;
+        }
+        
+        // Last retry failed
         return false;
       }
-
-      // Delete the document
-      await deleteDoc(docRef);
-      
-      // Wait a moment for Firestore to process the deletion (handles eventual consistency)
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Verify deletion with retries (Firestore eventual consistency)
-      let verified = false;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const verifySnap = await getDoc(docRef);
-        if (!verifySnap.exists()) {
-          verified = true;
-          break;
-        }
-        // Wait before retrying
-        if (attempt < 2) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
-      
-      if (!verified) {
-        console.warn(`⚠️ Interview ${interviewId} still exists after deletion attempt (may be eventual consistency)`);
-        // Still return true - the deletion was initiated, Firestore will eventually process it
-        // The deletion tracking will prevent it from being restored
-        return true;
-      }
-      
-      console.log(`✅ Interview ${interviewId} deleted from cloud successfully`);
-      return true;
-    } catch (error: any) {
-      console.error(`❌ Failed to delete interview ${interviewId} from cloud:`, error);
-      console.error("Error details:", {
-        code: error?.code,
-        message: error?.message,
-        interviewId,
-        userId
-      });
-      return false;
     }
+    
+    return false;
   }
 
   /**

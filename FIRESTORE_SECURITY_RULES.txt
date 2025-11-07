@@ -97,5 +97,24 @@ service cloud.firestore {
       return request.auth != null && 
         get(/databases/$(database)/documents/teams/$(teamId)).data.members[request.auth.uid].role in ['owner', 'admin'];
     }
+    
+    // Interview Analytics Collection Rules (REQUIRED for deletion to work)
+    match /interview_analytics/{interviewId} {
+      // Allow read if user is authenticated and owns the interview
+      allow read: if request.auth != null && 
+        resource.data.userId == request.auth.uid;
+      
+      // Allow create if user is authenticated and creating their own interview
+      allow create: if request.auth != null && 
+        request.resource.data.userId == request.auth.uid;
+      
+      // Allow update if user owns the interview
+      allow update: if request.auth != null && 
+        resource.data.userId == request.auth.uid;
+      
+      // CRITICAL: Allow delete if user owns the interview (required for deletion to work)
+      allow delete: if request.auth != null && 
+        resource.data.userId == request.auth.uid;
+    }
   }
 }

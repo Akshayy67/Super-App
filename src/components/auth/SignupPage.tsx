@@ -27,7 +27,7 @@ export const SignupPage: React.FC = () => {
           
           if (isPremium) {
             // User is premium - go to dashboard
-            navigate("/dashboard", { replace: true });
+          navigate("/dashboard", { replace: true });
           } else {
             // User is not premium - go to payment
             navigate("/payment", { replace: true });
@@ -75,7 +75,7 @@ export const SignupPage: React.FC = () => {
           if (isPremium) {
             // User is premium - go to dashboard
             console.log("✅ User is premium - redirecting to dashboard");
-            navigate("/dashboard", { replace: true });
+          navigate("/dashboard", { replace: true });
           } else {
             // User is not premium - go to payment
             console.log("⚠️ User is not premium - redirecting to payment");

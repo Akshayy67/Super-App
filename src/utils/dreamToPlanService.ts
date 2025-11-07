@@ -320,7 +320,7 @@ IMPORTANT: Only create action items if the user explicitly wants to DO something
     }
   }
 
-  async createTodosFromGoals(goals: DreamToPlanResult["suggestedGoals"]): Promise<void> {
+  async createTodosFromGoals(goals: DreamToPlanResult["suggestedGoals"], skipSync: boolean = false): Promise<void> {
     const user = realTimeAuth.getCurrentUser();
     if (!user) throw new Error("User not authenticated");
 
@@ -336,12 +336,15 @@ IMPORTANT: Only create action items if the user explicitly wants to DO something
       });
     }
 
-    // Sync todos to calendar
-    await calendarService.syncTodosToCalendar(user.id);
+    // Sync todos to calendar (unless skipped for batch operations)
+    if (!skipSync) {
+      await calendarService.syncTodosToCalendar(user.id);
+    }
   }
 
   async scheduleMeetingsFromActions(
-    actionItems: DreamToPlanResult["actionItems"]
+    actionItems: DreamToPlanResult["actionItems"],
+    skipSync: boolean = false
   ): Promise<void> {
     const user = realTimeAuth.getCurrentUser();
     if (!user) throw new Error("User not authenticated");
@@ -386,8 +389,10 @@ IMPORTANT: Only create action items if the user explicitly wants to DO something
       }
     }
 
-    // Sync todos to calendar
-    await calendarService.syncTodosToCalendar(user.id);
+    // Sync todos to calendar (unless skipped for batch operations)
+    if (!skipSync) {
+      await calendarService.syncTodosToCalendar(user.id);
+    }
   }
 
   async createTeamFromAction(
@@ -422,7 +427,8 @@ IMPORTANT: Only create action items if the user explicitly wants to DO something
   }
 
   async createTodosFromActions(
-    actionItems: DreamToPlanResult["actionItems"]
+    actionItems: DreamToPlanResult["actionItems"],
+    skipSync: boolean = false
   ): Promise<void> {
     const user = realTimeAuth.getCurrentUser();
     if (!user) throw new Error("User not authenticated");
@@ -441,8 +447,10 @@ IMPORTANT: Only create action items if the user explicitly wants to DO something
       }
     }
 
-    // Sync todos to calendar
-    await calendarService.syncTodosToCalendar(user.id);
+    // Sync todos to calendar (unless skipped for batch operations)
+    if (!skipSync) {
+      await calendarService.syncTodosToCalendar(user.id);
+    }
   }
 
   async createRemindersFromActions(

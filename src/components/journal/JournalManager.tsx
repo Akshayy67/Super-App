@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { BookOpen, Sparkles, Calendar, CheckCircle2, Users, Mail, X, Plus, Tag } from "lucide-react";
 import { journalService, type JournalEntry } from "../../utils/journalService";
 import { dreamToPlanService } from "../../utils/dreamToPlanService";
@@ -6,6 +7,7 @@ import { realTimeAuth } from "../../utils/realTimeAuth";
 import { format } from "date-fns";
 
 export const JournalManager: React.FC = () => {
+  const navigate = useNavigate();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [currentEntry, setCurrentEntry] = useState("");
   const [mood, setMood] = useState("");
@@ -92,43 +94,67 @@ export const JournalManager: React.FC = () => {
     setAddingToCalendar(true);
     try {
       const hasTeamActions = dreamToPlanResult.actionItems?.some((item: any) => item.type === "team");
+      const hasStudyPlanActions = dreamToPlanResult.actionItems?.some((item: any) => item.type === "study_plan");
+      const hasInterviewActions = dreamToPlanResult.actionItems?.some((item: any) => item.type === "interview");
       
       // Only create team if team form was filled and submitted
       if (hasTeamActions && showTeamForm && teamFormData.name.trim()) {
         await handleCreateTeam();
       }
 
-      // Always add todos and goals to calendar
-      await dreamToPlanService.createTodosFromGoals(dreamToPlanResult.suggestedGoals);
-      await dreamToPlanService.createTodosFromActions(
-        dreamToPlanResult.actionItems.filter((item: any) => item.type === "todo")
-      );
-      
-      // Handle meetings with date/time from form
+      // Prepare meeting items with date/time from form (exclude study plans and interviews)
       const meetingItems = dreamToPlanResult.actionItems
+        .filter((item: any) => item.type === "meeting")
         .map((item: any, originalIdx: number) => {
-          if (item.type === "meeting") {
-            const formData = meetingFormData[originalIdx];
-            if (formData && formData.date && formData.time) {
-              const dateTime = new Date(`${formData.date}T${formData.time}`);
-              return { ...item, suggestedDate: dateTime };
-            }
+          const formData = meetingFormData[originalIdx];
+          if (formData && formData.date && formData.time) {
+            const dateTime = new Date(`${formData.date}T${formData.time}`);
+            return { ...item, suggestedDate: dateTime };
           }
           return item;
-        })
-        .filter((item: any) => item.type === "meeting");
-      await dreamToPlanService.scheduleMeetingsFromActions(meetingItems);
-      
-      await dreamToPlanService.createRemindersFromActions(
-        dreamToPlanResult.actionItems.filter((item: any) => item.type === "reminder")
-      );
+        });
 
-      alert("✅ Done! All items have been added to your calendar.");
+      // Process all items EXCEPT study plans and interviews (todos, goals, meetings, reminders)
+      // Run all operations in parallel for better performance (skip individual syncs)
+      await Promise.all([
+        dreamToPlanService.createTodosFromGoals(dreamToPlanResult.suggestedGoals, true),
+        dreamToPlanService.createTodosFromActions(
+          dreamToPlanResult.actionItems.filter((item: any) => item.type === "todo"),
+          true
+        ),
+        dreamToPlanService.scheduleMeetingsFromActions(meetingItems, true),
+        dreamToPlanService.createRemindersFromActions(
+          dreamToPlanResult.actionItems.filter((item: any) => item.type === "reminder")
+        ),
+      ]);
+
+      // Sync todos to calendar once at the end (much faster than multiple syncs)
+      if (user) {
+        const { calendarService } = await import("../../utils/calendarService");
+        await calendarService.syncTodosToCalendar(user.id);
+      }
+
+      // Close modal immediately
       setShowDreamToPlan(false);
       setDreamToPlanResult(null);
       setTeamFormData({ name: "", emails: [], currentEmail: "" });
       setMeetingFormData({});
       setShowTeamForm(false);
+
+      // Handle interviews - navigate to interview prep page (highest priority)
+      if (hasInterviewActions) {
+        navigate("/interview/mock-interview?tab=custom", { replace: false });
+      } else if (hasStudyPlanActions) {
+        // Handle study plans - navigate to study plan page with pre-filled data (after closing modals)
+        const studyPlanItems = dreamToPlanResult.actionItems.filter((item: any) => item.type === "study_plan");
+        // Store study plan data in sessionStorage for the study plan page to use
+        sessionStorage.setItem("pendingStudyPlans", JSON.stringify(studyPlanItems));
+        // Navigate to study plan page using React Router (preserves auth state)
+        navigate("/tools/study-plans/new", { replace: false });
+      } else {
+        // Show success message only if no navigation
+        alert("✅ Done! All items have been added to your calendar.");
+      }
     } catch (error) {
       console.error("Error accepting goals:", error);
       alert("Failed to add items. Please try again.");
@@ -584,10 +610,17 @@ export const JournalManager: React.FC = () => {
               {(() => {
                 const hasTeamActions = dreamToPlanResult.actionItems?.some((item: any) => item.type === "team");
                 const hasMeetingActions = dreamToPlanResult.actionItems?.some((item: any) => item.type === "meeting");
+                const hasStudyPlanActions = dreamToPlanResult.actionItems?.some((item: any) => item.type === "study_plan");
+                const hasInterviewActions = dreamToPlanResult.actionItems?.some((item: any) => item.type === "interview");
                 const hasTodoActions = dreamToPlanResult.actionItems?.some((item: any) => item.type === "todo") || dreamToPlanResult.suggestedGoals?.length > 0;
                 
                 let buttonText = "Add to Calendar";
-                if (hasTeamActions && !hasMeetingActions && !hasTodoActions) {
+                // Prioritize interview and study plan - show "Open Mock Interview" or "Open Study Plan" if they exist
+                if (hasInterviewActions) {
+                  buttonText = "Open Mock Interview";
+                } else if (hasStudyPlanActions) {
+                  buttonText = "Open Study Plan";
+                } else if (hasTeamActions && !hasMeetingActions && !hasTodoActions) {
                   buttonText = "Create Team";
                 } else if (hasMeetingActions && !hasTeamActions && !hasTodoActions) {
                   buttonText = "Schedule Meeting & Add to Calendar";

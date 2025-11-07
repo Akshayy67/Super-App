@@ -347,6 +347,15 @@ export const AdminDashboard: React.FC = () => {
   const [codeType, setCodeType] = useState<"referral" | "discount" | "voucher">("referral");
   const [voucherName, setVoucherName] = useState("");
   const [codeDescription, setCodeDescription] = useState("");
+  const [worksForStudent, setWorksForStudent] = useState(true); // Default to true
+  
+  // Reset worksForStudent when code type changes
+  useEffect(() => {
+    if (codeType === "referral") {
+      // Referral codes don't use worksForStudent, but reset to default
+      setWorksForStudent(true);
+    }
+  }, [codeType]);
 
   // Generate new referral code
   const handleGenerateCode = async () => {

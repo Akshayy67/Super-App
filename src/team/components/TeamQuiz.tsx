@@ -121,34 +121,38 @@ export const TeamQuiz: React.FC<TeamQuizProps> = ({ teamId }) => {
     );
 
     if (synchronizedQuizzes.length === 0) {
+      // Reset countdown state when no synchronized quizzes
+      setSynchronizedQuizId(null);
+      setSynchronizedCountdown(null);
       return;
     }
 
     // Use ref to track interval to prevent multiple intervals
-    // Don't force re-render - rely on the countdown timer state instead
-    // This prevents double updates that cause seconds to jump by 2
+    // Update countdown continuously for all synchronized quizzes
     countdownTimerRef.current = setInterval(async () => {
       // Get fresh quiz data from the current quizzes array
-      // Read from state directly to avoid stale closures
       const currentSynchronizedQuizzes = quizzes.filter(
         q => q.startMode === "synchronized" && q.status === "active"
       );
       
       for (const quiz of currentSynchronizedQuizzes) {
-        // Check if countdown has reached 0 and quiz should auto-start
+        // Update countdown for this quiz if it has a synchronized start time
         if (quiz.synchronizedStartTime && user) {
           const startTime = quiz.synchronizedStartTime instanceof Date 
             ? quiz.synchronizedStartTime.getTime()
             : (quiz.synchronizedStartTime as any).toMillis?.() || (quiz.synchronizedStartTime as any).seconds * 1000;
           const now = Date.now();
-          const timeUntilStart = Math.floor((startTime - now) / 1000);
+          const timeUntilStart = Math.max(0, Math.floor((startTime - now) / 1000));
+          
+          // Update countdown state for the first synchronized quiz (or selected one)
+          // This ensures the countdown is always up-to-date
+          if (!synchronizedQuizId || synchronizedQuizId === quiz.id) {
+            setSynchronizedQuizId(quiz.id);
+            setSynchronizedCountdown(timeUntilStart);
+          }
           
           // If countdown reached 0, allow users to start (but don't auto-start)
-          // Users must click the button to start after countdown finishes
-          // This ensures users are ready and aware when the quiz starts
           if (timeUntilStart <= 0) {
-            // Countdown finished - button will be enabled, but don't auto-start
-            // Just update the countdown display to 0
             if (synchronizedQuizId === quiz.id) {
               setSynchronizedCountdown(0);
             }
@@ -198,7 +202,7 @@ export const TeamQuiz: React.FC<TeamQuizProps> = ({ teamId }) => {
         countdownTimerRef.current = null;
       }
     };
-  }, [quizzes, quizStarted, selectedQuiz, user, synchronizedQuizId]);
+  }, [quizzes, quizStarted, selectedQuiz, user]);
 
   const handleCreateQuiz = async () => {
     if (!user) return;
@@ -241,44 +245,20 @@ export const TeamQuiz: React.FC<TeamQuizProps> = ({ teamId }) => {
       const now = Date.now();
       const timeUntilStart = Math.max(0, Math.floor((startTime - now) / 1000));
       
-      // Users can only start after the 10-second countdown finishes
+      // Users can only start after the countdown finishes
       if (timeUntilStart > 0) {
         // Show countdown - don't allow starting yet
+        // The useEffect will handle updating the countdown, just set the quiz ID
         setSynchronizedQuizId(quiz.id);
         setSynchronizedCountdown(timeUntilStart);
         
-        // Clear any existing countdown timer
-        if (countdownTimerRef.current) {
-          clearInterval(countdownTimerRef.current);
-          countdownTimerRef.current = null;
-        }
-        
-        // Start countdown timer - use 1000ms (1 second)
-        countdownTimerRef.current = setInterval(() => {
-          const remaining = Math.max(0, Math.floor((startTime - Date.now()) / 1000));
-          setSynchronizedCountdown(remaining);
-          
-          if (remaining === 0) {
-            if (countdownTimerRef.current) {
-              clearInterval(countdownTimerRef.current);
-              countdownTimerRef.current = null;
-            }
-            // Countdown finished - allow starting now
-            setSynchronizedCountdown(0);
-          }
-        }, 1000);
-        
         // Don't start the quiz yet - wait for countdown to finish
+        // The countdown is handled by the useEffect hook
         return;
       }
       
       // Countdown has finished - proceed to start
       if (timeUntilStart <= 0) {
-        // Clear countdown timer if exists
-        if (countdownTimerRef.current) {
-          clearInterval(countdownTimerRef.current);
-          countdownTimerRef.current = null;
-        }
         // Start the quiz
         await actuallyStartQuiz(quiz);
         return;
@@ -1070,11 +1050,13 @@ export const TeamQuiz: React.FC<TeamQuizProps> = ({ teamId }) => {
                       >
                         <Clock className="w-4 h-4 animate-pulse" />
                         {quiz.synchronizedStartTime && (() => {
-                          // Use synchronizedCountdown state if available, otherwise calculate
+                          // Calculate countdown - use state if available for this quiz, otherwise calculate fresh
                           let timeUntilStart: number;
                           if (synchronizedQuizId === quiz.id && synchronizedCountdown !== null) {
+                            // Use the synchronized countdown state (updated by useEffect)
                             timeUntilStart = synchronizedCountdown;
                           } else {
+                            // Calculate countdown directly from quiz data
                             const startTime = quiz.synchronizedStartTime instanceof Date 
                               ? quiz.synchronizedStartTime.getTime()
                               : (quiz.synchronizedStartTime as any).toMillis?.() || (quiz.synchronizedStartTime as any).seconds * 1000;

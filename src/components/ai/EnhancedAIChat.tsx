@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Send,
   Bot,
@@ -6,26 +7,22 @@ import {
   Loader,
   Brain,
   FileText,
-  Image as ImageIcon,
   Plus,
   MessageSquare,
-  Camera,
   Upload,
   X,
-  Download,
   Copy,
-  RefreshCw,
   Sparkles,
   Menu,
 } from "lucide-react";
 import * as THREE from "three";
 import { unifiedAIService } from "../../utils/aiConfig";
-import { driveStorageUtils } from "../../utils/driveStorage";
 import { AIStatus } from "../notifications/AIStatus";
 import { extractTextFromPdfDataUrl } from "../../utils/pdfText";
 import { dreamToPlanService } from "../../utils/dreamToPlanService";
 import type { DreamToPlanResult } from "../../utils/journalService";
-import { CheckCircle2, Calendar, Bell, ListTodo, Sparkles as SparklesIcon, Users, Mail } from "lucide-react";
+import { realTimeAuth } from "../../utils/realTimeAuth";
+import { CheckCircle2, Calendar, Sparkles as SparklesIcon, Users, Mail } from "lucide-react";
 
 type ChatMessage = {
   id: string;
@@ -58,20 +55,23 @@ interface EnhancedAIChatProps {
   fileContent?: string;
   initialPrompt?: string;
   initialChatType?: ChatType;
+  onActionComplete?: () => void; // Callback to close parent modal after action completes
 }
 
 export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
-  file,
-  fileContent,
+  file: _file,
+  fileContent: _fileContent,
   initialPrompt,
   initialChatType,
+  onActionComplete,
 }) => {
+  const navigate = useNavigate();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string>("");
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
-  const [fileContextText, setFileContextText] = useState("");
+  const [fileContextText] = useState("");
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [uploadedPdf, setUploadedPdf] = useState<string>("");
   const [uploadedFileName, setUploadedFileName] = useState<string>("");
@@ -730,7 +730,7 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
             );
 
             // Check for interview intents first - navigate directly to interview prep
-            const interviewItems = dreamToPlanResult.actionItems.filter(item => item.type === "interview");
+            const interviewItems = dreamToPlanResult.actionItems.filter((item: any) => item.type === "interview");
             if (interviewItems.length > 0) {
               // Navigate to interview prep page with custom interview tab
               window.location.href = "/interview/mock-interview?tab=custom";
@@ -884,59 +884,76 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
     try {
       const hasTeamActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "team");
       const hasStudyPlanActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "study_plan");
+      const hasInterviewActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "interview");
       
       // Only create team if team form was filled and submitted
       if (hasTeamActions && showTeamForm && teamFormData.name.trim()) {
         await handleCreateTeam();
       }
 
-      // Handle study plans - navigate to study plan page with pre-filled data
-      if (hasStudyPlanActions) {
-        const studyPlanItems = currentDreamToPlanResult.actionItems.filter((item: any) => item.type === "study_plan");
-        // Store study plan data in sessionStorage for the study plan page to use
-        sessionStorage.setItem("pendingStudyPlans", JSON.stringify(studyPlanItems));
-        // Navigate to study plan page
-        window.location.href = "/tools/study-plans/new";
-        return; // Don't close modal yet, let navigation happen
-      }
-
-      // Always add todos and goals to calendar
-      await dreamToPlanService.createTodosFromGoals(currentDreamToPlanResult.suggestedGoals);
-      await dreamToPlanService.createTodosFromActions(
-        currentDreamToPlanResult.actionItems.filter((item) => item.type === "todo")
-      );
-      
-      // Handle meetings with date/time from form
+      // Prepare meeting items with date/time from form (exclude study plans and interviews)
       const meetingItems = currentDreamToPlanResult.actionItems
+        .filter((item: any) => item.type === "meeting")
         .map((item: any, originalIdx: number) => {
-          if (item.type === "meeting") {
-            const formData = meetingFormData[originalIdx];
-            if (formData && formData.date && formData.time) {
-              const dateTime = new Date(`${formData.date}T${formData.time}`);
-              return { ...item, suggestedDate: dateTime };
-            }
+          const formData = meetingFormData[originalIdx];
+          if (formData && formData.date && formData.time) {
+            const dateTime = new Date(`${formData.date}T${formData.time}`);
+            return { ...item, suggestedDate: dateTime };
           }
           return item;
-        })
-        .filter((item: any) => item.type === "meeting");
-      await dreamToPlanService.scheduleMeetingsFromActions(meetingItems);
-      
-      await dreamToPlanService.createRemindersFromActions(
-        currentDreamToPlanResult.actionItems.filter((item) => item.type === "reminder")
-      );
+        });
 
-      // Only show success message - no long explanations
-      addMessage(
-        "ai",
-        "✅ Done! All items have been added to your calendar.",
-        "Success"
-      );
-      
+      // Process all items EXCEPT study plans and interviews (todos, goals, meetings, reminders)
+      // Run all operations in parallel for better performance (skip individual syncs)
+      await Promise.all([
+        dreamToPlanService.createTodosFromGoals(currentDreamToPlanResult.suggestedGoals, true),
+        dreamToPlanService.createTodosFromActions(
+          currentDreamToPlanResult.actionItems.filter((item) => item.type === "todo"),
+          true
+        ),
+        dreamToPlanService.scheduleMeetingsFromActions(meetingItems, true),
+        dreamToPlanService.createRemindersFromActions(
+          currentDreamToPlanResult.actionItems.filter((item) => item.type === "reminder")
+        ),
+      ]);
+
+      // Sync todos to calendar once at the end (much faster than multiple syncs)
+      const user = realTimeAuth.getCurrentUser();
+      if (user) {
+        const { calendarService } = await import("../../utils/calendarService");
+        await calendarService.syncTodosToCalendar(user.id);
+      }
+
+      // Close modal immediately
       setShowDreamToPlanModal(false);
       setCurrentDreamToPlanResult(null);
       setTeamFormData({ name: "", emails: [], currentEmail: "" });
       setMeetingFormData({});
       setShowTeamForm(false);
+
+      // Close parent modal if callback provided (e.g., DreamToPlanModal)
+      if (onActionComplete) {
+        onActionComplete();
+      }
+
+      // Handle interviews - navigate to interview prep page (highest priority)
+      if (hasInterviewActions) {
+        navigate("/interview/mock-interview?tab=custom", { replace: false });
+      } else if (hasStudyPlanActions) {
+        // Handle study plans - navigate to study plan page with pre-filled data (after closing modals)
+        const studyPlanItems = currentDreamToPlanResult.actionItems.filter((item: any) => item.type === "study_plan");
+        // Store study plan data in sessionStorage for the study plan page to use
+        sessionStorage.setItem("pendingStudyPlans", JSON.stringify(studyPlanItems));
+        // Navigate to study plan page using React Router (preserves auth state)
+        navigate("/tools/study-plans/new", { replace: false });
+      } else {
+        // Show success message only if no navigation
+        addMessage(
+          "ai",
+          "✅ Done! All items have been added to your calendar.",
+          "Success"
+        );
+      }
     } catch (error) {
       console.error("Error accepting dream-to-plan:", error);
       addMessage("ai", "Sorry, I encountered an error adding items. Please try again.");
@@ -1010,7 +1027,7 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
   const currentSession = getCurrentSession();
 
   return (
-    <div className="flex flex-col lg:flex-row w-full h-full overflow-hidden fixed top-0 left-0 right-0 bottom-0 lg:relative lg:static z-[100] lg:z-auto bg-white dark:bg-slate-900">
+    <div className="flex flex-col lg:flex-row w-full h-screen overflow-hidden fixed top-0 left-0 right-0 bottom-0 lg:relative lg:static z-[100] lg:z-auto bg-white dark:bg-slate-900" style={{ height: '100vh', maxHeight: '100vh' }}>
       {/* Mobile Header */}
       <div className="lg:hidden bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between flex-shrink-0 z-10">
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -1146,8 +1163,8 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
         </div>
       </div>
 
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative z-10" style={{ height: '100%', minHeight: 0 }}>
+      {/* Chat Area - Takes full screen height */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative z-10" style={{ height: '100vh', minHeight: '100vh', flex: '1 1 auto', display: 'flex', flexDirection: 'column' }}>
         {/* Three.js Background Canvas - Only in chat area */}
         <canvas
           ref={canvasRef}
@@ -1161,18 +1178,51 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
             bottom: 0
           }}
         />
-        {/* Header */}
-        <div className="hidden lg:block p-3 sm:p-4 border-b border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex-shrink-0 relative z-10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Mobile sidebar toggle */}
-              <button
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="lg:hidden p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
-                aria-label="Toggle sidebar"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
+        {/* Header - Mobile-first responsive design */}
+        <div className="p-0 sm:p-3 md:p-4 border-b-0 sm:border-b border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-800/50 sm:bg-white/80 sm:dark:bg-slate-900/80 backdrop-blur-sm flex-shrink-0 relative z-10 safe-area-top">
+          {/* Mobile Layout */}
+          <div className="lg:hidden flex flex-col">
+            <div className="flex items-center justify-between px-2 py-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <button
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg btn-touch flex-shrink-0"
+                  aria-label="Toggle sidebar"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+                <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
+                    AI Assistant
+                  </h2>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  onClick={handleNewChatClick}
+                  className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors btn-touch"
+                  title="New Chat"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+                <div className="hidden sm:block">
+                  <AIStatus />
+                </div>
+              </div>
+            </div>
+            {currentSession?.chatType && (
+              <div className="flex items-center gap-2 px-2 pb-2">
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getChatTypeColor(currentSession.chatType)}`}>
+                  {getChatTypeIcon(currentSession.chatType)} {currentSession.chatType.charAt(0).toUpperCase() + currentSession.chatType.slice(1)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Layout */}
+          <div className="hidden lg:flex items-center justify-between">
+            <div className="flex items-center gap-3">
               <Brain className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               <div>
                 <div className="flex items-center gap-2 mb-1">
@@ -1259,39 +1309,40 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
           </div>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50/50 dark:bg-slate-800/50 backdrop-blur-sm min-h-0 relative z-10" style={{ flex: '1 1 auto', overflowY: 'auto' }}>
-          {currentSession?.messages.map((message) => (
+        {/* Messages - Mobile-first responsive design */}
+        <div className="flex-1 overflow-y-auto p-0 sm:p-3 md:p-4 space-y-0 sm:space-y-4 bg-gray-50/50 dark:bg-slate-800/50 backdrop-blur-sm min-h-0 relative z-10 scroll-area-mobile" style={{ flex: '1 1 0%', overflowY: 'auto', WebkitOverflowScrolling: 'touch', minHeight: 0, maxHeight: '100%' }}>
+          {currentSession?.messages.map((message, index) => (
             <div
               key={message.id}
-              className={`flex gap-3 ${
+              className={`flex w-full px-2 ${index === 0 ? 'pt-0' : ''} ${index === (currentSession?.messages.length || 0) - 1 ? 'pb-0 sm:pb-0' : 'pb-1 sm:pb-0'} sm:px-0 sm:pt-0 ${
                 message.type === "user" ? "justify-end" : "justify-start"
               }`}
             >
               <div
-                className={`flex gap-2 sm:gap-3 max-w-[85%] sm:max-w-[80%] ${
+                className={`flex gap-2 sm:gap-3 max-w-[85%] sm:max-w-[75%] md:max-w-[70%] lg:max-w-[65%] ${
                   message.type === "user" ? "flex-row-reverse" : "flex-row"
                 }`}
               >
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                     message.type === "user"
                       ? "bg-blue-600 dark:bg-blue-700 text-white"
                       : "bg-gray-200 dark:bg-slate-600 text-gray-600 dark:text-gray-300"
                   }`}
                 >
                   {message.type === "user" ? (
-                    <User className="w-4 h-4" />
+                    <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   ) : (
-                    <Bot className="w-4 h-4" />
+                    <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   )}
                 </div>
                 <div
-                  className={`rounded-lg p-3 ${
+                  className={`rounded-2xl p-2.5 sm:p-3 text-sm sm:text-base break-words ${
                     message.type === "user"
                       ? "bg-blue-600 dark:bg-blue-700 text-white"
                       : "bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-600"
                   }`}
+                  style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                 >
                   {message.imageUrl && (
                     <img
@@ -1377,21 +1428,21 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
               </div>
             </div>
           )}
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} className="h-0" />
         </div>
 
-        {/* Input Area */}
-        <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex-shrink-0 relative z-10">
+        {/* Input Area - Mobile-first responsive design */}
+        <div className="p-0 sm:p-3 md:p-4 border-t-0 sm:border-t border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-800/50 sm:bg-white/80 sm:dark:bg-slate-900/80 backdrop-blur-sm flex-shrink-0 relative z-10 safe-area-bottom">
           {uploadedImage && (
-            <div className="mb-3 relative inline-block">
+            <div className="mb-2 sm:mb-3 relative inline-block px-2 pt-2">
               <img
                 src={uploadedImage}
                 alt="Uploaded"
-                className="h-20 w-20 object-cover rounded-lg"
+                className="h-16 w-16 sm:h-20 sm:w-20 object-cover rounded-lg"
               />
               <button
                 onClick={() => setUploadedImage("")}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-red-500 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-xs btn-touch"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -1399,10 +1450,10 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
           )}
 
           {uploadedPdf && (
-            <div className="mb-3 relative inline-block">
-              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg">
-                <FileText className="w-5 h-5 text-red-600 dark:text-red-400" />
-                <span className="text-sm text-red-800 dark:text-red-300 font-medium">
+            <div className="mb-2 sm:mb-3 relative inline-block max-w-full px-2 pt-2">
+              <div className="flex items-center gap-2 p-2 sm:p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg">
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                <span className="text-xs sm:text-sm text-red-800 dark:text-red-300 font-medium truncate flex-1 min-w-0">
                   {uploadedFileName}
                 </span>
                 <button
@@ -1410,7 +1461,7 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
                     setUploadedPdf("");
                     setUploadedFileName("");
                   }}
-                  className="ml-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                  className="w-5 h-5 sm:w-6 sm:h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 flex-shrink-0 btn-touch"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -1418,68 +1469,80 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
             </div>
           )}
 
-          <div className="flex gap-2 items-end">
-            <div className="flex gap-1 flex-shrink-0">
+          <div className="flex gap-1.5 sm:gap-2 items-end px-2 pb-2 sm:px-0 sm:pb-0">
+            <button
+              onClick={() => setShowFileUpload(!showFileUpload)}
+              className="p-2 sm:p-2.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors btn-touch flex-shrink-0"
+              title="Upload File"
+            >
+              <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,application/pdf"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            {showFileUpload && (
               <button
-                onClick={() => setShowFileUpload(!showFileUpload)}
-                className="p-2 sm:p-2.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors touch-manipulation"
-                title="Upload File"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2 text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors btn-touch flex-shrink-0"
+                title="Choose Image or PDF"
               >
-                <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              {showFileUpload && (
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-2 text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
-                    title="Choose Image or PDF"
-                  >
-                    <FileText className="w-5 h-5" />
-                  </button>
-                </div>
-              )}
-            </div>
+            )}
 
             <div className="flex-1 relative min-w-0">
               <textarea
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="w-full px-3 py-2 sm:px-4 sm:py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm sm:text-base pr-12"
-                placeholder="Ask me anything, request an image, or upload an image/PDF to analyze..."
+                className="w-full px-3 py-2.5 sm:px-4 sm:py-3 border border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-base sm:text-base"
+                placeholder="Type your message..."
                 rows={1}
-                style={{ minHeight: '44px', maxHeight: '120px' }}
+                style={{ minHeight: '44px', maxHeight: '120px', fontSize: '16px' }}
               />
             </div>
-            <button
-              onClick={handleEnhancePrompt}
-              disabled={!inputMessage.trim() || isEnhancing || isLoading}
-              className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              aria-label="Enhance prompt"
-              title="Enhance this prompt"
-            >
-              {isEnhancing ? (
-                <Loader className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
-              <span className="text-sm hidden sm:inline">Enhance</span>
-            </button>
-            <button
-              onClick={() => handleSendMessage()}
-              disabled={!inputMessage.trim() || isLoading}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              aria-label="Send message"
-            >
-              <Send className="w-4 h-4" />
-            </button>
+            
+            {/* Mobile: Only Send button */}
+            <div className="lg:hidden flex-shrink-0">
+              <button
+                onClick={() => handleSendMessage()}
+                disabled={!inputMessage.trim() || isLoading}
+                className="p-2.5 sm:p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center btn-touch"
+                aria-label="Send message"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Desktop: Enhance and Send buttons */}
+            <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={handleEnhancePrompt}
+                disabled={!inputMessage.trim() || isEnhancing || isLoading}
+                className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 btn-touch"
+                aria-label="Enhance prompt"
+                title="Enhance this prompt"
+              >
+                {isEnhancing ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                <span className="text-sm">Enhance</span>
+              </button>
+              <button
+                onClick={() => handleSendMessage()}
+                disabled={!inputMessage.trim() || isLoading}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center btn-touch"
+                aria-label="Send message"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1853,16 +1916,20 @@ export const EnhancedAIChat: React.FC<EnhancedAIChatProps> = ({
                   const hasTeamActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "team");
                   const hasMeetingActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "meeting");
                   const hasStudyPlanActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "study_plan");
+                  const hasInterviewActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "interview");
                   const hasTodoActions = currentDreamToPlanResult.actionItems?.some((item: any) => item.type === "todo") || currentDreamToPlanResult.suggestedGoals?.length > 0;
                   
                   let buttonText = "Add to Calendar";
-                  if (hasStudyPlanActions && !hasTeamActions && !hasMeetingActions && !hasTodoActions) {
-                    buttonText = "Create Study Plan";
-                  } else if (hasTeamActions && !hasMeetingActions && !hasTodoActions && !hasStudyPlanActions) {
+                  // Prioritize interview and study plan - show "Open Mock Interview" or "Open Study Plan" if they exist
+                  if (hasInterviewActions) {
+                    buttonText = "Open Mock Interview";
+                  } else if (hasStudyPlanActions) {
+                    buttonText = "Open Study Plan";
+                  } else if (hasTeamActions && !hasMeetingActions && !hasTodoActions) {
                     buttonText = "Create Team";
-                  } else if (hasMeetingActions && !hasTeamActions && !hasTodoActions && !hasStudyPlanActions) {
+                  } else if (hasMeetingActions && !hasTeamActions && !hasTodoActions) {
                     buttonText = "Schedule Meeting & Add to Calendar";
-                  } else if (hasTodoActions && !hasTeamActions && !hasMeetingActions && !hasStudyPlanActions) {
+                  } else if (hasTodoActions && !hasTeamActions && !hasMeetingActions) {
                     buttonText = "Add Todos & Calendar";
                   } else {
                     buttonText = "Add All to Calendar";

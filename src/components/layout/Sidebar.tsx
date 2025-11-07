@@ -576,7 +576,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </nav>
 
-      <div className="p-responsive border-t border-gray-200 dark:border-gray-700 backdrop-blur-sm bg-gradient-to-t from-white/50 to-transparent dark:from-black/50 relative z-20 flex-shrink-0">
+      {/* Footer with Profile and Sign Out - Visible on both mobile and desktop */}
+      <div className="p-responsive border-t border-gray-200 dark:border-gray-700 backdrop-blur-sm bg-gradient-to-t from-white/50 to-transparent dark:from-black/50 relative z-20 flex-shrink-0 safe-area-bottom">
         <button
           onClick={() => handleNavigation("/profile/edit")}
           className="w-full flex items-center mb-3 group hover:opacity-80 transition-all duration-300 hover:scale-[1.02] btn-touch"
@@ -600,9 +601,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
         <button
           onClick={onLogout}
-          className="btn-touch w-full flex items-center px-3 py-2 text-responsive-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-300 hover:scale-[1.02] group border border-transparent hover:border-red-200 dark:hover:border-red-800"
+          className="btn-touch w-full flex items-center justify-center px-3 py-2.5 sm:py-2 text-responsive-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-300 hover:scale-[1.02] group border border-transparent hover:border-red-200 dark:hover:border-red-800 font-medium"
         >
-          <LogOut className="w-4 h-4 mr-2 flex-shrink-0 transition-transform duration-300 group-hover:rotate-12" />
+          <LogOut className="w-4 h-4 sm:w-5 sm:h-5 mr-2 flex-shrink-0 transition-transform duration-300 group-hover:rotate-12" />
           <span className="truncate">Sign Out</span>
         </button>
       </div>

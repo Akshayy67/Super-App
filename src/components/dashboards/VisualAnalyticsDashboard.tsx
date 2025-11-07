@@ -61,7 +61,7 @@ import {
 } from "../../utils/performanceAnalytics";
 import { SpeechAnalysisResult } from "../../utils/speechAnalysis";
 import { BodyLanguageAnalysisResult } from "../../utils/bodyLanguageAnalysis";
-import { useAnalyticsDataReadOnly } from "../../hooks/useAnalyticsData";
+import { useAnalyticsData } from "../../hooks/useAnalyticsData";
 import { AnalyticsValidationBanner } from "../analytics/AnalyticsValidationBanner";
 import { InterviewDataManager } from "../InterviewDataManager";
 import { DetailedInterviewHistory } from "../DetailedInterviewHistory";
@@ -131,7 +131,8 @@ export const VisualAnalyticsDashboard: React.FC<
     currentPerformance: latestPerformance,
     isLoading: dataLoading,
     lastUpdated,
-  } = useAnalyticsDataReadOnly();
+    refreshData,
+  } = useAnalyticsData();
 
   // Use the provided currentPerformance or fall back to latest from hook
   const displayPerformance = currentPerformance || latestPerformance;
@@ -1696,11 +1697,14 @@ export const VisualAnalyticsDashboard: React.FC<
             <InterviewDataManager
               onDataChange={async () => {
                 // Trigger a refresh of the analytics data without page reload
-                // The useAnalyticsDataReadOnly hook will automatically update
-                // when storage changes, so we just need to wait a moment
-                console.log("📊 Data changed, analytics will auto-refresh");
-                // Force a small delay to allow deletion to complete
-                await new Promise(resolve => setTimeout(resolve, 500));
+                console.log("📊 Data changed, forcing analytics refresh...");
+                // Wait a moment for deletion to complete, then force refresh
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Force immediate refresh of analytics data
+                if (refreshData) {
+                  await refreshData();
+                  console.log("✅ Analytics data refreshed after deletion");
+                }
               }}
               showDetailedView={(interview) => {
                 // Switch to detailed history tab and show specific interview

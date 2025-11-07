@@ -228,6 +228,7 @@ export const DreamToPlanModal: React.FC<DreamToPlanModalProps> = ({
                     file={undefined}
                     fileContent={undefined}
                     initialChatType="dream-to-plan"
+                    onActionComplete={handleClose}
                   />
                 </div>
               )}

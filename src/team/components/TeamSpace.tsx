@@ -380,14 +380,17 @@ export const TeamSpace: React.FC<{
       setInviteError(null);
       setInviteSuccess(null);
 
+      console.log(`📧 Inviting member with role:`, { email: inviteEmail.trim(), role: inviteRole });
+      
       await teamManagementService.inviteMember(
         selectedTeam.id,
         inviteEmail.trim(),
         inviteRole
       );
 
-      setInviteSuccess(`Invitation sent successfully to ${inviteEmail}!`);
+      setInviteSuccess(`Invitation sent successfully to ${inviteEmail.trim()} as ${inviteRole}!`);
       setInviteEmail("");
+      setInviteRole("member"); // Reset to default role after successful invite
 
       // Close modal after a short delay to show success message
       setTimeout(() => {

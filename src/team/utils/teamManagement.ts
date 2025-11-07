@@ -312,6 +312,8 @@ class TeamManagementService {
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
     });
 
+    console.log(`✅ Created team invite with role:`, { inviteId, email, role, teamId });
+
     // Send email invitation using the email service
     const emailResult = await emailService.sendTeamInvite({
       teamId,
@@ -322,13 +324,14 @@ class TeamManagementService {
     });
 
     if (emailResult.success) {
-      console.log(`✅ Team invitation sent successfully to ${email}`);
+      console.log(`✅ Team invitation sent successfully to ${email} with role: ${role}`);
     } else {
       console.warn("Failed to send email invitation:", emailResult.error);
       // Continue with the process even if email fails (for development)
     }
 
-    await this.logActivity(teamId, "invited member", email, "member");
+    // Log activity with the actual role that was assigned
+    await this.logActivity(teamId, "invited member", email, role);
   }
 
   async joinTeamByInviteCode(inviteCode: string): Promise<string> {

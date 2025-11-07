@@ -407,6 +407,17 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
       } catch (error) {
         console.error("Failed to parse saved position:", error);
       }
+    } else if (finalPosition === "draggable" && !dragPosition) {
+      // Set default position for feedback button (bottom-right) if no saved position
+      const setDefaultPosition = () => {
+        const defaultX = Math.max(20, window.innerWidth - 80); // 80px from right (button width + margin)
+        const defaultY = Math.max(20, window.innerHeight - 80); // 80px from bottom (button height + margin)
+        setDragPosition({ x: defaultX, y: defaultY });
+      };
+      // Wait for window to be available
+      if (typeof window !== 'undefined') {
+        setDefaultPosition();
+      }
     }
   }, [finalPosition]);
 
