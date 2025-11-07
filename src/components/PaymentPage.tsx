@@ -344,13 +344,16 @@ export const PaymentPage: React.FC = () => {
         setReferralApplied(true);
         alert(`✅ Discount code applied! You'll get ${discountValidation.discountPercentage}% off when you proceed to payment!`);
         return;
-      } else if (discountValidation.error) {
-        // Show specific error for discount codes
+      } else if (discountValidation.error === "This discount code has already been used") {
+        // Only return early if discount code is already used - that's a real error
+        // For "Invalid discount code" or "This is not a discount code", continue to try as referral/voucher
         alert(discountValidation.error);
         return;
       }
+      // If error is "Invalid discount code" or "This is not a discount code", 
+      // continue below to try redeeming as referral/voucher
       
-      // If not a discount code, try to redeem as referral/voucher (pass selected plan type)
+      // If not a discount code (or invalid discount code), try to redeem as referral/voucher (pass selected plan type)
       const result = await redeemReferralCode(
         referralCode.trim(),
         user.id,
