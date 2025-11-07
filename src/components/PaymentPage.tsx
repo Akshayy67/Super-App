@@ -312,7 +312,7 @@ export const PaymentPage: React.FC = () => {
   const plans = {
     monthly: { price: 299, originalPrice: 999, savings: 70, launchOffer: true },
     yearly: { price: 999, originalPrice: 11988, savings: 92, launchOffer: true },
-    student: { price: 99, originalPrice: 499, savings: 80, launchOffer: true },
+    student: { price: 149, originalPrice: 999, savings: 85, launchOffer: true },
   };
 
   const handleReferralCode = async () => {
@@ -634,7 +634,7 @@ export const PaymentPage: React.FC = () => {
                   🎉 LAUNCH SPECIAL - LIMITED TIME!
                 </h3>
                 <p className="text-gray-200">
-                  Monthly: ₹299 (70% OFF) • Student: ₹99 (80% OFF) • Use referral code for FREE premium!
+                  Monthly: ₹299 (70% OFF) • Student: ₹149 (85% OFF) • Use referral code for FREE premium!
                 </p>
               </div>
             </div>
