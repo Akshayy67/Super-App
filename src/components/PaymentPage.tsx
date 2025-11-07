@@ -635,6 +635,53 @@ export const PaymentPage: React.FC = () => {
               <span className="text-sm">24/7 Support</span>
             </div>
           </div>
+
+          {/* Policy Links */}
+          <div className="mt-8 pt-8 border-t border-gray-800">
+            <p className="text-sm text-gray-400 mb-4 text-center">
+              By subscribing, you agree to our policies:
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-4 mb-4">
+              <a 
+                href="/policies/terms-and-conditions.html" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-blue-400 hover:text-blue-300 underline text-sm transition-colors"
+              >
+                Terms and Conditions
+              </a>
+              <span className="text-gray-600">•</span>
+              <a 
+                href="/policies/privacy-policy.html" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-blue-400 hover:text-blue-300 underline text-sm transition-colors"
+              >
+                Privacy Policy
+              </a>
+              <span className="text-gray-600">•</span>
+              <a 
+                href="/policies/cancellation-refund.html" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-blue-400 hover:text-blue-300 underline text-sm transition-colors"
+              >
+                Cancellation & Refund Policy
+              </a>
+              <span className="text-gray-600">•</span>
+              <a 
+                href="/policies/contact-us.html" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-blue-400 hover:text-blue-300 underline text-sm transition-colors"
+              >
+                Contact Us
+              </a>
+            </div>
+            <p className="text-xs text-gray-500 text-center">
+              Secure payment via Razorpay • Cancel anytime • 30-day money-back guarantee
+            </p>
+          </div>
         </div>
       </div>
     </div>
