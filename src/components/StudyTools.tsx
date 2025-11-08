@@ -80,12 +80,12 @@ export const StudyTools: React.FC = () => {
 
   const getColorClasses = (color: string) => {
     const colors = {
-      blue: "bg-blue-100 text-blue-600 border-blue-200",
-      yellow: "bg-yellow-100 text-yellow-600 border-yellow-200",
-      green: "bg-green-100 text-green-600 border-green-200",
-      purple: "bg-purple-100 text-purple-600 border-purple-200",
-      indigo: "bg-indigo-100 text-indigo-600 border-indigo-200",
-      teal: "bg-teal-100 text-teal-600 border-teal-200",
+      blue: "bg-blue-100 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
+      yellow: "bg-yellow-100 text-yellow-600 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800",
+      green: "bg-green-100 text-green-600 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800",
+      purple: "bg-purple-100 text-purple-600 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800",
+      indigo: "bg-indigo-100 text-indigo-600 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800",
+      teal: "bg-teal-100 text-teal-600 border-teal-200 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-800",
     };
     return colors[color as keyof typeof colors] || colors.blue;
   };
@@ -313,7 +313,6 @@ export const StudyTools: React.FC = () => {
 
   const runTool = async () => {
     if (!selectedTool || isLoading) return;
-
     let content = inputText;
     
     // Prioritize uploaded file content
@@ -571,8 +570,8 @@ export const StudyTools: React.FC = () => {
 
       {/* Tool Interface */}
       {selectedTool && (
-        <div className="border-b border-gray-200 p-6">
-          <h3 className="text-lg font-semibold mb-4">
+        <div className="border-b border-gray-200 dark:border-slate-700 p-6">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
             {tools.find((t) => t.id === selectedTool)?.name}
           </h3>
 
@@ -657,24 +656,24 @@ export const StudyTools: React.FC = () => {
 
             {/* Text Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {selectedTool === "explanation"
-                  ? "Concept to Explain"
-                  : "Text to Analyze"}
-              </label>
-              <textarea
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
-                placeholder={
-                  selectedTool === "explanation"
-                    ? "Enter a concept you want explained..."
-                    : selectedDocument
-                    ? "Text will be extracted from the selected document, or you can add additional text here..."
-                    : "Paste your text here..."
-                }
-              />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {selectedTool === "explanation"
+                    ? "Concept to Explain"
+                    : "Text to Analyze"}
+                </label>
+                <textarea
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                  placeholder={
+                    selectedTool === "explanation"
+                      ? "Enter a concept you want explained..."
+                      : selectedDocument
+                      ? "Text will be extracted from the selected document, or you can add additional text here..."
+                      : "Paste your text here..."
+                  }
+                />
             </div>
 
             <button

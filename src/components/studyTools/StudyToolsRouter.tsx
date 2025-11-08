@@ -4,6 +4,7 @@ import { StudyToolsCombined } from "./StudyToolsCombined";
 import { StudyTools } from "../StudyTools";
 import { StudyPlanManager } from "../studyPlan/StudyPlan";
 import { FlashCards } from "../FlashCards";
+import { YouTubeSummarizer } from "../YouTubeSummarizer";
 
 export const StudyToolsRouter: React.FC = () => {
   return (
@@ -21,6 +22,7 @@ export const StudyToolsRouter: React.FC = () => {
         <Route path="study-plans/:planId" element={<StudyPlanManager />} />
         <Route path="study-plans" element={<StudyPlanManager />} />
         <Route path="flashcards/*" element={<FlashCards />} />
+        <Route path="youtube-summarizer" element={<YouTubeSummarizer />} />
         <Route
           path="*"
           element={<Navigate to="/tools/study-plans" replace />}

@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
-import { Brain, Target, BookOpen } from "lucide-react";
+import { Brain, Target, BookOpen, Youtube } from "lucide-react";
 
 export const StudyToolsCombined: React.FC = () => {
   const location = useLocation();
@@ -28,6 +28,12 @@ export const StudyToolsCombined: React.FC = () => {
       label: "Flash Cards",
       icon: BookOpen,
       path: "/tools/flashcards",
+    },
+    {
+      id: "youtube-summarizer",
+      label: "YouTube Summarizer",
+      icon: Youtube,
+      path: "/tools/youtube-summarizer",
     },
     {
       id: "study-tools",
