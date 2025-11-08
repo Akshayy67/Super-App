@@ -34,6 +34,13 @@ import { StudyPlanManager } from "../studyPlan/StudyPlan";
 import { SubscriptionPage } from "../SubscriptionPage";
 import { ContactForm } from "../ContactForm";
 import { ResumeBuilderPage } from "../resumeBuilder/ResumeBuilderPage";
+import { GamifiedProfile } from "../profile/GamifiedProfile";
+import { Leaderboard } from "../gamification/Leaderboard";
+import { AICodingInterview } from "../gamification/AICodingInterview";
+import { SkillAssessment } from "../gamification/SkillAssessment";
+import { AIStudyRoom } from "../studyrooms/AIStudyRoom";
+import { PersonalAIAssistant } from "../ai/PersonalAIAssistant";
+import { EnhancedContestSystem } from "../contests/EnhancedContestSystem";
 
 interface AppRouterProps {
   invitationData: {
@@ -348,6 +355,67 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
           </BlockedUserGuard>
         } 
       />
+      
+      {/* Gamification Routes */}
+      <Route 
+        path="/gamified-profile" 
+        element={
+          <BlockedUserGuard>
+            <PremiumGuard>
+              <PageTransitionWrapper><GamifiedProfile /></PageTransitionWrapper>
+            </PremiumGuard>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/leaderboard" 
+        element={
+          <BlockedUserGuard>
+            <PremiumGuard>
+              <PageTransitionWrapper><Leaderboard /></PageTransitionWrapper>
+            </PremiumGuard>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/coding-interview" 
+        element={
+          <BlockedUserGuard>
+            <PremiumGuard>
+              <PageTransitionWrapper><AICodingInterview /></PageTransitionWrapper>
+            </PremiumGuard>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/skill-assessment" 
+        element={
+          <BlockedUserGuard>
+            <PremiumGuard>
+              <PageTransitionWrapper><SkillAssessment /></PageTransitionWrapper>
+            </PremiumGuard>
+          </BlockedUserGuard>
+        } 
+      />
+      
+      {/* AI-Powered Features */}
+      <Route 
+        path="/ai-assistant" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><PersonalAIAssistant /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/study-rooms" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><AIStudyRoom /></PageTransitionWrapper>
+          </BlockedUserGuard>
+        } 
+      />
+      
       <Route 
         path="/about" 
         element={<AboutUsPage />}

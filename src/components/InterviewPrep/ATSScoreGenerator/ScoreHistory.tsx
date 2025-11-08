@@ -13,6 +13,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { ATSService, ScoreRun, UserStats } from "../../../utils/atsService";
+import { realTimeAuth } from "../../../utils/realTimeAuth";
 
 export const ScoreHistory: React.FC = () => {
   const [scoreRuns, setScoreRuns] = useState<ScoreRun[]>([]);
@@ -37,9 +38,16 @@ export const ScoreHistory: React.FC = () => {
 
       setHasMore(pagination.hasNext);
       setPage(pageNum);
-    } catch (error) {
-      console.error("Failed to load score runs:", error);
-      setError("Failed to load score history");
+    } catch (error: any) {
+      // Network errors are expected when backend is unavailable - suppress console logs
+      // Only show user-facing error for connection issues (not 404/401 which mean "no data")
+      if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
+        // Backend unavailable - expected, don't log
+        setError("Unable to connect to score history service");
+      } else if (error?.response?.status !== 404 && error?.response?.status !== 401) {
+        console.error("Unexpected error loading score runs:", error);
+        setError("Unable to connect to score history service");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -49,13 +57,15 @@ export const ScoreHistory: React.FC = () => {
     try {
       const stats = await ATSService.getUserStats();
       setUserStats(stats);
-    } catch (error) {
-      console.error("Failed to load user stats:", error);
+    } catch (error: any) {
+      // Silently fail for stats - not critical, don't clutter console
+      // Network errors are expected when backend service is unavailable
     }
   };
 
   useEffect(() => {
-    if (ATSService.isAuthenticated()) {
+    const user = realTimeAuth.getCurrentUser();
+    if (user) {
       loadScoreRuns();
       loadUserStats();
     } else {
@@ -77,8 +87,10 @@ export const ScoreHistory: React.FC = () => {
       if (userStats) {
         loadUserStats();
       }
-    } catch (error) {
-      console.error("Failed to delete score run:", error);
+    } catch (error: any) {
+      if (error?.code !== 'ERR_NETWORK') {
+        console.error("Failed to delete score run:", error);
+      }
       setError("Failed to delete score run");
     }
   };
@@ -94,8 +106,10 @@ export const ScoreHistory: React.FC = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Failed to download PDF:", error);
+    } catch (error: any) {
+      if (error?.code !== 'ERR_NETWORK') {
+        console.error("Failed to download PDF:", error);
+      }
       setError("Failed to download PDF report");
     }
   };
@@ -117,7 +131,8 @@ export const ScoreHistory: React.FC = () => {
     });
   };
 
-  if (!ATSService.isAuthenticated()) {
+  const user = realTimeAuth.getCurrentUser();
+  if (!user) {
     return (
       <div className="text-center py-12">
         <History className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -131,7 +146,7 @@ export const ScoreHistory: React.FC = () => {
     );
   }
 
-  if (isLoading && scoreRuns.length === 0) {
+  if (isLoading && scoreRuns.length === 0 && !error) {
     return (
       <div className="text-center py-12">
         <RefreshCw className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto mb-4 animate-spin" />
@@ -144,8 +159,8 @@ export const ScoreHistory: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Error Display */}
-      {error && (
+      {/* Error Display - Only show for critical errors */}
+      {error && !error.includes("connect") && scoreRuns.length > 0 && (
         <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <div className="flex items-center space-x-2">
             <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
@@ -223,10 +238,12 @@ export const ScoreHistory: React.FC = () => {
         <div className="text-center py-12">
           <History className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-            No Score History Yet
+            {error && error.includes("connect") ? "Service Unavailable" : "No Score History Yet"}
           </h3>
           <p className="text-gray-600 dark:text-gray-400">
-            Generate your first ATS score to start tracking your progress.
+            {error && error.includes("connect") 
+              ? "The score history service is currently unavailable. Please generate a new score to start tracking your progress." 
+              : "Generate your first ATS score to start tracking your progress."}
           </p>
         </div>
       ) : (

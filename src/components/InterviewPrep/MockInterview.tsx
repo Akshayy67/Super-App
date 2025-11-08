@@ -42,6 +42,7 @@ import { InterviewFeedback } from "./InterviewFeedback";
 import { JAMSession } from "./JAMSession";
 import { GeminiATSService } from "../../utils/geminiATSService";
 import { useFaceDetection } from "../../hooks/useFaceDetection";
+import { AICodingInterview } from "../gamification/AICodingInterview";
 import {
   FaceDetectionOverlay,
   EyeContactStatus,
@@ -102,13 +103,13 @@ export const MockInterview: React.FC = () => {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("general");
-  const [activeTab, setActiveTab] = useState<"templates" | "custom" | "resume">(
-    (tabParam === "custom" || tabParam === "resume") ? tabParam : "templates"
+  const [activeTab, setActiveTab] = useState<"templates" | "custom" | "resume" | "coding">(
+    (tabParam === "custom" || tabParam === "resume" || tabParam === "coding") ? tabParam : "templates"
   );
   
   // Update active tab when URL parameter changes
   useEffect(() => {
-    if (tabParam === "custom" || tabParam === "resume") {
+    if (tabParam === "custom" || tabParam === "resume" || tabParam === "coding") {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -3153,6 +3154,21 @@ Important:
                   <span className="sm:hidden">Resume</span>
                 </div>
               </button>
+              <button
+                onClick={() => setActiveTab("coding")}
+                className={`flex-shrink-0 py-2 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
+                  activeTab === "coding"
+                    ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg border-2 border-orange-200 dark:border-orange-600"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-slate-700/50"
+                }`}
+                style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}
+              >
+                <div className="flex items-center justify-center gap-1 sm:gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                  <span className="hidden sm:inline">AI Coding Interview</span>
+                  <span className="sm:hidden">Coding</span>
+                </div>
+              </button>
             </div>
           </div>
         </div>
@@ -3932,6 +3948,13 @@ Important:
           </div>
         </div>
       </div>
+
+      {/* AI Coding Interview Tab */}
+      {activeTab === "coding" && (
+        <div className="mt-6">
+          <AICodingInterview />
+        </div>
+      )}
 
       {/* Feedback Analysis Section */}
       {messages.length > 0 && (

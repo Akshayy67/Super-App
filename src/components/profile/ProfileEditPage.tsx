@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Camera, Save, User, Mail, Phone, MapPin, Globe, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, Camera, Save, User, Mail, Phone, MapPin, Globe, FileText, Loader2, Trophy, Zap, Github, Linkedin, Twitter } from "lucide-react";
 import { ProfileService } from "../../services/profileService";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import { UserProfile } from "../../types";
+import { gamificationService, LEVELS } from "../../services/gamificationService";
 
 export const ProfileEditPage: React.FC = () => {
   const navigate = useNavigate();
@@ -25,10 +26,35 @@ export const ProfileEditPage: React.FC = () => {
     website: "",
     photoURL: "",
   });
+  
+  // Gamification data
+  const [gamificationData, setGamificationData] = useState<any>(null);
+  const [socialLinks, setSocialLinks] = useState({
+    github: "",
+    linkedin: "",
+    twitter: "",
+  });
 
   useEffect(() => {
     loadProfile();
+    loadGamificationData();
   }, []);
+  
+  const loadGamificationData = async () => {
+    if (!user?.id) {
+      console.log("No user ID available for gamification");
+      return;
+    }
+    try {
+      console.log("Loading gamification data for user:", user.id);
+      await gamificationService.updateLoginStreak(user.id);
+      const data = await gamificationService.getUserGamification(user.id);
+      console.log("Gamification data loaded:", data);
+      setGamificationData(data);
+    } catch (error) {
+      console.error("Error loading gamification data:", error);
+    }
+  };
 
   const loadProfile = async () => {
     if (!user) {
@@ -210,6 +236,55 @@ export const ProfileEditPage: React.FC = () => {
         {success && (
           <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
             <p className="text-sm text-green-800 dark:text-green-200">{success}</p>
+          </div>
+        )}
+
+        {/* Gamification Section */}
+        {gamificationData && (
+          <div className="mb-6 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold">{LEVELS[gamificationData.level]?.name || 'Novice'}</h2>
+                <p className="text-white/80">Level {gamificationData.level}</p>
+              </div>
+              <div className="text-right">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-6 h-6 text-yellow-300" />
+                  <span className="text-2xl font-bold">{gamificationData.xp}</span>
+                </div>
+                <p className="text-white/80 text-sm">XP Points</p>
+              </div>
+            </div>
+            
+            {/* XP Progress Bar */}
+            <div className="mb-4">
+              <div className="flex justify-between text-sm mb-1">
+                <span>Progress to next level</span>
+                <span>{gamificationData.xp} / {gamificationData.nextLevelXP || 0} XP</span>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-3 overflow-hidden">
+                <div 
+                  className="h-full bg-yellow-400 transition-all duration-500"
+                  style={{ width: `${((gamificationData.xp / (gamificationData.nextLevelXP || 1)) * 100).toFixed(1)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-3 gap-4 mt-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold">{gamificationData.stats?.currentStreak || 0}</div>
+                <div className="text-white/80 text-xs">Day Streak</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">{gamificationData.achievements?.length || 0}</div>
+                <div className="text-white/80 text-xs">Achievements</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">#{gamificationData.rank || '---'}</div>
+                <div className="text-white/80 text-xs">Global Rank</div>
+              </div>
+            </div>
           </div>
         )}
 

@@ -3,6 +3,7 @@ import { X, FileText, Tag, Save, Copy, Check, Folder, Image as ImageIcon, Camera
 import { ShortNote, NoteFolder } from "../types";
 import { storageUtils } from "../../utils/storage";
 import { realTimeAuth } from "../../utils/realTimeAuth";
+import { NoteContentRenderer } from "./NoteContentRenderer";
 
 interface GlobalNoteCreatorProps {
   isVisible: boolean;

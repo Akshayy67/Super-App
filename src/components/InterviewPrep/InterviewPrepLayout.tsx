@@ -84,10 +84,16 @@ export const InterviewPrepLayout: React.FC<InterviewPrepLayoutProps> = ({
       path: "/interview/resume-builder",
     },
     {
-      id: "job-match",
-      label: "Job Match",
-      icon: Sparkles,
-      path: "/interview/job-match",
+      id: "job-hunt",
+      label: "Job Hunt",
+      icon: Briefcase,
+      path: "/interview/job-hunt",
+    },
+    {
+      id: "skill-assessment",
+      label: "Skill Assessment",
+      icon: Target,
+      path: "/interview/skill-assessment",
     },
   ];
 

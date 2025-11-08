@@ -11,7 +11,8 @@ import { EnhancedMockInterview } from "../EnhancedMockInterview";
 import { EnhancedAnalyticsIntegration } from "../analytics/EnhancedAnalyticsIntegration";
 import { ATSScoreGenerator } from "./ATSScoreGenerator/ATSScoreGenerator";
 import { ResumeBuilderPage } from "../resumeBuilder/ResumeBuilderPage";
-import { JobMatch } from "./JobMatch";
+import { JobHunt } from "./JobHunt";
+import { SkillAssessment } from "../gamification/SkillAssessment";
 
 export const InterviewPrepRouter: React.FC = () => {
   return (
@@ -39,7 +40,8 @@ export const InterviewPrepRouter: React.FC = () => {
         <Route path="/interview-tips" element={<InterviewTips />} />
         <Route path="/ats-score" element={<ATSScoreGenerator />} />
         <Route path="/resume-builder" element={<ResumeBuilderPage />} />
-        <Route path="/job-match" element={<JobMatch />} />
+        <Route path="/job-hunt" element={<JobHunt />} />
+        <Route path="/skill-assessment" element={<SkillAssessment />} />
         <Route
           path="*"
           element={<Navigate to="/interview/overview" replace />}

@@ -20,6 +20,9 @@ import {
   Info,
   Target,
   FileText,
+  Trophy,
+  Zap,
+  Code,
 } from "lucide-react";
 import { gsap } from "gsap";
 import * as THREE from "three";
@@ -79,6 +82,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: Briefcase,
       path: "/interview",
     },
+    { id: "ai-assistant", label: "AI Learning Assistant", icon: Brain, path: "/ai-assistant", badge: "NEW" },
+    { id: "study-rooms", label: "Study Rooms", icon: Video, path: "/study-rooms", badge: "NEW" },
     { id: "team", label: "Team Space", icon: Users, path: "/team" },
     { id: "community", label: "Community", icon: MessageCircle, path: "/community" },
     { id: "about", label: "About Us", icon: Info, path: "/about" },

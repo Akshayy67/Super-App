@@ -41,7 +41,7 @@ import { realTimeAuth } from "../utils/realTimeAuth";
 import { Timestamp } from "firebase/firestore";
 import { Comment } from "../services/communityService";
 import { FriendsCommunity } from "./FriendsCommunity";
-import { CommunityQuiz } from "./CommunityQuiz";
+import { EnhancedContestSystem } from "./contests/EnhancedContestSystem";
 import { ProfileService } from "../services/profileService";
 import { UserAvatar } from "./ui/UserAvatar";
 import { isAdmin } from "../utils/adminUtils";
@@ -176,7 +176,7 @@ const CommentsSection: React.FC<{
 export const Community: React.FC = () => {
   const navigate = useNavigate();
   const [communityMode, setCommunityMode] = useState<"global" | "friends">("global");
-  const [activeTab, setActiveTab] = useState<"feed" | "events" | "leaderboard" | "resources" | "quiz">("feed");
+  const [activeTab, setActiveTab] = useState<"feed" | "events" | "leaderboard" | "resources" | "contests">("feed");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
   
@@ -607,8 +607,8 @@ export const Community: React.FC = () => {
   const tabs = [
     { id: "feed", label: "Community Feed", icon: MessageCircle },
     { id: "events", label: "Events", icon: Calendar },
-    { id: "quiz", label: "Quiz", icon: ClipboardList },
-    { id: "leaderboard", label: "Leaderboard", icon: Trophy },
+    { id: "contests", label: "Contests", icon: Trophy },
+    { id: "leaderboard", label: "Leaderboard", icon: Award },
     { id: "resources", label: "Resources", icon: BookOpen }
   ];
 
@@ -1237,9 +1237,9 @@ export const Community: React.FC = () => {
             </div>
           )}
 
-          {/* Quiz Tab */}
-          {activeTab === "quiz" && (
-            <CommunityQuiz />
+          {/* Contests Tab */}
+          {activeTab === "contests" && (
+            <EnhancedContestSystem />
           )}
 
           {/* Resources Tab */}

@@ -58,7 +58,7 @@ import { DoubtDiscussionComponent } from "./DoubtDiscussion";
 import { PairTasks } from "./PairTasks";
 import { autoFileAccessChecker } from "../../utils/autoFileAccessChecker";
 import { filePreviewService } from "../../utils/filePreviewService";
-import { TeamQuiz } from "./TeamQuiz";
+import { EnhancedContestSystem } from "../../components/contests/EnhancedContestSystem";
 import { CallManager } from "../../components/call/CallManager";
 import { TeamMeetingModal } from "../../components/call/TeamMeetingModal";
 import { callService } from "../../services/callService";
@@ -100,7 +100,7 @@ const getTabConfig = (teamType: "general" | "study") => {
       { key: "members", label: "Study Groups", icon: Users },
       { key: "files", label: "Study Materials", icon: BookOpen },
       { key: "projects", label: "Study Sessions", icon: Clock },
-      { key: "quiz", label: "Quiz", icon: Target },
+      { key: "contests", label: "Contests", icon: Award },
       { key: "pairtasks", label: "Pair Tasks", icon: Code },
       { key: "doubts", label: "Doubt Discussion", icon: Brain },
       { key: "chat", label: "General Chat", icon: MessageSquare },
@@ -112,7 +112,7 @@ const getTabConfig = (teamType: "general" | "study") => {
     { key: "members", label: "Members", icon: Users },
     { key: "files", label: "Files", icon: FileText },
     { key: "projects", label: "Projects", icon: Folder },
-    { key: "quiz", label: "Quiz", icon: Target },
+    { key: "contests", label: "Contests", icon: Award },
     { key: "pairtasks", label: "Pair Tasks", icon: Code },
     { key: "doubts", label: "Doubt Discussion", icon: Brain },
     { key: "chat", label: "Chat", icon: MessageSquare },
@@ -150,7 +150,7 @@ export const TeamSpace: React.FC<{
     | "settings"
     | "doubts"
     | "pairtasks"
-    | "quiz"
+    | "contests"
   >("overview");
   const [teamActivities, setTeamActivities] = useState<TeamActivity[]>([]);
   const [sharedResources, setSharedResources] = useState<SharedResource[]>([]);
