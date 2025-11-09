@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring, animate } from "framer-motion";
-import { Cloud, Wand2, Zap } from "lucide-react";
+import { Cloud, Wand2, Zap, Lock } from "lucide-react";
 import { DreamToPlanModal } from "./DreamToPlanModal";
+import { realTimeAuth } from "../../utils/realTimeAuth";
+import { isPremiumUser } from "../../services/premiumUserService";
+import { useNavigate } from "react-router-dom";
 
 // Rotating helpful messages
 const helpMessages = [
@@ -41,15 +44,32 @@ export const DreamToPlanButton: React.FC<DreamToPlanButtonProps> = ({
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [currentHelpMessage, setCurrentHelpMessage] = useState(0);
+  const [isPremium, setIsPremium] = useState<boolean | null>(null);
+  const [showPremiumTooltip, setShowPremiumTooltip] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const isHoveredRef = useRef(false);
   const isDraggingRef = useRef(false);
+  const navigate = useNavigate();
 
   // Button position (for moving the entire button)
   const buttonPositionX = useMotionValue(0);
   const buttonPositionY = useMotionValue(0);
   const smoothButtonX = useSpring(buttonPositionX, { stiffness: 80, damping: 20 });
   const smoothButtonY = useSpring(buttonPositionY, { stiffness: 80, damping: 20 });
+
+  // Check premium status
+  useEffect(() => {
+    const checkPremium = async () => {
+      const user = realTimeAuth.getCurrentUser();
+      if (user) {
+        const premium = await isPremiumUser(user.id);
+        setIsPremium(premium);
+      } else {
+        setIsPremium(false);
+      }
+    };
+    checkPremium();
+  }, []);
 
   // Use props if provided, otherwise use defaults
   const finalPosition = position ?? "bottom-left";

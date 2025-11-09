@@ -1,8 +1,10 @@
-import React, { useState } from "react";
-import { X, Download, ZoomIn, ZoomOut, ExternalLink } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, Download, ZoomIn, ZoomOut, ExternalLink, Lock } from "lucide-react";
 import { FileItem } from "../types";
 import { driveStorageUtils } from "../../utils/driveStorage";
 import { filePreviewService } from "../../utils/filePreviewService";
+import { realTimeAuth } from "../../utils/realTimeAuth";
+import { isPremiumUser } from "../../services/premiumUserService";
 
 interface FilePreviewProps {
   file: FileItem | null;
@@ -14,7 +16,23 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
   const [zoom, setZoom] = useState(100);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isPremium, setIsPremium] = useState<boolean | null>(null);
+  const [showPremiumTooltip, setShowPremiumTooltip] = useState(false);
   const previewRef = React.useRef<HTMLDivElement>(null);
+
+  // Check premium status
+  useEffect(() => {
+    const checkPremium = async () => {
+      const user = realTimeAuth.getCurrentUser();
+      if (user) {
+        const premium = await isPremiumUser(user.id);
+        setIsPremium(premium);
+      } else {
+        setIsPremium(false);
+      }
+    };
+    checkPremium();
+  }, []);
 
   if (!file) return null;
 
@@ -458,14 +476,42 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
           </div>
 
           <div className="flex items-center space-x-2 ml-4">
-            <button
-              onClick={() => setShowAIChat((prev) => !prev)}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              title={showAIChat ? "Close AI Analysis" : "AI Analysis"}
-            >
-              {/* You can use a chat or analysis icon here if available */}
-              <span className="font-bold">AI</span>
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => {
+                  if (isPremium === false) {
+                    setShowPremiumTooltip(true);
+                    setTimeout(() => setShowPremiumTooltip(false), 3000);
+                  } else {
+                    setShowAIChat((prev) => !prev);
+                  }
+                }}
+                className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${
+                  isPremium === false
+                    ? 'text-gray-400 hover:text-gray-600 bg-gray-100 cursor-not-allowed'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+                title={isPremium === false ? "Premium Feature" : (showAIChat ? "Close AI Analysis" : "AI Analysis")}
+                disabled={isPremium === false}
+              >
+                {isPremium === false && <Lock className="w-4 h-4" />}
+                <span className="font-bold">{isPremium === false ? 'AI 🔒' : 'AI'}</span>
+              </button>
+              
+              {/* Premium Tooltip */}
+              {showPremiumTooltip && isPremium === false && (
+                <div className="absolute top-full right-0 mt-2 w-64 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-lg shadow-2xl z-50 animate-bounce">
+                  <div className="text-sm font-semibold mb-2">🌟 Premium Feature</div>
+                  <div className="text-xs mb-3">AI-powered file analysis is available for premium users</div>
+                  <button
+                    onClick={() => window.location.href = '/payment'}
+                    className="w-full bg-white text-purple-600 py-1 px-3 rounded text-xs font-bold hover:bg-gray-100 transition-colors"
+                  >
+                    Upgrade Now
+                  </button>
+                </div>
+              )}
+            </div>
             {canZoom && (
               <>
                 <button
