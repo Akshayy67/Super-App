@@ -1161,43 +1161,66 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
             </>
           ) : (
             // Normal grid layout
-            <div className="flex-1 p-4 h-full overflow-auto">
+            <div className="flex-1 p-4 h-full overflow-y-auto">
               {viewMode === 'grid' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 h-full auto-rows-fr">
-                  {/* Local video */}
-                  <div className="min-h-[300px]">
-                    <ParticipantVideo
-                      participant={currentParticipant}
-                      stream={isScreenSharing ? screenStream : localStream}
-                      isLocal
-                      onPin={() => handlePinParticipant(user.id)}
-                      className="h-full w-full"
-                    />
-                  </div>
+                (() => {
+                  // Calculate total participants including current user
+                  const allParticipantIds = Object.keys(meeting.participants);
+                  const totalParticipants = allParticipantIds.length;
+                  
+                  // Determine grid layout based on participant count
+                  let gridClass = '';
+                  if (totalParticipants === 1) {
+                    gridClass = 'grid-cols-1';
+                  } else if (totalParticipants === 2) {
+                    gridClass = 'grid-cols-1 md:grid-cols-2';
+                  } else if (totalParticipants <= 4) {
+                    gridClass = 'grid-cols-1 md:grid-cols-2';
+                  } else if (totalParticipants <= 6) {
+                    gridClass = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+                  } else {
+                    // More than 6 participants - show max 6 per row (2x3 grid)
+                    gridClass = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+                  }
 
-                  {/* Remote participants */}
-                  {Object.keys(meeting.participants)
-                    .filter(id => id !== user.id)
-                    .map((userId) => {
-                      const participant = meeting.participants[userId];
-                      const stream = remoteStreams.get(userId);
-                      
-                      if (!participant) {
-                        return null;
-                      }
-                      
-                      return (
-                        <div key={userId} className="min-h-[300px]">
-                          <ParticipantVideo
-                            participant={participant}
-                            stream={stream}
-                            onPin={() => handlePinParticipant(userId)}
-                            className="h-full w-full"
-                          />
-                        </div>
-                      );
-                    })}
-                </div>
+                  return (
+                    <div className={`grid ${gridClass} gap-4 auto-rows-fr content-start`}>
+                      {/* Local video */}
+                      <div className="aspect-video w-full">
+                        <ParticipantVideo
+                          participant={currentParticipant}
+                          stream={isScreenSharing ? screenStream : localStream}
+                          isLocal
+                          onPin={() => handlePinParticipant(user.id)}
+                          className="h-full w-full"
+                        />
+                      </div>
+
+                      {/* Remote participants */}
+                      {Object.keys(meeting.participants)
+                        .filter(id => id !== user.id)
+                        .map((userId) => {
+                          const participant = meeting.participants[userId];
+                          const stream = remoteStreams.get(userId);
+                          
+                          if (!participant) {
+                            return null;
+                          }
+                          
+                          return (
+                            <div key={userId} className="aspect-video w-full">
+                              <ParticipantVideo
+                                participant={participant}
+                                stream={stream}
+                                onPin={() => handlePinParticipant(userId)}
+                                className="h-full w-full"
+                              />
+                            </div>
+                          );
+                        })}
+                    </div>
+                  );
+                })()
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <ParticipantVideo

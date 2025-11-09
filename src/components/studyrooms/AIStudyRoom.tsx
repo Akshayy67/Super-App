@@ -1,4 +1,4 @@
-// AI-Powered Live Virtual Study Rooms with AI Chat - Fixed Version
+// AI-Powered Live Virtual Study Rooms with AI Chat - Fixed Version with WebRTC
 import React, { useState, useEffect, useRef } from "react";
 import {
   Video,
@@ -29,10 +29,12 @@ import {
   X,
   Play,
   Pause,
+  Monitor,
+  MonitorOff,
 } from "lucide-react";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import { db } from "../../config/firebase";
-import { collection, doc, setDoc, onSnapshot, updateDoc, deleteDoc, serverTimestamp, query, where } from "firebase/firestore";
+import { collection, doc, setDoc, onSnapshot, updateDoc, deleteDoc, serverTimestamp, query, where, addDoc, getDocs } from "firebase/firestore";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 interface StudyRoomUser {
@@ -91,8 +93,16 @@ export const AIStudyRoom: React.FC = () => {
   // Media state
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isMicOn, setIsMicOn] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
+  const screenVideoRef = useRef<HTMLVideoElement>(null);
+  
+  // WebRTC state - use refs to avoid re-render issues
+  const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
+  const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   
   // Focus detection
   const [focusScore, setFocusScore] = useState(100);
@@ -158,6 +168,80 @@ export const AIStudyRoom: React.FC = () => {
     }
   }, [aiMessages, messages, chatMode]);
 
+  // Ensure remote videos are playing when streams update
+  useEffect(() => {
+    if (remoteStreams.size > 0) {
+      console.log("🎬 Remote streams updated, count:", remoteStreams.size);
+      
+      remoteStreams.forEach((stream, userId) => {
+        const videoElement = remoteVideoRefs.current.get(userId);
+        if (videoElement && stream) {
+          console.log(`🎥 Updating remote video for ${userId}`);
+          videoElement.srcObject = stream;
+          videoElement.play().catch(err => {
+            console.error(`❌ Error playing remote video for ${userId}:`, err);
+          });
+        }
+      });
+    }
+  }, [remoteStreams]);
+
+  // Ensure local video is playing when stream changes
+  useEffect(() => {
+    if (localStream && localVideoRef.current) {
+      console.log("🎥 Setting up local video with stream:", localStream.getTracks());
+      console.log("🎥 Video tracks active:", localStream.getVideoTracks().map(t => ({ id: t.id, enabled: t.enabled, readyState: t.readyState })));
+      console.log("🎥 Video ref current:", localVideoRef.current);
+      
+      localVideoRef.current.srcObject = localStream;
+      
+      // Ensure it's muted and plays inline
+      localVideoRef.current.muted = true;
+      localVideoRef.current.playsInline = true;
+      localVideoRef.current.autoplay = true;
+      
+      // Add event listeners to track video state
+      localVideoRef.current.onloadedmetadata = () => {
+        console.log("📹 Video metadata loaded");
+      };
+      
+      localVideoRef.current.onplay = () => {
+        console.log("▶️ Video started playing");
+      };
+      
+      localVideoRef.current.onerror = (e) => {
+        console.error("❌ Video error:", e);
+      };
+      
+      // Try to play
+      const playVideo = async () => {
+        if (localVideoRef.current) {
+          try {
+            await localVideoRef.current.play();
+            console.log("✅ Local video play() succeeded");
+            console.log("📊 Video state:", {
+              paused: localVideoRef.current.paused,
+              readyState: localVideoRef.current.readyState,
+              videoWidth: localVideoRef.current.videoWidth,
+              videoHeight: localVideoRef.current.videoHeight
+            });
+          } catch (error) {
+            console.error("❌ Error playing local video:", error);
+          }
+        }
+      };
+      
+      // Small delay to ensure DOM is ready
+      setTimeout(playVideo, 100);
+    } else {
+      console.log("⚠️ Missing requirements:", { 
+        hasStream: !!localStream, 
+        hasRef: !!localVideoRef.current,
+        isCameraOn 
+      });
+    }
+  }, [localStream, isCameraOn]);
+
   // Focus detection
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -193,6 +277,364 @@ export const AIStudyRoom: React.FC = () => {
     
     return () => clearInterval(interval);
   }, [isRunning, currentRoom]);
+
+  // WebRTC configuration
+  const iceServers: RTCConfiguration = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { 
+        urls: 'turn:openrelay.metered.ca:80',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      }
+    ]
+  };
+
+  // Create peer connection for a user
+  const createPeerConnection = async (userId: string, isInitiator: boolean) => {
+    console.log(`🔗 Creating peer connection for ${userId}, initiator: ${isInitiator}`);
+    
+    const pc = new RTCPeerConnection(iceServers);
+    
+    // Add local stream tracks
+    if (localStream) {
+      console.log(`📤 Adding ${localStream.getTracks().length} tracks to peer connection`);
+      localStream.getTracks().forEach(track => {
+        const sender = pc.addTrack(track, localStream);
+        console.log(`✅ Added ${track.kind} track:`, track.id);
+      });
+    } else {
+      console.warn("⚠️ No local stream available to add tracks");
+    }
+    
+    // Add screen share tracks if sharing
+    if (screenStream) {
+      screenStream.getTracks().forEach(track => {
+        pc.addTrack(track, screenStream);
+      });
+    }
+    
+    // Handle incoming tracks
+    pc.ontrack = (event) => {
+      console.log(`📥 Received ${event.track.kind} track from ${userId}:`, event.track.id);
+      console.log(`📥 Track state:`, { enabled: event.track.enabled, readyState: event.track.readyState });
+      
+      setRemoteStreams(prev => {
+        const newStreams = new Map(prev);
+        let stream = newStreams.get(userId);
+        
+        if (!stream) {
+          console.log(`🆕 Creating new MediaStream for ${userId}`);
+          stream = new MediaStream();
+          newStreams.set(userId, stream);
+        }
+        
+        // Add the track if it doesn't exist
+        if (!stream.getTracks().find(t => t.id === event.track.id)) {
+          stream.addTrack(event.track);
+          console.log(`✅ Added ${event.track.kind} track to remote stream. Total tracks:`, stream.getTracks().length);
+        } else {
+          console.log(`⚠️ Track already exists in stream`);
+        }
+        
+        return newStreams;
+      });
+    };
+    
+    // Handle ICE candidates
+    pc.onicecandidate = async (event) => {
+      if (event.candidate && currentRoom) {
+        await addDoc(collection(db, `studyRooms/${currentRoom.id}/iceCandidates`), {
+          candidate: event.candidate.toJSON(),
+          from: user?.id,
+          to: userId,
+          timestamp: serverTimestamp()
+        });
+      }
+    };
+    
+    // Handle connection state changes
+    pc.onconnectionstatechange = () => {
+      console.log(`🔌 Connection state for ${userId}:`, pc.connectionState);
+      
+      if (pc.connectionState === 'connected') {
+        console.log(`✅ Successfully connected to ${userId}`);
+      } else if (pc.connectionState === 'failed') {
+        console.error(`❌ Connection failed with ${userId}`);
+      } else if (pc.connectionState === 'disconnected') {
+        console.warn(`⚠️ Disconnected from ${userId}`);
+      }
+    };
+    
+    // Handle ICE connection state changes
+    pc.oniceconnectionstatechange = () => {
+      console.log(`🧊 ICE connection state for ${userId}:`, pc.iceConnectionState);
+    };
+    
+    // Handle signaling state changes
+    pc.onsignalingstatechange = () => {
+      console.log(`📡 Signaling state for ${userId}:`, pc.signalingState);
+    };
+    
+    // Store in ref
+    peerConnectionsRef.current.set(userId, pc);
+    
+    // If initiator, create and send offer
+    if (isInitiator) {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      
+      if (currentRoom) {
+        await addDoc(collection(db, `studyRooms/${currentRoom.id}/offers`), {
+          offer: {
+            type: offer.type,
+            sdp: offer.sdp
+          },
+          from: user?.id,
+          to: userId,
+          timestamp: serverTimestamp()
+        });
+      }
+    }
+    
+    return pc;
+  };
+
+  // Listen for offers
+  useEffect(() => {
+    if (!currentRoom || !user) return;
+    
+    const offersRef = collection(db, `studyRooms/${currentRoom.id}/offers`);
+    const q = query(offersRef, where('to', '==', user.id));
+    
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      for (const change of snapshot.docChanges()) {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          const fromUserId = data.from;
+          
+          console.log(`Received offer from ${fromUserId}`);
+          
+          let pc = peerConnectionsRef.current.get(fromUserId);
+          if (!pc) {
+            pc = await createPeerConnection(fromUserId, false);
+          }
+          
+          await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          
+          await addDoc(collection(db, `studyRooms/${currentRoom.id}/answers`), {
+            answer: {
+              type: answer.type,
+              sdp: answer.sdp
+            },
+            from: user.id,
+            to: fromUserId,
+            timestamp: serverTimestamp()
+          });
+          
+          // Delete the offer
+          await deleteDoc(change.doc.ref);
+        }
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [currentRoom?.id, user?.id]);
+
+  // Listen for answers
+  useEffect(() => {
+    if (!currentRoom || !user) return;
+    
+    const answersRef = collection(db, `studyRooms/${currentRoom.id}/answers`);
+    const q = query(answersRef, where('to', '==', user.id));
+    
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      for (const change of snapshot.docChanges()) {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          const fromUserId = data.from;
+          
+          console.log(`Received answer from ${fromUserId}`);
+          
+          const pc = peerConnectionsRef.current.get(fromUserId);
+          if (pc && pc.signalingState !== 'stable') {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+          }
+          
+          // Delete the answer
+          await deleteDoc(change.doc.ref);
+        }
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [currentRoom?.id, user?.id]);
+
+  // Listen for ICE candidates
+  useEffect(() => {
+    if (!currentRoom || !user) return;
+    
+    const candidatesRef = collection(db, `studyRooms/${currentRoom.id}/iceCandidates`);
+    const q = query(candidatesRef, where('to', '==', user.id));
+    
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      for (const change of snapshot.docChanges()) {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          const fromUserId = data.from;
+          
+          const pc = peerConnectionsRef.current.get(fromUserId);
+          if (pc && data.candidate) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+            } catch (error) {
+              console.error('Error adding ICE candidate:', error);
+            }
+          }
+          
+          // Delete the candidate
+          await deleteDoc(change.doc.ref);
+        }
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [currentRoom?.id, user?.id]);
+
+  // Screen sharing with proper renegotiation
+  const toggleScreenShare = async () => {
+    if (isScreenSharing) {
+      // Stop screen sharing
+      console.log("🛑 Stopping screen share");
+      if (screenStream) {
+        screenStream.getTracks().forEach(track => {
+          console.log("⏹️ Stopping screen track:", track.id);
+          track.stop();
+        });
+        setScreenStream(null);
+        
+        // Replace screen tracks back with camera tracks
+        if (localStream) {
+          const videoTrack = localStream.getVideoTracks()[0];
+          console.log("🔄 Replacing screen with camera track:", videoTrack?.id);
+          
+          for (const [userId, pc] of peerConnectionsRef.current.entries()) {
+            const senders = pc.getSenders();
+            const videoSender = senders.find(s => s.track?.kind === 'video');
+            
+            if (videoSender && videoTrack) {
+              try {
+                await videoSender.replaceTrack(videoTrack);
+                console.log(`✅ Replaced screen with camera for ${userId}`);
+                
+                // Renegotiate after track change
+                await renegotiateConnection(userId, pc);
+              } catch (error) {
+                console.error(`❌ Error replacing track for ${userId}:`, error);
+              }
+            }
+          }
+        }
+      }
+      
+      setIsScreenSharing(false);
+    } else {
+      // Start screen sharing
+      try {
+        console.log("🖥️ Starting screen share");
+        const stream = await navigator.mediaDevices.getDisplayMedia({ 
+          video: { 
+            cursor: 'always',
+            displaySurface: 'monitor' 
+          } as any,
+          audio: false
+        });
+        
+        console.log("✅ Got screen share stream:", stream.getVideoTracks());
+        setScreenStream(stream);
+        setIsScreenSharing(true);
+        
+        // Display screen share in local view
+        if (screenVideoRef.current) {
+          screenVideoRef.current.srcObject = stream;
+          screenVideoRef.current.play().catch(err => console.error("Screen video play error:", err));
+        }
+        
+        // Replace camera track with screen track in all peer connections
+        const screenTrack = stream.getVideoTracks()[0];
+        console.log("📤 Replacing camera with screen track for all peers");
+        
+        for (const [userId, pc] of peerConnectionsRef.current.entries()) {
+          const senders = pc.getSenders();
+          const videoSender = senders.find(s => s.track?.kind === 'video');
+          
+          if (videoSender) {
+            try {
+              await videoSender.replaceTrack(screenTrack);
+              console.log(`✅ Replaced camera with screen for ${userId}`);
+              
+              // Renegotiate after track change
+              await renegotiateConnection(userId, pc);
+            } catch (error) {
+              console.error(`❌ Error replacing track for ${userId}:`, error);
+            }
+          } else {
+            // No video sender exists, add the screen track
+            pc.addTrack(screenTrack, stream);
+            console.log(`➕ Added screen track for ${userId}`);
+            
+            // Renegotiate after adding track
+            await renegotiateConnection(userId, pc);
+          }
+        }
+        
+        // Handle screen share stop (user clicks "Stop Sharing")
+        screenTrack.onended = () => {
+          console.log("⏹️ Screen share ended by user");
+          toggleScreenShare();
+        };
+      } catch (error) {
+        console.error('❌ Error starting screen share:', error);
+        if ((error as Error).name === 'NotAllowedError') {
+          alert('Screen sharing permission denied.');
+        } else {
+          alert('Could not start screen sharing. Please check permissions.');
+        }
+      }
+    }
+  };
+
+  // Helper function to renegotiate connection after track changes
+  const renegotiateConnection = async (userId: string, pc: RTCPeerConnection) => {
+    if (!currentRoom || !user) return;
+    
+    try {
+      console.log(`🔄 Renegotiating connection with ${userId}`);
+      
+      // Create new offer
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      
+      // Send the new offer
+      await addDoc(collection(db, `studyRooms/${currentRoom.id}/offers`), {
+        offer: {
+          type: offer.type,
+          sdp: offer.sdp
+        },
+        from: user.id,
+        to: userId,
+        timestamp: serverTimestamp(),
+        renegotiation: true
+      });
+      
+      console.log(`✅ Renegotiation offer sent to ${userId}`);
+    } catch (error) {
+      console.error(`❌ Error renegotiating with ${userId}:`, error);
+    }
+  };
 
   const createRoom = async () => {
     if (!user) return;
@@ -239,24 +681,34 @@ export const AIStudyRoom: React.FC = () => {
         } 
       });
       
+      console.log("✅ Got media stream:", stream.getTracks());
       setLocalStream(stream);
+      setIsCameraOn(true);
+      setIsMicOn(true);
       
-      // Ensure video plays
+      // Ensure video plays with multiple attempts
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
         localVideoRef.current.muted = true;
         localVideoRef.current.playsInline = true;
         
-        // Force play
-        setTimeout(() => {
-          localVideoRef.current?.play().catch(err => {
-            console.error("Video autoplay error:", err);
-          });
-        }, 100);
+        // Try to play immediately
+        try {
+          await localVideoRef.current.play();
+          console.log("✅ Video playing");
+        } catch (err) {
+          console.log("⚠️ Initial play failed, retrying...", err);
+          // Retry after a short delay
+          setTimeout(async () => {
+            try {
+              await localVideoRef.current?.play();
+              console.log("✅ Video playing (retry succeeded)");
+            } catch (retryErr) {
+              console.error("❌ Video play failed after retry:", retryErr);
+            }
+          }, 500);
+        }
       }
-      
-      setIsCameraOn(true);
-      setIsMicOn(true);
     } catch (error: any) {
       console.error("Error accessing media:", error);
       
@@ -294,6 +746,16 @@ export const AIStudyRoom: React.FC = () => {
     setCurrentRoom(room);
     setTimeRemaining(room.pomodoroMinutes * 60);
     setIsRunning(true);
+    
+    // Create peer connections with existing users
+    console.log("👥 Creating peer connections with", room.users.length, "existing users");
+    for (const existingUser of room.users) {
+      if (existingUser.userId !== user.id) {
+        console.log("🔗 Creating peer connection with:", existingUser.username, existingUser.userId);
+        await createPeerConnection(existingUser.userId, true);
+      }
+    }
+    console.log("✅ All peer connections created, total:", peerConnectionsRef.current.size);
   };
 
   const leaveRoom = async () => {
@@ -308,9 +770,23 @@ export const AIStudyRoom: React.FC = () => {
       setLocalStream(null);
     }
     
+    // Stop screen share
+    if (screenStream) {
+      screenStream.getTracks().forEach(track => track.stop());
+      setScreenStream(null);
+    }
+    
+    // Close all peer connections
+    peerConnectionsRef.current.forEach(pc => pc.close());
+    peerConnectionsRef.current.clear();
+    setRemoteStreams(new Map());
+    
     // Clear video
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = null;
+    }
+    if (screenVideoRef.current) {
+      screenVideoRef.current.srcObject = null;
     }
     
     const updatedUsers = currentRoom.users.filter(u => u.userId !== user.id);
@@ -400,15 +876,42 @@ export const AIStudyRoom: React.FC = () => {
     }
   };
 
-  const sendMessage = () => {
-    if (!messageInput.trim()) return;
+  // Listen for group chat messages
+  useEffect(() => {
+    if (!currentRoom) return;
     
-    setMessages([...messages, {
-      sender: user?.username || 'You',
-      text: messageInput,
-      time: new Date()
-    }]);
-    setMessageInput("");
+    const messagesRef = collection(db, `studyRooms/${currentRoom.id}/messages`);
+    const unsubscribe = onSnapshot(messagesRef, (snapshot) => {
+      const msgs: ChatMessage[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        msgs.push({
+          sender: data.sender,
+          text: data.text,
+          time: data.timestamp?.toDate() || new Date()
+        });
+      });
+      msgs.sort((a, b) => a.time.getTime() - b.time.getTime());
+      setMessages(msgs);
+    });
+    
+    return () => unsubscribe();
+  }, [currentRoom?.id]);
+
+  const sendMessage = async () => {
+    if (!messageInput.trim() || !currentRoom || !user) return;
+    
+    try {
+      await addDoc(collection(db, `studyRooms/${currentRoom.id}/messages`), {
+        sender: user.username || user.email || 'Anonymous',
+        text: messageInput,
+        timestamp: serverTimestamp(),
+        userId: user.id
+      });
+      setMessageInput("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
   };
 
   const sendAiMessage = async () => {
@@ -540,13 +1043,16 @@ export const AIStudyRoom: React.FC = () => {
             }`}>
               {/* Local user */}
               <div className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video">
+                {/* Always render video element to maintain ref */}
                 <video
                   ref={localVideoRef}
                   autoPlay
                   muted
                   playsInline
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover ${isCameraOn ? 'block' : 'hidden'}`}
+                  style={{ transform: 'scaleX(-1)' }}
                 />
+                {/* Show placeholder when camera is off */}
                 {!isCameraOn && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gray-700">
                     <UserIcon className="w-16 h-16 text-gray-500" />
@@ -562,16 +1068,75 @@ export const AIStudyRoom: React.FC = () => {
                 </div>
               </div>
 
-              {/* Other participants */}
-              {currentRoom.users.filter(u => u.userId !== user?.id).map((participant) => (
-                <div key={participant.userId} className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video">
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-800">
-                    {participant.photo ? (
-                      <img src={participant.photo} alt={participant.username} className="w-24 h-24 rounded-full" />
-                    ) : (
-                      <UserIcon className="w-16 h-16 text-gray-500" />
-                    )}
+              {/* Screen share view - always visible when anyone is sharing */}
+              {isScreenSharing && screenStream && (
+                <div className="relative bg-gray-900 rounded-lg overflow-hidden aspect-video col-span-2">
+                  <video
+                    ref={screenVideoRef}
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-contain"
+                  />
+                  <div className="absolute top-3 left-3 bg-blue-600 px-3 py-1.5 rounded-lg">
+                    <span className="text-white text-sm font-medium flex items-center gap-2">
+                      <Monitor className="w-4 h-4" />
+                      You are sharing your screen
+                    </span>
                   </div>
+                </div>
+              )}
+
+              {/* Other participants */}
+              {currentRoom.users.filter(u => u.userId !== user?.id).map((participant) => {
+                const remoteStream = remoteStreams.get(participant.userId);
+                const hasVideo = remoteStream && remoteStream.getVideoTracks().length > 0;
+                const hasAudio = remoteStream && remoteStream.getAudioTracks().length > 0;
+                
+                console.log(`👤 Participant ${participant.username}:`, {
+                  hasStream: !!remoteStream,
+                  hasVideo,
+                  hasAudio,
+                  trackCount: remoteStream?.getTracks().length || 0
+                });
+                
+                return (
+                <div key={participant.userId} className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video">
+                  {/* Always render video element for remote streams */}
+                  {remoteStream && (
+                    <video
+                      ref={(el) => {
+                        if (el && remoteStream) {
+                          console.log(`🎥 Setting remote video for ${participant.username}`);
+                          el.srcObject = remoteStream;
+                          el.autoplay = true;
+                          el.playsInline = true;
+                          
+                          // Try to play
+                          el.play().then(() => {
+                            console.log(`✅ Remote video playing for ${participant.username}`);
+                          }).catch(err => {
+                            console.error(`❌ Remote video play error for ${participant.username}:`, err);
+                          });
+                          
+                          remoteVideoRefs.current.set(participant.userId, el);
+                        }
+                      }}
+                      autoPlay
+                      playsInline
+                      className={`w-full h-full object-cover ${hasVideo ? 'block' : 'hidden'}`}
+                    />
+                  )}
+                  
+                  {/* Show placeholder when no video */}
+                  {!hasVideo && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-800">
+                      {participant.photo ? (
+                        <img src={participant.photo} alt={participant.username} className="w-24 h-24 rounded-full" />
+                      ) : (
+                        <UserIcon className="w-16 h-16 text-gray-500" />
+                      )}
+                    </div>
+                  )}
                   <div className="absolute bottom-3 left-3 flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-lg">
                     <span className="text-white text-sm font-medium">{participant.username}</span>
                     {!participant.isMicOn && <MicOff className="w-4 h-4 text-red-400" />}
@@ -590,7 +1155,8 @@ export const AIStudyRoom: React.FC = () => {
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -763,6 +1329,7 @@ export const AIStudyRoom: React.FC = () => {
             <button
               onClick={toggleCamera}
               className={`p-4 rounded-full transition-colors ${isCameraOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600 hover:bg-red-700'}`}
+              title={isCameraOn ? 'Turn camera off' : 'Turn camera on'}
             >
               {isCameraOn ? <Video className="w-6 h-6 text-white" /> : <VideoOff className="w-6 h-6 text-white" />}
             </button>
@@ -770,8 +1337,17 @@ export const AIStudyRoom: React.FC = () => {
             <button
               onClick={toggleMic}
               className={`p-4 rounded-full transition-colors ${isMicOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600 hover:bg-red-700'}`}
+              title={isMicOn ? 'Mute microphone' : 'Unmute microphone'}
             >
               {isMicOn ? <Mic className="w-6 h-6 text-white" /> : <MicOff className="w-6 h-6 text-white" />}
+            </button>
+            
+            <button
+              onClick={toggleScreenShare}
+              className={`p-4 rounded-full transition-colors ${isScreenSharing ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'}`}
+              title={isScreenSharing ? 'Stop sharing screen' : 'Share your screen'}
+            >
+              {isScreenSharing ? <MonitorOff className="w-6 h-6 text-white" /> : <Monitor className="w-6 h-6 text-white" />}
             </button>
           </div>
         </div>

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { User, Mail, Phone, MapPin, Globe, FileText, ArrowLeft, Loader2, Edit, UserPlus, Users } from "lucide-react";
+import { User, Mail, Phone, MapPin, Globe, FileText, ArrowLeft, Loader2, Edit, UserPlus, Users, Trophy, Star, Award, Flame, Crown, Zap, Target } from "lucide-react";
 import { ProfileService } from "../../services/profileService";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import { UserProfile } from "../../types";
 import { friendsService } from "../../services/friends/friendsService";
 import { friendRequestsService } from "../../services/friends/friendRequestsService";
 import { CallButton } from "../calls/CallButton";
+import { gamificationService, UserGamification, Achievement, LEVELS } from "../../services/gamificationService";
 
 export const ProfileViewPage: React.FC = () => {
   const { useremail } = useParams<{ useremail: string }>();
@@ -19,12 +20,21 @@ export const ProfileViewPage: React.FC = () => {
   const [isFriend, setIsFriend] = useState(false);
   const [isRequestPending, setIsRequestPending] = useState(false);
   const [isAddingFriend, setIsAddingFriend] = useState(false);
+  const [gamificationData, setGamificationData] = useState<UserGamification | null>(null);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
 
   useEffect(() => {
     if (useremail) {
       loadProfile();
     }
   }, [useremail]);
+
+  // Load gamification data when profile is loaded
+  useEffect(() => {
+    if (profile && profile.userId) {
+      loadGamificationData(profile.userId);
+    }
+  }, [profile]);
 
   useEffect(() => {
     if (profile && currentUser && profile.userId !== currentUser.id) {
@@ -64,7 +74,26 @@ export const ProfileViewPage: React.FC = () => {
     }
   };
 
+  const loadGamificationData = async (userId: string) => {
+    try {
+      console.log("Loading gamification data for user:", userId);
+      const data = await gamificationService.getUserGamification(userId);
+      setGamificationData(data);
+      
+      const achievementsData = await gamificationService.getUserAchievements(userId);
+      setAchievements(achievementsData);
+      
+      console.log("Gamification data loaded:", data);
+    } catch (error) {
+      console.error("Error loading gamification data:", error);
+    }
+  };
+
   const isOwnProfile = currentUser && profile && profile.userId === currentUser.id;
+  
+  const getLevelColor = (level: number) => {
+    return LEVELS[level]?.color || '#9CA3AF';
+  };
 
   const checkFriendStatus = async () => {
     if (!currentUser || !profile || profile.userId === currentUser.id) return;
@@ -370,6 +399,131 @@ export const ProfileViewPage: React.FC = () => {
             </p>
           </div>
         </div>
+
+        {/* Gamification Stats */}
+        {gamificationData && (
+          <div className="mt-6 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+            {/* Header with Level Badge */}
+            <div 
+              className="p-6 relative"
+              style={{ 
+                background: `linear-gradient(135deg, ${getLevelColor(gamificationData.level)}20, ${getLevelColor(gamificationData.level)}40)` 
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <Crown className="w-6 h-6" style={{ color: getLevelColor(gamificationData.level) }} />
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                      Level {gamificationData.level} - {LEVELS[gamificationData.level]?.name || 'Student'}
+                    </h3>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {gamificationData.xp.toLocaleString()} XP
+                  </p>
+                </div>
+                <div 
+                  className="px-4 py-2 rounded-full text-white font-bold text-lg shadow-lg"
+                  style={{ backgroundColor: getLevelColor(gamificationData.level) }}
+                >
+                  Lv {gamificationData.level}
+                </div>
+              </div>
+
+              {/* XP Progress Bar */}
+              {gamificationData.level < 7 && (
+                <div className="mt-4">
+                  <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                    <span>{gamificationData.xp} XP</span>
+                    <span>{LEVELS[gamificationData.level + 1]?.minXP || 'Max'} XP</span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+                    <div
+                      className="h-2 rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(((gamificationData.xp - LEVELS[gamificationData.level].minXP) / (LEVELS[gamificationData.level + 1]?.minXP - LEVELS[gamificationData.level].minXP)) * 100, 100)}%`,
+                        backgroundColor: getLevelColor(gamificationData.level)
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-6">
+              <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                <Flame className="w-8 h-8 text-orange-500 mx-auto mb-2" />
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {gamificationData.currentStreak}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Day Streak</div>
+              </div>
+
+              <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                <Trophy className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {achievements.filter(a => a.isUnlocked).length}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Achievements</div>
+              </div>
+
+              <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                <Star className="w-8 h-8 text-purple-500 mx-auto mb-2" />
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                  #{gamificationData.rank || 'N/A'}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Global Rank</div>
+              </div>
+
+              <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <Zap className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {gamificationData.longestStreak}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Best Streak</div>
+              </div>
+            </div>
+
+            {/* Achievements Section */}
+            {achievements.length > 0 && (
+              <div className="p-6 border-t border-gray-200 dark:border-slate-700">
+                <div className="flex items-center gap-2 mb-4">
+                  <Award className="w-5 h-5 text-yellow-500" />
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Achievements
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {achievements.filter(a => a.isUnlocked).map((achievement, index) => (
+                    <div
+                      key={index}
+                      className="flex flex-col items-center p-3 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+                      title={achievement.description}
+                    >
+                      <div className="text-3xl mb-1">{achievement.icon}</div>
+                      <div className="text-xs font-medium text-center text-gray-900 dark:text-white line-clamp-2">
+                        {achievement.name}
+                      </div>
+                      <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                        +{achievement.xpReward} XP
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {achievements.filter(a => !a.isUnlocked).length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      Locked Achievements: {achievements.filter(a => !a.isUnlocked).length}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

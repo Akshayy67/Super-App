@@ -18,16 +18,22 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   cursors,
   onCursorChange,
 }) => {
-  // Ensure cursors is always an array
-  const safeCursors = cursors || [];
+  // Ensure cursors is always an array and code is always a string
+  const safeCursors = Array.isArray(cursors) ? cursors : [];
+  const safeCode = code || '';
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [lineNumbers, setLineNumbers] = useState<number[]>([]);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [lineNumbers, setLineNumbers] = useState<number[]>([1]);
   const [cursorPosition, setCursorPosition] = useState({ line: 0, column: 0 });
 
   useEffect(() => {
-    const lines = code.split("\n");
+    if (!safeCode) {
+      setLineNumbers([1]);
+      return;
+    }
+    const lines = safeCode.split("\n");
     setLineNumbers(Array.from({ length: lines.length }, (_, i) => i + 1));
-  }, [code]);
+  }, [safeCode]);
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (!readOnly) {
@@ -40,10 +46,16 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
     const textarea = textareaRef.current;
     const position = textarea.selectionStart;
-    const textBeforeCursor = code.substring(0, position);
+    const textBeforeCursor = safeCode.substring(0, position);
     const lines = textBeforeCursor.split("\n");
-    const line = lines.length;
-    const column = lines[lines.length - 1].length + 1;
+    const line = lines.length; // 1-indexed: line 1, 2, 3...
+    const column = lines[lines.length - 1].length; // 0-indexed: 0 = before first char
+    
+    // Example: "hello\nworld" with cursor after 'w' (position 6)
+    // textBeforeCursor = "hello\nw"
+    // lines = ["hello", "w"]
+    // line = 2 (second line)
+    // column = 1 (1 character before cursor: 'w')
 
     setCursorPosition({ line, column });
     onCursorChange(line, column);
@@ -62,7 +74,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const newCode =
-        code.substring(0, start) + "  " + code.substring(end);
+        safeCode.substring(0, start) + "  " + safeCode.substring(end);
       onChange(newCode);
 
       // Set cursor position after the inserted spaces
@@ -76,6 +88,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   };
 
   const getSyntaxHighlighting = (text: string, lang: string): JSX.Element[] => {
+    if (!text) return [<div key="empty" className="min-h-[1.5rem]"><span className="text-gray-300"> </span></div>];
+    
     const lines = text.split("\n");
     
     return lines.map((line, index) => {
@@ -83,7 +97,14 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       const elements: JSX.Element[] = [];
       
       // Simple syntax highlighting based on language
-      const patterns = getSyntaxPatterns(lang) || [];
+      const patterns = getSyntaxPatterns(lang);
+      if (!patterns || patterns.length === 0) {
+        return (
+          <div key={index} className="min-h-[1.5rem]">
+            <span className="text-gray-300">{line}</span>
+          </div>
+        );
+      }
       
       let lastIndex = 0;
       const matches: Array<{ index: number; length: number; className: string }> = [];
@@ -91,13 +112,17 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       // Find all matches
       patterns.forEach(({ pattern, className }) => {
         let match;
-        const regex = new RegExp(pattern, 'g');
-        while ((match = regex.exec(line)) !== null) {
-          matches.push({
-            index: match.index,
-            length: match[0].length,
-            className
-          });
+        try {
+          const regex = new RegExp(pattern, 'g');
+          while ((match = regex.exec(line)) !== null) {
+            matches.push({
+              index: match.index,
+              length: match[0].length,
+              className
+            });
+          }
+        } catch (e) {
+          // Skip invalid regex patterns
         }
       });
       
@@ -134,7 +159,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       if (elements.length === 0) {
         elements.push(
           <span key="full-line" className="text-gray-300">
-            {line}
+            {line || ' '}
           </span>
         );
       }
@@ -219,7 +244,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       <div className="px-4 py-2 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-400">
-            Line {cursorPosition.line}, Column {cursorPosition.column}
+            Line {cursorPosition.line}, Column {cursorPosition.column + 1}
           </span>
           <span className="text-sm text-gray-400">
             Language: <span className="text-purple-400">{language}</span>
@@ -244,62 +269,71 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         </div>
 
         {/* Code Area Container */}
-        <div className="flex-1 relative overflow-auto">
-          {/* Syntax Highlighted Preview (Background) */}
+        <div className="flex-1 relative">
+          {/* Actual Textarea (Primary - handles all input and scrolling) */}
+          <textarea
+            ref={textareaRef}
+            value={safeCode}
+            onChange={handleCodeChange}
+            onKeyDown={handleKeyDown}
+            onMouseUp={handleCursorMove}
+            onKeyUp={handleCursorMove}
+            onClick={handleCursorMove}
+            readOnly={readOnly}
+            spellCheck={false}
+            className="absolute inset-0 w-full h-full p-4 bg-transparent text-transparent caret-white font-mono text-sm leading-6 resize-none outline-none whitespace-pre-wrap break-words overflow-auto selection:bg-blue-500/30"
+            style={{ 
+              zIndex: 3,
+              colorScheme: 'dark'
+            }}
+            placeholder={readOnly ? "" : "Start typing your code..."}
+          />
+
+          {/* Syntax Highlighted Preview (Background - pointer-events-none to let clicks through) */}
           <div
             className="absolute inset-0 p-4 font-mono text-sm leading-6 pointer-events-none whitespace-pre-wrap break-words overflow-hidden"
             style={{ zIndex: 1 }}
           >
-            {getSyntaxHighlighting(code, language)}
+            {getSyntaxHighlighting(safeCode, language)}
           </div>
 
           {/* Other users' cursors */}
-          {safeCursors.length > 0 && safeCursors.map((cursor) => {
-            const lines = code.split("\n");
-            let totalChars = 0;
-            for (let i = 0; i < cursor.line - 1; i++) {
-              totalChars += lines[i].length + 1; // +1 for newline
-            }
-            totalChars += cursor.column - 1;
+          {safeCursors && safeCursors.length > 0 && safeCursors.map((cursor) => {
+            if (!cursor || !cursor.userId) return null;
+            
+            const lines = safeCode ? safeCode.split("\n") : [];
+            // cursor.line is 1-indexed, so line 1 means index 0
+            const cursorLine = (cursor.line || 1) - 1;
+            // cursor.column is now 0-indexed (number of characters before cursor)
+            const cursorColumn = cursor.column || 0;
 
             return (
               <div
                 key={cursor.userId}
                 className="absolute pointer-events-none"
                 style={{
-                  top: `${(cursor.line - 1) * 1.5 + 1}rem`,
-                  left: `${(cursor.column - 1) * 0.6 + 1}rem`,
-                  zIndex: 3,
+                  top: `${cursorLine * 1.5 + 1}rem`,
+                  left: '1rem',
+                  zIndex: 2,
                 }}
               >
+                {/* Invisible text to position cursor */}
+                <span className="font-mono text-sm leading-6 opacity-0 pointer-events-none" style={{ whiteSpace: 'pre' }}>
+                  {lines[cursorLine]?.substring(0, cursorColumn) || ''}
+                </span>
                 <div
                   className="w-0.5 h-6 animate-pulse"
-                  style={{ backgroundColor: cursor.color }}
+                  style={{ backgroundColor: cursor.color || '#888' }}
                 />
                 <div
                   className="absolute -top-6 left-0 px-2 py-0.5 text-xs text-white rounded whitespace-nowrap"
-                  style={{ backgroundColor: cursor.color }}
+                  style={{ backgroundColor: cursor.color || '#888' }}
                 >
-                  {cursor.userName}
+                  {cursor.userName || 'User'}
                 </div>
               </div>
             );
           })}
-
-          {/* Actual Textarea (Transparent, on top for input) */}
-          <textarea
-            ref={textareaRef}
-            value={code}
-            onChange={handleCodeChange}
-            onKeyDown={handleKeyDown}
-            onMouseUp={handleCursorMove}
-            onKeyUp={handleCursorMove}
-            readOnly={readOnly}
-            spellCheck={false}
-            className="absolute inset-0 w-full h-full p-4 bg-transparent text-transparent caret-white font-mono text-sm leading-6 resize-none outline-none whitespace-pre-wrap break-words overflow-auto"
-            style={{ zIndex: 2 }}
-            placeholder={readOnly ? "" : "Start typing your code..."}
-          />
         </div>
       </div>
 

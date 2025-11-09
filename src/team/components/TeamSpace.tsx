@@ -2315,6 +2315,10 @@ export const TeamSpace: React.FC<{
                 <TeamQuiz teamId={selectedTeam.id} />
               )}
 
+              {activeTab === "contests" && selectedTeam && (
+                <EnhancedContestSystem teamId={selectedTeam.id} />
+              )}
+
               {activeTab === "pairtasks" && selectedTeam && (
                 <PairTasks teamId={selectedTeam.id} />
               )}
@@ -3178,10 +3182,10 @@ export const TeamSpace: React.FC<{
           onClose={closePreview}
           onZoomChange={setPreviewZoom}
           onDownload={downloadFile}
-          onAnalyze={() => setShowAIChat((prev) => !prev)}
+          onAnalyze={undefined}
           formatFileSize={formatFileSize}
-          showAIChat={showAIChat}
-          setShowAIChat={setShowAIChat}
+          showAIChat={false}
+          setShowAIChat={() => {}}
         />
       )}
 

@@ -141,15 +141,17 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
             >
               <Share2 className="w-5 h-5 text-gray-600" />
             </button>
-            <button
-              onClick={() => setShowAIChat((prev) => !prev)}
-              className={`p-2 rounded-full transition-colors ${
-                showAIChat ? "bg-purple-100" : "hover:bg-purple-100"
-              }`}
-              title={showAIChat ? "Close AI Analysis" : "AI Analysis"}
-            >
-              <Brain className="w-5 h-5 text-purple-600" />
-            </button>
+            {onAnalyze && (
+              <button
+                onClick={() => setShowAIChat((prev) => !prev)}
+                className={`p-2 rounded-full transition-colors ${
+                  showAIChat ? "bg-purple-100" : "hover:bg-purple-100"
+                }`}
+                title={showAIChat ? "Close AI Analysis" : "AI Analysis"}
+              >
+                <Brain className="w-5 h-5 text-purple-600" />
+              </button>
+            )}
             <button
               onClick={onClose}
               className="p-2 hover:bg-red-100 rounded-full transition-colors"

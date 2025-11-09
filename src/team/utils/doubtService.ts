@@ -384,9 +384,8 @@ class DoubtService {
   async getTeamFiles(teamId: string): Promise<any[]> {
     try {
       const filesQuery = query(
-        collection(db, 'teamFiles'),
-        where('teamId', '==', teamId),
-        orderBy('uploadedAt', 'desc')
+        collection(db, 'sharedFiles'),
+        where('teamId', '==', teamId)
       );
 
       const snapshot = await getDocs(filesQuery);
@@ -395,8 +394,10 @@ class DoubtService {
         const data = doc.data();
         return {
           id: doc.id,
+          name: data.fileName,
+          url: data.fileUrl,
           ...data,
-          uploadedAt: data.uploadedAt?.toDate() || new Date(),
+          uploadedAt: data.lastModified?.toDate() || data.sharedAt?.toDate() || new Date(),
         };
       });
     } catch (error) {

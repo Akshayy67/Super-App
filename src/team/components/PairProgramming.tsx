@@ -65,8 +65,11 @@ export const PairProgramming: React.FC<PairProgrammingProps> = ({
   const [showConsole, setShowConsole] = useState(false);
   const [consoleOutput, setConsoleOutput] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [localCode, setLocalCode] = useState("");
 
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const cursorUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const user = realTimeAuth.getCurrentUser();
 
   // Load sessions on mount
@@ -89,6 +92,10 @@ export const PairProgramming: React.FC<PairProgrammingProps> = ({
       (updatedSession) => {
         if (updatedSession) {
           setCurrentSession(updatedSession);
+          // Update local code only if we're not the one typing (to prevent overwriting local changes)
+          if (!updateDebounceRef.current) {
+            setLocalCode(updatedSession.code);
+          }
         }
       }
     );
@@ -96,6 +103,13 @@ export const PairProgramming: React.FC<PairProgrammingProps> = ({
     return () => {
       unsubscribe();
     };
+  }, [currentSession?.id]);
+
+  // Initialize local code when session is loaded
+  useEffect(() => {
+    if (currentSession) {
+      setLocalCode(currentSession.code);
+    }
   }, [currentSession?.id]);
 
   // Auto-scroll chat to bottom
@@ -232,7 +246,20 @@ export const PairProgramming: React.FC<PairProgrammingProps> = ({
 
   const handleCodeChange = async (newCode: string) => {
     if (!currentSession) return;
-    await pairProgrammingService.updateCode(currentSession.id, newCode);
+    
+    // Update local state immediately for responsive typing
+    setLocalCode(newCode);
+    
+    // Clear existing debounce timer
+    if (updateDebounceRef.current) {
+      clearTimeout(updateDebounceRef.current);
+    }
+    
+    // Debounce Firebase update - only update after user stops typing for 500ms
+    updateDebounceRef.current = setTimeout(async () => {
+      await pairProgrammingService.updateCode(currentSession.id, newCode);
+      updateDebounceRef.current = null;
+    }, 500);
   };
 
   const saveSnapshot = async () => {
@@ -740,18 +767,24 @@ export const PairProgramming: React.FC<PairProgrammingProps> = ({
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 flex flex-col min-h-0">
             <CodeEditor
-              code={currentSession.code}
+              code={localCode}
               language={currentSession.language}
               onChange={handleCodeChange}
               readOnly={!isDriver}
-              cursors={Object.values(currentSession.cursors)}
+              cursors={Object.values(currentSession.cursors).filter(c => c.userId !== user?.id)}
               onCursorChange={(line, column) => {
-                if (currentSession) {
-                  pairProgrammingService.updateCursor(
-                    currentSession.id,
-                    line,
-                    column
-                  );
+                if (currentSession && user) {
+                  // Throttle cursor updates to avoid excessive Firebase writes
+                  if (cursorUpdateTimeoutRef.current) {
+                    clearTimeout(cursorUpdateTimeoutRef.current);
+                  }
+                  cursorUpdateTimeoutRef.current = setTimeout(() => {
+                    pairProgrammingService.updateCursor(
+                      currentSession.id,
+                      line,
+                      column
+                    );
+                  }, 100); // Update cursor position every 100ms max
                 }
               }}
             />
