@@ -146,14 +146,12 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
       {/* Blocked Users Page */}
       <Route path="/blocked" element={<BlockedUsersPage />} />
 
-      {/* Protected Routes - Check if user is blocked AND premium */}
+      {/* Protected Routes - Free tier (no premium required) */}
       <Route 
         path="/dashboard" 
         element={
           <BlockedUserGuard>
-            <PremiumGuard>
-              <PageTransitionWrapper><Dashboard /></PageTransitionWrapper>
-            </PremiumGuard>
+            <PageTransitionWrapper><Dashboard /></PageTransitionWrapper>
           </BlockedUserGuard>
         } 
       />
@@ -161,9 +159,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/files-notes/*" 
         element={
           <BlockedUserGuard>
-            <PremiumGuard>
-              <PageTransitionWrapper><FilesAndNotesRouter /></PageTransitionWrapper>
-            </PremiumGuard>
+            <PageTransitionWrapper><FilesAndNotesRouter /></PageTransitionWrapper>
           </BlockedUserGuard>
         } 
       />
@@ -183,9 +179,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/tasks/*" 
         element={
           <BlockedUserGuard>
-            <PremiumGuard>
-              <PageTransitionWrapper><TaskManager /></PageTransitionWrapper>
-            </PremiumGuard>
+            <PageTransitionWrapper><TaskManager /></PageTransitionWrapper>
           </BlockedUserGuard>
         } 
       />
@@ -201,11 +195,12 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
           </BlockedUserGuard>
         } 
       />
+      {/* Premium Features - Show upsell if not premium */}
       <Route 
         path="/chat/*" 
         element={
           <BlockedUserGuard>
-            <PremiumGuard>
+            <PremiumGuard featureName="AI Assistant">
               <PageTransitionWrapper><EnhancedAIChat /></PageTransitionWrapper>
             </PremiumGuard>
           </BlockedUserGuard>
@@ -215,7 +210,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/tools/*" 
         element={
           <BlockedUserGuard>
-            <PremiumGuard>
+            <PremiumGuard featureName="Study Tools">
               <PageTransitionWrapper><StudyToolsRouter /></PageTransitionWrapper>
             </PremiumGuard>
           </BlockedUserGuard>
