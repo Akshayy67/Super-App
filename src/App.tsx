@@ -428,37 +428,28 @@ function App() {
     sessionStorage.removeItem('showPaymentGateway');
     setShowPaymentGateway(false);
     
-    // Check if user is blocked or premium after authentication
-    // Small delay to ensure auth state is updated
+    // With freemium model, all authenticated users go to dashboard
+    // Premium features are gated by PremiumGuard component
     setTimeout(async () => {
       const currentUser = realTimeAuth.getCurrentUser();
       if (currentUser?.email) {
         try {
-          // Check if user is blocked
+          // Only check if user is blocked
           const { isUserBlockedByEmail } = await import("./services/blockedUsersService");
           const isBlocked = await isUserBlockedByEmail(currentUser.email);
           if (isBlocked) {
+            console.log("❌ User is blocked, redirecting to blocked page");
             window.location.href = "/blocked";
             return;
           }
 
-          // Check if user is premium
-          const { isPremiumUser } = await import("./services/premiumUserService");
-          const isPremium = await isPremiumUser(currentUser.id);
-          
-          if (isPremium) {
-            // User is premium - redirect to dashboard
-            console.log("✅ User is premium, redirecting to dashboard");
-            window.location.href = "/dashboard";
-          } else {
-            // User is not premium - redirect to payment page
-            console.log("⚠️ User is not premium, redirecting to payment page");
-            window.location.href = "/payment";
-          }
+          // All authenticated, non-blocked users go to dashboard
+          console.log("✅ User authenticated, redirecting to dashboard");
+          window.location.href = "/dashboard";
         } catch (error) {
           console.error("Error checking user status:", error);
-          // If check fails, redirect to payment page to be safe
-          window.location.href = "/payment";
+          // If check fails, still go to dashboard (freemium access)
+          window.location.href = "/dashboard";
         }
       } else {
         // No user found, redirect to home
