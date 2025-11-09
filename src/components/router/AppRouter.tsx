@@ -422,14 +422,12 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         } 
       />
       
-      {/* Predictive Learning & Analytics */}
+      {/* Predictive Learning & Analytics - Enterprise Features (No Premium Required) */}
       <Route 
         path="/predictive-dashboard" 
         element={
           <BlockedUserGuard>
-            <PremiumGuard>
-              <PageTransitionWrapper><PredictiveDashboardWrapper /></PageTransitionWrapper>
-            </PremiumGuard>
+            <PageTransitionWrapper><PredictiveDashboardWrapper /></PageTransitionWrapper>
           </BlockedUserGuard>
         } 
       />
@@ -437,9 +435,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/faculty-dashboard" 
         element={
           <BlockedUserGuard>
-            <PremiumGuard>
-              <PageTransitionWrapper><FacultyDashboardWrapper /></PageTransitionWrapper>
-            </PremiumGuard>
+            <PageTransitionWrapper><FacultyDashboardWrapper /></PageTransitionWrapper>
           </BlockedUserGuard>
         } 
       />

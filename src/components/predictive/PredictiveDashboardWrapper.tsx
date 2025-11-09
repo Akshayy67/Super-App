@@ -8,15 +8,30 @@ export const PredictiveDashboardWrapper: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Give auth a moment to initialize
-    const timer = setTimeout(() => {
-      const currentUser = realTimeAuth.getCurrentUser();
-      console.log('🔐 Predictive Dashboard - Current user:', currentUser);
+    // Listen for auth state changes
+    const unsubscribe = realTimeAuth.onAuthStateChange((currentUser) => {
+      console.log('🔐 Predictive Dashboard - Auth state changed:', currentUser);
       setUser(currentUser);
       setLoading(false);
-    }, 100);
+    });
 
-    return () => clearTimeout(timer);
+    // Also check immediately
+    const currentUser = realTimeAuth.getCurrentUser();
+    if (currentUser) {
+      console.log('🔐 Predictive Dashboard - Current user (immediate):', currentUser);
+      setUser(currentUser);
+      setLoading(false);
+    } else {
+      // Wait a bit for auth to initialize
+      setTimeout(() => {
+        const user = realTimeAuth.getCurrentUser();
+        console.log('🔐 Predictive Dashboard - Current user (delayed):', user);
+        setUser(user);
+        setLoading(false);
+      }, 500);
+    }
+
+    return () => unsubscribe();
   }, []);
 
   if (loading) {
