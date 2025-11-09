@@ -1,0 +1,226 @@
+{
+  "name": "Monthly Activity Summary",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 1 * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-1",
+      "name": "Schedule - 1st of Every Month at 9 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://firestore.googleapis.com/v1/projects/super-app-54ae9/databases/(default)/documents/users",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleServiceAccount",
+        "options": {}
+      },
+      "id": "httpRequest-1",
+      "name": "Get All Users",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const documents = $input.item.json.documents || [];\nconst users = [];\n\nfor (const doc of documents) {\n  const fields = doc.fields;\n  if (fields && fields.email && fields.monthlySummaryEnabled?.booleanValue !== false) {\n    users.push({\n      userId: doc.name.split('/').pop(),\n      email: fields.email.stringValue,\n      name: fields.displayName?.stringValue || 'User'\n    });\n  }\n}\n\nreturn users.map(user => ({ json: user }));"
+      },
+      "id": "code-1",
+      "name": "Parse Users",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "splitInBatches-1",
+      "name": "Process Each User",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const userId = $json.userId;\nconst now = new Date();\nconst lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);\nconst lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);\n\nreturn [{\n  json: {\n    userId,\n    startDate: lastMonth.toISOString(),\n    endDate: lastMonthEnd.toISOString(),\n    monthName: lastMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })\n  }\n}];"
+      },
+      "id": "code-2",
+      "name": "Calculate Date Range",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://firestore.googleapis.com/v1/projects/super-app-54ae9/databases/(default)/documents:runQuery",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleServiceAccount",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "structuredQuery",
+              "value": "={{JSON.stringify({\n  from: [{ collectionId: 'contestResults' }],\n  where: {\n    compositeFilter: {\n      op: 'AND',\n      filters: [\n        {\n          fieldFilter: {\n            field: { fieldPath: 'userId' },\n            op: 'EQUAL',\n            value: { stringValue: $json.userId }\n          }\n        },\n        {\n          fieldFilter: {\n            field: { fieldPath: 'timestamp' },\n            op: 'GREATER_THAN_OR_EQUAL',\n            value: { timestampValue: $json.startDate }\n          }\n        },\n        {\n          fieldFilter: {\n            field: { fieldPath: 'timestamp' },\n            op: 'LESS_THAN_OR_EQUAL',\n            value: { timestampValue: $json.endDate }\n          }\n        }\n      ]\n    }\n  }\n})}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "httpRequest-2",
+      "name": "Get Contest Results",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "url": "=https://firestore.googleapis.com/v1/projects/super-app-54ae9/databases/(default)/documents:runQuery",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleServiceAccount",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "structuredQuery",
+              "value": "={{JSON.stringify({\n  from: [{ collectionId: 'studySessions' }],\n  where: {\n    compositeFilter: {\n      op: 'AND',\n      filters: [\n        {\n          fieldFilter: {\n            field: { fieldPath: 'userId' },\n            op: 'EQUAL',\n            value: { stringValue: $json.userId }\n          }\n        },\n        {\n          fieldFilter: {\n            field: { fieldPath: 'createdAt' },\n            op: 'GREATER_THAN_OR_EQUAL',\n            value: { timestampValue: $json.startDate }\n          }\n        },\n        {\n          fieldFilter: {\n            field: { fieldPath: 'createdAt' },\n            op: 'LESS_THAN_OR_EQUAL',\n            value: { timestampValue: $json.endDate }\n          }\n        }\n      ]\n    }\n  }\n})}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "httpRequest-3",
+      "name": "Get Study Sessions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 350]
+    },
+    {
+      "parameters": {
+        "url": "=https://firestore.googleapis.com/v1/projects/super-app-54ae9/databases/(default)/documents:runQuery",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleServiceAccount",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "structuredQuery",
+              "value": "={{JSON.stringify({\n  from: [{ collectionId: 'todos' }],\n  where: {\n    compositeFilter: {\n      op: 'AND',\n      filters: [\n        {\n          fieldFilter: {\n            field: { fieldPath: 'userId' },\n            op: 'EQUAL',\n            value: { stringValue: $json.userId }\n          }\n        },\n        {\n          fieldFilter: {\n            field: { fieldPath: 'completed' },\n            op: 'EQUAL',\n            value: { booleanValue: true }\n          }\n        },\n        {\n          fieldFilter: {\n            field: { fieldPath: 'completedAt' },\n            op: 'GREATER_THAN_OR_EQUAL',\n            value: { timestampValue: $json.startDate }\n          }\n        },\n        {\n          fieldFilter: {\n            field: { fieldPath: 'completedAt' },\n            op: 'LESS_THAN_OR_EQUAL',\n            value: { timestampValue: $json.endDate }\n          }\n        }\n      ]\n    }\n  }\n})}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "httpRequest-4",
+      "name": "Get Completed Todos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 500]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "merge-1",
+      "name": "Merge All Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [1450, 350]
+    },
+    {
+      "parameters": {
+        "functionCode": "const user = $('Process Each User').item.json;\nconst dateInfo = $('Calculate Date Range').item.json;\nconst contestsData = $input.all()[0]?.json[0] || [];\nconst studyData = $input.all()[1]?.json[0] || [];\nconst todosData = $input.all()[2]?.json[0] || [];\n\n// Parse contests\nlet contests = [];\nif (Array.isArray(contestsData)) {\n  contests = contestsData.filter(item => item.document).map(item => {\n    const fields = item.document.fields;\n    return {\n      score: parseFloat(fields.score?.doubleValue || fields.score?.integerValue || 0),\n      totalQuestions: parseInt(fields.totalQuestions?.integerValue || 0),\n      timeTaken: parseInt(fields.timeTaken?.integerValue || 0)\n    };\n  });\n} else if (contestsData.document) {\n  const fields = contestsData.document.fields;\n  contests = [{\n    score: parseFloat(fields.score?.doubleValue || fields.score?.integerValue || 0),\n    totalQuestions: parseInt(fields.totalQuestions?.integerValue || 0),\n    timeTaken: parseInt(fields.timeTaken?.integerValue || 0)\n  }];\n}\n\n// Parse study sessions\nlet studySessions = [];\nif (Array.isArray(studyData)) {\n  studySessions = studyData.filter(item => item.document).map(item => {\n    const fields = item.document.fields;\n    return {\n      duration: parseInt(fields.duration?.integerValue || 0),\n      topic: fields.topic?.stringValue || 'General'\n    };\n  });\n} else if (studyData.document) {\n  const fields = studyData.document.fields;\n  studySessions = [{\n    duration: parseInt(fields.duration?.integerValue || 0),\n    topic: fields.topic?.stringValue || 'General'\n  }];\n}\n\n// Parse todos\nlet completedTodos = 0;\nif (Array.isArray(todosData)) {\n  completedTodos = todosData.filter(item => item.document).length;\n} else if (todosData.document) {\n  completedTodos = 1;\n}\n\n// Calculate statistics\nconst totalContests = contests.length;\nconst avgScore = contests.length > 0 \n  ? contests.reduce((sum, c) => sum + c.score, 0) / contests.length \n  : 0;\nconst totalStudyTime = studySessions.reduce((sum, s) => sum + s.duration, 0);\nconst totalStudySessions = studySessions.length;\n\n// Generate insights\nconst insights = [];\n\nif (totalContests > 0) {\n  insights.push(`Participated in ${totalContests} contest${totalContests > 1 ? 's' : ''}`);\n  if (avgScore >= 70) {\n    insights.push('🌟 Excellent average performance!');\n  } else if (avgScore >= 50) {\n    insights.push('📈 Good progress, keep it up!');\n  } else {\n    insights.push('💪 Focus on consistent practice');\n  }\n}\n\nif (totalStudyTime > 0) {\n  const hours = Math.floor(totalStudyTime / 3600);\n  insights.push(`Dedicated ${hours} hours to learning`);\n}\n\nif (completedTodos > 10) {\n  insights.push('✅ Highly productive month!');\n}\n\n// Generate email HTML\nconst emailHTML = `\n<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 700px; margin: 0 auto; padding: 20px; background: #f5f5f5; }\n    .container { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }\n    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 30px; text-align: center; }\n    .header h1 { margin: 0; font-size: 32px; }\n    .header p { margin: 10px 0 0; font-size: 18px; opacity: 0.9; }\n    .content { padding: 30px; }\n    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 20px 0; }\n    .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 10px; text-align: center; box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3); }\n    .stat-value { font-size: 36px; font-weight: bold; margin: 10px 0; }\n    .stat-label { font-size: 14px; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; }\n    .insights { background: #f0f4ff; padding: 20px; border-radius: 10px; margin: 20px 0; }\n    .insights h3 { color: #667eea; margin-top: 0; }\n    .insights ul { margin: 10px 0; padding-left: 20px; }\n    .insights li { margin: 8px 0; }\n    .goals { background: #fff4e6; padding: 20px; border-radius: 10px; border-left: 4px solid #ffa726; }\n    .goals h3 { color: #f57c00; margin-top: 0; }\n    .footer { text-align: center; padding: 20px; color: #999; font-size: 14px; }\n    .cta-button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 20px 0; font-weight: bold; transition: all 0.3s; }\n    .cta-button:hover { background: #764ba2; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4); }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>📊 Your Monthly Report</h1>\n      <p>${dateInfo.monthName}</p>\n    </div>\n    \n    <div class=\"content\">\n      <h2 style=\"color: #667eea;\">Hi ${user.name}! 👋</h2>\n      <p>Here's a comprehensive summary of your activities and achievements this month.</p>\n      \n      <div class=\"stats-grid\">\n        <div class=\"stat-card\">\n          <div class=\"stat-label\">Contests Taken</div>\n          <div class=\"stat-value\">${totalContests}</div>\n        </div>\n        <div class=\"stat-card\">\n          <div class=\"stat-label\">Average Score</div>\n          <div class=\"stat-value\">${avgScore.toFixed(1)}%</div>\n        </div>\n        <div class=\"stat-card\">\n          <div class=\"stat-label\">Study Sessions</div>\n          <div class=\"stat-value\">${totalStudySessions}</div>\n        </div>\n        <div class=\"stat-card\">\n          <div class=\"stat-label\">Tasks Completed</div>\n          <div class=\"stat-value\">${completedTodos}</div>\n        </div>\n      </div>\n      \n      <div class=\"insights\">\n        <h3>🎯 Key Insights</h3>\n        <ul>\n          ${insights.map(insight => `<li>${insight}</li>`).join('')}\n          ${insights.length === 0 ? '<li>Start your journey this month!</li>' : ''}\n        </ul>\n      </div>\n      \n      <div class=\"goals\">\n        <h3>🚀 Goals for Next Month</h3>\n        <ul>\n          <li>Participate in at least ${Math.max(totalContests + 2, 3)} contests</li>\n          <li>Maintain or improve your average score</li>\n          <li>Complete ${Math.max(completedTodos + 5, 15)} tasks</li>\n          <li>Dedicate ${Math.max(Math.floor(totalStudyTime / 3600) + 5, 10)} hours to learning</li>\n        </ul>\n      </div>\n      \n      <center>\n        <a href=\"https://your-app-url.com/dashboard\" class=\"cta-button\">\n          View Detailed Analytics 📈\n        </a>\n      </center>\n    </div>\n    \n    <div class=\"footer\">\n      <p>Keep up the great work! 🌟</p>\n      <p>Sent from SuperApp | <a href=\"#\">Manage Email Preferences</a></p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n\nreturn [{\n  json: {\n    to: user.email,\n    subject: `📊 Your ${dateInfo.monthName} Summary - SuperApp`,\n    html: emailHTML,\n    stats: {\n      totalContests,\n      avgScore: avgScore.toFixed(1),\n      totalStudySessions,\n      completedTodos,\n      totalStudyHours: Math.floor(totalStudyTime / 3600)\n    }\n  }\n}];"
+      },
+      "id": "code-3",
+      "name": "Generate Monthly Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 350]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$credentials.email}}",
+        "toEmail": "={{$json.to}}",
+        "subject": "={{$json.subject}}",
+        "emailType": "html",
+        "message": "={{$json.html}}",
+        "options": {}
+      },
+      "id": "emailSend-1",
+      "name": "Send Monthly Summary Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1850, 350],
+      "credentials": {
+        "smtp": {
+          "id": "smtp-credentials",
+          "name": "SMTP Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule - 1st of Every Month at 9 AM": {
+      "main": [[{ "node": "Get All Users", "type": "main", "index": 0 }]]
+    },
+    "Get All Users": {
+      "main": [[{ "node": "Parse Users", "type": "main", "index": 0 }]]
+    },
+    "Parse Users": {
+      "main": [[{ "node": "Process Each User", "type": "main", "index": 0 }]]
+    },
+    "Process Each User": {
+      "main": [[{ "node": "Calculate Date Range", "type": "main", "index": 0 }]]
+    },
+    "Calculate Date Range": {
+      "main": [
+        [
+          { "node": "Get Contest Results", "type": "main", "index": 0 },
+          { "node": "Get Study Sessions", "type": "main", "index": 0 },
+          { "node": "Get Completed Todos", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Contest Results": {
+      "main": [[{ "node": "Merge All Data", "type": "main", "index": 0 }]]
+    },
+    "Get Study Sessions": {
+      "main": [[{ "node": "Merge All Data", "type": "main", "index": 1 }]]
+    },
+    "Get Completed Todos": {
+      "main": [[{ "node": "Merge All Data", "type": "main", "index": 2 }]]
+    },
+    "Merge All Data": {
+      "main": [[{ "node": "Generate Monthly Summary", "type": "main", "index": 0 }]]
+    },
+    "Generate Monthly Summary": {
+      "main": [[{ "node": "Send Monthly Summary Email", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "id": "monthly-summary",
+  "meta": {
+    "instanceId": "local"
+  },
+  "tags": []
+}

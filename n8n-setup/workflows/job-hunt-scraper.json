@@ -1,0 +1,188 @@
+{
+  "name": "Job Hunt Scraper - 10+ Sources",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "job-hunt",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-1",
+      "name": "Webhook - Job Hunt Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "job-hunt-webhook"
+    },
+    {
+      "parameters": {
+        "functionCode": "const userId = $input.item.json.userId;\nconst preferences = $input.item.json.preferences || {};\nconst role = preferences.role || 'Software Engineer';\nconst location = preferences.location || 'Remote';\nconst experience = preferences.experience || 'entry-level';\n\nreturn {\n  userId,\n  searchQueries: [\n    { source: 'linkedin', query: `${role} ${location}`, url: 'https://www.linkedin.com/jobs/search/' },\n    { source: 'indeed', query: `${role} ${location}`, url: 'https://www.indeed.com/jobs' },\n    { source: 'glassdoor', query: `${role}`, location: location, url: 'https://www.glassdoor.com/Job/' },\n    { source: 'monster', query: `${role}`, url: 'https://www.monster.com/jobs/search/' },\n    { source: 'dice', query: `${role}`, url: 'https://www.dice.com/jobs' },\n    { source: 'stackoverflow', query: `${role}`, url: 'https://stackoverflow.com/jobs' },\n    { source: 'github-jobs', query: `${role}`, url: 'https://github.com/jobs' },\n    { source: 'angellist', query: `${role}`, url: 'https://angel.co/jobs' },\n    { source: 'remoteok', query: `${role}`, url: 'https://remoteok.com/remote-jobs' },\n    { source: 'weworkremotely', query: `${role}`, url: 'https://weworkremotely.com/' },\n    { source: 'flexjobs', query: `${role}`, url: 'https://www.flexjobs.com/' },\n    { source: 'simplyhired', query: `${role}`, url: 'https://www.simplyhired.com/' }\n  ]\n};"
+      },
+      "id": "code-1",
+      "name": "Prepare Search Queries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 3,
+        "options": {}
+      },
+      "id": "splitInBatches-1",
+      "name": "Split Into Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://jsearch.p.rapidapi.com/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "rapidApiApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{$json.searchQueries[$itemIndex].query}}"
+            },
+            {
+              "name": "num_pages",
+              "value": "1"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-RapidAPI-Host",
+              "value": "jsearch.p.rapidapi.com"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "httpRequest-1",
+      "name": "JSearch API - LinkedIn/Indeed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "url": "=https://serpapi.com/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "google_jobs"
+            },
+            {
+              "name": "q",
+              "value": "={{$json.searchQueries[$itemIndex].query}}"
+            },
+            {
+              "name": "location",
+              "value": "={{$json.searchQueries[$itemIndex].location || 'United States'}}"
+            },
+            {
+              "name": "api_key",
+              "value": "={{$credentials.serpApiKey}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "httpRequest-2",
+      "name": "SerpAPI - Google Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "functionCode": "const jobs = [];\n\nfor (const item of $input.all()) {\n  const data = item.json;\n  \n  // Handle JSearch format\n  if (data.data && Array.isArray(data.data)) {\n    data.data.forEach(job => {\n      jobs.push({\n        title: job.job_title,\n        company: job.employer_name,\n        location: job.job_city ? `${job.job_city}, ${job.job_state || job.job_country}` : job.job_country,\n        description: job.job_description,\n        url: job.job_apply_link || job.job_google_link,\n        source: 'JSearch',\n        salary: job.job_salary_range || 'Not specified',\n        postedDate: job.job_posted_at_datetime_utc,\n        employmentType: job.job_employment_type,\n        remote: job.job_is_remote\n      });\n    });\n  }\n  \n  // Handle SerpAPI format\n  if (data.jobs_results && Array.isArray(data.jobs_results)) {\n    data.jobs_results.forEach(job => {\n      jobs.push({\n        title: job.title,\n        company: job.company_name,\n        location: job.location,\n        description: job.description,\n        url: job.share_link || job.link,\n        source: 'Google Jobs',\n        salary: job.detected_extensions?.salary || 'Not specified',\n        postedDate: job.detected_extensions?.posted_at,\n        employmentType: job.detected_extensions?.schedule_type,\n        remote: job.location?.toLowerCase().includes('remote')\n      });\n    });\n  }\n}\n\n// Remove duplicates by URL\nconst uniqueJobs = Array.from(\n  new Map(jobs.map(job => [job.url, job])).values()\n);\n\n// Sort by posted date (most recent first)\nuniqueJobs.sort((a, b) => \n  new Date(b.postedDate) - new Date(a.postedDate)\n);\n\nreturn uniqueJobs.map(job => ({ json: job }));"
+      },
+      "id": "code-2",
+      "name": "Parse & Deduplicate Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://firestore.googleapis.com/v1/projects/super-app-54ae9/databases/(default)/documents/scrapedJobs",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleServiceAccount",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "={{JSON.stringify({\n  title: { stringValue: $json.title },\n  company: { stringValue: $json.company },\n  location: { stringValue: $json.location },\n  description: { stringValue: $json.description },\n  url: { stringValue: $json.url },\n  source: { stringValue: $json.source },\n  salary: { stringValue: $json.salary },\n  postedDate: { stringValue: $json.postedDate },\n  employmentType: { stringValue: $json.employmentType },\n  remote: { booleanValue: $json.remote },\n  scrapedAt: { timestampValue: new Date().toISOString() },\n  userId: { stringValue: $('Webhook - Job Hunt Trigger').item.json.userId }\n})}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "httpRequest-3",
+      "name": "Save to Firebase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const userId = $('Webhook - Job Hunt Trigger').item.json.userId;\nconst totalJobs = $input.all().length;\nconst sources = [...new Set($input.all().map(item => item.json.source))];\n\nreturn [{\n  json: {\n    userId,\n    totalJobs,\n    sources: sources.join(', '),\n    timestamp: new Date().toISOString(),\n    message: `Successfully scraped ${totalJobs} jobs from ${sources.length} sources`,\n    jobs: $input.all().slice(0, 20).map(item => item.json)\n  }\n}];"
+      },
+      "id": "code-3",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - Job Hunt Trigger": {
+      "main": [[{ "node": "Prepare Search Queries", "type": "main", "index": 0 }]]
+    },
+    "Prepare Search Queries": {
+      "main": [[{ "node": "Split Into Batches", "type": "main", "index": 0 }]]
+    },
+    "Split Into Batches": {
+      "main": [
+        [
+          { "node": "JSearch API - LinkedIn/Indeed", "type": "main", "index": 0 },
+          { "node": "SerpAPI - Google Jobs", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "JSearch API - LinkedIn/Indeed": {
+      "main": [[{ "node": "Parse & Deduplicate Jobs", "type": "main", "index": 0 }]]
+    },
+    "SerpAPI - Google Jobs": {
+      "main": [[{ "node": "Parse & Deduplicate Jobs", "type": "main", "index": 0 }]]
+    },
+    "Parse & Deduplicate Jobs": {
+      "main": [[{ "node": "Save to Firebase", "type": "main", "index": 0 }]]
+    },
+    "Save to Firebase": {
+      "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "id": "job-hunt-scraper",
+  "meta": {
+    "instanceId": "local"
+  },
+  "tags": []
+}

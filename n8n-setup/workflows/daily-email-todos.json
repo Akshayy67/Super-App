@@ -1,0 +1,186 @@
+{
+  "name": "Daily Email - Calendar & Todos",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-1",
+      "name": "Schedule - Every Morning 7 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://firestore.googleapis.com/v1/projects/super-app-54ae9/databases/(default)/documents/users",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleServiceAccount",
+        "options": {}
+      },
+      "id": "httpRequest-1",
+      "name": "Get All Active Users",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const documents = $input.item.json.documents || [];\nconst users = [];\n\nfor (const doc of documents) {\n  const fields = doc.fields;\n  if (fields && fields.email && fields.dailyEmailEnabled?.booleanValue !== false) {\n    users.push({\n      userId: doc.name.split('/').pop(),\n      email: fields.email.stringValue,\n      name: fields.displayName?.stringValue || 'User',\n      timezone: fields.timezone?.stringValue || 'America/New_York'\n    });\n  }\n}\n\nreturn users.map(user => ({ json: user }));"
+      },
+      "id": "code-1",
+      "name": "Parse Active Users",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "splitInBatches-1",
+      "name": "Process Each User",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://firestore.googleapis.com/v1/projects/super-app-54ae9/databases/(default)/documents:runQuery",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleServiceAccount",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "structuredQuery",
+              "value": "={{JSON.stringify({\n  from: [{ collectionId: 'todos' }],\n  where: {\n    compositeFilter: {\n      op: 'AND',\n      filters: [\n        {\n          fieldFilter: {\n            field: { fieldPath: 'userId' },\n            op: 'EQUAL',\n            value: { stringValue: $json.userId }\n          }\n        },\n        {\n          fieldFilter: {\n            field: { fieldPath: 'completed' },\n            op: 'EQUAL',\n            value: { booleanValue: false }\n          }\n        },\n        {\n          fieldFilter: {\n            field: { fieldPath: 'dueDate' },\n            op: 'LESS_THAN_OR_EQUAL',\n            value: { timestampValue: new Date().toISOString() }\n          }\n        }\n      ]\n    }\n  },\n  orderBy: [{ field: { fieldPath: 'priority' }, direction: 'DESCENDING' }]\n})}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "httpRequest-2",
+      "name": "Get User Todos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "url": "=https://firestore.googleapis.com/v1/projects/super-app-54ae9/databases/(default)/documents:runQuery",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleServiceAccount",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "structuredQuery",
+              "value": "={{JSON.stringify({\n  from: [{ collectionId: 'calendarEvents' }],\n  where: {\n    compositeFilter: {\n      op: 'AND',\n      filters: [\n        {\n          fieldFilter: {\n            field: { fieldPath: 'userId' },\n            op: 'EQUAL',\n            value: { stringValue: $json.userId }\n          }\n        },\n        {\n          fieldFilter: {\n            field: { fieldPath: 'date' },\n            op: 'EQUAL',\n            value: { stringValue: new Date().toISOString().split('T')[0] }\n          }\n        }\n      ]\n    }\n  },\n  orderBy: [{ field: { fieldPath: 'startTime' }, direction: 'ASCENDING' }]\n})}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "httpRequest-3",
+      "name": "Get Calendar Events",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "merge-1",
+      "name": "Merge Todos & Events",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const user = $('Process Each User').item.json;\nconst todosData = $input.first().json[0] || {};\nconst eventsData = $input.last().json[0] || {};\n\n// Parse todos\nconst todos = [];\nif (todosData.document) {\n  const docs = Array.isArray(todosData) ? todosData : [todosData];\n  docs.forEach(item => {\n    if (item.document && item.document.fields) {\n      const fields = item.document.fields;\n      todos.push({\n        title: fields.title?.stringValue || '',\n        priority: fields.priority?.stringValue || 'medium',\n        dueDate: fields.dueDate?.timestampValue || '',\n        category: fields.category?.stringValue || 'general'\n      });\n    }\n  });\n}\n\n// Parse events\nconst events = [];\nif (eventsData.document) {\n  const docs = Array.isArray(eventsData) ? eventsData : [eventsData];\n  docs.forEach(item => {\n    if (item.document && item.document.fields) {\n      const fields = item.document.fields;\n      events.push({\n        title: fields.title?.stringValue || '',\n        startTime: fields.startTime?.stringValue || '',\n        endTime: fields.endTime?.stringValue || '',\n        location: fields.location?.stringValue || 'Not specified',\n        description: fields.description?.stringValue || ''\n      });\n    }\n  });\n}\n\n// Generate email HTML\nconst todayDate = new Date().toLocaleDateString('en-US', { \n  weekday: 'long', \n  year: 'numeric', \n  month: 'long', \n  day: 'numeric' \n});\n\nconst emailHTML = `\n<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px 10px 0 0; }\n    .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 10px 10px; }\n    .section { background: white; padding: 15px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }\n    .section-title { color: #667eea; font-size: 18px; font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #667eea; padding-bottom: 5px; }\n    .todo-item { padding: 10px; margin: 8px 0; background: #f0f4ff; border-left: 4px solid #667eea; border-radius: 4px; }\n    .event-item { padding: 10px; margin: 8px 0; background: #fff4e6; border-left: 4px solid #ffa726; border-radius: 4px; }\n    .priority-high { border-left-color: #e74c3c; }\n    .priority-medium { border-left-color: #f39c12; }\n    .priority-low { border-left-color: #3498db; }\n    .time { font-weight: bold; color: #ffa726; }\n    .empty-state { color: #999; font-style: italic; text-align: center; padding: 20px; }\n    .footer { text-align: center; color: #999; font-size: 12px; margin-top: 20px; padding: 10px; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>🌅 Good Morning, ${user.name}!</h1>\n    <p>${todayDate}</p>\n  </div>\n  <div class=\"content\">\n    <div class=\"section\">\n      <div class=\"section-title\">📅 Today's Schedule</div>\n      ${events.length > 0 ? events.map(event => `\n        <div class=\"event-item\">\n          <div class=\"time\">${event.startTime} - ${event.endTime}</div>\n          <div><strong>${event.title}</strong></div>\n          <div>${event.location}</div>\n          ${event.description ? `<div style=\"color: #666; font-size: 14px; margin-top: 5px;\">${event.description}</div>` : ''}\n        </div>\n      `).join('') : '<div class=\"empty-state\">No events scheduled for today 🎉</div>'}\n    </div>\n    \n    <div class=\"section\">\n      <div class=\"section-title\">✅ Today's Tasks</div>\n      ${todos.length > 0 ? todos.map(todo => `\n        <div class=\"todo-item priority-${todo.priority}\">\n          <div><strong>${todo.title}</strong></div>\n          <div style=\"font-size: 12px; color: #666; margin-top: 5px;\">\n            Priority: ${todo.priority.toUpperCase()} | Category: ${todo.category}\n          </div>\n        </div>\n      `).join('') : '<div class=\"empty-state\">No pending tasks - You\\'re all caught up! 🎊</div>'}\n    </div>\n    \n    <div class=\"section\">\n      <div class=\"section-title\">💡 Daily Tip</div>\n      <p>Break your tasks into smaller chunks and take regular breaks. Remember to stay hydrated! 💧</p>\n    </div>\n  </div>\n  <div class=\"footer\">\n    <p>Sent from your SuperApp | <a href=\"#\">Manage Email Preferences</a></p>\n  </div>\n</body>\n</html>\n`;\n\nreturn [{\n  json: {\n    to: user.email,\n    subject: `🌅 Your Day at a Glance - ${todayDate}`,\n    html: emailHTML,\n    userName: user.name,\n    todosCount: todos.length,\n    eventsCount: events.length\n  }\n}];"
+      },
+      "id": "code-2",
+      "name": "Generate Email Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$credentials.email}}",
+        "toEmail": "={{$json.to}}",
+        "subject": "={{$json.subject}}",
+        "emailType": "html",
+        "message": "={{$json.html}}",
+        "options": {}
+      },
+      "id": "emailSend-1",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1650, 300],
+      "credentials": {
+        "smtp": {
+          "id": "smtp-credentials",
+          "name": "SMTP Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule - Every Morning 7 AM": {
+      "main": [[{ "node": "Get All Active Users", "type": "main", "index": 0 }]]
+    },
+    "Get All Active Users": {
+      "main": [[{ "node": "Parse Active Users", "type": "main", "index": 0 }]]
+    },
+    "Parse Active Users": {
+      "main": [[{ "node": "Process Each User", "type": "main", "index": 0 }]]
+    },
+    "Process Each User": {
+      "main": [
+        [
+          { "node": "Get User Todos", "type": "main", "index": 0 },
+          { "node": "Get Calendar Events", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get User Todos": {
+      "main": [[{ "node": "Merge Todos & Events", "type": "main", "index": 0 }]]
+    },
+    "Get Calendar Events": {
+      "main": [[{ "node": "Merge Todos & Events", "type": "main", "index": 1 }]]
+    },
+    "Merge Todos & Events": {
+      "main": [[{ "node": "Generate Email Content", "type": "main", "index": 0 }]]
+    },
+    "Generate Email Content": {
+      "main": [[{ "node": "Send Email", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "id": "daily-email-todos",
+  "meta": {
+    "instanceId": "local"
+  },
+  "tags": []
+}
