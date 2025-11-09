@@ -38,7 +38,7 @@ export const PremiumUpsell: React.FC<PremiumUpsellProps> = ({ featureName = 'thi
 
     const particlesMaterial = new THREE.PointsMaterial({
       size: 0.015,
-      color: '#8b5cf6',
+      color: '#06b6d4',
       transparent: true,
       opacity: 0.8,
       blending: THREE.AdditiveBlending,
@@ -53,8 +53,8 @@ export const PremiumUpsell: React.FC<PremiumUpsellProps> = ({ featureName = 'thi
 
     for (let i = 0; i < 5; i++) {
       const material = new THREE.MeshPhongMaterial({
-        color: i % 2 === 0 ? '#8b5cf6' : '#3b82f6',
-        emissive: i % 2 === 0 ? '#8b5cf6' : '#3b82f6',
+        color: i % 2 === 0 ? '#06b6d4' : '#3b82f6',
+        emissive: i % 2 === 0 ? '#06b6d4' : '#3b82f6',
         emissiveIntensity: 0.5,
         shininess: 100,
         transparent: true,
@@ -72,7 +72,7 @@ export const PremiumUpsell: React.FC<PremiumUpsellProps> = ({ featureName = 'thi
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
-    const pointLight1 = new THREE.PointLight(0x8b5cf6, 2, 100);
+    const pointLight1 = new THREE.PointLight(0x06b6d4, 2, 100);
     pointLight1.position.set(5, 5, 5);
     scene.add(pointLight1);
 
@@ -140,7 +140,7 @@ export const PremiumUpsell: React.FC<PremiumUpsellProps> = ({ featureName = 'thi
   ];
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* 3D Canvas Background */}
       <canvas
         ref={canvasRef}
@@ -154,7 +154,7 @@ export const PremiumUpsell: React.FC<PremiumUpsellProps> = ({ featureName = 'thi
           {/* Main Card */}
           <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
             {/* Header */}
-            <div className="relative bg-gradient-to-r from-purple-600 to-blue-600 p-12 text-center">
+            <div className="relative bg-gradient-to-r from-blue-600 to-cyan-600 p-12 text-center">
               <div className="absolute inset-0 bg-black/10"></div>
               <div className="relative">
                 <div className="flex justify-center mb-6">
@@ -168,10 +168,10 @@ export const PremiumUpsell: React.FC<PremiumUpsellProps> = ({ featureName = 'thi
                 <h1 className="text-5xl font-bold text-white mb-4 drop-shadow-lg">
                   Just One Step Away!
                 </h1>
-                <p className="text-2xl text-purple-100 mb-2">
+                <p className="text-2xl text-cyan-100 mb-2">
                   Transform Your Learning Journey
                 </p>
-                <p className="text-lg text-purple-200">
+                <p className="text-lg text-cyan-200">
                   Unlock {featureName} and 50+ premium features
                 </p>
               </div>
@@ -186,12 +186,12 @@ export const PremiumUpsell: React.FC<PremiumUpsellProps> = ({ featureName = 'thi
                     className="group bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl p-6 transition-all duration-300 hover:scale-105 hover:shadow-2xl border border-white/10"
                   >
                     <div className="flex items-start gap-4">
-                      <div className="p-3 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg shadow-lg group-hover:shadow-purple-500/50 transition-shadow">
+                      <div className="p-3 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg shadow-lg group-hover:shadow-cyan-500/50 transition-shadow">
                         <feature.icon className="w-6 h-6 text-white" />
                       </div>
                       <div>
                         <h3 className="text-xl font-bold text-white mb-2">{feature.title}</h3>
-                        <p className="text-purple-200">{feature.description}</p>
+                        <p className="text-cyan-200">{feature.description}</p>
                       </div>
                     </div>
                   </div>
@@ -202,7 +202,7 @@ export const PremiumUpsell: React.FC<PremiumUpsellProps> = ({ featureName = 'thi
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button
                   onClick={() => navigate('/payment')}
-                  className="group relative px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-lg font-bold rounded-xl shadow-2xl transform transition-all duration-300 hover:scale-110 hover:shadow-purple-500/50"
+                  className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white text-lg font-bold rounded-xl shadow-2xl transform transition-all duration-300 hover:scale-110 hover:shadow-cyan-500/50"
                 >
                   <div className="absolute inset-0 bg-white/20 rounded-xl blur-xl group-hover:blur-2xl transition-all"></div>
                   <div className="relative flex items-center gap-3">
@@ -221,10 +221,10 @@ export const PremiumUpsell: React.FC<PremiumUpsellProps> = ({ featureName = 'thi
 
               {/* Additional Info */}
               <div className="mt-8 text-center">
-                <p className="text-purple-200 mb-2">
+                <p className="text-cyan-200 mb-2">
                   <span className="font-semibold">30 Days Money Back Guarantee</span>
                 </p>
-                <p className="text-sm text-purple-300">
+                <p className="text-sm text-cyan-300">
                   Cancel anytime • No hidden fees • Risk-free trial
                 </p>
               </div>
