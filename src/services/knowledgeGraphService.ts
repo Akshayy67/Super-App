@@ -129,8 +129,11 @@ class KnowledgeGraphService {
 
     const nodes: KnowledgeNode[] = [];
 
-    // Get user's contest history
-    const contestResults = await this.getContestResults(userId);
+    try {
+      // Get user's contest history
+      console.log('📊 Fetching contest results...');
+      const contestResults = await this.getContestResults(userId);
+      console.log('✅ Contest results loaded:', contestResults.length, 'contests');
 
     // Analyze performance by topic
     for (const [topicId, topicInfo] of Object.entries(this.TOPIC_GRAPH)) {
@@ -155,10 +158,16 @@ class KnowledgeGraphService {
       nodes.push(node);
     }
 
-    // Save to database
-    await this.saveKnowledgeGraph(userId, nodes);
+      // Save to database
+      console.log('💾 Saving knowledge graph...');
+      await this.saveKnowledgeGraph(userId, nodes);
+      console.log('✅ Knowledge graph saved successfully');
 
-    return nodes;
+      return nodes;
+    } catch (error) {
+      console.error('❌ Error building knowledge graph:', error);
+      throw error;
+    }
   }
 
   private analyzeTopicPerformance(topicId: string, contestResults: any[]): any {
@@ -238,8 +247,11 @@ class KnowledgeGraphService {
   async generateAdaptivePath(userId: string, targetTopics?: string[]): Promise<AdaptiveLearningPath> {
     console.log(`🎯 Generating adaptive learning path for user: ${userId}`);
 
-    // Build/refresh knowledge graph
-    const knowledgeGraph = await this.buildKnowledgeGraph(userId);
+    try {
+      // Build/refresh knowledge graph
+      console.log('🧠 Building knowledge graph...');
+      const knowledgeGraph = await this.buildKnowledgeGraph(userId);
+      console.log('✅ Knowledge graph built with', knowledgeGraph.length, 'topics');
 
     // Determine learning style (in production, from user preferences or ML)
     const learningStyle = 'mixed'; // 'visual' | 'auditory' | 'kinesthetic' | 'reading'
@@ -279,10 +291,16 @@ class KnowledgeGraphService {
       nextMilestone,
     };
 
-    // Save path to database
-    await this.saveLearningPath(path);
+      // Save path to database
+      console.log('💾 Saving learning path...');
+      await this.saveLearningPath(path);
+      console.log('✅ Learning path saved successfully');
 
-    return path;
+      return path;
+    } catch (error) {
+      console.error('❌ Error generating adaptive path:', error);
+      throw error;
+    }
   }
 
   private identifyFocusTopics(graph: KnowledgeNode[], targetTopics?: string[]): KnowledgeNode[] {

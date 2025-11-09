@@ -203,11 +203,23 @@ class PredictiveLearningEngine {
   async predictStudentRisk(userId: string): Promise<RiskPrediction> {
     console.log(`🤖 Generating risk prediction for user: ${userId}`);
 
-    // Gather all student data
-    const profile = await this.getStudentProfile(userId);
-    const activities = await this.getRecentActivities(userId, 90); // last 90 days
-    const performance = await this.getPerformanceMetrics(userId, 'month');
-    const historicalPredictions = await this.getHistoricalPredictions(userId, 4); // last 4 predictions
+    try {
+      // Gather all student data
+      console.log('📋 Fetching student profile...');
+      const profile = await this.getStudentProfile(userId);
+      console.log('✅ Profile loaded:', profile.name);
+      
+      console.log('📊 Fetching recent activities (90 days)...');
+      const activities = await this.getRecentActivities(userId, 90); // last 90 days
+      console.log('✅ Activities loaded:', activities.length, 'activities');
+      
+      console.log('📈 Calculating performance metrics...');
+      const performance = await this.getPerformanceMetrics(userId, 'month');
+      console.log('✅ Performance metrics calculated');
+      
+      console.log('🔙 Fetching historical predictions...');
+      const historicalPredictions = await this.getHistoricalPredictions(userId, 4); // last 4 predictions
+      console.log('✅ Historical predictions loaded:', historicalPredictions.length);
 
     // Extract features for ML model
     const features = this.extractPredictiveFeatures(profile, activities, performance);
@@ -260,15 +272,23 @@ class PredictiveLearningEngine {
       confidence: 0.82, // Model confidence (in production, from ML model)
     };
 
-    // Save prediction to database
-    await this.savePrediction(prediction);
+      // Save prediction to database
+      console.log('💾 Saving prediction to database...');
+      await this.savePrediction(prediction);
+      console.log('✅ Prediction saved successfully');
 
-    // Trigger automated interventions if critical
-    if (riskLevel === 'critical' || riskLevel === 'high') {
-      await this.triggerAutomatedInterventions(prediction);
+      // Trigger automated interventions if critical
+      if (riskLevel === 'critical' || riskLevel === 'high') {
+        console.log('⚠️ Triggering automated interventions for', riskLevel, 'risk');
+        await this.triggerAutomatedInterventions(prediction);
+      }
+
+      console.log('🎉 Risk prediction complete!');
+      return prediction;
+    } catch (error) {
+      console.error('❌ Error in predictStudentRisk:', error);
+      throw error;
     }
-
-    return prediction;
   }
 
   private predictDropout(features: any): PredictionScore {
@@ -967,24 +987,50 @@ class PredictiveLearningEngine {
   // ==================== DATA FETCHING ====================
 
   private async getStudentProfile(userId: string): Promise<StudentProfile> {
-    const docRef = doc(db, this.COLLECTIONS.STUDENTS, userId);
-    const docSnap = await getDoc(docRef);
-    
-    if (!docSnap.exists()) {
-      throw new Error(`Student profile not found: ${userId}`);
+    try {
+      const docRef = doc(db, this.COLLECTIONS.STUDENTS, userId);
+      const docSnap = await getDoc(docRef);
+      
+      if (!docSnap.exists()) {
+        console.warn(`⚠️ Student profile not found for userId: ${userId}, using defaults`);
+        // Return default profile instead of throwing error
+        return {
+          userId,
+          name: 'Student',
+          email: '',
+          enrollmentDate: new Date(),
+          major: 'Unknown',
+          year: 1,
+          gpa: 0,
+          demographics: {},
+        };
+      }
+      
+      const data = docSnap.data();
+      return {
+        userId,
+        name: data.displayName || data.name || 'Student',
+        email: data.email || '',
+        enrollmentDate: data.createdAt?.toDate() || new Date(),
+        major: data.major,
+        year: data.year,
+        gpa: data.gpa,
+        demographics: data.demographics,
+      };
+    } catch (error) {
+      console.error('❌ Error fetching student profile:', error);
+      // Return default profile on error
+      return {
+        userId,
+        name: 'Student',
+        email: '',
+        enrollmentDate: new Date(),
+        major: 'Unknown',
+        year: 1,
+        gpa: 0,
+        demographics: {},
+      };
     }
-    
-    const data = docSnap.data();
-    return {
-      userId,
-      name: data.displayName || data.name || 'Student',
-      email: data.email || '',
-      enrollmentDate: data.createdAt?.toDate() || new Date(),
-      major: data.major,
-      year: data.year,
-      gpa: data.gpa,
-      demographics: data.demographics,
-    };
   }
 
   private async getRecentActivities(userId: string, days: number): Promise<LearningActivity[]> {

@@ -36,17 +36,44 @@ export const PredictiveDashboard: React.FC<PredictiveDashboardProps> = ({ userId
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [pred, path, graph] = await Promise.all([
-        predictiveLearningEngine.getLatestPrediction(userId) || predictiveLearningEngine.predictStudentRisk(userId),
-        knowledgeGraphService.getLearningPath(userId) || knowledgeGraphService.generateAdaptivePath(userId),
-        knowledgeGraphService.getKnowledgeGraph(userId),
-      ]);
+      console.log('📊 Loading dashboard data for user:', userId);
+      
+      // Get or generate prediction
+      let pred = await predictiveLearningEngine.getLatestPrediction(userId);
+      console.log('🔮 Latest prediction:', pred ? 'Found' : 'Not found, generating...');
+      
+      if (!pred) {
+        console.log('🤖 Generating new risk prediction...');
+        pred = await predictiveLearningEngine.predictStudentRisk(userId);
+        console.log('✅ Risk prediction generated:', pred);
+      }
+
+      // Get or generate learning path
+      let path = await knowledgeGraphService.getLearningPath(userId);
+      console.log('🎯 Learning path:', path ? 'Found' : 'Not found, generating...');
+      
+      if (!path) {
+        console.log('🧠 Generating new learning path...');
+        path = await knowledgeGraphService.generateAdaptivePath(userId);
+        console.log('✅ Learning path generated:', path);
+      }
+
+      // Get knowledge graph
+      console.log('📚 Loading knowledge graph...');
+      const graph = await knowledgeGraphService.getKnowledgeGraph(userId);
+      console.log('✅ Knowledge graph loaded:', graph.length, 'topics');
 
       setPrediction(pred);
       setLearningPath(path);
       setKnowledgeGraph(graph);
+      
+      console.log('🎉 Dashboard data loaded successfully!');
     } catch (error) {
-      console.error('Error loading dashboard:', error);
+      console.error('❌ Error loading dashboard:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
     } finally {
       setLoading(false);
     }
