@@ -41,6 +41,8 @@ import { SkillAssessment } from "../gamification/SkillAssessment";
 import { AIStudyRoom } from "../studyrooms/AIStudyRoom";
 import { PersonalAIAssistant } from "../ai/PersonalAIAssistant";
 import { EnhancedContestSystem } from "../contests/EnhancedContestSystem";
+import { PredictiveDashboardWrapper } from "../predictive/PredictiveDashboardWrapper";
+import { FacultyDashboardWrapper } from "../predictive/FacultyDashboardWrapper";
 
 interface AppRouterProps {
   invitationData: {
@@ -403,7 +405,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/ai-assistant" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><PersonalAIAssistant /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><PersonalAIAssistant /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
@@ -411,7 +415,43 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
         path="/study-rooms" 
         element={
           <BlockedUserGuard>
-            <PageTransitionWrapper><AIStudyRoom /></PageTransitionWrapper>
+            <PremiumGuard>
+              <PageTransitionWrapper><AIStudyRoom /></PageTransitionWrapper>
+            </PremiumGuard>
+          </BlockedUserGuard>
+        } 
+      />
+      
+      {/* Predictive Learning & Analytics */}
+      <Route 
+        path="/predictive-dashboard" 
+        element={
+          <BlockedUserGuard>
+            <PremiumGuard>
+              <PageTransitionWrapper><PredictiveDashboardWrapper /></PageTransitionWrapper>
+            </PremiumGuard>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/faculty-dashboard" 
+        element={
+          <BlockedUserGuard>
+            <PremiumGuard>
+              <PageTransitionWrapper><FacultyDashboardWrapper /></PageTransitionWrapper>
+            </PremiumGuard>
+          </BlockedUserGuard>
+        } 
+      />
+      
+      {/* Contests */}
+      <Route 
+        path="/contests" 
+        element={
+          <BlockedUserGuard>
+            <PremiumGuard>
+              <PageTransitionWrapper><EnhancedContestSystem /></PageTransitionWrapper>
+            </PremiumGuard>
           </BlockedUserGuard>
         } 
       />
