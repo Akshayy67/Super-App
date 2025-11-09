@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, TrendingDown, Users, Mail, Phone, Calendar, CheckCircle, Clock, Filter } from 'lucide-react';
+import { AlertTriangle, TrendingDown, Users, Mail, Phone, Calendar, CheckCircle, Clock, Filter, LogOut } from 'lucide-react';
 import { predictiveLearningEngine, RiskPrediction } from '../../services/predictiveLearningEngine';
 import { collection, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { useNavigate } from 'react-router-dom';
 
 interface AdviseeAlert {
   studentId: string;
@@ -21,10 +22,17 @@ interface FacultyEarlyWarningDashboardProps {
 }
 
 export const FacultyEarlyWarningDashboard: React.FC<FacultyEarlyWarningDashboardProps> = ({ facultyId }) => {
+  const navigate = useNavigate();
   const [advisees, setAdvisees] = useState<AdviseeAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'critical' | 'high' | 'medium'>('all');
   const [sortBy, setSortBy] = useState<'risk' | 'lastContact' | 'name'>('risk');
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('facultyAuth');
+    console.log('🔒 Faculty logged out');
+    window.location.reload(); // Reload to show login screen
+  };
 
   useEffect(() => {
     loadAdvisees();
@@ -122,7 +130,17 @@ export const FacultyEarlyWarningDashboard: React.FC<FacultyEarlyWarningDashboard
             <h1 className="text-3xl font-bold mb-2">Early Warning System</h1>
             <p className="text-purple-100">AI-powered student success monitoring</p>
           </div>
-          <AlertTriangle className="w-12 h-12 opacity-80" />
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+              title="Logout"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="text-sm font-medium">Logout</span>
+            </button>
+            <AlertTriangle className="w-12 h-12 opacity-80" />
+          </div>
         </div>
       </div>
 

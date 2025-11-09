@@ -1,15 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { FacultyEarlyWarningDashboard } from './FacultyEarlyWarningDashboard';
+import { FacultyLogin } from './FacultyLogin';
 import { realTimeAuth } from '../../utils/realTimeAuth';
 
 export const FacultyDashboardWrapper: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
+  const [facultyAuthenticated, setFacultyAuthenticated] = useState(false);
 
   useEffect(() => {
     let mounted = true;
+
+    // Check faculty authentication from sessionStorage
+    const checkFacultyAuth = () => {
+      try {
+        const facultyAuth = sessionStorage.getItem('facultyAuth');
+        if (facultyAuth) {
+          const authData = JSON.parse(facultyAuth);
+          if (authData.authenticated) {
+            console.log('✅ Faculty already authenticated');
+            setFacultyAuthenticated(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking faculty auth:', error);
+      }
+    };
+
+    checkFacultyAuth();
 
     // Listen for auth state changes
     const unsubscribe = realTimeAuth.onAuthStateChange((currentUser) => {
@@ -60,6 +80,11 @@ export const FacultyDashboardWrapper: React.FC = () => {
   if (!user || !user.id) {
     console.warn('⚠️ No user found, redirecting to landing');
     return <Navigate to="/landing" replace />;
+  }
+
+  // Show faculty login if not authenticated
+  if (!facultyAuthenticated) {
+    return <FacultyLogin onLogin={() => setFacultyAuthenticated(true)} />;
   }
 
   console.log('✅ Loading faculty dashboard for user:', user.id);
