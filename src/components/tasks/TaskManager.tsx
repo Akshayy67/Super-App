@@ -44,6 +44,7 @@ import { TodoReminderButton } from "./TodoReminderButton";
 import { DopamineSpikeCelebration } from "../ui/DopamineSpikeCelebration";
 import { todoDayDetailsService, DayDetails } from "../../utils/todoDayDetailsService";
 import { unifiedAIService } from "../../utils/aiConfig";
+import { gamificationService } from "../../services/gamificationService";
 
 // Compact Task Item Component - shows only title, expands on click
 interface CompactTaskItemProps {
@@ -524,6 +525,12 @@ export const TaskManager: React.FC = () => {
         
         // Trigger Three.js celebration effect immediately
         setShowThreeJSEffect(true);
+
+        // Award XP for task completion
+        const xpAmount = task.priority === "high" ? 50 : task.priority === "medium" ? 25 : 15;
+        gamificationService.awardXP(user.id, xpAmount, `Task Completed: ${task.title}`).catch((error) => {
+          console.error("Error awarding XP:", error);
+        });
 
         // Update streak and check achievements (synchronous operations)
         const { newAchievements, streakData: updatedStreakData } =
