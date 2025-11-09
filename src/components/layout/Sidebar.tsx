@@ -83,7 +83,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       path: "/interview",
     },
     { id: "ai-assistant", label: "AI Learning Assistant", icon: Brain, path: "/ai-assistant", badge: "NEW" },
-    { id: "predictive-dashboard", label: "Predictive Analytics", icon: Target, path: "/predictive-dashboard", badge: "AI" },
     { id: "study-rooms", label: "Study Rooms", icon: Video, path: "/study-rooms", badge: "NEW" },
     { id: "team", label: "Team Space", icon: Users, path: "/team" },
     { id: "community", label: "Community", icon: MessageCircle, path: "/community" },
