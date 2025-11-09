@@ -335,8 +335,7 @@ const AuthenticatedApp: React.FC = () => {
 // Component to check current location
 const AppContent: React.FC<{
   isAuthenticated: boolean;
-  showPaymentGateway: boolean;
-}> = ({ isAuthenticated, showPaymentGateway }) => {
+}> = ({ isAuthenticated }) => {
   const location = useLocation();
   
   // Always show AppRouter if on payment page
@@ -348,12 +347,12 @@ const AppContent: React.FC<{
     );
   }
   
-  // Show AuthenticatedApp if authenticated and not showing payment gateway
-  if (isAuthenticated && !showPaymentGateway) {
+  // Show AuthenticatedApp if authenticated
+  if (isAuthenticated) {
     return <AuthenticatedApp />;
   }
   
-  // Otherwise show AppRouter
+  // Otherwise show AppRouter (landing, signup, etc.)
   return (
     <ErrorBoundary>
       <AppRouter invitationData={null} />
@@ -365,7 +364,6 @@ const AppContent: React.FC<{
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showPaymentGateway, setShowPaymentGateway] = useState(false);
 
   // Initialize todo reminders for authenticated user
   useTodoReminders(user);
@@ -376,40 +374,26 @@ function App() {
     const unsubscribe = realTimeAuth.onAuthStateChange((currentUser) => {
       console.log("👤 Auth state changed:", { user: !!currentUser, userId: currentUser?.id });
       setUser(currentUser);
-      // Check if payment gateway should be shown before authenticating
-      const shouldShowPayment = sessionStorage.getItem('showPaymentGateway') === 'true';
-      if (shouldShowPayment && currentUser) {
-        console.log("💳 Payment gateway flag detected - showing payment gateway");
-        setShowPaymentGateway(true);
-        // Don't set isAuthenticated yet - wait for payment gateway to complete
-        return;
-      }
-      // Only set authenticated if payment gateway is not active
-      if (!shouldShowPayment) {
-        setIsAuthenticated(!!currentUser);
-      }
+      // With freemium model, simply set authentication state
+      setIsAuthenticated(!!currentUser);
     });
 
-    // Check for payment gateway flag on mount (after auth state is set up)
-    const checkPaymentGateway = () => {
-      const shouldShowPayment = sessionStorage.getItem('showPaymentGateway') === 'true';
+    // Check current user on mount
+    const checkAuth = () => {
       const currentUser = realTimeAuth.getCurrentUser();
-      if (shouldShowPayment && currentUser) {
-        console.log("💳 Payment gateway flag found on mount - showing payment gateway");
-        setShowPaymentGateway(true);
-        // Don't set isAuthenticated - wait for payment gateway to complete
-      } else if (currentUser && !shouldShowPayment) {
-        // User is authenticated and payment gateway is not needed
+      if (currentUser) {
         console.log("✅ User authenticated on mount - setting authenticated state");
         setIsAuthenticated(true);
-      } else if (!currentUser) {
-        // No user - not authenticated
+        setUser(currentUser);
+      } else {
+        console.log("❌ No user authenticated");
         setIsAuthenticated(false);
+        setUser(null);
       }
     };
     
     // Check after a short delay to ensure auth state is initialized
-    setTimeout(checkPaymentGateway, 100);
+    setTimeout(checkAuth, 100);
 
     // Start daily task reminder service (sends emails at 8am daily)
     console.log("📧 Starting daily task reminder service...");
@@ -424,9 +408,6 @@ function App() {
 
   const handleAuthSuccess = async () => {
     console.log("🎉 Auth success handler called");
-    // Clear payment gateway flag
-    sessionStorage.removeItem('showPaymentGateway');
-    setShowPaymentGateway(false);
     
     // With freemium model, all authenticated users go to dashboard
     // Premium features are gated by PremiumGuard component
@@ -464,8 +445,7 @@ function App() {
         <GlobalPomodoroProvider>
           <Router>
             <AppContent 
-              isAuthenticated={isAuthenticated} 
-              showPaymentGateway={showPaymentGateway} 
+              isAuthenticated={isAuthenticated}
             />
           </Router>
         </GlobalPomodoroProvider>
