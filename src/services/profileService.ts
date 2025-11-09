@@ -18,6 +18,20 @@ const PROFILES_COLLECTION = "profiles";
 const MAX_PROFILE_PHOTO_SIZE = 500 * 1024; // 500KB for base64 (safe limit for profile photos)
 
 /**
+ * Helper function to remove undefined values from an object
+ * Firestore doesn't accept undefined values - they must be null or omitted
+ */
+const cleanUndefinedValues = (obj: any): any => {
+  const cleaned: any = {};
+  Object.keys(obj).forEach((key) => {
+    if (obj[key] !== undefined) {
+      cleaned[key] = obj[key];
+    }
+  });
+  return cleaned;
+};
+
+/**
  * Profile Service
  * Handles user profile operations including CRUD and photo uploads
  */
@@ -152,10 +166,12 @@ export class ProfileService {
       if (existingProfile) {
         // Update existing profile
         const profileRef = doc(db, PROFILES_COLLECTION, existingProfile.id);
-        await updateDoc(profileRef, {
+        // Clean undefined values - Firestore doesn't accept them
+        const cleanedData = cleanUndefinedValues({
           ...profileData,
           updatedAt: serverTimestamp(),
         });
+        await updateDoc(profileRef, cleanedData);
 
         const updatedDoc = await getDoc(profileRef);
         const data = updatedDoc.data();
@@ -182,7 +198,9 @@ export class ProfileService {
           updatedAt: serverTimestamp(),
         };
 
-        await setDoc(profileRef, newProfile);
+        // Clean undefined values before creating
+        const cleanedProfile = cleanUndefinedValues(newProfile);
+        await setDoc(profileRef, cleanedProfile);
 
         const createdDoc = await getDoc(profileRef);
         const data = createdDoc.data();
