@@ -46,19 +46,22 @@ export const PredictiveDashboardWrapper: React.FC = () => {
     };
   }, [authChecked]);
 
-  if (loading) {
+  // Show loading until auth is confirmed
+  if (loading || !authChecked) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
+          <p className="text-gray-600 dark:text-gray-400">Initializing dashboard...</p>
+          <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">Authenticating...</p>
         </div>
       </div>
     );
   }
   
-  if (!user || !user.id) {
-    console.warn('⚠️ No user found, redirecting to landing');
+  // Only redirect if auth check is complete and still no user
+  if (authChecked && (!user || !user.id)) {
+    console.warn('⚠️ No user found after auth check, redirecting to landing');
     return <Navigate to="/landing" replace />;
   }
 
