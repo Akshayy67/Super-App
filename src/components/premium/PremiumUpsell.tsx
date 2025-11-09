@@ -222,10 +222,10 @@ export const PremiumUpsell: React.FC<PremiumUpsellProps> = ({ featureName = 'thi
               {/* Additional Info */}
               <div className="mt-8 text-center">
                 <p className="text-purple-200 mb-2">
-                  <span className="font-semibold">Special Offer:</span> Get 30% off for students
+                  <span className="font-semibold">30 Days Money Back Guarantee</span>
                 </p>
                 <p className="text-sm text-purple-300">
-                  Cancel anytime • No hidden fees • 7-day money-back guarantee
+                  Cancel anytime • No hidden fees • Risk-free trial
                 </p>
               </div>
             </div>
