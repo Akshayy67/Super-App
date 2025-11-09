@@ -874,11 +874,18 @@ All team files and resources should be stored here for easy access and backup.`;
       const result = await response.json();
       let allFiles = result.files || [];
 
-      // Filter out old special folder names but keep the new structure
-      const oldSpecialFolders = ['Flashcards', 'Flash Cards', 'Short Notes'];
+      // Filter out special folders and files used by the app internally
+      const specialFolders = ['Flashcards', 'Flash Cards', 'Short Notes', 'ShortNotes', 'FlashCards'];
+      const specialFiles = ['shortnotes.json', 'flashcards.json'];
+      
       allFiles = allFiles.filter((file: any) => {
+        // Filter out special folders
         if (file.mimeType === "application/vnd.google-apps.folder") {
-          return !oldSpecialFolders.includes(file.name);
+          return !specialFolders.includes(file.name);
+        }
+        // Filter out special JSON files
+        if (specialFiles.includes(file.name)) {
+          return false;
         }
         return true;
       });
@@ -954,6 +961,22 @@ All team files and resources should be stored here for easy access and backup.`;
 
       const result = await response.json();
       let files = result.files || [];
+
+      // Filter out special folders and files
+      const specialFolders = ['Flashcards', 'Flash Cards', 'Short Notes', 'ShortNotes', 'FlashCards'];
+      const specialFiles = ['shortnotes.json', 'flashcards.json'];
+      
+      files = files.filter((file: any) => {
+        // Filter out special folders
+        if (file.mimeType === "application/vnd.google-apps.folder") {
+          return !specialFolders.includes(file.name);
+        }
+        // Filter out special JSON files
+        if (specialFiles.includes(file.name)) {
+          return false;
+        }
+        return true;
+      });
 
       // Recursively get files from subfolders
       const subfolders = files.filter(

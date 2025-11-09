@@ -126,19 +126,28 @@ export const FileManager: React.FC<FileManagerProps> = () => {
     if (!user) return;
     console.log("🔄 FileManager: Loading files...");
     
-    // OPTIMIZATION: Use backgroundSync for instant loading
     try {
+      // First, try to get from cache for instant display
+      const status = driveStorageUtils.getStorageStatus();
+      const cachedFiles = driveStorageUtils.getCachedFiles(user.id);
+      
+      if (cachedFiles && cachedFiles.length > 0) {
+        console.log("💾 Loading from cache:", cachedFiles.length, "files");
+        setFiles(cachedFiles);
+        setStorageStatus({ ...status, needsReauth: false, error: undefined });
+      }
+
+      // Then fetch fresh data (will use cache internally if valid, or fetch from Drive)
       const allFiles = await driveStorageUtils.getFiles(user.id, { 
-        backgroundSync: true // This returns localStorage immediately, syncs Drive in background
+        skipCache: false // Use cache if available, otherwise fetch
       });
-      console.log("📁 FileManager: Received files (fast load):", allFiles.length);
+      console.log("📁 FileManager: Received files:", allFiles.length);
       setFiles(allFiles);
 
       // Update storage status
-      const status = driveStorageUtils.getStorageStatus();
       setStorageStatus({ ...status, needsReauth: false, error: undefined });
       console.log(
-        "✅ FileManager: Files loaded instantly, count:",
+        "✅ FileManager: Files loaded, count:",
         allFiles.length,
         "Storage type:",
         status.type
@@ -172,20 +181,18 @@ export const FileManager: React.FC<FileManagerProps> = () => {
 
     let filteredFiles;
     if (isGoogleDriveUser && !currentFolderId) {
-      // When at root and using Google Drive, show files that are in the app folder
-      // We need to identify which parentId represents the app folder
-      const parentIds = [
-        ...new Set(files.map((f) => f.parentId).filter(Boolean)),
-      ];
-
-      if (parentIds.length === 1) {
-        // If all files have the same parentId, that's likely the app folder
-        filteredFiles = files.filter((file) => file.parentId === parentIds[0]);
+      // When at root and using Google Drive, show files in the app's root folder
+      // Get the app folder ID to know which files are at root
+      const appFolderId = driveStorageUtils.getAppFolderId();
+      
+      if (appFolderId) {
+        // Show only direct children of the app folder
+        filteredFiles = files.filter((file) => file.parentId === appFolderId);
+        console.log("📂 Filtering by app folder ID:", appFolderId, "Found:", filteredFiles.length, "files");
       } else {
-        // Fallback: show files with any parentId when at root
-        filteredFiles = files.filter(
-          (file) => !file.parentId || file.parentId === parentIds[0]
-        );
+        // Fallback: show all files (shouldn't happen normally)
+        console.warn("⚠️ No app folder ID found, showing all files");
+        filteredFiles = files;
       }
     } else {
       // Normal filtering for localStorage or when inside a specific folder
@@ -213,7 +220,24 @@ export const FileManager: React.FC<FileManagerProps> = () => {
   };
 
   const getFilteredFiles = () => {
-    const currentFiles = getCurrentFolderFiles();
+    let currentFiles = getCurrentFolderFiles();
+    
+    // Filter out special app folders and files that shouldn't be visible
+    const specialFolders = ['Flashcards', 'Flash Cards', 'Short Notes', 'ShortNotes', 'FlashCards'];
+    const specialFiles = ['shortnotes.json', 'flashcards.json'];
+    
+    currentFiles = currentFiles.filter((file) => {
+      // Filter out special folders
+      if (file.type === 'folder' && specialFolders.includes(file.name)) {
+        return false;
+      }
+      // Filter out special JSON files
+      if (specialFiles.includes(file.name)) {
+        return false;
+      }
+      return true;
+    });
+    
     if (!searchQuery.trim()) return currentFiles;
 
     return currentFiles.filter((file) =>

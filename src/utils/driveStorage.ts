@@ -9,12 +9,14 @@ const NOTES_KEY = "super_study_notes";
 const AI_ANALYSIS_KEY = "super_study_ai_analysis";
 const NOTE_FOLDERS_KEY = "super_study_note_folders";
 const DRIVE_CACHE_KEY = "super_study_drive_cache";
+const APP_FOLDER_ID_KEY = "super_study_app_folder_id";
 const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
 interface CacheEntry {
   data: FileItem[];
   timestamp: number;
   userId: string;
+  appFolderId?: string;
 }
 
 export const driveStorageUtils = {
@@ -48,16 +50,31 @@ export const driveStorageUtils = {
     }
   },
 
-  setCachedFiles(userId: string, files: FileItem[]): void {
+  setCachedFiles(userId: string, files: FileItem[], appFolderId?: string): void {
     try {
       const cacheEntry: CacheEntry = {
         data: files,
         timestamp: Date.now(),
         userId: userId,
+        appFolderId: appFolderId,
       };
       localStorage.setItem(DRIVE_CACHE_KEY, JSON.stringify(cacheEntry));
+      
+      // Also store app folder ID separately for easy access
+      if (appFolderId) {
+        localStorage.setItem(APP_FOLDER_ID_KEY, appFolderId);
+      }
     } catch (error) {
       console.error("Error setting cache:", error);
+    }
+  },
+
+  getAppFolderId(): string | null {
+    try {
+      return localStorage.getItem(APP_FOLDER_ID_KEY);
+    } catch (error) {
+      console.error("Error getting app folder ID:", error);
+      return null;
     }
   },
 
@@ -287,7 +304,25 @@ export const driveStorageUtils = {
               const driveFiles = result.data.map((driveFile: DriveFile) =>
                 this.driveFileToFileItem(driveFile, userId)
               );
-              this.setCachedFiles(userId, driveFiles);
+              
+              // Identify app folder ID
+              const parentIdCounts = new Map<string, number>();
+              driveFiles.forEach(file => {
+                if (file.parentId) {
+                  parentIdCounts.set(file.parentId, (parentIdCounts.get(file.parentId) || 0) + 1);
+                }
+              });
+              
+              let appFolderId: string | undefined;
+              let maxCount = 0;
+              parentIdCounts.forEach((count, parentId) => {
+                if (count > maxCount) {
+                  maxCount = count;
+                  appFolderId = parentId;
+                }
+              });
+              
+              this.setCachedFiles(userId, driveFiles, appFolderId);
               console.log("✅ Background sync completed:", driveFiles.length, "files");
             }
           } catch (error) {
@@ -308,8 +343,28 @@ export const driveStorageUtils = {
         );
 
         console.log("✅ Successfully got files from Drive:", driveFiles.length);
-        // Cache the results
-        this.setCachedFiles(userId, driveFiles);
+        
+        // Identify the app folder ID (the most common parentId)
+        const parentIdCounts = new Map<string, number>();
+        driveFiles.forEach(file => {
+          if (file.parentId) {
+            parentIdCounts.set(file.parentId, (parentIdCounts.get(file.parentId) || 0) + 1);
+          }
+        });
+        
+        let appFolderId: string | undefined;
+        let maxCount = 0;
+        parentIdCounts.forEach((count, parentId) => {
+          if (count > maxCount) {
+            maxCount = count;
+            appFolderId = parentId;
+          }
+        });
+        
+        console.log("📂 Identified app folder ID:", appFolderId, "with", maxCount, "direct children");
+        
+        // Cache the results with app folder ID
+        this.setCachedFiles(userId, driveFiles, appFolderId);
         return driveFiles;
       }
 
