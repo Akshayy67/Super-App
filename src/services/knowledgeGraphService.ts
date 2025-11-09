@@ -569,7 +569,14 @@ class KnowledgeGraphService {
       return bTime - aTime;
     });
     
-    return docs[0].data().nodes as KnowledgeNode[];
+    const nodes = docs[0].data().nodes as KnowledgeNode[];
+    
+    // Convert Firestore Timestamps to Date objects
+    return nodes.map(node => ({
+      ...node,
+      lastTested: node.lastTested instanceof Date ? node.lastTested : 
+                  (node.lastTested as any)?.toDate?.() || new Date(0),
+    }));
   }
 
   async getLearningPath(userId: string): Promise<AdaptiveLearningPath | null> {

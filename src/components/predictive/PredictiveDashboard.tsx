@@ -398,7 +398,11 @@ const LearningPathTab: React.FC<{ path: AdaptiveLearningPath }> = ({ path }) => 
         <div className="grid grid-cols-2 gap-4 mt-4">
           <div>
             <div className="text-sm text-purple-100">Target Date</div>
-            <div className="text-lg font-bold">{path.nextMilestone.targetDate.toLocaleDateString()}</div>
+            <div className="text-lg font-bold">
+              {path.nextMilestone.targetDate instanceof Date 
+                ? path.nextMilestone.targetDate.toLocaleDateString() 
+                : 'Not set'}
+            </div>
           </div>
           <div>
             <div className="text-sm text-purple-100">Progress</div>
@@ -561,7 +565,7 @@ const KnowledgeMapTab: React.FC<{ graph: KnowledgeNode[] }> = ({ graph }) => {
               <div>Attempts: {node.timesAttempted}</div>
               <div>Confidence: {node.confidence}%</div>
               <div>Time: {Math.round(node.timeSpent)} min</div>
-              <div>Last: {node.lastTested.toLocaleDateString()}</div>
+              <div>Last: {node.lastTested instanceof Date ? node.lastTested.toLocaleDateString() : 'Never'}</div>
             </div>
 
             {/* Prerequisites Status */}

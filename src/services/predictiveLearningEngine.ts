@@ -1120,7 +1120,15 @@ class PredictiveLearningEngine {
     
     // Sort in memory instead
     const predictions = snap.docs
-      .map(doc => doc.data() as RiskPrediction)
+      .map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          // Convert Firestore Timestamps to Date objects
+          timestamp: data.timestamp instanceof Date ? data.timestamp : 
+                     data.timestamp?.toDate?.() || new Date(),
+        } as RiskPrediction;
+      })
       .sort((a, b) => {
         const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : 0;
         const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : 0;

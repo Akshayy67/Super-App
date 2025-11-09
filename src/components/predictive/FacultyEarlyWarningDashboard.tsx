@@ -57,7 +57,7 @@ export const FacultyEarlyWarningDashboard: React.FC<FacultyEarlyWarningDashboard
             riskLevel: prediction.riskLevel,
             overallRiskScore: prediction.overallRiskScore,
             topFactors: prediction.contributingFactors.slice(0, 3).map(f => f.factor),
-            lastContact: studentData.lastAdvisorContact?.toDate() || new Date(0),
+            lastContact: studentData.lastAdvisorContact?.toDate?.() || new Date(0),
             interventionStatus: studentData.interventionStatus || 'none',
             prediction,
           });
