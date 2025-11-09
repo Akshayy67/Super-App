@@ -4,35 +4,47 @@ import { FacultyEarlyWarningDashboard } from './FacultyEarlyWarningDashboard';
 import { realTimeAuth } from '../../utils/realTimeAuth';
 
 export const FacultyDashboardWrapper: React.FC = () => {
-  const [user, setUser] = useState(realTimeAuth.getCurrentUser());
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+
     // Listen for auth state changes
     const unsubscribe = realTimeAuth.onAuthStateChange((currentUser) => {
+      if (!mounted) return;
       console.log('🔐 Faculty Dashboard - Auth state changed:', currentUser);
       setUser(currentUser);
+      setAuthChecked(true);
       setLoading(false);
     });
 
-    // Also check immediately
+    // Check immediately but don't rely solely on this
     const currentUser = realTimeAuth.getCurrentUser();
     if (currentUser) {
       console.log('🔐 Faculty Dashboard - Current user (immediate):', currentUser);
       setUser(currentUser);
+      setAuthChecked(true);
       setLoading(false);
     } else {
-      // Wait a bit for auth to initialize
+      // Give auth state listener time to fire (it will update via callback)
       setTimeout(() => {
-        const user = realTimeAuth.getCurrentUser();
-        console.log('🔐 Faculty Dashboard - Current user (delayed):', user);
-        setUser(user);
-        setLoading(false);
-      }, 500);
+        if (mounted && !authChecked) {
+          const user = realTimeAuth.getCurrentUser();
+          console.log('🔐 Faculty Dashboard - Current user (fallback check):', user);
+          setUser(user);
+          setAuthChecked(true);
+          setLoading(false);
+        }
+      }, 2000); // Increased to 2 seconds
     }
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, [authChecked]);
 
   if (loading) {
     return (
