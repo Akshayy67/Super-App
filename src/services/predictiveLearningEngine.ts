@@ -994,25 +994,28 @@ class PredictiveLearningEngine {
     // Collect activities from multiple sources
     const activities: LearningActivity[] = [];
 
-    // Contest results
+    // Contest results - simplified query to avoid index requirement
     const contestsQuery = query(
       collection(db, this.COLLECTIONS.CONTEST_RESULTS),
-      where('userId', '==', userId),
-      where('timestamp', '>=', Timestamp.fromDate(cutoffDate)),
-      orderBy('timestamp', 'desc')
+      where('userId', '==', userId)
     );
     
     const contestsSnap = await getDocs(contestsQuery);
     contestsSnap.forEach(doc => {
       const data = doc.data();
-      activities.push({
-        timestamp: data.timestamp?.toDate() || new Date(),
-        type: 'contest',
-        duration: data.timeTaken / 60 || 30, // convert seconds to minutes
-        performance: data.score || 0,
-        topicId: data.contestId,
-        completed: true,
-      });
+      const timestamp = data.timestamp?.toDate() || new Date();
+      
+      // Filter by cutoff date in memory
+      if (timestamp >= cutoffDate) {
+        activities.push({
+          timestamp,
+          type: 'contest',
+          duration: data.timeTaken / 60 || 30, // convert seconds to minutes
+          performance: data.score || 0,
+          topicId: data.contestId,
+          completed: true,
+        });
+      }
     });
 
     // Study sessions (if tracked)
@@ -1061,15 +1064,25 @@ class PredictiveLearningEngine {
   }
 
   private async getHistoricalPredictions(userId: string, count: number): Promise<RiskPrediction[]> {
+    // Simplified query without orderBy to avoid index requirement
     const q = query(
       collection(db, this.COLLECTIONS.PREDICTIONS),
-      where('userId', '==', userId),
-      orderBy('timestamp', 'desc'),
-      limit(count)
+      where('userId', '==', userId)
     );
     
     const snap = await getDocs(q);
-    return snap.docs.map(doc => doc.data() as RiskPrediction);
+    
+    // Sort in memory instead
+    const predictions = snap.docs
+      .map(doc => doc.data() as RiskPrediction)
+      .sort((a, b) => {
+        const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : 0;
+        const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : 0;
+        return bTime - aTime;
+      })
+      .slice(0, count);
+    
+    return predictions;
   }
 
   private async savePrediction(prediction: RiskPrediction): Promise<void> {

@@ -494,16 +494,21 @@ class KnowledgeGraphService {
   // ==================== DATABASE OPERATIONS ====================
 
   private async getContestResults(userId: string): Promise<any[]> {
-    const q = query(
-      collection(db, 'contestResults'),
-      where('userId', '==', userId)
-    );
-    
-    const snap = await getDocs(q);
-    return snap.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    try {
+      const q = query(
+        collection(db, 'contestResults'),
+        where('userId', '==', userId)
+      );
+      
+      const snap = await getDocs(q);
+      return snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+    } catch (error) {
+      console.warn('Error fetching contest results:', error);
+      return []; // Return empty array if no results
+    }
   }
 
   private async saveKnowledgeGraph(userId: string, nodes: KnowledgeNode[]): Promise<void> {
@@ -528,11 +533,10 @@ class KnowledgeGraphService {
   // ==================== PUBLIC API ====================
 
   async getKnowledgeGraph(userId: string): Promise<KnowledgeNode[]> {
+    // Simplified query without orderBy to avoid index requirement
     const q = query(
       collection(db, 'knowledgeGraphs'),
-      where('userId', '==', userId),
-      orderBy('generated', 'desc'),
-      limit(1)
+      where('userId', '==', userId)
     );
     
     const snap = await getDocs(q);
@@ -540,21 +544,34 @@ class KnowledgeGraphService {
       return this.buildKnowledgeGraph(userId);
     }
     
-    return snap.docs[0].data().nodes as KnowledgeNode[];
+    // Sort in memory instead
+    const docs = snap.docs.sort((a, b) => {
+      const aTime = a.data().generated?.toMillis?.() || 0;
+      const bTime = b.data().generated?.toMillis?.() || 0;
+      return bTime - aTime;
+    });
+    
+    return docs[0].data().nodes as KnowledgeNode[];
   }
 
   async getLearningPath(userId: string): Promise<AdaptiveLearningPath | null> {
+    // Simplified query without orderBy to avoid index requirement
     const q = query(
       collection(db, 'adaptivePaths'),
-      where('userId', '==', userId),
-      orderBy('generated', 'desc'),
-      limit(1)
+      where('userId', '==', userId)
     );
     
     const snap = await getDocs(q);
     if (snap.empty) return null;
     
-    const data = snap.docs[0].data();
+    // Sort in memory instead
+    const docs = snap.docs.sort((a, b) => {
+      const aTime = a.data().generated?.toMillis?.() || 0;
+      const bTime = b.data().generated?.toMillis?.() || 0;
+      return bTime - aTime;
+    });
+    
+    const data = docs[0].data();
     return {
       ...data,
       generated: data.generated.toDate(),
