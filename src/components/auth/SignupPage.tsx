@@ -21,21 +21,13 @@ export const SignupPage: React.FC = () => {
             return;
           }
           
-          // Check premium status and redirect accordingly
-          const { isPremiumUser } = await import("../../services/premiumUserService");
-          const isPremium = await isPremiumUser(currentUser.id);
-          
-          if (isPremium) {
-            // User is premium - go to dashboard
+          // Freemium: All authenticated users go to dashboard
+          console.log("✅ Redirecting to dashboard (freemium)");
           navigate("/dashboard", { replace: true });
-          } else {
-            // User is not premium - go to payment
-            navigate("/payment", { replace: true });
-          }
         } catch (error) {
           console.error("Error checking user status:", error);
-          // If check fails, redirect to payment to be safe
-          navigate("/payment", { replace: true });
+          // If check fails, still go to dashboard (freemium)
+          navigate("/dashboard", { replace: true });
         }
       }
     };
@@ -68,23 +60,13 @@ export const SignupPage: React.FC = () => {
             return;
           }
 
-          // Check premium status and redirect accordingly
-          const { isPremiumUser } = await import("../../services/premiumUserService");
-          const isPremium = await isPremiumUser(currentUser.id);
-          
-          if (isPremium) {
-            // User is premium - go to dashboard
-            console.log("✅ User is premium - redirecting to dashboard");
+          // Freemium: All authenticated users go to dashboard
+          console.log("✅ User authenticated - redirecting to dashboard (freemium)");
           navigate("/dashboard", { replace: true });
-          } else {
-            // User is not premium - go to payment
-            console.log("⚠️ User is not premium - redirecting to payment");
-            navigate("/payment", { replace: true });
-          }
         } catch (error) {
           console.error("Error checking user status:", error);
-          // If check fails, redirect to payment to be safe
-          navigate("/payment", { replace: true });
+          // If check fails, still go to dashboard (freemium)
+          navigate("/dashboard", { replace: true });
         }
       }
     }, 200);

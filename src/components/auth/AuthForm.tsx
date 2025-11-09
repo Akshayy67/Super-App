@@ -89,27 +89,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
           } else {
             // Check premium status and redirect accordingly
             onAuthSuccess();
-            setTimeout(async () => {
-              try {
-                const user = realTimeAuth.getCurrentUser();
-                if (user) {
-                  const { isPremiumUser } = await import("../../services/premiumUserService");
-                  const isPremium = await isPremiumUser(user.id);
-                  
-                  if (isPremium) {
-                    // User is premium - go to dashboard
-                    window.location.href = "/dashboard";
-                  } else {
-                    // User is not premium - go to payment
-                    window.location.href = "/payment";
-                  }
-                } else {
-                  window.location.href = "/payment";
-                }
-              } catch (error) {
-                console.error("Error checking premium status:", error);
-                window.location.href = "/payment";
-              }
+            setTimeout(() => {
+              // Freemium: All authenticated users go to dashboard
+              console.log("✅ User authenticated - redirecting to dashboard (freemium)");
+              window.location.href = "/dashboard";
             }, 200);
           }
         }
@@ -147,27 +130,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onAuthSuccess }) => {
         
         // Check premium status and redirect accordingly
         onAuthSuccess();
-        setTimeout(async () => {
-          try {
-            const user = realTimeAuth.getCurrentUser();
-            if (user) {
-              const { isPremiumUser } = await import("../../services/premiumUserService");
-              const isPremium = await isPremiumUser(user.id);
-              
-              if (isPremium) {
-                // User is premium - go to dashboard
-                window.location.href = "/dashboard";
-              } else {
-                // User is not premium - go to payment
-                window.location.href = "/payment";
-              }
-            } else {
-              window.location.href = "/payment";
-            }
-          } catch (error) {
-            console.error("Error checking premium status:", error);
-            window.location.href = "/payment";
-          }
+        setTimeout(() => {
+          // Freemium: All authenticated users go to dashboard
+          console.log("✅ User authenticated - redirecting to dashboard (freemium)");
+          window.location.href = "/dashboard";
         }, 200);
       } else {
         // Only show error if message is provided (demo sign-in handles popup-closed automatically)
