@@ -23,7 +23,7 @@ const sections: Section[] = [
     subtitle:
       "You've been learning the hard way. It's time to study smarter — with AI that understands you, plans for you, and pushes you toward your dream job. " +
       "Discover a revolutionary ecosystem built to guide your every step. " +
-      "Join 10,000+ students who turned chaos into clarity and unlocked the results they once only imagined.",
+      "Join students who turned chaos into clarity and unlocked the results they once only imagined.",
     quote:
       "✨ Start your AI journey today — because your future deserves smarter effort, not harder struggle.",
     author: "AI Academic Ecosystem — Launch Edition",
@@ -2200,9 +2200,9 @@ export const LandingPage: React.FC = () => {
             {/* Bottom half click area for next section */}
             <div
               className="absolute bottom-0 left-0 right-0 h-1/2 cursor-pointer z-10"
-              style={{ 
+              style={{
                 background: "transparent",
-                pointerEvents: index === sections.length - 1 ? "none" : "auto"
+                pointerEvents: index === sections.length - 1 ? "none" : "auto",
               }}
               onClick={(e) => {
                 e.stopPropagation();
