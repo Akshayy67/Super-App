@@ -3182,10 +3182,10 @@ export const TeamSpace: React.FC<{
           onClose={closePreview}
           onZoomChange={setPreviewZoom}
           onDownload={downloadFile}
-          onAnalyze={undefined}
+          onAnalyze={(file) => setShowAIChat(true)}
           formatFileSize={formatFileSize}
-          showAIChat={false}
-          setShowAIChat={() => {}}
+          showAIChat={showAIChat}
+          setShowAIChat={setShowAIChat}
         />
       )}
 

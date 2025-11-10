@@ -12,6 +12,15 @@ const geminiModel = genAI.getGenerativeModel({
 
 class StudyPlanAIService {
   async generateStudyPlan(input: StudyPlanInput): Promise<Omit<StudyPlan, "id" | "userId" | "createdAt" | "updatedAt" | "status" | "startedAt">> {
+    // Log the input parameters for debugging
+    console.log("📚 Generating Study Plan with parameters:", {
+      goal: input.goal,
+      difficulty: input.difficulty,
+      currentLevel: input.currentLevel || 'Not specified',
+      duration: input.duration,
+      dailyHours: input.dailyHours,
+    });
+
     const prompt = this.buildPrompt(input);
 
     try {
@@ -330,10 +339,16 @@ Return only the JSON object, no additional text.`;
   }
 
   private buildPrompt(input: StudyPlanInput): string {
-    return `You are Dream-to-Plan AI — an expert study planner and UI logic generator.
+    // Determine actual difficulty level considering both inputs
+    const effectiveLevel = input.currentLevel?.toLowerCase() || input.difficulty;
+    const isBeginnerLevel = effectiveLevel.includes('beginner') || input.difficulty === 'beginner';
+    const isIntermediateLevel = effectiveLevel.includes('intermediate') || input.difficulty === 'intermediate';
+    const isAdvancedLevel = effectiveLevel.includes('advanced') || input.difficulty === 'advanced';
+
+    return `You are Dream-to-Plan AI — an expert study planner and UI logic generator specializing in personalized learning paths.
 
 Your job:
-1. Create a detailed weekly and daily study roadmap for the user's goal.
+1. Create a detailed weekly and daily study roadmap STRICTLY TAILORED to the user's CURRENT LEVEL and DIFFICULTY.
 2. Provide a structured JSON output that the frontend can use to render:
    - Weekly Cards (collapsible)
    - Daily Todo Checkboxes
@@ -342,9 +357,81 @@ Your job:
 
 🎯 USER INPUT:
 Goal: ${input.goal}
-Level: ${input.currentLevel || input.difficulty} (Beginner / Intermediate / Advanced)
+Current Level: ${input.currentLevel || 'Not specified'}
+Difficulty: ${input.difficulty.toUpperCase()}
 Duration: ${input.duration} weeks
 Hours per day: ${input.dailyHours}
+
+⚠️ CRITICAL REQUIREMENTS - MUST FOLLOW:
+
+${isBeginnerLevel ? `
+📌 BEGINNER LEVEL ADAPTATION:
+- Start with ABSOLUTE BASICS and fundamental concepts
+- Use simple, clear language without jargon
+- Provide step-by-step explanations for everything
+- Include MORE hands-on examples and practice exercises (easier difficulty)
+- Break down complex topics into VERY SMALL digestible chunks
+- Assume NO prior knowledge unless explicitly stated
+- First week should focus on introduction, tools/setup, and basic terminology
+- Progress SLOWLY - spend more time on foundations
+- Include more "why" explanations to build understanding
+- Avoid advanced topics or mention them only as "future learning"
+- Tasks should be simple and achievable (e.g., "Learn basic terminology", "Try 3 simple exercises", "Watch introduction video")
+- Resources should be beginner-friendly (tutorials, visual guides, interactive platforms, YouTube basics)
+` : isIntermediateLevel ? `
+📌 INTERMEDIATE LEVEL ADAPTATION:
+- Assume basic knowledge of fundamentals
+- Focus on building DEPTH and practical application
+- Include moderate complexity challenges and projects
+- Introduce best practices and advanced techniques
+- Balance theory with hands-on practice (50/50)
+- Week 1 can start with review but quickly move to intermediate concepts
+- Include some challenging tasks but ensure they're achievable
+- Explain "why" for complex concepts but less hand-holding
+- Introduce optimization and efficiency in the subject area
+- Tasks should be specific and moderately challenging (e.g., "Complete intermediate exercises", "Create a small project", "Practice advanced techniques")
+- Resources should include specialized guides, community articles, practice platforms, and structured courses
+` : `
+📌 ADVANCED LEVEL ADAPTATION:
+- Assume strong foundation in fundamentals and intermediate concepts
+- Focus on ADVANCED techniques, mastery, and expert-level application
+- Include complex challenges and real-world professional projects
+- Emphasize best practices, expert-level execution, and professional standards
+- Week 1 should dive into advanced topics immediately
+- Include challenging expert-level tasks and comprehensive projects
+- Minimal hand-holding - focus on depth and mastery
+- Introduce cutting-edge techniques and professional/academic resources
+- Expect learner to connect concepts independently and do research
+- Tasks should be challenging and comprehensive (e.g., "Create advanced project", "Research and implement cutting-edge techniques", "Master professional-level skills")
+- Resources should include academic papers, advanced courses, professional guides, and expert-level content
+`}
+
+🎓 LEARNING GOAL ALIGNMENT:
+- Every week MUST directly contribute to achieving: "${input.goal}"
+- Week titles should explicitly reference the goal
+- Daily tasks should clearly connect to the end goal
+- Progress should be measurable toward the stated goal
+- Final week should include goal achievement verification/project
+
+📚 SUBJECT DOMAIN ADAPTATION (CRITICAL):
+Analyze the goal "${input.goal}" and ADAPT ALL content to the specific subject domain:
+
+**For Programming/Tech:** Use coding exercises, projects, debugging tasks, documentation reading
+**For Languages:** Use vocabulary, grammar, conversation practice, listening/reading comprehension
+**For Arts/Design:** Use sketching, practice pieces, studies, portfolio projects, critique
+**For Music:** Use scales, exercises, pieces to learn, ear training, performance practice
+**For Business/Marketing:** Use case studies, strategy development, market analysis, campaigns
+**For Fitness/Sports:** Use workout routines, skill drills, endurance training, technique practice
+**For Writing:** Use writing exercises, drafts, editing, reading assignments, style practice
+**For Science:** Use experiments, problem sets, paper reading, lab work, theory study
+**For Other Subjects:** Identify the domain from the goal and adapt accordingly
+
+IMPORTANT: 
+- Use domain-specific terminology throughout
+- Recommend domain-appropriate resources (not generic ones)
+- Structure tasks in the way practitioners in that field actually learn
+- Include domain-specific best practices and methods
+- Use realistic examples from that field
 
 🧭 TASK DETAILS:
 Generate:
@@ -371,53 +458,74 @@ Generate:
    - Total estimated study hours
    - Motivation line
 
+⏰ TIME ALLOCATION RULES (STRICTLY ENFORCE):
+- User has ${input.dailyHours} hours per day
+- Days 1-6: Active study days with full hours (${input.dailyHours}h each)
+- Day 7: MUST be rest/review/recap day with REDUCED hours (0-2 hours max)
+${isBeginnerLevel ? '- Beginners need MORE practice time and LESS theory (40% theory, 60% practice)' : ''}
+${isIntermediateLevel ? '- Intermediate learners need BALANCED time (50% theory, 50% practice)' : ''}
+${isAdvancedLevel ? '- Advanced learners need MORE application time (30% theory, 70% implementation/projects)' : ''}
+- Each day's tasks MUST be achievable within the allocated hours
+- Include specific time estimates for each task (e.g., "2 hours for X, 1 hour for Y")
+
 💻 OUTPUT FORMAT (STRICT JSON):
 Return only valid JSON like this:
 
 {
-  "overview": "This plan builds your DSA foundation over ${input.duration} weeks of focused learning.",
+  "overview": "This plan will help you achieve '${input.goal}' over ${input.duration} weeks through structured, ${input.difficulty}-level learning.",
   "totalWeeks": ${input.duration},
   "totalHours": ${input.dailyHours * 7 * input.duration},
   "weeks": [
     {
-      "weekTitle": "Week 1: Arrays & Strings",
-      "focus": "Master arrays, strings, and basic problem-solving patterns.",
+      "weekTitle": "Week 1: [Subject-Appropriate Title for First Week]",
+      "focus": "[Brief description of this week's focus area]",
       "studyGoals": [
-        "Understand array memory layout and operations",
-        "Learn two-pointer and sliding window patterns",
-        "Practice 10+ beginner DSA problems"
+        "[Specific, measurable goal 1 for this week]",
+        "[Specific, measurable goal 2 for this week]",
+        "[Specific, measurable goal 3 for this week]"
       ],
       "progress": 0,
       "dailyTodos": [
         {
           "day": 1,
-          "topic": "Array Basics",
+          "topic": "[Topic appropriate to the goal]",
           "tasks": [
-            "Learn array declaration and traversal",
-            "Solve 5 easy problems on LeetCode"
+            "[Specific, actionable task 1 - with time estimate]",
+            "[Specific, actionable task 2 - with time estimate]"
           ],
           "hours": ${input.dailyHours},
           "isCompleted": false,
-          "resources": ["NeetCode.io", "GeeksforGeeks Arrays"]
+          "resources": ["[Domain-appropriate resource 1]", "[Domain-appropriate resource 2]"]
         },
         {
           "day": 2,
-          "topic": "Two Pointer Technique",
+          "topic": "[Next topic]",
           "tasks": [
-            "Learn two-pointer pattern",
-            "Solve 3 medium LeetCode problems"
+            "[Task 1 for day 2]",
+            "[Task 2 for day 2]"
           ],
           "hours": ${input.dailyHours},
           "isCompleted": false
         },
-        ... (continue for all 7 days)
+        ... (continue for days 3-6 with full hours),
+        {
+          "day": 7,
+          "topic": "Rest & Review",
+          "tasks": [
+            "Review this week's learning",
+            "Rest and consolidate knowledge"
+          ],
+          "hours": 1,
+          "isCompleted": false,
+          "dayType": "rest"
+        }
       ]
     },
     ... (continue for all ${input.duration} weeks)
   ],
   "summary": {
     "totalProgress": 0,
-    "motivation": "Stay consistent — one concept a day compounds into mastery!"
+    "motivation": "[Motivational message related to the goal]"
   }
 }
 
@@ -438,35 +546,76 @@ IMPORTANT REQUIREMENTS:
 1. STRUCTURE:
    - Create exactly ${input.duration} weeks
    - Each week must have exactly 7 dailyTodos
-   - Day 7 should typically be for rest/revision/recap (set hours to 0 or 1-2)
+   - Day 7 MUST be rest/revision/recap (0-2 hours max, marked as "rest" dayType)
    - Days 1-6 should be active study days
 
-2. CONTENT QUALITY:
-   - Make tasks SPECIFIC and ACTIONABLE (e.g., "Solve 3 LeetCode easy problems" not just "Practice")
-   - Include 3-5 study goals for each week
-   - Progress from basic to advanced concepts logically
-   - Each task should be clear and achievable
-   - Include relevant resources when helpful
+2. CONTENT QUALITY BASED ON LEVEL:
+${isBeginnerLevel ? `   - BEGINNER: Tasks must be VERY SIMPLE and ACHIEVABLE (e.g., "Read tutorial on variables", "Complete 2 basic exercises")
+   - Use encouraging language: "Learn", "Understand", "Try", "Practice"
+   - Break down every concept into smallest possible steps
+   - Include explanations and "why this matters" context
+   - Avoid jargon or define it immediately
+   - 3-5 simple, clear study goals per week` : ''}
+${isIntermediateLevel ? `   - INTERMEDIATE: Tasks should be SPECIFIC and MODERATELY CHALLENGING (e.g., "Implement binary search", "Solve 5 medium LeetCode problems")
+   - Balance conceptual understanding with practical application
+   - Include optimization and best practices
+   - Reference multiple resources and approaches
+   - 4-6 concrete study goals per week` : ''}
+${isAdvancedLevel ? `   - ADVANCED: Tasks must be CHALLENGING and COMPREHENSIVE (e.g., "Design scalable system architecture", "Implement advanced algorithm with optimization")
+   - Focus on depth, edge cases, and real-world scenarios
+   - Include system design and architectural considerations
+   - Expect independent research and problem-solving
+   - 5-7 ambitious study goals per week` : ''}
+   - ALL LEVELS: Make tasks ACTIONABLE with clear outcomes
 
 3. TONE & STYLE:
    - Friendly, professional, and action-oriented
-   - Use motivational language
-   - Make it sound encouraging but realistic
+   - Use motivational language appropriate to level
+${isBeginnerLevel ? '   - BEGINNER: Extra encouraging, patient, emphasize progress over perfection' : ''}
+${isIntermediateLevel ? '   - INTERMEDIATE: Balanced encouragement, focus on skill building' : ''}
+${isAdvancedLevel ? '   - ADVANCED: Challenge-focused, emphasize mastery and innovation' : ''}
 
-4. DIFFICULTY ADAPTATION:
-   - Beginner: Focus on fundamentals, simpler examples, more explanation
-   - Intermediate: Balance theory and practice, moderate complexity
-   - Advanced: More challenging problems, deeper concepts, faster pace
+4. DIFFICULTY ADAPTATION (CRITICAL):
+${isBeginnerLevel ? `   - BEGINNER SPECIFIC:
+     * Week 1: Introduction to the subject, basic setup/preparation, fundamental terminology
+     * Week 2-3: One concept at a time, lots of beginner-level practice
+     * Later weeks: Gradually combine concepts but keep complexity low
+     * NO advanced topics - stay focused on fundamentals
+     * Focus: Understanding > Speed, Quality > Quantity, Build Confidence
+     * Approach: "Learn X" → "Try simple X" → "Practice basic X" → "Review and consolidate"` : ''}
+${isIntermediateLevel ? `   - INTERMEDIATE SPECIFIC:
+     * Week 1: Quick review of basics + introduce intermediate concepts
+     * Week 2-${Math.ceil(input.duration * 0.6)}: Core intermediate skills and techniques
+     * Week ${Math.ceil(input.duration * 0.6) + 1}-${input.duration}: Practical applications and intermediate projects
+     * Include: Best practices, efficient methods, common pitfalls
+     * Focus: Depth + Breadth, Theory + Practice, Real Applications
+     * Approach: "Review basics" → "Learn intermediate X" → "Apply in context" → "Create project"` : ''}
+${isAdvancedLevel ? `   - ADVANCED SPECIFIC:
+     * Week 1: Jump into advanced/expert topics immediately
+     * Week 2-${Math.ceil(input.duration * 0.5)}: Deep dive into advanced techniques and mastery
+     * Week ${Math.ceil(input.duration * 0.5) + 1}-${input.duration}: Complex projects and professional-level work
+     * Include: Expert techniques, research-level content, professional standards
+     * Focus: Mastery + Innovation, Professional + Research, Cutting-edge
+     * Approach: "Master advanced X" → "Research latest techniques" → "Create professional project" → "Innovate"` : ''}
 
-5. TIME ALLOCATION:
-   - Respect the daily hours (${input.dailyHours}h/day)
-   - Weekends (Day 7) can be lighter (0-2 hours)
-   - Ensure realistic time distribution
+5. TIME ALLOCATION (MUST FOLLOW):
+   - Total available: ${input.dailyHours}h/day × 6 active days = ${input.dailyHours * 6}h/week
+   - Day 7: 0-2 hours only (rest/review)
+   - Each task MUST include estimated time
+   - Daily total MUST NOT exceed ${input.dailyHours}h
+   - Tasks should fill the available time but leave buffer for breaks
 
-6. WEEKLY PROGRESSION:
-   - Week 1: Foundation building
-   - Week 2-${input.duration - 1}: Core concepts and practice
-   - Final week: Review, integration, and advanced topics
+6. WEEKLY PROGRESSION (TAILORED TO GOAL):
+   - ALL weeks must clearly advance toward: "${input.goal}"
+   - Week 1: ${isBeginnerLevel ? 'Absolute basics and environment setup' : isIntermediateLevel ? 'Review and intermediate foundations' : 'Advanced concepts immediately'}
+   - Middle weeks: Build progressively toward the goal
+   - Final week: ${isBeginnerLevel ? 'Simple project demonstrating learned concepts' : isIntermediateLevel ? 'Comprehensive project applying all skills' : 'Complex capstone project or research'}
+   - Each week's focus should be a milestone toward the goal
+
+7. RESOURCE QUALITY (ADAPT TO SUBJECT):
+${isBeginnerLevel ? '   - BEGINNER: Interactive tutorials, visual guides, beginner courses, YouTube basics, step-by-step guides, beginner books/articles' : ''}
+${isIntermediateLevel ? '   - INTERMEDIATE: Specialized guides, community articles, structured courses, practice platforms, intermediate books, expert blogs' : ''}
+${isAdvancedLevel ? '   - ADVANCED: Academic papers, professional guides, advanced courses, expert-level content, research materials, professional communities' : ''}
 
 Return ONLY the JSON object, no additional text or markdown formatting outside the JSON.`;
   }
