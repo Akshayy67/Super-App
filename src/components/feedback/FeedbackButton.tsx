@@ -220,8 +220,9 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
     // Calculate new position (random position on screen, but keep it visible)
     // Use a reasonable distance from current position (not too far, not too close)
     const buttonSize = Math.max(rect.width, rect.height);
-    const minDistance = 100; // Minimum distance to move
-    const maxDistance = 300; // Maximum distance to move
+    const margin = 20; // Minimum margin from edges
+    const minDistance = 80; // Minimum distance to move (reduced to keep on screen)
+    const maxDistance = 200; // Maximum distance to move (reduced to keep on screen)
     const angle = Math.random() * Math.PI * 2;
     const distance = minDistance + Math.random() * (maxDistance - minDistance);
     
@@ -232,12 +233,14 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
     // Make sure the new position stays within screen bounds
     const newX = currentX + offsetX;
     const newY = currentY + offsetY;
-    const maxX = window.innerWidth - buttonSize - 20;
-    const maxY = window.innerHeight - buttonSize - 20;
+    const minX = margin;
+    const minY = margin;
+    const maxX = window.innerWidth - buttonSize - margin;
+    const maxY = window.innerHeight - buttonSize - margin;
     
-    // Clamp to screen bounds if needed
-    const finalOffsetX = Math.max(-currentX + 20, Math.min(maxX - currentX, offsetX));
-    const finalOffsetY = Math.max(-currentY + 20, Math.min(maxY - currentY, offsetY));
+    // Clamp to screen bounds with proper constraints
+    const finalOffsetX = Math.max(minX - currentX, Math.min(maxX - currentX, offsetX));
+    const finalOffsetY = Math.max(minY - currentY, Math.min(maxY - currentY, offsetY));
     
     // Animate button to new position
     animate(buttonPositionX, finalOffsetX, {
@@ -403,15 +406,22 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
     if (savedPosition && finalPosition === "draggable") {
       try {
         const { x, y } = JSON.parse(savedPosition);
-        setDragPosition({ x, y });
+        // Validate saved position is still within bounds
+        const buttonSize = finalSize === "sm" ? 48 : finalSize === "lg" ? 64 : 56;
+        const maxX = Math.max(0, window.innerWidth - buttonSize - 20);
+        const maxY = Math.max(0, window.innerHeight - buttonSize - 20);
+        const validX = Math.min(Math.max(20, x), maxX);
+        const validY = Math.min(Math.max(20, y), maxY);
+        setDragPosition({ x: validX, y: validY });
       } catch (error) {
         console.error("Failed to parse saved position:", error);
       }
     } else if (finalPosition === "draggable" && !dragPosition) {
       // Set default position for feedback button (bottom-right) if no saved position
       const setDefaultPosition = () => {
-        const defaultX = Math.max(20, window.innerWidth - 80); // 80px from right (button width + margin)
-        const defaultY = Math.max(20, window.innerHeight - 80); // 80px from bottom (button height + margin)
+        const buttonSize = finalSize === "sm" ? 48 : finalSize === "lg" ? 64 : 56;
+        const defaultX = Math.max(20, window.innerWidth - buttonSize - 24); // 24px margin from right
+        const defaultY = Math.max(20, window.innerHeight - buttonSize - 24); // 24px margin from bottom
         setDragPosition({ x: defaultX, y: defaultY });
       };
       // Wait for window to be available
@@ -419,7 +429,32 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
         setDefaultPosition();
       }
     }
-  }, [finalPosition]);
+  }, [finalPosition, finalSize]);
+
+  // Handle window resize to keep button within bounds
+  React.useEffect(() => {
+    if (finalPosition !== "draggable" || !dragPosition) return;
+
+    const handleResize = () => {
+      const buttonSize = finalSize === "sm" ? 48 : finalSize === "lg" ? 64 : 56;
+      const margin = 20;
+      const maxX = Math.max(margin, window.innerWidth - buttonSize - margin);
+      const maxY = Math.max(margin, window.innerHeight - buttonSize - margin);
+      
+      // Ensure button stays within bounds after resize
+      if (dragPosition.x > maxX || dragPosition.y > maxY) {
+        const newPosition = {
+          x: Math.min(dragPosition.x, maxX),
+          y: Math.min(dragPosition.y, maxY)
+        };
+        setDragPosition(newPosition);
+        saveDragPosition(newPosition);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [finalPosition, finalSize, dragPosition]);
 
   // Save drag position to localStorage
   const saveDragPosition = (position: { x: number; y: number }) => {
@@ -451,9 +486,13 @@ export const FeedbackButton: React.FC<FeedbackButtonProps> = ({
     const deltaX = clientX - dragStart.x;
     const deltaY = clientY - dragStart.y;
     
+    // Calculate button size based on finalSize
+    const buttonSize = finalSize === "sm" ? 48 : finalSize === "lg" ? 64 : 56;
+    const margin = 20; // Minimum margin from edges
+    
     const newPosition = {
-      x: Math.max(0, Math.min(window.innerWidth - 60, (dragPosition?.x || 0) + deltaX)),
-      y: Math.max(0, Math.min(window.innerHeight - 60, (dragPosition?.y || 0) + deltaY))
+      x: Math.max(margin, Math.min(window.innerWidth - buttonSize - margin, (dragPosition?.x || 0) + deltaX)),
+      y: Math.max(margin, Math.min(window.innerHeight - buttonSize - margin, (dragPosition?.y || 0) + deltaY))
     };
     
     setDragPosition(newPosition);

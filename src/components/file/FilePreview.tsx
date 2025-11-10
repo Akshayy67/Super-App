@@ -121,12 +121,57 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
       file.id
     );
 
+    // Check for Office documents (Word, PowerPoint, Excel) - show with better UI
+    if (previewInfo.previewType === "office") {
+      return (
+        <div className="flex items-center justify-center h-full p-8">
+          <div className="text-center max-w-2xl">
+            <div className="bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <span className="text-5xl">{previewInfo.icon}</span>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-3">
+              {previewInfo.title}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6 text-lg">
+              {previewInfo.description}
+            </p>
+            <div className="space-y-3">
+              {previewInfo.actions.map((action, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    if (action.action === "download") {
+                      downloadFile();
+                    } else if (
+                      action.action === "office-online" &&
+                      action.url
+                    ) {
+                      window.open(action.url, "_blank");
+                    }
+                  }}
+                  className={`w-full max-w-md px-6 py-3 text-white rounded-lg transition-all transform hover:scale-105 shadow-lg hover:shadow-xl font-semibold ${action.color}`}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+              <p className="text-sm text-blue-800 dark:text-blue-300">
+                <strong>💡 Tip:</strong> Office documents are best viewed in their native applications. 
+                Download the file to open in Microsoft Word, PowerPoint, or Excel for full editing capabilities.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // Check for corrupted or invalid data
     if (previewInfo.previewType === "corrupted") {
       return (
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <div className="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="bg-yellow-100 dark:bg-yellow-900/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
                 className="w-8 h-8 text-yellow-600"
                 fill="currentColor"
@@ -139,8 +184,8 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, onClose }) => {
                 />
               </svg>
             </div>
-            <p className="text-gray-600 mb-2">{previewInfo.title}</p>
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-gray-600 dark:text-gray-400 mb-2">{previewInfo.title}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               {previewInfo.description}
             </p>
             <div className="space-y-2">

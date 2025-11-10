@@ -88,6 +88,8 @@ type StudySession = {
 
 export const FlashCards: React.FC = () => {
   const [inputText, setInputText] = React.useState("");
+  const [inputMode, setInputMode] = React.useState<"text" | "topic">("text");
+  const [topicInput, setTopicInput] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [availableDocuments, setAvailableDocuments] = React.useState<any[]>([]);
   const [selectedDocument, setSelectedDocument] = React.useState("");
@@ -527,20 +529,35 @@ export const FlashCards: React.FC = () => {
   // Generate flashcards with enhanced tagging
   const generateFlashcards = async () => {
     if (isLoading) return;
-    let content = inputText;
-    if (selectedDocument) {
-      content = await getDocumentContent(selectedDocument);
-      if (!content) {
-        alert(
-          "Could not extract text from the selected document. Please try with a text file or paste the content manually."
-        );
+    
+    let content = "";
+    
+    // Handle different input modes
+    if (inputMode === "topic") {
+      if (!topicInput.trim()) {
+        alert("Please enter a topic to generate flashcards.");
         return;
       }
-    }
+      // Create a prompt for topic-based generation
+      content = `Generate comprehensive flashcards about the topic: "${topicInput}". Include key concepts, definitions, examples, and important details that would help someone learn about this topic thoroughly.`;
+    } else {
+      // Text or document mode
+      if (selectedDocument) {
+        content = await getDocumentContent(selectedDocument);
+        if (!content) {
+          alert(
+            "Could not extract text from the selected document. Please try with a text file or paste the content manually."
+          );
+          return;
+        }
+      } else {
+        content = inputText;
+      }
 
-    if (!content.trim()) {
-      alert("Please provide some text to generate flashcards.");
-      return;
+      if (!content.trim()) {
+        alert("Please provide some text to generate flashcards.");
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -575,6 +592,7 @@ export const FlashCards: React.FC = () => {
         }
 
         setInputText("");
+        setTopicInput("");
         setSelectedDocument("");
         setInputTags(""); // Clear tags input
         setCurrentView("manage");
@@ -1316,7 +1334,19 @@ export const FlashCards: React.FC = () => {
     const [flipped, setFlipped] = React.useState(false);
     const [showTagInput, setShowTagInput] = React.useState(false);
     const [newTagInput, setNewTagInput] = React.useState("");
-    const toggle = () => setFlipped((f) => !f);
+    const toggle = (e: React.MouseEvent) => {
+      // Only toggle if clicking on the card itself, not on buttons or inputs
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "BUTTON" ||
+        target.tagName === "INPUT" ||
+        target.closest("button") ||
+        target.closest("input")
+      ) {
+        return;
+      }
+      setFlipped((f) => !f);
+    };
 
     const handleAddTag = () => {
       if (newTagInput.trim()) {
@@ -1776,42 +1806,98 @@ export const FlashCards: React.FC = () => {
 
   const renderCreateView = () => (
     <div className="space-y-6">
-      {availableDocuments.length > 0 && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select Document (Optional)
-          </label>
-          <select
-            value={selectedDocument}
-            onChange={(e) => setSelectedDocument(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
+      {/* Mode Selection */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+          How would you like to create flashcards?
+        </label>
+        <div className="flex gap-4">
+          <button
+            onClick={() => setInputMode("text")}
+            className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all duration-200 ${
+              inputMode === "text"
+                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-slate-500"
+            }`}
           >
-            <option value="">Choose a document...</option>
-            {availableDocuments.map((doc) => (
-              <option key={doc.id} value={doc.id}>
-                {doc.name}
-              </option>
-            ))}
-          </select>
+            <div className="text-center">
+              <div className="text-lg font-semibold mb-1">From Text/Document</div>
+              <div className="text-xs opacity-75">Paste text or select a document</div>
+            </div>
+          </button>
+          <button
+            onClick={() => setInputMode("topic")}
+            className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all duration-200 ${
+              inputMode === "topic"
+                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                : "border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-slate-500"
+            }`}
+          >
+            <div className="text-center">
+              <div className="text-lg font-semibold mb-1">From Topic</div>
+              <div className="text-xs opacity-75">AI generates from topic name</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Show different inputs based on mode */}
+      {inputMode === "text" ? (
+        <>
+          {availableDocuments.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Select Document (Optional)
+              </label>
+              <select
+                value={selectedDocument}
+                onChange={(e) => setSelectedDocument(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="">Choose a document...</option>
+                {availableDocuments.map((doc) => (
+                  <option key={doc.id} value={doc.id}>
+                    {doc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Text to Convert into Flashcards
+            </label>
+            <textarea
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              rows={6}
+              className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+              placeholder={
+                selectedDocument
+                  ? "Text will be extracted from the selected document, or you can add additional text here..."
+                  : "Paste your text here to generate flashcards..."
+              }
+            />
+          </div>
+        </>
+      ) : (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Enter Topic for Flashcards
+          </label>
+          <input
+            type="text"
+            value={topicInput}
+            onChange={(e) => setTopicInput(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+            placeholder="e.g., React Hooks, World War 2, Photosynthesis, Machine Learning Basics..."
+          />
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            AI will generate comprehensive flashcards covering key concepts, definitions, and examples about this topic.
+          </p>
         </div>
       )}
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Text to Convert into Flashcards
-        </label>
-        <textarea
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          rows={6}
-          className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
-          placeholder={
-            selectedDocument
-              ? "Text will be extracted from the selected document, or you can add additional text here..."
-              : "Paste your text here to generate flashcards..."
-          }
-        />
-      </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">

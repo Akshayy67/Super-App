@@ -28,6 +28,12 @@ export interface TeamFolderItem {
     edit: string[];
     admin: string[];
   };
+  // User-specific permissions for the current user
+  userPermissions?: {
+    canView: boolean;
+    canEdit: boolean;
+    canManage: boolean;
+  };
   // File-specific properties
   fileType?: string;
   fileSize?: number;
@@ -114,7 +120,7 @@ class TeamFolderService {
             folderPath: folderData.folderPath,
             description: folderData.description,
             userPermissions,
-          } as any);
+          });
         }
       });
 
@@ -178,7 +184,7 @@ class TeamFolderService {
             storageType: fileData.storageType,
             folderPath: fileData.folderPath,
             userPermissions,
-          } as any);
+          });
         }
       });
 

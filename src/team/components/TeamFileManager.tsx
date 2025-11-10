@@ -17,6 +17,7 @@ import {
   Grid,
   List,
   Share2,
+  GripVertical,
 } from "lucide-react";
 import {
   teamFolderService,
@@ -26,6 +27,8 @@ import {
 import { fileShareService } from "../../utils/fileShareService";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import { FileAccessFixButton } from "../../components/file/FileAccessFixButton";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../config/firebase";
 
 interface TeamFileManagerProps {
   teamId: string;
@@ -66,6 +69,15 @@ export const TeamFileManager: React.FC<TeamFileManagerProps> = ({
   // Drag and drop state
   const [draggedItem, setDraggedItem] = useState<TeamFolderItem | null>(null);
   const [dragOverItem, setDragOverItem] = useState<string | null>(null);
+
+  // File upload state
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    current: number;
+    total: number;
+    currentFile: string;
+  } | null>(null);
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false);
 
   // Error state
   const [indexError, setIndexError] = useState<string | null>(null);
@@ -259,7 +271,16 @@ export const TeamFileManager: React.FC<TeamFileManagerProps> = ({
 
   const handleDragOver = (e: React.DragEvent, targetItem?: TeamFolderItem) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
+    
+    // Check if dragging files from OS (external drag)
+    const isExternalDrag = e.dataTransfer.types.includes("Files");
+    
+    if (isExternalDrag) {
+      e.dataTransfer.dropEffect = "copy";
+      setIsDraggingFiles(true);
+    } else {
+      e.dataTransfer.dropEffect = "move";
+    }
 
     if (targetItem && targetItem.type === "folder") {
       setDragOverItem(targetItem.id);
@@ -272,6 +293,7 @@ export const TeamFileManager: React.FC<TeamFileManagerProps> = ({
     // Only clear drag over if we're leaving the entire drop zone
     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       setDragOverItem(null);
+      setIsDraggingFiles(false);
     }
   };
 
@@ -281,8 +303,21 @@ export const TeamFileManager: React.FC<TeamFileManagerProps> = ({
   ) => {
     e.preventDefault();
     setDragOverItem(null);
+    setIsDraggingFiles(false);
 
-    if (!draggedItem || !user) return;
+    if (!user) return;
+
+    // Check if this is a file upload from OS
+    const isExternalDrag = e.dataTransfer.types.includes("Files");
+
+    if (isExternalDrag) {
+      // Handle file/folder upload from OS
+      await handleFileUpload(e, targetItem);
+      return;
+    }
+
+    // Handle internal item move
+    if (!draggedItem) return;
 
     // Determine target folder ID
     let targetFolderId: string | null = null;
@@ -327,6 +362,266 @@ export const TeamFileManager: React.FC<TeamFileManagerProps> = ({
       alert("Failed to move item. Please try again.");
     } finally {
       setDraggedItem(null);
+    }
+  };
+
+  // Handle file/folder upload from OS
+  const handleFileUpload = async (
+    e: React.DragEvent,
+    targetItem?: TeamFolderItem
+  ) => {
+    if (!user) return;
+
+    // Determine target folder ID
+    let targetFolderId: string | null = null;
+    if (targetItem && targetItem.type === "folder") {
+      targetFolderId = targetItem.id;
+    } else {
+      targetFolderId = navigation.currentFolderId;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const items = e.dataTransfer.items;
+      const filesToUpload: Array<{
+        file: File;
+        path: string;
+        folderPath: string[];
+      }> = [];
+
+      // Process all dropped items
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === "file") {
+          const entry = item.webkitGetAsEntry();
+          if (entry) {
+            await processEntry(entry, [], filesToUpload);
+          }
+        }
+      }
+
+      // Upload all files with folder structure
+      const totalFiles = filesToUpload.length;
+      setUploadProgress({ current: 0, total: totalFiles, currentFile: "" });
+
+      // Create folder structure first
+      const folderMap = new Map<string, string>(); // path -> folderId
+      const uniqueFolders = new Set<string>();
+
+      // Collect all unique folder paths
+      filesToUpload.forEach((item) => {
+        let currentPath = "";
+        item.folderPath.forEach((folder) => {
+          currentPath = currentPath ? `${currentPath}/${folder}` : folder;
+          uniqueFolders.add(currentPath);
+        });
+      });
+
+      // Sort folders by depth to create parent folders first
+      const sortedFolders = Array.from(uniqueFolders).sort(
+        (a, b) => a.split("/").length - b.split("/").length
+      );
+
+      // Create folders
+      for (const folderPath of sortedFolders) {
+        const parts = folderPath.split("/");
+        const folderName = parts[parts.length - 1];
+        const parentPath = parts.slice(0, -1).join("/");
+        const parentFolderId = parentPath ? folderMap.get(parentPath) : targetFolderId;
+
+        try {
+          const folderData = await fileShareService.createFolder({
+            teamId,
+            folderName,
+            description: "",
+            parentId: parentFolderId || null,
+            createdBy: user.id,
+            permissions: await getDefaultPermissions(),
+          });
+
+          folderMap.set(folderPath, folderData.id);
+        } catch (error) {
+          console.error(`Error creating folder ${folderName}:`, error);
+        }
+      }
+
+      // Upload files
+      const errors: string[] = [];
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const { file, folderPath } = filesToUpload[i];
+
+        setUploadProgress({
+          current: i + 1,
+          total: totalFiles,
+          currentFile: file.name,
+        });
+
+        try {
+          const parentPath = folderPath.join("/");
+          const parentFolderId = parentPath ? folderMap.get(parentPath) : targetFolderId;
+
+          // Get file type, default to application/octet-stream if empty
+          const fileType = file.type || getFileTypeFromName(file.name);
+
+          await fileShareService.shareFile({
+            teamId,
+            fileName: file.name,
+            fileType: fileType,
+            fileSize: file.size,
+            file: file,
+            sharedBy: user.id,
+            permissions: await getDefaultPermissions(),
+            parentId: parentFolderId || null,
+          });
+        } catch (error) {
+          console.error(`Error uploading file ${file.name}:`, error);
+          errors.push(`${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
+      // Show errors if any
+      if (errors.length > 0) {
+        console.warn("Upload errors:", errors);
+        if (errors.length < totalFiles) {
+          alert(`Uploaded ${totalFiles - errors.length} of ${totalFiles} files. Some files failed:\n${errors.slice(0, 3).join('\n')}${errors.length > 3 ? '\n...' : ''}`);
+        } else {
+          alert(`Failed to upload files:\n${errors.slice(0, 3).join('\n')}${errors.length > 3 ? '\n...' : ''}`);
+        }
+      }
+
+      // Refresh folder contents
+      await loadFolderContents();
+
+      alert(`Successfully uploaded ${totalFiles} file(s)!`);
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      alert("Failed to upload files. Please try again.");
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(null);
+    }
+  };
+
+  // Recursively process directory entries
+  const processEntry = async (
+    entry: any,
+    path: string[],
+    files: Array<{ file: File; path: string; folderPath: string[] }>
+  ): Promise<void> => {
+    if (entry.isFile) {
+      return new Promise((resolve) => {
+        entry.file((file: File) => {
+          files.push({
+            file,
+            path: [...path, file.name].join("/"),
+            folderPath: path,
+          });
+          resolve();
+        });
+      });
+    } else if (entry.isDirectory) {
+      const dirReader = entry.createReader();
+      return new Promise((resolve) => {
+        dirReader.readEntries(async (entries: any[]) => {
+          for (const childEntry of entries) {
+            await processEntry(childEntry, [...path, entry.name], files);
+          }
+          resolve();
+        });
+      });
+    }
+  };
+
+  // Get file MIME type from filename extension
+  const getFileTypeFromName = (fileName: string): string => {
+    const extension = fileName.toLowerCase().split('.').pop();
+    
+    const mimeTypes: Record<string, string> = {
+      // Documents
+      'pdf': 'application/pdf',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'ppt': 'application/vnd.ms-powerpoint',
+      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'txt': 'text/plain',
+      'csv': 'text/csv',
+      'md': 'text/markdown',
+      // Images
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'svg': 'image/svg+xml',
+      'webp': 'image/webp',
+      // Archives
+      'zip': 'application/zip',
+      'rar': 'application/x-rar-compressed',
+      '7z': 'application/x-7z-compressed',
+      // Code
+      'js': 'text/javascript',
+      'ts': 'text/typescript',
+      'jsx': 'text/javascript',
+      'tsx': 'text/typescript',
+      'json': 'application/json',
+      'html': 'text/html',
+      'css': 'text/css',
+      'xml': 'application/xml',
+      // Other
+      'mp4': 'video/mp4',
+      'mp3': 'audio/mpeg',
+      'wav': 'audio/wav',
+    };
+    
+    return mimeTypes[extension || ''] || 'application/octet-stream';
+  };
+
+  // Get default permissions for uploaded files
+  const getDefaultPermissions = async () => {
+    if (!user) {
+      return { view: [], edit: [], admin: [] };
+    }
+
+    try {
+      const teamDoc = await getDoc(doc(db, "teams", teamId));
+      if (!teamDoc.exists()) {
+        return { view: [user.id], edit: [user.id], admin: [user.id] };
+      }
+
+      const teamData = teamDoc.data();
+      const members = teamData?.members || {};
+
+      const permissions = {
+        view: [] as string[],
+        edit: [] as string[],
+        admin: [] as string[],
+      };
+
+      Object.entries(members).forEach(([memberId, member]: [string, any]) => {
+        const role = member.role || "member";
+
+        switch (role) {
+          case "owner":
+          case "admin":
+            permissions.admin.push(memberId);
+            break;
+          case "member":
+            permissions.edit.push(memberId);
+            break;
+          case "viewer":
+            permissions.view.push(memberId);
+            break;
+          default:
+            permissions.view.push(memberId);
+        }
+      });
+
+      return permissions;
+    } catch (error) {
+      console.error("Error getting default permissions:", error);
+      return { view: [user.id], edit: [user.id], admin: [user.id] };
     }
   };
 
@@ -514,13 +809,69 @@ export const TeamFileManager: React.FC<TeamFileManagerProps> = ({
         </div>
       )}
 
+      {/* Drag and Drop Info */}
+      {getFilteredItems().some((item) => item.userPermissions?.canEdit) && !isUploading && (
+        <div className="mx-4 mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <p className="text-sm text-blue-800 dark:text-blue-300 flex items-center gap-2">
+            <GripVertical className="w-4 h-4" />
+            <span>
+              <strong>Tip:</strong> Drag files/folders from your computer to upload them, or drag items within the file manager to organize them.
+            </span>
+          </p>
+        </div>
+      )}
+
+      {/* Upload Progress */}
+      {isUploading && uploadProgress && (
+        <div className="mx-4 mt-4 p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              Uploading Files...
+            </h3>
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {uploadProgress.current} / {uploadProgress.total}
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
+            <div
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              style={{
+                width: `${(uploadProgress.current / uploadProgress.total) * 100}%`,
+              }}
+            />
+          </div>
+          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+            {uploadProgress.currentFile}
+          </p>
+        </div>
+      )}
+
       {/* Content */}
       <div
-        className={`p-4 ${dragOverItem === "root" ? "bg-blue-50" : ""}`}
+        className={`p-4 relative ${
+          dragOverItem === "root"
+            ? "bg-blue-50 dark:bg-blue-900/20"
+            : ""
+        } ${isDraggingFiles ? "border-2 border-dashed border-blue-500" : ""}`}
         onDragOver={(e) => handleDragOver(e)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e)}
       >
+        {/* Drag Overlay for File Uploads */}
+        {isDraggingFiles && (
+          <div className="absolute inset-0 bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center z-10 rounded-lg pointer-events-none">
+            <div className="text-center">
+              <Upload className="w-16 h-16 text-blue-600 mx-auto mb-4 animate-bounce" />
+              <p className="text-lg font-semibold text-blue-800 dark:text-blue-300 mb-2">
+                Drop files and folders here
+              </p>
+              <p className="text-sm text-blue-600 dark:text-blue-400">
+                Folder structure will be preserved
+              </p>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -536,13 +887,19 @@ export const TeamFileManager: React.FC<TeamFileManagerProps> = ({
             {getFilteredItems().map((item) => (
               <div
                 key={item.id}
-                draggable={(item as any).userPermissions?.canEdit}
+                draggable={item.userPermissions?.canEdit || false}
                 className={`${
                   viewMode === "grid"
-                    ? "border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow group relative"
-                    : "flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group"
-                } cursor-pointer ${
-                  dragOverItem === item.id ? "bg-blue-50 border-blue-300" : ""
+                    ? "border border-gray-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow group relative"
+                    : "flex items-center gap-3 p-3 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors group"
+                } ${
+                  item.userPermissions?.canEdit
+                    ? "cursor-move"
+                    : "cursor-pointer"
+                } ${
+                  dragOverItem === item.id
+                    ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-600"
+                    : ""
                 } ${draggedItem?.id === item.id ? "opacity-50" : ""} ${
                   loadingFolderId === item.id
                     ? "opacity-75 pointer-events-none"
@@ -561,6 +918,12 @@ export const TeamFileManager: React.FC<TeamFileManagerProps> = ({
                 {viewMode === "grid" ? (
                   <div className="flex flex-col space-y-3">
                     <div className="flex items-center space-x-3">
+                      {/* Drag handle for items with edit permission */}
+                      {item.userPermissions?.canEdit && (
+                        <div className="opacity-0 group-hover:opacity-50 transition-opacity flex-shrink-0">
+                          <GripVertical className="w-4 h-4 text-gray-400" />
+                        </div>
+                      )}
                       {item.type === "folder" ? (
                         <div className="relative">
                           <Folder className="w-8 h-8 text-blue-500 flex-shrink-0" />
@@ -629,6 +992,12 @@ export const TeamFileManager: React.FC<TeamFileManagerProps> = ({
                   </div>
                 ) : (
                   <>
+                    {/* Drag handle for items with edit permission */}
+                    {item.userPermissions?.canEdit && (
+                      <div className="opacity-0 group-hover:opacity-50 transition-opacity flex-shrink-0">
+                        <GripVertical className="w-4 h-4 text-gray-400" />
+                      </div>
+                    )}
                     {item.type === "folder" ? (
                       <div className="relative">
                         <Folder className="w-5 h-5 text-blue-500 flex-shrink-0" />
@@ -735,7 +1104,7 @@ export const TeamFileManager: React.FC<TeamFileManagerProps> = ({
             Share
           </button>
 
-          {(contextMenuItem as any).userPermissions?.canManage && (
+          {contextMenuItem.userPermissions?.canManage && (
             <button
               onClick={() => handleDeleteItem(contextMenuItem)}
               className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
