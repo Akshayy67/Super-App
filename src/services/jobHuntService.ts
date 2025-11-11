@@ -262,29 +262,31 @@ class JobHuntService {
       const hasLocationFilter = filters.location && filters.location.length > 0;
       const hasRemoteFilter = filters.remote === true;
       
-      if (hasLocationFilter || hasRemoteFilter) {
+      // ONLY apply filter if location array is not empty
+      if (hasLocationFilter) {
+        const beforeLocationFilter = jobs.length;
         jobs = jobs.filter(job => {
           // If remote filter is enabled, include all remote jobs
           if (hasRemoteFilter && job.isRemote) {
             return true;
           }
           
-          // If location filter is enabled, include jobs matching location
-          if (hasLocationFilter) {
-            if (filters.location!.includes('hyderabad') && job.isHyderabad) {
-              return true;
-            }
-            // Check if job location contains any of the filter locations
-            const jobLocationLower = job.location.toLowerCase();
-            if (filters.location!.some(loc => jobLocationLower.includes(loc.toLowerCase()))) {
-              return true;
-            }
+          // Check if job location matches any filter location
+          if (filters.location!.includes('hyderabad') && job.isHyderabad) {
+            return true;
+          }
+          // Check if job location contains any of the filter locations
+          const jobLocationLower = job.location.toLowerCase();
+          if (filters.location!.some(loc => jobLocationLower.includes(loc.toLowerCase()))) {
+            return true;
           }
           
           return false;
         });
         
-        console.log(`   After location/remote filter: ${jobs.length} jobs`);
+        console.log(`   After location/remote filter: ${jobs.length} jobs (removed ${beforeLocationFilter - jobs.length})`);
+      } else {
+        console.log(`   Skipping location filter at service level (location array empty)`);
       }
 
       if (filters.skills && filters.skills.length > 0) {
@@ -297,12 +299,15 @@ class JobHuntService {
         );
       }
 
-      if (filters.postedWithin) {
+      // Only apply date filter if postedWithin > 0 (0 means show all)
+      if (filters.postedWithin && filters.postedWithin > 0) {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - filters.postedWithin);
         const beforeFilter = jobs.length;
         jobs = jobs.filter(job => job.postedDate >= cutoffDate);
         console.log(`   After postedWithin (${filters.postedWithin} days) filter: ${jobs.length} jobs (removed ${beforeFilter - jobs.length})`);
+      } else {
+        console.log(`   Skipping date filter at service level (postedWithin = ${filters.postedWithin || 0})`);
       }
 
       // Calculate match scores if user preferences exist

@@ -43,6 +43,7 @@ import { PersonalAIAssistant } from "../ai/PersonalAIAssistant";
 import { EnhancedContestSystem } from "../contests/EnhancedContestSystem";
 import { PredictiveDashboardWrapper } from "../predictive/PredictiveDashboardWrapper";
 import { FacultyDashboardWrapper } from "../predictive/FacultyDashboardWrapper";
+import { DailyQuestionComponent } from "../gamification/DailyQuestion";
 
 interface AppRouterProps {
   invitationData: {
@@ -287,6 +288,14 @@ export const AppRouter: React.FC<AppRouterProps> = ({ invitationData }) => {
             <PremiumGuard>
               <PageTransitionWrapper><Community /></PageTransitionWrapper>
             </PremiumGuard>
+          </BlockedUserGuard>
+        } 
+      />
+      <Route 
+        path="/daily-question" 
+        element={
+          <BlockedUserGuard>
+            <PageTransitionWrapper><DailyQuestionComponent /></PageTransitionWrapper>
           </BlockedUserGuard>
         } 
       />

@@ -39,18 +39,19 @@ export const JobHunt: React.FC = () => {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Filters - More permissive defaults
+  // Filters - More permissive defaults (passed to service)
   const [filters, setFilters] = useState<JobFilter>({
-    location: ["hyderabad"],
-    remote: true, // This is now OR logic with location, not AND
-    postedWithin: 30, // Show jobs from last 30 days (not just 7)
+    // Leave location empty to load ALL jobs, filter in UI instead
+    location: [],
+    remote: true, // Include remote jobs
+    postedWithin: 0, // 0 = no date filter at service level
   });
   
   const [searchQuery, setSearchQuery] = useState("");
-  const [locationFilter, setLocationFilter] = useState("hyderabad");
+  const [locationFilter, setLocationFilter] = useState("all"); // Changed to "all" to show all locations
   const [remoteFilter, setRemoteFilter] = useState(true);
   const [skillsFilter, setSkillsFilter] = useState<string[]>([]);
-  const [postedWithinDays, setPostedWithinDays] = useState(30);
+  const [postedWithinDays, setPostedWithinDays] = useState(365); // Changed to 365 days
   
   // User preferences
   const [userPreferences, setUserPreferences] = useState<any>(null);
@@ -163,7 +164,9 @@ export const JobHunt: React.FC = () => {
     const hasLocationFilter = locationFilter && locationFilter !== "all";
     const hasRemoteFilter = remoteFilter;
     
-    if (hasLocationFilter || hasRemoteFilter) {
+    // Only apply filter if a specific location is selected (not "all")
+    if (hasLocationFilter) {
+      const beforeFilter = filtered.length;
       filtered = filtered.filter((job) => {
         // If remote filter is enabled, include remote jobs
         if (hasRemoteFilter && job.isRemote) {
@@ -171,19 +174,17 @@ export const JobHunt: React.FC = () => {
         }
         
         // If location filter is set, include jobs matching location
-        if (hasLocationFilter) {
-          if (locationFilter === "remote") {
-            return job.isRemote;
-          } else if (locationFilter === "hyderabad") {
-            return job.isHyderabad || job.location.toLowerCase().includes("hyderabad");
-          }
-          // Check if job location contains the filter
-          return job.location.toLowerCase().includes(locationFilter.toLowerCase());
+        if (locationFilter === "remote") {
+          return job.isRemote;
+        } else if (locationFilter === "hyderabad") {
+          return job.isHyderabad || job.location.toLowerCase().includes("hyderabad");
         }
-        
-        return false;
+        // Check if job location contains the filter
+        return job.location.toLowerCase().includes(locationFilter.toLowerCase());
       });
-      console.log(`   After location/remote filter: ${filtered.length} jobs`);
+      console.log(`   After location/remote filter: ${filtered.length} jobs (removed ${beforeFilter - filtered.length})`);
+    } else {
+      console.log(`   Skipping location filter (showing all locations)`);
     }
     
     // Skills filter
@@ -259,19 +260,19 @@ export const JobHunt: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 space-y-6">
+    <div className="max-w-7xl mx-auto p-2 sm:p-4 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-              <Briefcase className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+              <Briefcase className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
                 Job Hunt
               </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 hidden sm:block">
                 Find your perfect job in Hyderabad and remote positions
               </p>
             </div>
@@ -280,51 +281,52 @@ export const JobHunt: React.FC = () => {
           <button
             onClick={handleRefreshJobs}
             disabled={isRefreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh Jobs
+            <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh Jobs</span>
+            <span className="sm:hidden">Refresh</span>
           </button>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
-              <Briefcase className="w-4 h-4" />
-              <span className="text-sm font-medium">Total Jobs</span>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 sm:p-4 rounded-lg">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-blue-600 dark:text-blue-400 mb-1">
+              <Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm font-medium">Total Jobs</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+            <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               {stats.totalJobs}
             </div>
           </div>
           
-          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-            <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1">
-              <Target className="w-4 h-4" />
-              <span className="text-sm font-medium">High Matches</span>
+          <div className="bg-green-50 dark:bg-green-900/20 p-3 sm:p-4 rounded-lg">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-green-600 dark:text-green-400 mb-1">
+              <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm font-medium">High Matches</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+            <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               {stats.matchedJobs}
             </div>
           </div>
           
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
-            <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 mb-1">
-              <Bookmark className="w-4 h-4" />
-              <span className="text-sm font-medium">Saved</span>
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 sm:p-4 rounded-lg">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-yellow-600 dark:text-yellow-400 mb-1">
+              <Bookmark className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm font-medium">Saved</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+            <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               {stats.savedJobs}
             </div>
           </div>
           
-          <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-            <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-1">
-              <CheckCircle2 className="w-4 h-4" />
-              <span className="text-sm font-medium">Applied</span>
+          <div className="bg-purple-50 dark:bg-purple-900/20 p-3 sm:p-4 rounded-lg">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-purple-600 dark:text-purple-400 mb-1">
+              <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm font-medium">Applied</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+            <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               {stats.appliedJobs}
             </div>
           </div>
@@ -333,52 +335,55 @@ export const JobHunt: React.FC = () => {
 
       {/* Tabs */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-        <div className="flex border-b border-gray-200 dark:border-gray-700">
+        <div className="flex overflow-x-auto border-b border-gray-200 dark:border-gray-700 scrollbar-hide">
           <button
             onClick={() => setActiveTab("search")}
-            className={`px-6 py-3 font-medium transition-colors ${
+            className={`px-4 sm:px-6 py-2.5 sm:py-3 font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
               activeTab === "search"
                 ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
             }`}
           >
-            <div className="flex items-center gap-2">
-              <Search className="w-4 h-4" />
-              Search Jobs
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Search Jobs</span>
+              <span className="sm:hidden">Search</span>
             </div>
           </button>
           
           <button
             onClick={() => setActiveTab("matched")}
-            className={`px-6 py-3 font-medium transition-colors ${
+            className={`px-4 sm:px-6 py-2.5 sm:py-3 font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
               activeTab === "matched"
                 ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
             }`}
           >
-            <div className="flex items-center gap-2">
-              <Target className="w-4 h-4" />
-              Job Match
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Job Match</span>
+              <span className="sm:hidden">Match</span>
             </div>
           </button>
           
           <button
             onClick={() => setActiveTab("preferences")}
-            className={`px-6 py-3 font-medium transition-colors ${
+            className={`px-4 sm:px-6 py-2.5 sm:py-3 font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
               activeTab === "preferences"
                 ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
             }`}
           >
-            <div className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Preferences
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Preferences</span>
+              <span className="sm:hidden">Settings</span>
             </div>
           </button>
         </div>
 
         {/* Tab Content */}
-        <div className="p-6">
+        <div className="p-3 sm:p-6">
           {/* Search Jobs Tab */}
           {activeTab === "search" && (
             <div className="space-y-6">
@@ -429,6 +434,8 @@ export const JobHunt: React.FC = () => {
                     <option value="7">7 days</option>
                     <option value="14">14 days</option>
                     <option value="30">30 days</option>
+                    <option value="90">90 days</option>
+                    <option value="365">1 year</option>
                     <option value="0">Any time</option>
                   </select>
                 </div>
@@ -438,13 +445,13 @@ export const JobHunt: React.FC = () => {
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  id="remoteOnly"
+                  id="remoteInclude"
                   checked={remoteFilter}
                   onChange={(e) => setRemoteFilter(e.target.checked)}
                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
-                <label htmlFor="remoteOnly" className="text-sm text-gray-700 dark:text-gray-300">
-                  Remote jobs only
+                <label htmlFor="remoteInclude" className="text-sm text-gray-700 dark:text-gray-300">
+                  Include remote jobs
                 </label>
               </div>
 

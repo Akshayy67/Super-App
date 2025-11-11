@@ -1065,39 +1065,39 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
   const isHost = meeting.hostId === user.id;
 
   return (
-    <div className="h-screen bg-gray-900 flex flex-col relative">
+    <div className="h-screen w-screen bg-gray-900 flex flex-col relative overflow-hidden">
       {/* Scribe Banner */}
       {showScribeBanner && !isScribing && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-2xl px-4">
-          <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-green-600 rounded-lg shadow-2xl border border-green-500 p-4 flex items-center justify-between animate-pulse">
-            <div className="flex items-center gap-3">
-              <FileText className="w-6 h-6 text-white" />
+        <div className="absolute top-2 sm:top-4 left-1/2 transform -translate-x-1/2 z-50 w-[calc(100%-1rem)] sm:w-full max-w-2xl px-2 sm:px-4">
+          <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-green-600 rounded-lg shadow-2xl border border-green-500 p-2 sm:p-4 flex items-center justify-between animate-pulse">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <FileText className="w-4 h-4 sm:w-6 sm:h-6 text-white flex-shrink-0" />
               <div>
-                <h3 className="text-white font-bold text-sm">✨ Try AI-Powered Scribe!</h3>
-                <p className="text-green-100 text-xs">Get live transcription + AI summaries. Click the scribe button below!</p>
+                <h3 className="text-white font-bold text-xs sm:text-sm">✨ Try AI-Powered Scribe!</h3>
+                <p className="text-green-100 text-[10px] sm:text-xs">Get live transcription + AI summaries.</p>
               </div>
             </div>
             <button
               onClick={() => setShowScribeBanner(false)}
-              className="p-1 hover:bg-green-700 rounded-full transition-colors"
+              className="p-1 hover:bg-green-700 rounded-full transition-colors flex-shrink-0"
               title="Dismiss"
             >
-              <X className="w-4 h-4 text-white" />
+              <X className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
             </button>
           </div>
         </div>
       )}
 
       {/* Main video area */}
-      <div className="flex-1 flex relative">
-        <div className={`flex-1 flex ${pinnedParticipant ? 'flex-row' : 'flex-col'} ${isChatOpen || isParticipantsOpen || isSettingsOpen || isWhiteboardOpen || showLiveTranscript ? 'mr-80' : ''}`}>
+      <div className="flex-1 flex relative min-h-0 overflow-hidden">
+        <div className={`flex-1 flex ${pinnedParticipant ? 'flex-row' : 'flex-col'} min-w-0 ${isChatOpen || isParticipantsOpen || isSettingsOpen || isWhiteboardOpen || showLiveTranscript ? 'mr-64 sm:mr-72 lg:mr-80' : ''}`}>
           {pinnedParticipant ? (
             // Layout with pinned participant
             <>
               {/* Pinned video on left */}
               <div className={`relative bg-gray-900 h-full ${
-                pinnedSize === 'small' ? 'w-80' : pinnedSize === 'medium' ? 'w-[500px]' : 'w-[700px]'
-              } border-r border-gray-700 flex-shrink-0`}>
+                pinnedSize === 'small' ? 'w-64 sm:w-80' : pinnedSize === 'medium' ? 'w-96 sm:w-[500px]' : 'w-[500px] sm:w-[700px]'
+              } border-r border-gray-700 flex-shrink-0 min-w-0`}>
                 {pinnedParticipant === user.id ? (
                   <ParticipantVideo
                     participant={currentParticipant}
@@ -1121,10 +1121,10 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
               </div>
               
               {/* Grid of other participants on right */}
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 h-full overflow-auto auto-rows-fr">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-4 p-2 sm:p-4 h-full overflow-auto auto-rows-fr min-w-0">
                 {/* Show local video if not pinned */}
                 {pinnedParticipant !== user.id && (
-                  <div className="min-h-[300px]">
+                  <div className="min-h-[200px] sm:min-h-[300px] w-full">
                     <ParticipantVideo
                       participant={currentParticipant}
                       stream={isScreenSharing ? screenStream : localStream}
@@ -1147,7 +1147,7 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
                     }
                     
                     return (
-                      <div key={userId} className="min-h-[300px]">
+                      <div key={userId} className="min-h-[200px] sm:min-h-[300px] w-full">
                         <ParticipantVideo
                           participant={participant}
                           stream={stream}
@@ -1161,7 +1161,7 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
             </>
           ) : (
             // Normal grid layout
-            <div className="flex-1 p-4 h-full overflow-y-auto">
+            <div className="flex-1 p-2 sm:p-4 h-full overflow-y-auto min-w-0">
               {viewMode === 'grid' ? (
                 (() => {
                   // Calculate total participants including current user
@@ -1184,9 +1184,11 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
                   }
 
                   return (
-                    <div className={`grid ${gridClass} gap-4 auto-rows-fr content-start`}>
+                    <div className={`grid ${gridClass} gap-2 sm:gap-4 h-full w-full`} style={{
+                      gridAutoRows: 'minmax(0, 1fr)'
+                    }}>
                       {/* Local video */}
-                      <div className="aspect-video w-full">
+                      <div className="w-full h-full min-h-0 min-w-0">
                         <ParticipantVideo
                           participant={currentParticipant}
                           stream={isScreenSharing ? screenStream : localStream}
@@ -1208,7 +1210,7 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
                           }
                           
                           return (
-                            <div key={userId} className="aspect-video w-full">
+                            <div key={userId} className="w-full h-full min-h-0 min-w-0">
                               <ParticipantVideo
                                 participant={participant}
                                 stream={stream}
@@ -1222,14 +1224,16 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
                   );
                 })()
               ) : (
-                <div className="flex items-center justify-center h-full">
-                  <ParticipantVideo
-                    participant={currentParticipant}
-                    stream={isScreenSharing ? screenStream : localStream}
-                    isLocal
-                    className="w-full h-full max-w-6xl"
-                    onPin={() => handlePinParticipant(user.id)}
-                  />
+                <div className="flex items-center justify-center h-full w-full p-4">
+                  <div className="w-full h-full max-w-7xl max-h-full">
+                    <ParticipantVideo
+                      participant={currentParticipant}
+                      stream={isScreenSharing ? screenStream : localStream}
+                      isLocal
+                      className="h-full w-full"
+                      onPin={() => handlePinParticipant(user.id)}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -1238,7 +1242,7 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
 
         {/* Chat Sidebar */}
         {isChatOpen && (
-          <div className="w-80 border-l border-gray-700 bg-gray-800">
+          <div className="w-64 sm:w-72 lg:w-80 border-l border-gray-700 bg-gray-800 flex-shrink-0 overflow-hidden">
             <MeetingChat
               meeting={meeting}
               onClose={() => setIsChatOpen(false)}
@@ -1248,14 +1252,14 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
 
         {/* Whiteboard Sidebar */}
         {isWhiteboardOpen && (
-          <div className={`border-l border-gray-700 bg-gray-800 transition-all duration-300 ${
+          <div className={`border-l border-gray-700 bg-gray-800 transition-all duration-300 flex-shrink-0 overflow-hidden ${
             whiteboardSize === 'fullscreen' 
               ? 'fixed inset-0 z-50' 
               : whiteboardSize === 'large' 
-              ? 'w-[600px]' 
+              ? 'w-[400px] sm:w-[500px] lg:w-[600px]' 
               : whiteboardSize === 'medium' 
-              ? 'w-96' 
-              : 'w-80'
+              ? 'w-72 sm:w-80 lg:w-96' 
+              : 'w-64 sm:w-72 lg:w-80'
           }`}>
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-between p-4 border-b border-gray-700">
@@ -1328,7 +1332,7 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
 
         {/* Participants Sidebar */}
         {isParticipantsOpen && (
-          <div className="w-80 border-l border-gray-700 bg-gray-800">
+          <div className="w-64 sm:w-72 lg:w-80 border-l border-gray-700 bg-gray-800 flex-shrink-0 overflow-hidden">
             <ParticipantsList
               meeting={meeting}
               currentUserId={user.id}
@@ -1339,7 +1343,7 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
 
         {/* Settings Sidebar */}
         {isSettingsOpen && isHost && (
-          <div className="w-80 border-l border-gray-700 bg-gray-800">
+          <div className="w-64 sm:w-72 lg:w-80 border-l border-gray-700 bg-gray-800 flex-shrink-0 overflow-hidden">
             <MeetingSettings
               meeting={meeting}
               isHost={isHost}
@@ -1350,7 +1354,7 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
 
         {/* Live Transcript Sidebar */}
         {showLiveTranscript && isScribing && (
-          <div className="w-80 border-l border-gray-700 bg-gray-800 flex flex-col">
+          <div className="w-64 sm:w-72 lg:w-80 border-l border-gray-700 bg-gray-800 flex flex-col flex-shrink-0 overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-gray-700">
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                 <FileText className="w-5 h-5" />

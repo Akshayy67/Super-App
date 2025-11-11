@@ -23,6 +23,7 @@ import {
   Trophy,
   Zap,
   Code,
+  Flame,
 } from "lucide-react";
 import { gsap } from "gsap";
 import { realTimeAuth } from "../../utils/realTimeAuth";
@@ -48,10 +49,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { activeView } = useCurrentRoute();
   const { showWidget, toggleEducation, currentSession } = useGlobalPomodoro();
   const [userProfilePhoto, setUserProfilePhoto] = useState<string | null>(null);
+  const [dailyStreak, setDailyStreak] = useState<number>(0);
 
-  // Fetch user profile photo
+  // Fetch user profile photo and daily streak
   useEffect(() => {
-    const fetchUserProfilePhoto = async () => {
+    const fetchUserData = async () => {
       if (user?.id) {
         try {
           const profile = await ProfileService.getProfileByUserId(user.id);
@@ -61,10 +63,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         } catch (error) {
           console.error("Error fetching user profile photo:", error);
         }
+
+        // Fetch daily question streak
+        try {
+          const userId = user.uid || user.id;
+          if (userId) {
+            const { dailyQuestionService } = await import('../../services/dailyQuestionService');
+            const stats = await dailyQuestionService.getUserStats(userId);
+            setDailyStreak(stats.currentStreak);
+          }
+        } catch (error) {
+          console.error("Error fetching daily streak:", error);
+        }
       }
     };
 
-    fetchUserProfilePhoto();
+    fetchUserData();
   }, [user]);
 
   const menuItems = [
@@ -85,6 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: "study-rooms", label: "Study Rooms", icon: Video, path: "/study-rooms", badge: "NEW" },
     { id: "team", label: "Team Space", icon: Users, path: "/team" },
     { id: "community", label: "Community", icon: MessageCircle, path: "/community" },
+    { id: "daily-question", label: "Daily Challenge", icon: Zap, path: "/daily-question", badge: "NEW", streak: true },
     { id: "about", label: "About Us", icon: Info, path: "/about" },
   ];
 
@@ -344,6 +359,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <span className="font-heading font-medium text-responsive-sm truncate relative z-10">
                     {item.label}
                   </span>
+                  
+                  {/* Daily Streak Indicator */}
+                  {(item as any).streak && dailyStreak > 0 && (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-orange-500 text-white rounded-full text-xs font-bold shadow-lg">
+                      <Flame className="w-3 h-3" />
+                      {dailyStreak}
+                    </div>
+                  )}
                   
                   {/* Active indicator with pulse */}
                   {isActive && (

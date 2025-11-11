@@ -35,6 +35,7 @@ import {
   DollarSign,
   FileJson,
   Upload,
+  Zap,
 } from "lucide-react";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import { 
@@ -82,6 +83,8 @@ import {
 } from "../../services/studentVerificationService";
 import { JobAPIService, JobSearchParams } from "../../services/jobAPIService";
 import type { Job } from "../../services/jobHuntService";
+import { DailyQuestionManager } from "../admin/DailyQuestionManager";
+import { JobDatabaseViewer } from "../admin/JobDatabaseViewer";
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -896,8 +899,8 @@ export const AdminDashboard: React.FC = () => {
       return;
     }
 
-    // Double-check: Don't load if on Firebase, reports, or premium tab
-    if (activeTab === "firebase" || activeTab === "reports" || activeTab === "premium" || activeTab === "students") {
+    // Double-check: Don't load if on Firebase, reports, premium, daily-question, job-database, or students tab
+    if (activeTab === "firebase" || activeTab === "reports" || activeTab === "premium" || activeTab === "students" || activeTab === "daily-question" || activeTab === "job-database") {
       console.log("🚫 Skipping ATS backend data load - on non-ATS tab:", activeTab);
       setLoading(false);
       return;
@@ -1091,6 +1094,8 @@ export const AdminDashboard: React.FC = () => {
   const tabs = [
     { id: "firebase", label: "Firebase Admin", icon: Database, requiresATS: false },
     { id: "jobs", label: "Job Management", icon: Briefcase, requiresATS: false },
+    { id: "job-database", label: "Job Database Viewer", icon: Database, requiresATS: false },
+    { id: "daily-question", label: "Daily Questions", icon: Zap, requiresATS: false },
     { id: "premium", label: "Premium Users", icon: Gift, requiresATS: false },
     { id: "students", label: "Student Verifications", icon: BookOpen, requiresATS: false },
     { id: "reports", label: "Reports", icon: AlertTriangle, requiresATS: false },
@@ -3001,6 +3006,14 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               )}
             </div>
+          )}
+
+          {!loading && !error && activeTab === "daily-question" && (
+            <DailyQuestionManager />
+          )}
+
+          {!loading && !error && activeTab === "job-database" && (
+            <JobDatabaseViewer />
           )}
 
           {!loading && !error && activeTab === "students" && (

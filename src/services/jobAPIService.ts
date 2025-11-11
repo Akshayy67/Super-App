@@ -209,8 +209,9 @@ export class JobAPIService {
 
   /**
    * Save job to Firestore
+   * @returns Object with id and isDuplicate flag
    */
-  static async saveJobToFirestore(job: Job): Promise<string> {
+  static async saveJobToFirestore(job: Job): Promise<{ id: string; isDuplicate: boolean }> {
     try {
       // Check for duplicates using multiple strategies
       
@@ -224,7 +225,7 @@ export class JobAPIService {
         const urlDocs = await getDocs(urlQuery);
         if (!urlDocs.empty) {
           console.log(`⏭️ Skipping duplicate (same URL): ${job.title} at ${job.company}`);
-          return urlDocs.docs[0].id;
+          return { id: urlDocs.docs[0].id, isDuplicate: true };
         }
       }
       
@@ -238,7 +239,7 @@ export class JobAPIService {
       const titleCompanyDocs = await getDocs(titleCompanyQuery);
       if (!titleCompanyDocs.empty) {
         console.log(`⏭️ Skipping duplicate (same title+company): ${job.title} at ${job.company}`);
-        return titleCompanyDocs.docs[0].id;
+        return { id: titleCompanyDocs.docs[0].id, isDuplicate: true };
       }
 
       // Validate and normalize posted date
@@ -302,7 +303,7 @@ export class JobAPIService {
       const docRef = await addDoc(collection(db, "jobListings"), jobDoc);
       
       console.log("✅ Job saved to Firestore:", docRef.id);
-      return docRef.id;
+      return { id: docRef.id, isDuplicate: false };
     } catch (error: any) {
       console.error("❌ Error saving job to Firestore:", error);
       console.error("   Job data:", { title: job.title, company: job.company, url: job.url });
@@ -319,17 +320,18 @@ export class JobAPIService {
     let failed = 0;
     let duplicates = 0;
     const errors: string[] = [];
-    const existingIds = new Set<string>();
 
     for (const job of jobs) {
       try {
-        const docId = await this.saveJobToFirestore(job);
-        if (existingIds.has(docId)) {
+        const result = await this.saveJobToFirestore(job);
+        if (result.isDuplicate) {
           // This was a duplicate
           duplicates++;
+          console.log(`⏭️ Duplicate skipped: ${job.title} at ${job.company}`);
         } else {
-          existingIds.add(docId);
+          // Successfully saved new job
           success++;
+          console.log(`✅ New job added: ${job.title} at ${job.company}`);
         }
       } catch (error: any) {
         const errorMsg = `${job.title} at ${job.company}: ${error.message}`;
@@ -339,10 +341,15 @@ export class JobAPIService {
       }
     }
 
-    console.log(`✅ Saved ${success} new jobs, ${duplicates} duplicates skipped, ${failed} failed`);
+    console.log(`\n📊 Import Summary:`);
+    console.log(`   ✅ Saved: ${success} new jobs`);
+    console.log(`   ⏭️ Skipped: ${duplicates} duplicates`);
+    console.log(`   ❌ Failed: ${failed} jobs`);
+    
     if (errors.length > 0) {
-      console.error("Failed jobs:", errors);
+      console.error("\n❌ Failed jobs details:", errors);
     }
+    
     return { success, failed, duplicates, errors };
   }
 
