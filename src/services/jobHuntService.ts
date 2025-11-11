@@ -223,30 +223,68 @@ class JobHuntService {
   // Get jobs with filters
   async getJobs(userId: string, filters: JobFilter): Promise<Job[]> {
     try {
-      let q = query(
-        collection(db, this.jobsCollection),
-        orderBy('scrapedAt', 'desc'),
-        limit(100)
-      );
+      // Try with orderBy first, fall back to simple query if index doesn't exist
+      let snapshot;
+      try {
+        let q = query(
+          collection(db, this.jobsCollection),
+          orderBy('scrapedAt', 'desc'),
+          limit(500) // Increased from 100 to 500
+        );
+        snapshot = await getDocs(q);
+      } catch (indexError: any) {
+        console.warn("⚠️ Firestore index not found for 'scrapedAt', using simple query:", indexError.message);
+        // Fallback: Query without orderBy (no index needed)
+        let q = query(
+          collection(db, this.jobsCollection),
+          limit(500) // Increased from 100 to 500
+        );
+        snapshot = await getDocs(q);
+      }
 
-      const snapshot = await getDocs(q);
       let jobs = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
           ...data,
-          postedDate: data.postedDate?.toDate(),
-          scrapedAt: data.scrapedAt?.toDate(),
+          postedDate: data.postedDate?.toDate?.() || new Date(data.postedDate),
+          scrapedAt: data.scrapedAt?.toDate?.() || new Date(data.scrapedAt || Date.now()),
         } as Job;
       });
 
-      // Apply filters
-      if (filters.remote) {
-        jobs = jobs.filter(job => job.isRemote);
-      }
+      console.log(`📊 Loaded ${jobs.length} jobs from Firestore`);
 
-      if (filters.location?.includes('hyderabad')) {
-        jobs = jobs.filter(job => job.isHyderabad);
+      // Sort in memory if we couldn't use orderBy
+      jobs.sort((a, b) => b.scrapedAt.getTime() - a.scrapedAt.getTime());
+
+      // Apply filters
+      // Location filter: Show jobs that match location OR are remote
+      const hasLocationFilter = filters.location && filters.location.length > 0;
+      const hasRemoteFilter = filters.remote === true;
+      
+      if (hasLocationFilter || hasRemoteFilter) {
+        jobs = jobs.filter(job => {
+          // If remote filter is enabled, include all remote jobs
+          if (hasRemoteFilter && job.isRemote) {
+            return true;
+          }
+          
+          // If location filter is enabled, include jobs matching location
+          if (hasLocationFilter) {
+            if (filters.location!.includes('hyderabad') && job.isHyderabad) {
+              return true;
+            }
+            // Check if job location contains any of the filter locations
+            const jobLocationLower = job.location.toLowerCase();
+            if (filters.location!.some(loc => jobLocationLower.includes(loc.toLowerCase()))) {
+              return true;
+            }
+          }
+          
+          return false;
+        });
+        
+        console.log(`   After location/remote filter: ${jobs.length} jobs`);
       }
 
       if (filters.skills && filters.skills.length > 0) {
@@ -262,7 +300,9 @@ class JobHuntService {
       if (filters.postedWithin) {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - filters.postedWithin);
+        const beforeFilter = jobs.length;
         jobs = jobs.filter(job => job.postedDate >= cutoffDate);
+        console.log(`   After postedWithin (${filters.postedWithin} days) filter: ${jobs.length} jobs (removed ${beforeFilter - jobs.length})`);
       }
 
       // Calculate match scores if user preferences exist

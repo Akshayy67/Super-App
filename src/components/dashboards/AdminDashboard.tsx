@@ -27,6 +27,14 @@ import {
   Check,
   Star,
   XCircle,
+  Briefcase,
+  Plus,
+  Loader2,
+  ExternalLink,
+  MapPin,
+  DollarSign,
+  FileJson,
+  Upload,
 } from "lucide-react";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import { 
@@ -72,6 +80,8 @@ import {
   rejectStudentVerification,
   StudentVerification,
 } from "../../services/studentVerificationService";
+import { JobAPIService, JobSearchParams } from "../../services/jobAPIService";
+import type { Job } from "../../services/jobHuntService";
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -105,6 +115,27 @@ export const AdminDashboard: React.FC = () => {
   const [processingVerificationId, setProcessingVerificationId] = useState<string | null>(null);
   const [editingPremiumUserId, setEditingPremiumUserId] = useState<string | null>(null);
   const [newPremiumEndDate, setNewPremiumEndDate] = useState<string>("");
+
+  // Job Management State
+  const [jobSearchQuery, setJobSearchQuery] = useState("software developer");
+  const [jobLocation, setJobLocation] = useState("hyderabad");
+  const [jobRemoteOnly, setJobRemoteOnly] = useState(false);
+  const [jobIncludeScraping, setJobIncludeScraping] = useState(true);
+  const [searchedJobs, setSearchedJobs] = useState<Job[]>([]);
+  const [searchingJobs, setSearchingJobs] = useState(false);
+  const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
+  const [addingJobs, setAddingJobs] = useState(false);
+  
+  // JSON Import State
+  const [jsonInput, setJsonInput] = useState("");
+  const [importingJobs, setImportingJobs] = useState(false);
+
+  // Job Management State
+  const [allJobs, setAllJobs] = useState<Job[]>([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+  const [duplicateGroups, setDuplicateGroups] = useState<Job[][]>([]);
+  const [findingDuplicates, setFindingDuplicates] = useState(false);
+  const [removingDuplicates, setRemovingDuplicates] = useState(false);
 
   const user = realTimeAuth.getCurrentUser();
 
@@ -300,6 +331,381 @@ export const AdminDashboard: React.FC = () => {
     } catch (error: any) {
       console.error("Error updating premium end date:", error);
       alert(error.message || "Failed to update premium end date");
+    }
+  };
+
+  // Handle job search
+  const handleJobSearch = async () => {
+    if (!user) return;
+    
+    setSearchingJobs(true);
+    setError(null);
+    setSearchedJobs([]);
+    setSelectedJobs(new Set());
+    
+    try {
+      const params: any = {
+        query: jobSearchQuery,
+        location: jobLocation,
+        remote: jobRemoteOnly,
+        maxResults: 100,
+        includeScraping: jobIncludeScraping,
+      };
+      
+      console.log("🔍 Searching jobs with params:", params);
+      const jobs = await JobAPIService.searchAllAPIs(params);
+      
+      setSearchedJobs(jobs);
+      console.log(`✅ Found ${jobs.length} jobs`);
+      
+      if (jobs.length === 0) {
+        alert("No jobs found. Try different search parameters or enable traditional scraping.");
+      } else {
+        const sourcesText = jobIncludeScraping 
+          ? "15 sources (4 APIs + 6 modern sources + 5 traditional sites)"
+          : "10 sources (4 APIs + 6 modern sources)";
+        alert(`✅ Found ${jobs.length} jobs from ${sourcesText}!`);
+      }
+    } catch (error: any) {
+      console.error("Error searching jobs:", error);
+      setError(error.message || "Failed to search jobs");
+      alert("Failed to search jobs: " + (error.message || "Unknown error"));
+    } finally {
+      setSearchingJobs(false);
+    }
+  };
+
+  // Handle toggle job selection
+  const handleToggleJobSelection = (jobUrl: string) => {
+    const newSelected = new Set(selectedJobs);
+    if (newSelected.has(jobUrl)) {
+      newSelected.delete(jobUrl);
+    } else {
+      newSelected.add(jobUrl);
+    }
+    setSelectedJobs(newSelected);
+  };
+
+  // Handle add selected jobs to Firestore
+  const handleAddSelectedJobs = async () => {
+    if (selectedJobs.size === 0) {
+      alert("Please select at least one job to add");
+      return;
+    }
+    
+    if (!window.confirm(`Add ${selectedJobs.size} selected job(s) to the job hunt database?`)) {
+      return;
+    }
+    
+    setAddingJobs(true);
+    try {
+      const jobsToAdd = searchedJobs.filter(job => 
+        selectedJobs.has(job.url || `${job.title}_${job.company}`)
+      );
+      
+      const result = await JobAPIService.saveJobsToFirestore(jobsToAdd);
+      
+      let message = `✅ Successfully added ${result.success} new job(s)!`;
+      if (result.duplicates > 0) {
+        message += `\n⏭️ Skipped ${result.duplicates} duplicate(s)`;
+      }
+      if (result.failed > 0) {
+        message += `\n\n❌ Failed: ${result.failed} job(s)`;
+        if (result.errors.length > 0) {
+          message += `\n${result.errors.slice(0, 3).join('\n')}`;
+          if (result.errors.length > 3) {
+            message += `\n... and ${result.errors.length - 3} more (check console)`;
+          }
+        }
+      }
+      alert(message);
+      
+      // Clear selection
+      setSelectedJobs(new Set());
+    } catch (error: any) {
+      console.error("Error adding jobs:", error);
+      alert("Failed to add jobs: " + (error.message || "Unknown error"));
+    } finally {
+      setAddingJobs(false);
+    }
+  };
+
+  // Handle import jobs from JSON
+  const handleImportFromJSON = async () => {
+    if (!jsonInput.trim()) {
+      alert("Please paste JSON data");
+      return;
+    }
+
+    setImportingJobs(true);
+    try {
+      // Clean up JSON input
+      let cleanedInput = jsonInput.trim();
+      
+      // Parse JSON
+      let parsedData;
+      try {
+        parsedData = JSON.parse(cleanedInput);
+      } catch (parseError: any) {
+        // Show helpful error message with position
+        const match = parseError.message.match(/position (\d+)/);
+        if (match) {
+          const pos = parseInt(match[1]);
+          const snippet = cleanedInput.substring(Math.max(0, pos - 50), Math.min(cleanedInput.length, pos + 50));
+          console.error("❌ JSON Parse Error at position", pos);
+          console.error("   Snippet:", snippet);
+          console.error("   Error:", parseError.message);
+          throw new Error(`Invalid JSON at position ${pos}. Check console for details.\n\nError: ${parseError.message}`);
+        }
+        throw parseError;
+      }
+      
+      // Ensure it's an array
+      const jobsArray = Array.isArray(parsedData) ? parsedData : [parsedData];
+      
+      if (jobsArray.length === 0) {
+        alert("No jobs found in JSON");
+        return;
+      }
+
+      // Transform to Job format
+      const transformedJobs: Job[] = jobsArray.map((item: any) => {
+        // Parse location to determine if Hyderabad
+        const location = item.Location || item.location || "";
+        const isHyderabad = location.toLowerCase().includes("hyderabad");
+        const isRemote = location.toLowerCase().includes("remote");
+        
+        // Parse posted date
+        let postedDate = new Date();
+        const postedDateStr = item["Posted Date"] || item.postedDate || item.posted_date || "";
+        
+        if (postedDateStr) {
+          let parsedDate: Date | null = null;
+          const lowerDateStr = postedDateStr.toLowerCase();
+          
+          // Try to extract numbers from the string
+          const numberMatch = postedDateStr.match(/\d+/);
+          const number = numberMatch ? parseInt(numberMatch[0]) : 1;
+          
+          if (lowerDateStr.includes("recently") || lowerDateStr.includes("just now")) {
+            // "Recently posted" or "Just now" - default to today
+            parsedDate = new Date();
+          } else if (lowerDateStr.includes("reposted")) {
+            // "Reposted 4 months ago" - extract time after "reposted"
+            if (lowerDateStr.includes("month")) {
+              parsedDate = new Date(Date.now() - number * 30 * 24 * 60 * 60 * 1000);
+            } else if (lowerDateStr.includes("week")) {
+              parsedDate = new Date(Date.now() - number * 7 * 24 * 60 * 60 * 1000);
+            } else if (lowerDateStr.includes("day")) {
+              parsedDate = new Date(Date.now() - number * 24 * 60 * 60 * 1000);
+            } else {
+              parsedDate = new Date();
+            }
+          } else if (lowerDateStr.includes("week")) {
+            parsedDate = new Date(Date.now() - number * 7 * 24 * 60 * 60 * 1000);
+          } else if (lowerDateStr.includes("day")) {
+            parsedDate = new Date(Date.now() - number * 24 * 60 * 60 * 1000);
+          } else if (lowerDateStr.includes("month")) {
+            parsedDate = new Date(Date.now() - number * 30 * 24 * 60 * 60 * 1000);
+          } else if (lowerDateStr.includes("year")) {
+            parsedDate = new Date(Date.now() - number * 365 * 24 * 60 * 60 * 1000);
+          } else if (lowerDateStr.includes("hour")) {
+            parsedDate = new Date(Date.now() - number * 60 * 60 * 1000);
+          } else if (lowerDateStr.includes("minute")) {
+            parsedDate = new Date(Date.now() - number * 60 * 1000);
+          } else {
+            // Try to parse as standard date format
+            parsedDate = new Date(postedDateStr);
+          }
+          
+          // Validate the parsed date
+          if (parsedDate && !isNaN(parsedDate.getTime())) {
+            postedDate = parsedDate;
+          } else {
+            // If parsing failed, default to today
+            console.warn(`⚠️ Could not parse date "${postedDateStr}", defaulting to today`);
+            postedDate = new Date();
+          }
+        }
+        
+        // Build URL
+        const sourceWebsite = item["Source Website"] || item.sourceWebsite || item.source || "unknown.com";
+        const applicationURL = item["Application URL"] || item.applicationUrl || item.url || "";
+        
+        let fullURL;
+        if (!applicationURL || applicationURL.toLowerCase().includes("not available")) {
+          // No URL available - generate a search URL
+          const jobTitle = item["Job Title"] || item.title || "";
+          const companyName = item["Company Name"] || item.company || "";
+          const encodedTitle = encodeURIComponent(jobTitle);
+          const encodedCompany = encodeURIComponent(companyName);
+          fullURL = `https://www.linkedin.com/jobs/search/?keywords=${encodedTitle}%20${encodedCompany}`;
+        } else if (applicationURL.startsWith("http")) {
+          fullURL = applicationURL;
+        } else {
+          fullURL = `https://${sourceWebsite}${applicationURL}`;
+        }
+
+        return {
+          title: item["Job Title"] || item.title || item.jobTitle || "Untitled",
+          company: item["Company Name"] || item.company || item.companyName || "Unknown Company",
+          location: location,
+          type: item.Type || item.type || item.jobType || "full-time",
+          description: item.Description || item.description || "",
+          requirements: item.Requirements || item.requirements || [],
+          skills: item.Skills || item.skills || [],
+          url: fullURL,
+          source: sourceWebsite,
+          postedDate: postedDate,
+          scrapedAt: new Date(),
+          isRemote: isRemote,
+          isHyderabad: isHyderabad,
+          salary: item.Salary || item.salary,
+          experience: item.Experience || item.experience,
+        };
+      });
+
+      console.log(`📦 Transformed ${transformedJobs.length} jobs from JSON`);
+      console.log("Sample job:", transformedJobs[0]);
+
+      // Confirm import
+      if (!window.confirm(`Import ${transformedJobs.length} job(s) from JSON?`)) {
+        return;
+      }
+
+      // Save to Firestore
+      const result = await JobAPIService.saveJobsToFirestore(transformedJobs);
+      
+      let message = `✅ Successfully imported ${result.success} new job(s)!`;
+      if (result.duplicates > 0) {
+        message += `\n⏭️ Skipped ${result.duplicates} duplicate(s)`;
+      }
+      if (result.failed > 0) {
+        message += `\n\n❌ Failed to import ${result.failed} job(s):`;
+        result.errors.slice(0, 5).forEach(err => {
+          message += `\n• ${err}`;
+        });
+        if (result.errors.length > 5) {
+          message += `\n... and ${result.errors.length - 5} more (check console)`;
+        }
+      }
+      alert(message);
+      
+      // Clear JSON input if all succeeded
+      if (result.failed === 0) {
+        setJsonInput("");
+      }
+    } catch (error: any) {
+      console.error("Error importing jobs from JSON:", error);
+      if (error instanceof SyntaxError) {
+        alert("Invalid JSON format. Please check your input.");
+      } else {
+        alert("Failed to import jobs: " + (error.message || "Unknown error"));
+      }
+    } finally {
+      setImportingJobs(false);
+    }
+  };
+
+  // Handle add all jobs
+  const handleAddAllJobs = async () => {
+    if (searchedJobs.length === 0) {
+      alert("No jobs to add");
+      return;
+    }
+    
+    if (!window.confirm(`Add all ${searchedJobs.length} job(s) to the job hunt database?`)) {
+      return;
+    }
+    
+    setAddingJobs(true);
+    try {
+      const result = await JobAPIService.saveJobsToFirestore(searchedJobs);
+      
+      let message = `✅ Successfully added ${result.success} new job(s)!`;
+      if (result.duplicates > 0) {
+        message += `\n⏭️ Skipped ${result.duplicates} duplicate(s)`;
+      }
+      if (result.failed > 0) {
+        message += `\n\n❌ Failed: ${result.failed} job(s)`;
+        if (result.errors.length > 0) {
+          message += `\n${result.errors.slice(0, 3).join('\n')}`;
+          if (result.errors.length > 3) {
+            message += `\n... and ${result.errors.length - 3} more (check console)`;
+          }
+        }
+      }
+      alert(message);
+      
+      // Clear results
+      setSearchedJobs([]);
+      setSelectedJobs(new Set());
+    } catch (error: any) {
+      console.error("Error adding all jobs:", error);
+      alert("Failed to add jobs: " + (error.message || "Unknown error"));
+    } finally {
+      setAddingJobs(false);
+    }
+  };
+
+  // Handle finding duplicates
+  const handleFindDuplicates = async () => {
+    setFindingDuplicates(true);
+    try {
+      const result = await JobAPIService.findDuplicates();
+      setDuplicateGroups(result.duplicates);
+      
+      alert(`🔍 Found ${result.duplicates.length} duplicate groups\n(${result.totalDuplicates} extra jobs to remove)\n\nCheck the list below to review.`);
+    } catch (error: any) {
+      console.error("Error finding duplicates:", error);
+      alert("Failed to find duplicates: " + (error.message || "Unknown error"));
+    } finally {
+      setFindingDuplicates(false);
+    }
+  };
+
+  // Handle removing all duplicates
+  const handleRemoveDuplicates = async () => {
+    if (!window.confirm("⚠️ This will delete ALL duplicate jobs, keeping only the most recent one in each group.\n\nContinue?")) {
+      return;
+    }
+
+    setRemovingDuplicates(true);
+    try {
+      const result = await JobAPIService.removeDuplicateJobs();
+      
+      alert(`✅ Cleanup complete!\n\nKept: ${result.kept} unique jobs\nDeleted: ${result.deleted} duplicates`);
+      
+      // Clear duplicate groups and reload
+      setDuplicateGroups([]);
+      await handleFindDuplicates(); // Refresh to see if any duplicates remain
+    } catch (error: any) {
+      console.error("Error removing duplicates:", error);
+      alert("Failed to remove duplicates: " + (error.message || "Unknown error"));
+    } finally {
+      setRemovingDuplicates(false);
+    }
+  };
+
+  // Handle deleting a specific job
+  const handleDeleteJob = async (jobId: string, jobTitle: string) => {
+    if (!window.confirm(`Delete job: ${jobTitle}?`)) {
+      return;
+    }
+
+    try {
+      await JobAPIService.deleteJob(jobId);
+      
+      // Remove from state
+      setDuplicateGroups(prevGroups => 
+        prevGroups.map(group => group.filter(job => job.id !== jobId))
+          .filter(group => group.length > 0)
+      );
+      
+      alert(`✅ Deleted: ${jobTitle}`);
+    } catch (error: any) {
+      console.error("Error deleting job:", error);
+      alert("Failed to delete job: " + (error.message || "Unknown error"));
     }
   };
 
@@ -684,6 +1090,7 @@ export const AdminDashboard: React.FC = () => {
 
   const tabs = [
     { id: "firebase", label: "Firebase Admin", icon: Database, requiresATS: false },
+    { id: "jobs", label: "Job Management", icon: Briefcase, requiresATS: false },
     { id: "premium", label: "Premium Users", icon: Gift, requiresATS: false },
     { id: "students", label: "Student Verifications", icon: BookOpen, requiresATS: false },
     { id: "reports", label: "Reports", icon: AlertTriangle, requiresATS: false },
@@ -2091,6 +2498,508 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {!loading && !error && activeTab === "jobs" && (
+            <div className="space-y-6">
+              {/* Job Management Header */}
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                      <Briefcase className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      Job Management
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Search for jobs across multiple APIs and add them to the job hunt database
+                    </p>
+                  </div>
+                </div>
+
+                {/* Search Interface */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Job Query
+                      </label>
+                      <input
+                        type="text"
+                        value={jobSearchQuery}
+                        onChange={(e) => setJobSearchQuery(e.target.value)}
+                        placeholder="e.g., software developer, data scientist"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Location
+                      </label>
+                      <input
+                        type="text"
+                        value={jobLocation}
+                        onChange={(e) => setJobLocation(e.target.value)}
+                        placeholder="e.g., hyderabad, bangalore"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Filters
+                      </label>
+                      <div className="space-y-2">
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="remoteOnly"
+                            checked={jobRemoteOnly}
+                            onChange={(e) => setJobRemoteOnly(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <label htmlFor="remoteOnly" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                            Remote jobs only
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="includeScraping"
+                            checked={jobIncludeScraping}
+                            onChange={(e) => setJobIncludeScraping(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <label htmlFor="includeScraping" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                            Include traditional scraping (LinkedIn, Naukri, Glassdoor, etc.) +5 sources
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <button
+                      onClick={handleJobSearch}
+                      disabled={searchingJobs}
+                      className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                    >
+                      {searchingJobs ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Searching...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="w-4 h-4" />
+                          Search Jobs from All APIs
+                        </>
+                      )}
+                    </button>
+
+                    {searchedJobs.length > 0 && (
+                      <>
+                        <button
+                          onClick={handleAddSelectedJobs}
+                          disabled={selectedJobs.size === 0 || addingJobs}
+                          className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                        >
+                          {addingJobs ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Adding...
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4" />
+                              Add Selected ({selectedJobs.size})
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          onClick={handleAddAllJobs}
+                          disabled={addingJobs}
+                          className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                        >
+                          Add All ({searchedJobs.length})
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Info Banner */}
+                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Briefcase className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
+                      <p className="font-medium mb-2">🌟 Premium Multi-Source Job Search ({jobIncludeScraping ? '15' : '10'} Sources)</p>
+                      
+                      <p className="mb-2">
+                        <strong className="text-green-600 dark:text-green-400">✓ APIs (4):</strong> Adzuna, RapidAPI (Indeed/LinkedIn/Glassdoor), SerpAPI (Google Jobs), Remotive
+                      </p>
+                      
+                      <p className="mb-2">
+                        <strong className="text-blue-600 dark:text-blue-400">✓ Modern Sources (6):</strong> RemoteOK, Lever, Greenhouse, We Work Remotely, Wellfound, Y Combinator
+                      </p>
+                      
+                      {jobIncludeScraping && (
+                        <p className="mb-2">
+                          <strong className="text-purple-600 dark:text-purple-400">✓ Traditional Sites (5):</strong> LinkedIn, Glassdoor, Naukri, Internshala, Unstop
+                        </p>
+                      )}
+                      
+                      <p className="text-xs opacity-80 mt-2">
+                        Select jobs to add to your database. Modern sources provide JSON APIs for fast, reliable results.
+                        {jobIncludeScraping && " Traditional scraping adds 5 more sources but takes 30-60s longer."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* JSON Import Section */}
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
+                <div className="mb-4">
+                  <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-2">
+                    <FileJson className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                    Import Jobs from JSON
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Paste JSON array of jobs to import them directly
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      JSON Data
+                    </label>
+                    <textarea
+                      value={jsonInput}
+                      onChange={(e) => setJsonInput(e.target.value)}
+                      placeholder={`Paste JSON here, e.g.:
+[
+  {
+    "Job Title": "Software Engineer",
+    "Company Name": "E - Solutions",
+    "Location": "Chennai, Pune, Hyderabad, Bangalore",
+    "Source Website": "internshala.com",
+    "Application URL": "/job/detail/software-engineer-123",
+    "Posted Date": "3 weeks ago",
+    "Type": "Full-time"
+  }
+]`}
+                      rows={10}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 font-mono text-sm"
+                    />
+                  </div>
+
+                  <div className="flex gap-4 items-center">
+                    <button
+                      onClick={handleImportFromJSON}
+                      disabled={importingJobs || !jsonInput.trim()}
+                      className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                    >
+                      {importingJobs ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Importing...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4" />
+                          Import Jobs
+                        </>
+                      )}
+                    </button>
+
+                    {jsonInput && (
+                      <button
+                        onClick={() => setJsonInput("")}
+                        className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <strong>Supported JSON fields:</strong>
+                    </p>
+                    <ul className="text-xs text-gray-600 dark:text-gray-400 mt-2 space-y-1 ml-4 list-disc">
+                      <li><code>Job Title</code> or <code>title</code> - Job title</li>
+                      <li><code>Company Name</code> or <code>company</code> - Company name</li>
+                      <li><code>Location</code> or <code>location</code> - Job location(s)</li>
+                      <li><code>Source Website</code> or <code>source</code> - Website domain</li>
+                      <li><code>Application URL</code> or <code>url</code> - Application link</li>
+                      <li><code>Posted Date</code> or <code>postedDate</code> - When posted (e.g., "3 weeks ago")</li>
+                      <li><code>Type</code> or <code>type</code> - Job type (full-time, part-time, etc.)</li>
+                      <li>Optional: <code>Description</code>, <code>Skills</code>, <code>Salary</code>, <code>Experience</code></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Duplicate Management Section */}
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
+                <div className="mb-4">
+                  <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-2">
+                    <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                    Manage Duplicate Jobs
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Find and remove duplicate job listings from the database
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex gap-4 items-center">
+                    <button
+                      onClick={handleFindDuplicates}
+                      disabled={findingDuplicates}
+                      className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                    >
+                      {findingDuplicates ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Finding Duplicates...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="w-4 h-4" />
+                          Find Duplicates
+                        </>
+                      )}
+                    </button>
+
+                    {duplicateGroups.length > 0 && (
+                      <button
+                        onClick={handleRemoveDuplicates}
+                        disabled={removingDuplicates}
+                        className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                      >
+                        {removingDuplicates ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Removing...
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-4 h-4" />
+                            Remove All Duplicates
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  {duplicateGroups.length > 0 && (
+                    <div className="mt-6">
+                      <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg mb-4">
+                        <p className="text-sm text-gray-700 dark:text-gray-300">
+                          <strong>Found {duplicateGroups.length} duplicate groups</strong>
+                          <br />
+                          Total extra jobs: {duplicateGroups.reduce((sum, group) => sum + group.length - 1, 0)}
+                        </p>
+                      </div>
+
+                      <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                        {duplicateGroups.slice(0, 10).map((group, groupIndex) => (
+                          <div key={groupIndex} className="border border-gray-200 dark:border-slate-700 rounded-lg p-4">
+                            <div className="font-medium text-gray-900 dark:text-gray-100 mb-3">
+                              {group[0].title} at {group[0].company}
+                              <span className="ml-2 text-sm text-red-600 dark:text-red-400">
+                                ({group.length} copies)
+                              </span>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              {group.map((job, jobIndex) => (
+                                <div key={job.id} className="flex items-center justify-between text-sm p-2 bg-gray-50 dark:bg-slate-700 rounded">
+                                  <div className="flex-1">
+                                    <div className="text-gray-600 dark:text-gray-400">
+                                      {jobIndex === 0 && <span className="text-green-600 dark:text-green-400 font-medium mr-2">✓ Keep</span>}
+                                      {jobIndex > 0 && <span className="text-red-600 dark:text-red-400 font-medium mr-2">✗ Delete</span>}
+                                      Added: {new Date(job.scrapedAt).toLocaleDateString()}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                      {job.location} • {job.source}
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => handleDeleteJob(job.id!, `${job.title} (${new Date(job.scrapedAt).toLocaleDateString()})`)}
+                                    className="ml-4 px-3 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        {duplicateGroups.length > 10 && (
+                          <div className="text-center text-sm text-gray-600 dark:text-gray-400 py-2">
+                            ... and {duplicateGroups.length - 10} more duplicate groups
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {duplicateGroups.length === 0 && !findingDuplicates && (
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      Click "Find Duplicates" to scan the database
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Search Results */}
+              {searchingJobs && (
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-12">
+                  <div className="flex flex-col items-center justify-center">
+                    <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+                    <p className="text-gray-600 dark:text-gray-400 text-lg font-medium">
+                      Searching for jobs across all APIs...
+                    </p>
+                    <p className="text-gray-500 dark:text-gray-500 text-sm mt-2">
+                      This may take a few seconds
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {!searchingJobs && searchedJobs.length > 0 && (
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow">
+                  <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
+                    <h4 className="text-md font-medium text-gray-900 dark:text-gray-100">
+                      Search Results ({searchedJobs.length} jobs found)
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      Select jobs to add to the database or add all at once
+                    </p>
+                  </div>
+
+                  <div className="p-6 space-y-4 max-h-[600px] overflow-y-auto">
+                    {searchedJobs.map((job) => {
+                      const jobKey = job.url || `${job.title}_${job.company}`;
+                      const isSelected = selectedJobs.has(jobKey);
+
+                      return (
+                        <div
+                          key={jobKey}
+                          className={`border rounded-lg p-4 transition-all ${
+                            isSelected
+                              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                              : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                          }`}
+                        >
+                          <div className="flex items-start gap-4">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleJobSelection(jobKey)}
+                              className="mt-1 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between mb-2">
+                                <div>
+                                  <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                    {job.title}
+                                  </h5>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    {job.company}
+                                  </p>
+                                </div>
+                                {job.source && (
+                                  <span className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
+                                    {job.source}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex flex-wrap gap-3 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-4 h-4" />
+                                  {job.location}
+                                </span>
+                                {job.isRemote && (
+                                  <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                    <CheckCircle className="w-4 h-4" />
+                                    Remote
+                                  </span>
+                                )}
+                                {job.salary && (
+                                  <span className="flex items-center gap-1">
+                                    <DollarSign className="w-4 h-4" />
+                                    {job.salary}
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-1">
+                                  <Briefcase className="w-4 h-4" />
+                                  {job.type}
+                                </span>
+                              </div>
+
+                              {job.skills.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                  {job.skills.slice(0, 6).map((skill, i) => (
+                                    <span
+                                      key={i}
+                                      className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded"
+                                    >
+                                      {skill}
+                                    </span>
+                                  ))}
+                                  {job.skills.length > 6 && (
+                                    <span className="px-2 py-1 text-xs text-gray-600 dark:text-gray-400">
+                                      +{job.skills.length - 6} more
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
+                              <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
+                                {job.description}
+                              </p>
+
+                              {job.url && (
+                                <a
+                                  href={job.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                                >
+                                  View Job <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {!searchingJobs && searchedJobs.length === 0 && (
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-12">
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <Briefcase className="w-16 h-16 text-gray-400 mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                      No jobs searched yet
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400 mb-6">
+                      Use the search form above to find jobs across multiple APIs
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

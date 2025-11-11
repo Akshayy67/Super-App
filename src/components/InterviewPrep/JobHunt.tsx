@@ -39,18 +39,18 @@ export const JobHunt: React.FC = () => {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Filters
+  // Filters - More permissive defaults
   const [filters, setFilters] = useState<JobFilter>({
     location: ["hyderabad"],
-    remote: true,
-    postedWithin: 7,
+    remote: true, // This is now OR logic with location, not AND
+    postedWithin: 30, // Show jobs from last 30 days (not just 7)
   });
   
   const [searchQuery, setSearchQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState("hyderabad");
   const [remoteFilter, setRemoteFilter] = useState(true);
   const [skillsFilter, setSkillsFilter] = useState<string[]>([]);
-  const [postedWithinDays, setPostedWithinDays] = useState(7);
+  const [postedWithinDays, setPostedWithinDays] = useState(30);
   
   // User preferences
   const [userPreferences, setUserPreferences] = useState<any>(null);
@@ -83,8 +83,13 @@ export const JobHunt: React.FC = () => {
     setIsLoading(true);
     setError(null);
     
+    console.log("🔄 Loading jobs for user:", userId);
+    console.log("   Filters:", filters);
+    
     try {
       const fetchedJobs = await jobHuntService.getJobs(userId, filters);
+      console.log(`✅ Loaded ${fetchedJobs.length} jobs from service`);
+      
       setJobs(fetchedJobs);
       setFilteredJobs(fetchedJobs);
       
@@ -94,9 +99,16 @@ export const JobHunt: React.FC = () => {
         savedJobs: 0, // TODO: Track saved jobs
         appliedJobs: 0, // TODO: Track applied jobs
       });
+      
+      if (fetchedJobs.length === 0) {
+        console.warn("⚠️ No jobs found in database");
+        setError("No jobs available yet. Admin needs to add jobs from Job Management.");
+      }
     } catch (err: any) {
-      setError(err.message || "Failed to load jobs");
-      console.error("Error loading jobs:", err);
+      const errorMessage = err.message || "Failed to load jobs";
+      setError(errorMessage);
+      console.error("❌ Error loading jobs:", err);
+      console.error("   Error details:", errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -131,10 +143,12 @@ export const JobHunt: React.FC = () => {
   };
 
   const applyFilters = () => {
+    console.log(`🔍 Applying local filters to ${jobs.length} jobs...`);
     let filtered = [...jobs];
     
     // Search query
     if (searchQuery.trim()) {
+      const beforeSearch = filtered.length;
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (job) =>
@@ -142,24 +156,39 @@ export const JobHunt: React.FC = () => {
           job.company.toLowerCase().includes(query) ||
           job.description.toLowerCase().includes(query)
       );
+      console.log(`   After search query "${searchQuery}": ${filtered.length} jobs (removed ${beforeSearch - filtered.length})`);
     }
     
-    // Location filter
-    if (locationFilter && locationFilter !== "all") {
-      if (locationFilter === "remote") {
-        filtered = filtered.filter((job) => job.isRemote);
-      } else if (locationFilter === "hyderabad") {
-        filtered = filtered.filter((job) => job.isHyderabad);
-      }
-    }
+    // Location and Remote filter (OR logic - show jobs matching location OR remote)
+    const hasLocationFilter = locationFilter && locationFilter !== "all";
+    const hasRemoteFilter = remoteFilter;
     
-    // Remote filter
-    if (remoteFilter) {
-      filtered = filtered.filter((job) => job.isRemote);
+    if (hasLocationFilter || hasRemoteFilter) {
+      filtered = filtered.filter((job) => {
+        // If remote filter is enabled, include remote jobs
+        if (hasRemoteFilter && job.isRemote) {
+          return true;
+        }
+        
+        // If location filter is set, include jobs matching location
+        if (hasLocationFilter) {
+          if (locationFilter === "remote") {
+            return job.isRemote;
+          } else if (locationFilter === "hyderabad") {
+            return job.isHyderabad || job.location.toLowerCase().includes("hyderabad");
+          }
+          // Check if job location contains the filter
+          return job.location.toLowerCase().includes(locationFilter.toLowerCase());
+        }
+        
+        return false;
+      });
+      console.log(`   After location/remote filter: ${filtered.length} jobs`);
     }
     
     // Skills filter
     if (skillsFilter.length > 0) {
+      const beforeSkills = filtered.length;
       filtered = filtered.filter((job) =>
         skillsFilter.some((skill) =>
           job.skills.some((jobSkill) =>
@@ -167,15 +196,19 @@ export const JobHunt: React.FC = () => {
           )
         )
       );
+      console.log(`   After skills filter: ${filtered.length} jobs (removed ${beforeSkills - filtered.length})`);
     }
     
     // Posted within filter
     if (postedWithinDays > 0) {
+      const beforeDate = filtered.length;
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - postedWithinDays);
       filtered = filtered.filter((job) => job.postedDate >= cutoffDate);
+      console.log(`   After postedWithin (${postedWithinDays} days) filter: ${filtered.length} jobs (removed ${beforeDate - filtered.length})`);
     }
     
+    console.log(`   Final filtered jobs: ${filtered.length}`);
     setFilteredJobs(filtered);
   };
 

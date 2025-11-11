@@ -25,7 +25,6 @@ import {
   Code,
 } from "lucide-react";
 import { gsap } from "gsap";
-import * as THREE from "three";
 import { realTimeAuth } from "../../utils/realTimeAuth";
 import { useCurrentRoute } from "../../hooks/useCurrentRoute";
 import { ThemeToggle } from "../ui/ThemeToggle";
@@ -146,230 +145,38 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Three.js rotary phone effect
-  useEffect(() => {
-    if (!canvasRef.current) return;
-
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(
-      50,
-      280 / window.innerHeight,
-      0.1,
-      1000
-    );
-    const renderer = new THREE.WebGLRenderer({
-      canvas: canvasRef.current,
-      alpha: true,
-      antialias: true,
-    });
-
-    renderer.setSize(280, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-    // Create rotary phone dial effect with numbers
-    const rotors: THREE.Mesh[] = [];
-    const rotorCount = 10;
-    const dialRadius = 120;
-    const numbers = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-
-    for (let i = 0; i < rotorCount; i++) {
-      const rotorGeometry = new THREE.CylinderGeometry(10, 10, 18, 16);
-      const rotorMaterial = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        metalness: 0.9,
-        roughness: 0.1,
-        transparent: true,
-        opacity: 0.8,
-        emissive: 0xffffff,
-        emissiveIntensity: 0.3,
-      });
-      const rotor = new THREE.Mesh(rotorGeometry, rotorMaterial);
-
-      const angle = (i / rotorCount) * Math.PI * 2;
-      rotor.position.set(
-        Math.cos(angle) * dialRadius,
-        Math.sin(angle) * dialRadius,
-        0
-      );
-      rotor.rotation.z = Math.PI / 2;
-      rotor.rotation.x = angle;
-
-      scene.add(rotor);
-      rotors.push(rotor);
-      (rotor as any).baseAngle = angle;
-      (rotor as any).rotationSpeed = 0.3 + Math.random() * 0.3;
-      (rotor as any).pulseSpeed = 0.8 + Math.random() * 0.4;
-      (rotor as any).number = numbers[i];
-    }
-
-    // Center hub (receiver)
-    const hubGeometry = new THREE.CylinderGeometry(30, 30, 25, 32);
-    const hubMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      metalness: 0.9,
-      roughness: 0.1,
-      emissive: 0xffffff,
-      emissiveIntensity: 0.6,
-    });
-    const hub = new THREE.Mesh(hubGeometry, hubMaterial);
-    hub.rotation.z = Math.PI / 2;
-    hub.position.z = 8;
-    scene.add(hub);
-
-    // Inner number ring
-    const numberRingGeometry = new THREE.TorusGeometry(dialRadius, 15, 8, 32);
-    const numberRingMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      metalness: 0.8,
-      roughness: 0.2,
-      transparent: true,
-      opacity: 0.4,
-      wireframe: true,
-    });
-    const numberRing = new THREE.Mesh(numberRingGeometry, numberRingMaterial);
-    scene.add(numberRing);
-
-    // Connecting wires between rotors
-    const wireMaterial = new THREE.LineBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.3,
-    });
-
-    for (let i = 0; i < rotorCount; i++) {
-      const nextIndex = (i + 1) % rotorCount;
-      const points = [
-        new THREE.Vector3(
-          Math.cos((i / rotorCount) * Math.PI * 2) * dialRadius,
-          Math.sin((i / rotorCount) * Math.PI * 2) * dialRadius,
-          0
-        ),
-        new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(
-          Math.cos((nextIndex / rotorCount) * Math.PI * 2) * dialRadius,
-          Math.sin((nextIndex / rotorCount) * Math.PI * 2) * dialRadius,
-          0
-        ),
-      ];
-      const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
-      const line = new THREE.Line(lineGeometry, wireMaterial);
-      scene.add(line);
-    }
-
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(1, 1, 1);
-    scene.add(directionalLight);
-
-    const pointLight = new THREE.PointLight(0xffffff, 0.5, 300);
-    pointLight.position.set(0, 0, 50);
-    scene.add(pointLight);
-
-    // Mouse interaction
-    let mouseX = 0;
-    let mouseY = 0;
-    const handleMouseMove = (e: MouseEvent) => {
-      mouseX = (e.clientX / window.innerWidth) * 2 - 1;
-      mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-
-    camera.position.set(0, 0, 400);
-
-    let animationId: number;
-    const animate = () => {
-      animationId = requestAnimationFrame(animate);
-
-      const time = Date.now() * 0.001;
-
-      // Animate rotors
-      rotors.forEach((rotor, i) => {
-        const speed = (rotor as any).rotationSpeed;
-        const pulse = (rotor as any).pulseSpeed;
-
-        // Rotate around center
-        const angle = (rotor as any).baseAngle + time * speed;
-        rotor.position.x = Math.cos(angle) * dialRadius;
-        rotor.position.y = Math.sin(angle) * dialRadius;
-
-        // Spin on axis
-        rotor.rotation.z += 0.02;
-        rotor.rotation.y += 0.01;
-
-        // Pulse scale
-        const scale = 0.9 + Math.sin(time * pulse + i) * 0.1;
-        rotor.scale.setScalar(scale);
-
-        // Material pulse
-        if (rotor.material instanceof THREE.MeshStandardMaterial) {
-          rotor.material.emissiveIntensity = 0.3 + Math.sin(time * pulse * 2 + i) * 0.3;
-          rotor.material.opacity = 0.6 + Math.sin(time * pulse + i) * 0.2;
-        }
-      });
-
-      // Hub rotation
-      hub.rotation.x += 0.01;
-      hub.rotation.y += 0.015;
-
-      // Mouse interaction with hub
-      hub.position.x += (mouseX * 50 - hub.position.x) * 0.05;
-      hub.position.y += (mouseY * 50 - hub.position.y) * 0.05;
-
-      // Hub pulse
-      const hubScale = 1 + Math.sin(time * 1.5) * 0.05;
-      hub.scale.setScalar(hubScale);
-
-      if (hub.material instanceof THREE.MeshStandardMaterial) {
-        hub.material.emissiveIntensity = 0.5 + Math.sin(time * 2) * 0.3;
-      }
-
-      // Number ring rotation
-      numberRing.rotation.z += 0.005;
-
-      renderer.render(scene, camera);
-    };
-
-    animate();
-
-    const handleResize = () => {
-      camera.aspect = 280 / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(280, window.innerHeight);
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("mousemove", handleMouseMove);
-      cancelAnimationFrame(animationId);
-      rotors.forEach((rotor) => {
-        rotor.geometry.dispose();
-        if (rotor.material instanceof THREE.Material) rotor.material.dispose();
-      });
-      hub.geometry.dispose();
-      if (hub.material instanceof THREE.Material) hub.material.dispose();
-      numberRing.geometry.dispose();
-      if (numberRing.material instanceof THREE.Material) numberRing.material.dispose();
-      renderer.dispose();
-    };
-  }, []);
 
   return (
     <div className="bg-white dark:bg-black h-full lg:h-screen shadow-2xl border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-500 backdrop-blur-xl bg-opacity-95 dark:bg-opacity-90 relative" style={{ width: '100%', maxWidth: '100%', height: '100%', maxHeight: '100vh', zIndex: 30, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      {/* Three.js Rotary Phone Background - Hidden on mobile */}
-      <canvas
-        ref={canvasRef}
-        className="absolute top-0 right-0 w-[280px] h-full pointer-events-none opacity-20 dark:opacity-10 hidden lg:block"
-        style={{ zIndex: 0 }}
-      />
+      
+      {/* Motivational Background - Subtle and Non-distracting */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40 dark:opacity-20" style={{ zIndex: 0 }}>
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-blue-950/20 dark:via-purple-950/20 dark:to-pink-950/20" />
+        
+        {/* Motivational Text - Large Vertical */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 -rotate-90 whitespace-nowrap">
+          <div className="text-[120px] font-black tracking-tighter bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent opacity-10 dark:opacity-5">
+            LET'S GO
+          </div>
+        </div>
+        
+        {/* Small Motivational Phrases - Scattered */}
+        <div className="absolute top-20 right-8 text-xs font-semibold text-blue-500 dark:text-blue-400 opacity-30 rotate-12">
+          You got this! ✨
+        </div>
+        <div className="absolute bottom-32 left-8 text-xs font-semibold text-purple-500 dark:text-purple-400 opacity-30 -rotate-6">
+          Keep going 🚀
+        </div>
+        <div className="absolute top-1/3 left-4 text-xs font-semibold text-pink-500 dark:text-pink-400 opacity-30 rotate-6">
+          Stay focused 🎯
+        </div>
+        
+        {/* Subtle Decorative Elements */}
+        <div className="absolute top-1/4 right-4 w-16 h-16 rounded-full bg-gradient-to-br from-blue-400/10 to-purple-400/10 blur-xl" />
+        <div className="absolute bottom-1/4 left-4 w-20 h-20 rounded-full bg-gradient-to-br from-purple-400/10 to-pink-400/10 blur-xl" />
+      </div>
 
         {/* Mobile Header */}
       {isMobile && (

@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { e2eEncryptionService } from './e2eEncryptionService';
+import { filterUndefinedValues } from '../utils/firestoreHelpers';
 
 export interface CallInvitation {
   callId: string;
@@ -72,7 +73,10 @@ class CallSignalingService {
         timestamp: serverTimestamp(),
       };
 
-      await setDoc(doc(this.callsCollection, callId), callData);
+      // Filter out undefined values to prevent Firestore errors
+      const filteredCallData = filterUndefinedValues(callData);
+
+      await setDoc(doc(this.callsCollection, callId), filteredCallData);
       console.log('📞 Call invitation created:', callId);
 
       return { callId, encryptionKey };
