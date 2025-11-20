@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { EnhancedApp } from "./components/EnhancedApp.tsx";
 import "./index.css";
+import "./styles/video-meeting.css";
 
 // Development utilities removed for production
 

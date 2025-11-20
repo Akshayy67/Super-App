@@ -103,6 +103,7 @@ export const AIStudyRoom: React.FC = () => {
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const pendingIceCandidates = useRef<Map<string, RTCIceCandidate[]>>(new Map());
   
   // Focus detection
   const [focusScore, setFocusScore] = useState(100);
@@ -278,17 +279,35 @@ export const AIStudyRoom: React.FC = () => {
     return () => clearInterval(interval);
   }, [isRunning, currentRoom]);
 
-  // WebRTC configuration
+  // WebRTC configuration with comprehensive STUN/TURN servers
   const iceServers: RTCConfiguration = {
     iceServers: [
+      // Google STUN servers
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
+      
+      // Open TURN servers for relay when direct connection fails
       { 
         urls: 'turn:openrelay.metered.ca:80',
         username: 'openrelayproject',
         credential: 'openrelayproject'
+      },
+      { 
+        urls: 'turn:openrelay.metered.ca:443',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      },
+      { 
+        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
       }
-    ]
+    ],
+    iceCandidatePoolSize: 10, // Pre-gather candidates for faster connection
+    iceTransportPolicy: 'all' // Use both direct and relay connections
   };
 
   // Create peer connection for a user
@@ -315,42 +334,93 @@ export const AIStudyRoom: React.FC = () => {
       });
     }
     
-    // Handle incoming tracks
+    // Handle incoming tracks with improved stream management
     pc.ontrack = (event) => {
       console.log(`📥 Received ${event.track.kind} track from ${userId}:`, event.track.id);
       console.log(`📥 Track state:`, { enabled: event.track.enabled, readyState: event.track.readyState });
       
-      setRemoteStreams(prev => {
-        const newStreams = new Map(prev);
-        let stream = newStreams.get(userId);
-        
-        if (!stream) {
-          console.log(`🆕 Creating new MediaStream for ${userId}`);
-          stream = new MediaStream();
+      // Use streams from event if available, otherwise create new stream
+      if (event.streams && event.streams.length > 0) {
+        const stream = event.streams[0];
+        console.log(`📺 Using stream from event for ${userId}:`, stream.id);
+        setRemoteStreams(prev => {
+          const newStreams = new Map(prev);
           newStreams.set(userId, stream);
-        }
-        
-        // Add the track if it doesn't exist
-        if (!stream.getTracks().find(t => t.id === event.track.id)) {
-          stream.addTrack(event.track);
-          console.log(`✅ Added ${event.track.kind} track to remote stream. Total tracks:`, stream.getTracks().length);
-        } else {
-          console.log(`⚠️ Track already exists in stream`);
-        }
-        
-        return newStreams;
-      });
+          return newStreams;
+        });
+      } else {
+        setRemoteStreams(prev => {
+          const newStreams = new Map(prev);
+          let stream = newStreams.get(userId);
+          
+          if (!stream) {
+            console.log(`🆕 Creating new MediaStream for ${userId}`);
+            stream = new MediaStream();
+            newStreams.set(userId, stream);
+          }
+          
+          // Add the track if it doesn't exist
+          if (!stream.getTracks().find(t => t.id === event.track.id)) {
+            stream.addTrack(event.track);
+            console.log(`✅ Added ${event.track.kind} track to remote stream. Total tracks:`, stream.getTracks().length);
+          } else {
+            console.log(`⚠️ Track already exists in stream`);
+          }
+          
+          return newStreams;
+        });
+      }
+      
+      // Handle track state changes
+      event.track.onmute = () => console.log(`🔇 ${event.track.kind} track muted for ${userId}`);
+      event.track.onunmute = () => {
+        console.log(`🔊 ${event.track.kind} track unmuted for ${userId}`);
+        // Force re-render when track unmutes
+        setRemoteStreams(prev => new Map(prev));
+      };
+      event.track.onended = () => console.log(`⏹️ ${event.track.kind} track ended for ${userId}`);
     };
     
-    // Handle ICE candidates
+    // Handle ICE candidates with batching
+    let candidateQueue: RTCIceCandidate[] = [];
+    let candidateTimeout: NodeJS.Timeout | null = null;
+    
+    const sendCandidates = async () => {
+      if (candidateQueue.length > 0 && currentRoom) {
+        // Send all candidates
+        for (const candidate of candidateQueue) {
+          await addDoc(collection(db, `studyRooms/${currentRoom.id}/iceCandidates`), {
+            candidate: candidate.toJSON(),
+            from: user?.id,
+            to: userId,
+            timestamp: serverTimestamp()
+          });
+        }
+        console.log(`🧊 Sent ${candidateQueue.length} ICE candidates to ${userId}`);
+        candidateQueue = [];
+      }
+      candidateTimeout = null;
+    };
+    
     pc.onicecandidate = async (event) => {
-      if (event.candidate && currentRoom) {
-        await addDoc(collection(db, `studyRooms/${currentRoom.id}/iceCandidates`), {
-          candidate: event.candidate.toJSON(),
-          from: user?.id,
-          to: userId,
-          timestamp: serverTimestamp()
-        });
+      if (event.candidate) {
+        candidateQueue.push(event.candidate);
+        console.log(`🧊 Queued ICE candidate for ${userId}, queue size: ${candidateQueue.length}`);
+        
+        // Clear existing timeout
+        if (candidateTimeout) {
+          clearTimeout(candidateTimeout);
+        }
+        
+        // Send candidates after a short delay to batch them
+        candidateTimeout = setTimeout(sendCandidates, 100);
+      } else {
+        // null candidate means gathering complete
+        console.log(`🧊 ICE gathering complete for ${userId}`);
+        if (candidateTimeout) {
+          clearTimeout(candidateTimeout);
+        }
+        await sendCandidates();
       }
     };
     
@@ -361,7 +431,23 @@ export const AIStudyRoom: React.FC = () => {
       if (pc.connectionState === 'connected') {
         console.log(`✅ Successfully connected to ${userId}`);
       } else if (pc.connectionState === 'failed') {
-        console.error(`❌ Connection failed with ${userId}`);
+        console.error(`❌ Connection failed with ${userId}, attempting ICE restart`);
+        // Attempt ICE restart
+        setTimeout(async () => {
+          if (pc.connectionState === 'failed') {
+            const offer = await pc.createOffer({ iceRestart: true });
+            await pc.setLocalDescription(offer);
+            if (currentRoom) {
+              await addDoc(collection(db, `studyRooms/${currentRoom.id}/offers`), {
+                offer: { type: offer.type, sdp: offer.sdp },
+                from: user?.id,
+                to: userId,
+                iceRestart: true,
+                timestamp: serverTimestamp()
+              });
+            }
+          }
+        }, 1000);
       } else if (pc.connectionState === 'disconnected') {
         console.warn(`⚠️ Disconnected from ${userId}`);
       }
@@ -380,21 +466,30 @@ export const AIStudyRoom: React.FC = () => {
     // Store in ref
     peerConnectionsRef.current.set(userId, pc);
     
-    // If initiator, create and send offer
+    // If initiator, create and send offer with retry logic
     if (isInitiator) {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      
-      if (currentRoom) {
-        await addDoc(collection(db, `studyRooms/${currentRoom.id}/offers`), {
-          offer: {
-            type: offer.type,
-            sdp: offer.sdp
-          },
-          from: user?.id,
-          to: userId,
-          timestamp: serverTimestamp()
-        });
+      try {
+        const offerOptions: RTCOfferOptions = {
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true
+        };
+        const offer = await pc.createOffer(offerOptions);
+        await pc.setLocalDescription(offer);
+        
+        if (currentRoom) {
+          await addDoc(collection(db, `studyRooms/${currentRoom.id}/offers`), {
+            offer: {
+              type: offer.type,
+              sdp: offer.sdp
+            },
+            from: user?.id,
+            to: userId,
+            timestamp: serverTimestamp()
+          });
+          console.log(`📤 Sent offer to ${userId}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error creating offer for ${userId}:`, error);
       }
     }
     
@@ -413,30 +508,64 @@ export const AIStudyRoom: React.FC = () => {
         if (change.type === 'added') {
           const data = change.doc.data();
           const fromUserId = data.from;
+          const isIceRestart = data.iceRestart === true;
           
-          console.log(`Received offer from ${fromUserId}`);
+          console.log(`📥 Received ${isIceRestart ? 'ICE restart ' : ''}offer from ${fromUserId}`);
           
-          let pc = peerConnectionsRef.current.get(fromUserId);
-          if (!pc) {
-            pc = await createPeerConnection(fromUserId, false);
+          try {
+            let pc = peerConnectionsRef.current.get(fromUserId);
+            
+            // For ICE restart, use existing connection if available
+            if (isIceRestart && pc && pc.signalingState === 'stable') {
+              console.log(`🔄 Processing ICE restart offer from ${fromUserId}`);
+            } else if (!pc || pc.connectionState === 'closed') {
+              // Create new peer connection if none exists or if closed
+              console.log(`🆕 Creating new peer connection for ${fromUserId}`);
+              pc = await createPeerConnection(fromUserId, false);
+            }
+            
+            // Set remote description
+            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+            console.log(`📋 Set remote offer from ${fromUserId}`);
+            
+            // Process any pending ICE candidates after setting remote description
+            const pendingCandidates = pendingIceCandidates.current.get(fromUserId);
+            if (pendingCandidates && pendingCandidates.length > 0) {
+              console.log(`📦 Processing ${pendingCandidates.length} pending ICE candidates after setting remote offer`);
+              for (const candidate of pendingCandidates) {
+                try {
+                  await pc.addIceCandidate(candidate);
+                  console.log(`✅ Added pending ICE candidate`);
+                } catch (err) {
+                  console.error(`❌ Error adding pending ICE candidate:`, err);
+                }
+              }
+              pendingIceCandidates.current.delete(fromUserId);
+            }
+            
+            // Create and send answer
+            const answerOptions: RTCAnswerOptions = {};
+            const answer = await pc.createAnswer(answerOptions);
+            await pc.setLocalDescription(answer);
+            console.log(`📤 Created answer for ${fromUserId}`);
+            
+            await addDoc(collection(db, `studyRooms/${currentRoom.id}/answers`), {
+              answer: {
+                type: answer.type,
+                sdp: answer.sdp
+              },
+              from: user.id,
+              to: fromUserId,
+              timestamp: serverTimestamp(),
+              isIceRestart
+            });
+            console.log(`✅ Sent answer to ${fromUserId}`);
+          } catch (error) {
+            console.error(`❌ Error processing offer from ${fromUserId}:`, error);
+          } finally {
+            // Always delete the offer after processing
+            await deleteDoc(change.doc.ref);
           }
-          
-          await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          
-          await addDoc(collection(db, `studyRooms/${currentRoom.id}/answers`), {
-            answer: {
-              type: answer.type,
-              sdp: answer.sdp
-            },
-            from: user.id,
-            to: fromUserId,
-            timestamp: serverTimestamp()
-          });
-          
-          // Delete the offer
-          await deleteDoc(change.doc.ref);
         }
       }
     });
@@ -456,16 +585,44 @@ export const AIStudyRoom: React.FC = () => {
         if (change.type === 'added') {
           const data = change.doc.data();
           const fromUserId = data.from;
+          const isIceRestart = data.isIceRestart === true;
           
-          console.log(`Received answer from ${fromUserId}`);
+          console.log(`📥 Received ${isIceRestart ? 'ICE restart ' : ''}answer from ${fromUserId}`);
           
-          const pc = peerConnectionsRef.current.get(fromUserId);
-          if (pc && pc.signalingState !== 'stable') {
-            await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+          try {
+            const pc = peerConnectionsRef.current.get(fromUserId);
+            if (pc) {
+              // Only set answer if we're in the right state
+              if (pc.signalingState === 'have-local-offer') {
+                await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                console.log(`✅ Set remote answer from ${fromUserId}`);
+                
+                // Process any pending ICE candidates after setting remote description
+                const pendingCandidates = pendingIceCandidates.current.get(fromUserId);
+                if (pendingCandidates && pendingCandidates.length > 0) {
+                  console.log(`📦 Processing ${pendingCandidates.length} pending ICE candidates after setting remote answer`);
+                  for (const candidate of pendingCandidates) {
+                    try {
+                      await pc.addIceCandidate(candidate);
+                      console.log(`✅ Added pending ICE candidate`);
+                    } catch (err) {
+                      console.error(`❌ Error adding pending ICE candidate:`, err);
+                    }
+                  }
+                  pendingIceCandidates.current.delete(fromUserId);
+                }
+              } else {
+                console.warn(`⚠️ Cannot set answer in state ${pc.signalingState} for ${fromUserId}`);
+              }
+            } else {
+              console.warn(`⚠️ No peer connection found for ${fromUserId}`);
+            }
+          } catch (error) {
+            console.error(`❌ Error processing answer from ${fromUserId}:`, error);
+          } finally {
+            // Always delete the answer after processing
+            await deleteDoc(change.doc.ref);
           }
-          
-          // Delete the answer
-          await deleteDoc(change.doc.ref);
         }
       }
     });
@@ -486,17 +643,53 @@ export const AIStudyRoom: React.FC = () => {
           const data = change.doc.data();
           const fromUserId = data.from;
           
-          const pc = peerConnectionsRef.current.get(fromUserId);
-          if (pc && data.candidate) {
-            try {
-              await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-            } catch (error) {
-              console.error('Error adding ICE candidate:', error);
-            }
-          }
+          console.log(`🧊 Received ICE candidate from ${fromUserId}`);
           
-          // Delete the candidate
-          await deleteDoc(change.doc.ref);
+          try {
+            const pc = peerConnectionsRef.current.get(fromUserId);
+            const candidate = new RTCIceCandidate(data.candidate);
+            
+            if (pc) {
+              // Check if remote description is set
+              if (pc.remoteDescription) {
+                await pc.addIceCandidate(candidate);
+                console.log(`✅ Added ICE candidate from ${fromUserId}`);
+                
+                // Process any pending candidates for this user
+                const pending = pendingIceCandidates.current.get(fromUserId);
+                if (pending && pending.length > 0) {
+                  console.log(`📦 Processing ${pending.length} pending ICE candidates for ${fromUserId}`);
+                  for (const pendingCandidate of pending) {
+                    try {
+                      await pc.addIceCandidate(pendingCandidate);
+                    } catch (err) {
+                      console.error(`❌ Error adding pending ICE candidate:`, err);
+                    }
+                  }
+                  pendingIceCandidates.current.delete(fromUserId);
+                }
+              } else {
+                console.warn(`⚠️ Remote description not set yet for ${fromUserId}, queuing candidate`);
+                // Queue candidate for later processing
+                if (!pendingIceCandidates.current.has(fromUserId)) {
+                  pendingIceCandidates.current.set(fromUserId, []);
+                }
+                pendingIceCandidates.current.get(fromUserId)?.push(candidate);
+              }
+            } else {
+              console.warn(`⚠️ No peer connection for ${fromUserId}, queuing candidate`);
+              // Queue candidate for later when peer connection is created
+              if (!pendingIceCandidates.current.has(fromUserId)) {
+                pendingIceCandidates.current.set(fromUserId, []);
+              }
+              pendingIceCandidates.current.get(fromUserId)?.push(candidate);
+            }
+          } catch (error) {
+            console.error(`❌ Error adding ICE candidate from ${fromUserId}:`, error);
+          } finally {
+            // Always delete the candidate after processing
+            await deleteDoc(change.doc.ref);
+          }
         }
       }
     });
@@ -666,6 +859,10 @@ export const AIStudyRoom: React.FC = () => {
   const joinRoom = async (room: StudyRoom) => {
     if (!user) return;
     
+    let mediaStream: MediaStream | null = null;
+    let cameraEnabled = false;
+    let micEnabled = false;
+    
     // Start media with improved settings
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -682,7 +879,10 @@ export const AIStudyRoom: React.FC = () => {
       });
       
       console.log("✅ Got media stream:", stream.getTracks());
+      mediaStream = stream;
       setLocalStream(stream);
+      cameraEnabled = true;
+      micEnabled = true;
       setIsCameraOn(true);
       setIsMicOn(true);
       
@@ -724,13 +924,18 @@ export const AIStudyRoom: React.FC = () => {
       setIsMicOn(false);
     }
     
-    // Join room
+    // Set current room first to enable listeners
+    setCurrentRoom(room);
+    setTimeRemaining(room.pomodoroMinutes * 60);
+    setIsRunning(true);
+    
+    // Join room - update user list
     const newUser: StudyRoomUser = {
       userId: user.id,
       username: user.username || user.email || 'Anonymous',
       photo: user.photoURL || '',
-      isCameraOn: isCameraOn,
-      isMicOn: isMicOn,
+      isCameraOn: cameraEnabled,
+      isMicOn: micEnabled,
       focusScore: 100,
       studyMinutes: 0,
       isFocused: true,
@@ -743,15 +948,16 @@ export const AIStudyRoom: React.FC = () => {
       currentParticipants: room.currentParticipants + 1,
     });
     
-    setCurrentRoom(room);
-    setTimeRemaining(room.pomodoroMinutes * 60);
-    setIsRunning(true);
+    // Small delay to ensure listeners are set up
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Create peer connections with existing users
     console.log("👥 Creating peer connections with", room.users.length, "existing users");
     for (const existingUser of room.users) {
       if (existingUser.userId !== user.id) {
         console.log("🔗 Creating peer connection with:", existingUser.username, existingUser.userId);
+        // Add small delay between connections to avoid overwhelming signaling
+        await new Promise(resolve => setTimeout(resolve, 100));
         await createPeerConnection(existingUser.userId, true);
       }
     }
@@ -1032,24 +1238,26 @@ export const AIStudyRoom: React.FC = () => {
         </div>
 
         {/* Main content */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden min-h-0">
           {/* Video grid */}
-          <div className="flex-1 p-4 overflow-auto">
-            <div className={`grid gap-4 h-full ${
+          <div className="flex-1 p-4 overflow-auto min-h-0">
+            <div className={`grid gap-3 h-full auto-rows-fr ${
               currentRoom.users.length === 1 ? 'grid-cols-1' :
-              currentRoom.users.length === 2 ? 'grid-cols-2' :
-              currentRoom.users.length <= 4 ? 'grid-cols-2 grid-rows-2' :
-              'grid-cols-3 grid-rows-2'
+              currentRoom.users.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
+              currentRoom.users.length <= 4 ? 'grid-cols-2' :
+              currentRoom.users.length <= 6 ? 'grid-cols-2 lg:grid-cols-3' :
+              currentRoom.users.length <= 9 ? 'grid-cols-3' :
+              'grid-cols-3 lg:grid-cols-4'
             }`}>
               {/* Local user */}
-              <div className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video">
+              <div className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video w-full">
                 {/* Always render video element to maintain ref */}
                 <video
                   ref={localVideoRef}
                   autoPlay
                   muted
                   playsInline
-                  className={`w-full h-full object-cover ${isCameraOn ? 'block' : 'hidden'}`}
+                  className={`absolute inset-0 w-full h-full object-contain bg-gray-900 ${isCameraOn ? 'block' : 'hidden'}`}
                   style={{ transform: 'scaleX(-1)' }}
                 />
                 {/* Show placeholder when camera is off */}
@@ -1075,7 +1283,7 @@ export const AIStudyRoom: React.FC = () => {
                     ref={screenVideoRef}
                     autoPlay
                     playsInline
-                    className="w-full h-full object-contain"
+                    className="absolute inset-0 w-full h-full object-contain"
                   />
                   <div className="absolute top-3 left-3 bg-blue-600 px-3 py-1.5 rounded-lg">
                     <span className="text-white text-sm font-medium flex items-center gap-2">
@@ -1100,7 +1308,7 @@ export const AIStudyRoom: React.FC = () => {
                 });
                 
                 return (
-                <div key={participant.userId} className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video">
+                <div key={participant.userId} className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video w-full">
                   {/* Always render video element for remote streams */}
                   {remoteStream && (
                     <video
@@ -1123,7 +1331,7 @@ export const AIStudyRoom: React.FC = () => {
                       }}
                       autoPlay
                       playsInline
-                      className={`w-full h-full object-cover ${hasVideo ? 'block' : 'hidden'}`}
+                      className={`absolute inset-0 w-full h-full object-contain bg-gray-900 ${hasVideo ? 'block' : 'hidden'}`}
                     />
                   )}
                   
@@ -1161,7 +1369,7 @@ export const AIStudyRoom: React.FC = () => {
           </div>
 
           {/* Sidebar */}
-          <div className="w-80 bg-gray-800 border-l border-gray-700 flex flex-col">
+          <div className="w-80 bg-gray-800 border-l border-gray-700 flex flex-col h-full overflow-hidden">
             {/* Stats */}
             <div className="p-4 space-y-3 border-b border-gray-700">
               <div className="flex items-center justify-between text-sm">
@@ -1324,30 +1532,30 @@ export const AIStudyRoom: React.FC = () => {
         </div>
 
         {/* Controls */}
-        <div className="bg-gray-800 border-t border-gray-700 p-4">
-          <div className="flex items-center justify-center gap-4">
+        <div className="bg-gray-800 border-t border-gray-700 p-3 sm:p-4 flex-shrink-0">
+          <div className="flex items-center justify-center gap-2 sm:gap-4">
             <button
               onClick={toggleCamera}
-              className={`p-4 rounded-full transition-colors ${isCameraOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600 hover:bg-red-700'}`}
+              className={`p-3 sm:p-4 rounded-full transition-colors ${isCameraOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600 hover:bg-red-700'}`}
               title={isCameraOn ? 'Turn camera off' : 'Turn camera on'}
             >
-              {isCameraOn ? <Video className="w-6 h-6 text-white" /> : <VideoOff className="w-6 h-6 text-white" />}
+              {isCameraOn ? <Video className="w-5 h-5 sm:w-6 sm:h-6 text-white" /> : <VideoOff className="w-5 h-5 sm:w-6 sm:h-6 text-white" />}
             </button>
             
             <button
               onClick={toggleMic}
-              className={`p-4 rounded-full transition-colors ${isMicOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600 hover:bg-red-700'}`}
+              className={`p-3 sm:p-4 rounded-full transition-colors ${isMicOn ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-600 hover:bg-red-700'}`}
               title={isMicOn ? 'Mute microphone' : 'Unmute microphone'}
             >
-              {isMicOn ? <Mic className="w-6 h-6 text-white" /> : <MicOff className="w-6 h-6 text-white" />}
+              {isMicOn ? <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-white" /> : <MicOff className="w-5 h-5 sm:w-6 sm:h-6 text-white" />}
             </button>
             
             <button
               onClick={toggleScreenShare}
-              className={`p-4 rounded-full transition-colors ${isScreenSharing ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'}`}
+              className={`p-3 sm:p-4 rounded-full transition-colors ${isScreenSharing ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'}`}
               title={isScreenSharing ? 'Stop sharing screen' : 'Share your screen'}
             >
-              {isScreenSharing ? <MonitorOff className="w-6 h-6 text-white" /> : <Monitor className="w-6 h-6 text-white" />}
+              {isScreenSharing ? <MonitorOff className="w-5 h-5 sm:w-6 sm:h-6 text-white" /> : <Monitor className="w-5 h-5 sm:w-6 sm:h-6 text-white" />}
             </button>
           </div>
         </div>

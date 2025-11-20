@@ -332,7 +332,7 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
   const showVideo = stream && hasVideoTracks;
 
   return (
-    <div className={`relative rounded-lg overflow-hidden bg-gray-900 group ${className}`} style={{ minHeight: '300px', aspectRatio: '16/9' }}>
+    <div className={`relative rounded-lg overflow-hidden bg-gray-900 group ${className} w-full h-full`}>
       {/* Video or Avatar */}
       {showVideo ? (
         <video
@@ -340,11 +340,9 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
           autoPlay
           playsInline
           muted={isLocal}
-          className={`w-full h-full ${participant.isScreenSharing ? 'object-contain bg-black' : 'object-cover'} ${isLocal && !participant.isScreenSharing ? 'mirror' : ''}`}
+          className={`absolute inset-0 w-full h-full ${participant.isScreenSharing ? 'object-contain bg-black' : 'object-contain bg-gray-900'} ${isLocal && !participant.isScreenSharing ? 'mirror' : ''}`}
           style={{ 
-            transform: isLocal && !participant.isScreenSharing ? 'scaleX(-1)' : 'none',
-            minHeight: '300px',
-            backgroundColor: '#000'
+            transform: isLocal && !participant.isScreenSharing ? 'scaleX(-1)' : 'none'
           }}
           onPlay={() => console.log('▶️ Video started playing for', participant.name)}
           onPause={() => console.warn('⏸️ Video paused for', participant.name)}
@@ -354,13 +352,13 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
           onStalled={() => console.warn('⚠️ Video stalled for', participant.name)}
         />
       ) : !participant.isCameraOff && !stream ? (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900" style={{ minHeight: '300px' }}>
+        <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-gray-900">
           <LoadingGlobe size={32} color="rgb(255, 255, 255)" className="mb-2" />
           <div className="text-white text-sm">Connecting...</div>
           <div className="text-gray-400 text-xs mt-1">{participant.name}</div>
         </div>
       ) : (
-        <div className={`w-full h-full flex items-center justify-center ${
+        <div className={`absolute inset-0 w-full h-full flex items-center justify-center ${
           participant.avatarType === 'Innovation' 
             ? 'bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500'
             : participant.avatarType === 'Professional'
@@ -368,7 +366,7 @@ export const ParticipantVideo: React.FC<ParticipantVideoProps> = ({
             : participant.avatarType === 'Creative'
             ? 'bg-gradient-to-br from-orange-500 via-red-500 to-pink-500'
             : 'bg-gradient-to-br from-blue-600 to-purple-600'
-        }`} style={{ minHeight: '300px' }}>
+        }`}>
           {participant.avatar ? (
             <img
               src={participant.avatar}

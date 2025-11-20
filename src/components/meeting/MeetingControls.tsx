@@ -100,14 +100,14 @@ export const MeetingControls: React.FC<MeetingControlsProps> = ({
     }
   };
   return (
-    <div className="bg-gray-800 border-t border-gray-700 px-6 py-4">
+    <div className="bg-gray-800 border-t border-gray-700 px-4 py-3 flex-shrink-0">
       <div className="flex items-center justify-between max-w-7xl mx-auto">
         {/* Left Controls */}
         <div className="flex items-center gap-3">
           {/* Microphone */}
           <button
             onClick={onToggleAudio}
-            className={`p-4 rounded-full transition-all ${
+            className={`p-3 sm:p-4 rounded-full transition-all ${
               isAudioMuted
                 ? 'bg-red-500 hover:bg-red-600'
                 : 'bg-gray-700 hover:bg-gray-600'
@@ -115,16 +115,16 @@ export const MeetingControls: React.FC<MeetingControlsProps> = ({
             title={isAudioMuted ? 'Unmute' : 'Mute'}
           >
             {isAudioMuted ? (
-              <MicOff className="w-5 h-5 text-white" />
+              <MicOff className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             ) : (
-              <Mic className="w-5 h-5 text-white" />
+              <Mic className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             )}
           </button>
 
           {/* Camera */}
           <button
             onClick={onToggleVideo}
-            className={`p-4 rounded-full transition-all ${
+            className={`p-3 sm:p-4 rounded-full transition-all ${
               isVideoOff
                 ? 'bg-red-500 hover:bg-red-600'
                 : 'bg-gray-700 hover:bg-gray-600'
@@ -132,16 +132,16 @@ export const MeetingControls: React.FC<MeetingControlsProps> = ({
             title={isVideoOff ? 'Start Video' : 'Stop Video'}
           >
             {isVideoOff ? (
-              <VideoOff className="w-5 h-5 text-white" />
+              <VideoOff className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             ) : (
-              <Video className="w-5 h-5 text-white" />
+              <Video className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             )}
           </button>
 
           {/* Screen Share */}
           <button
             onClick={onToggleScreenShare}
-            className={`p-4 rounded-full transition-all ${
+            className={`p-3 sm:p-4 rounded-full transition-all ${
               isScreenSharing
                 ? 'bg-blue-500 hover:bg-blue-600'
                 : 'bg-gray-700 hover:bg-gray-600'
@@ -149,9 +149,9 @@ export const MeetingControls: React.FC<MeetingControlsProps> = ({
             title={isScreenSharing ? 'Stop Sharing' : 'Share Screen'}
           >
             {isScreenSharing ? (
-              <MonitorOff className="w-5 h-5 text-white" />
+              <MonitorOff className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             ) : (
-              <Monitor className="w-5 h-5 text-white" />
+              <Monitor className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             )}
           </button>
         </div>
@@ -315,10 +315,11 @@ export const MeetingControls: React.FC<MeetingControlsProps> = ({
           {/* Leave Meeting */}
           <button
             onClick={onLeaveMeeting}
-            className="px-6 py-4 bg-red-500 hover:bg-red-600 rounded-full font-semibold text-white transition-all flex items-center gap-2"
+            className="px-4 sm:px-6 py-3 sm:py-4 bg-red-500 hover:bg-red-600 rounded-full font-medium sm:font-semibold text-white transition-all flex items-center gap-1 sm:gap-2"
           >
-            <Phone className="w-5 h-5 rotate-135" />
-            Leave
+            <Phone className="w-4 h-4 sm:w-5 sm:h-5 rotate-135" />
+            <span className="hidden sm:inline">Leave</span>
+            <span className="sm:hidden">End</span>
           </button>
         </div>
       </div>

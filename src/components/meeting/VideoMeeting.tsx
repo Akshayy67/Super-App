@@ -1065,7 +1065,7 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
   const isHost = meeting.hostId === user.id;
 
   return (
-    <div className="h-screen w-screen bg-gray-900 flex flex-col relative overflow-hidden">
+    <div className="h-screen w-full bg-gray-900 flex flex-col relative">
       {/* Scribe Banner */}
       {showScribeBanner && !isScribing && (
         <div className="absolute top-2 sm:top-4 left-1/2 transform -translate-x-1/2 z-50 w-[calc(100%-1rem)] sm:w-full max-w-2xl px-2 sm:px-4">
@@ -1090,41 +1090,45 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
 
       {/* Main video area */}
       <div className="flex-1 flex relative min-h-0 overflow-hidden">
-        <div className={`flex-1 flex ${pinnedParticipant ? 'flex-row' : 'flex-col'} min-w-0 ${isChatOpen || isParticipantsOpen || isSettingsOpen || isWhiteboardOpen || showLiveTranscript ? 'mr-64 sm:mr-72 lg:mr-80' : ''}`}>
+        <div className={`flex-1 flex ${pinnedParticipant ? 'flex-row' : 'flex-col'} min-w-0`}>
           {pinnedParticipant ? (
             // Layout with pinned participant
             <>
               {/* Pinned video on left */}
               <div className={`relative bg-gray-900 h-full ${
                 pinnedSize === 'small' ? 'w-64 sm:w-80' : pinnedSize === 'medium' ? 'w-96 sm:w-[500px]' : 'w-[500px] sm:w-[700px]'
-              } border-r border-gray-700 flex-shrink-0 min-w-0`}>
-                {pinnedParticipant === user.id ? (
-                  <ParticipantVideo
-                    participant={currentParticipant}
-                    stream={isScreenSharing ? screenStream : localStream}
-                    isLocal
-                    isPinned
-                    onUnpin={() => handlePinParticipant(pinnedParticipant)}
-                    onResize={handleResizePinned}
-                    size={pinnedSize}
-                  />
-                ) : (
-                  <ParticipantVideo
-                    participant={meeting.participants[pinnedParticipant]}
-                    stream={remoteStreams.get(pinnedParticipant)}
-                    isPinned
-                    onUnpin={() => handlePinParticipant(pinnedParticipant)}
-                    onResize={handleResizePinned}
-                    size={pinnedSize}
-                  />
-                )}
+              } border-r border-gray-700 flex-shrink-0 flex items-center justify-center`}>
+                <div className="w-full h-full relative">
+                  {pinnedParticipant === user.id ? (
+                    <ParticipantVideo
+                      participant={currentParticipant}
+                      stream={isScreenSharing ? screenStream : localStream}
+                      isLocal
+                      isPinned
+                      onUnpin={() => handlePinParticipant(pinnedParticipant)}
+                      onResize={handleResizePinned}
+                      size={pinnedSize}
+                      className="h-full w-full"
+                    />
+                  ) : (
+                    <ParticipantVideo
+                      participant={meeting.participants[pinnedParticipant]}
+                      stream={remoteStreams.get(pinnedParticipant)}
+                      isPinned
+                      onUnpin={() => handlePinParticipant(pinnedParticipant)}
+                      onResize={handleResizePinned}
+                      size={pinnedSize}
+                      className="h-full w-full"
+                    />
+                  )}
+                </div>
               </div>
               
               {/* Grid of other participants on right */}
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-4 p-2 sm:p-4 h-full overflow-auto auto-rows-fr min-w-0">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 p-2 sm:p-4 h-full overflow-auto auto-rows-fr">
                 {/* Show local video if not pinned */}
                 {pinnedParticipant !== user.id && (
-                  <div className="min-h-[200px] sm:min-h-[300px] w-full">
+                  <div className="relative aspect-video">
                     <ParticipantVideo
                       participant={currentParticipant}
                       stream={isScreenSharing ? screenStream : localStream}
@@ -1147,7 +1151,7 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
                     }
                     
                     return (
-                      <div key={userId} className="min-h-[200px] sm:min-h-[300px] w-full">
+                      <div key={userId} className="relative aspect-video">
                         <ParticipantVideo
                           participant={participant}
                           stream={stream}
@@ -1175,20 +1179,20 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
                   } else if (totalParticipants === 2) {
                     gridClass = 'grid-cols-1 md:grid-cols-2';
                   } else if (totalParticipants <= 4) {
-                    gridClass = 'grid-cols-1 md:grid-cols-2';
+                    gridClass = 'grid-cols-2';
                   } else if (totalParticipants <= 6) {
-                    gridClass = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+                    gridClass = 'grid-cols-2 lg:grid-cols-3';
+                  } else if (totalParticipants <= 9) {
+                    gridClass = 'grid-cols-2 md:grid-cols-3';
                   } else {
-                    // More than 6 participants - show max 6 per row (2x3 grid)
-                    gridClass = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+                    // More than 9 participants
+                    gridClass = 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
                   }
 
                   return (
-                    <div className={`grid ${gridClass} gap-2 sm:gap-4 h-full w-full`} style={{
-                      gridAutoRows: 'minmax(0, 1fr)'
-                    }}>
+                    <div className={`grid ${gridClass} gap-2 sm:gap-3 h-full w-full auto-rows-fr`}>
                       {/* Local video */}
-                      <div className="w-full h-full min-h-0 min-w-0">
+                      <div className="relative aspect-video">
                         <ParticipantVideo
                           participant={currentParticipant}
                           stream={isScreenSharing ? screenStream : localStream}
@@ -1210,7 +1214,7 @@ export const VideoMeeting: React.FC<{ meetingId?: string }> = ({ meetingId: prop
                           }
                           
                           return (
-                            <div key={userId} className="w-full h-full min-h-0 min-w-0">
+                            <div key={userId} className="relative aspect-video">
                               <ParticipantVideo
                                 participant={participant}
                                 stream={stream}
