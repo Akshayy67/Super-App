@@ -2,26 +2,16 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Video,
-  Mic,
-  Play,
-  Pause,
-  SkipForward,
   Clock,
-  User,
-  Bot,
   Star,
   TrendingUp,
   AlertCircle,
   CheckCircle,
   FileText,
-  Award,
   Target,
-  BarChart3,
-  ArrowRight,
   Headphones,
   MessageSquare,
   ArrowLeft,
-  MicOff,
   Phone,
   PhoneOff,
   Settings,
@@ -30,12 +20,13 @@ import {
   X,
   RotateCcw,
   BarChart,
+  Sparkles,
+  Cpu,
 } from "lucide-react";
 import {
   vapi,
   isVapiConfigured,
   checkBrowserCompatibility,
-  interviewer,
 } from "../../lib/vapi.sdk";
 import { aiService } from "../../utils/aiService";
 import { InterviewFeedback } from "./InterviewFeedback";
@@ -43,6 +34,7 @@ import { JAMSession } from "./JAMSession";
 import { GeminiATSService } from "../../utils/geminiATSService";
 import { useFaceDetection } from "../../hooks/useFaceDetection";
 import { AICodingInterview } from "../gamification/AICodingInterview";
+import { questionHistoryManager } from "../../utils/questionHistoryManager";
 import {
   FaceDetectionOverlay,
   EyeContactStatus,
@@ -56,6 +48,8 @@ import {
 } from "../../utils/performanceAnalytics";
 import { analyticsStorage } from "../../utils/analyticsStorage";
 import { unifiedAnalyticsStorage } from "../../utils/unifiedAnalyticsStorage";
+import { realTimeAuth } from "../../utils/realTimeAuth";
+import { ProfileService } from "../../services/profileService";
 
 interface InterviewQuestion {
   id: string;
@@ -88,9 +82,9 @@ interface SavedMessage {
 }
 
 export const MockInterview: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  
+
   const [activeSession, setActiveSession] = useState<InterviewSession | null>(
     null
   );
@@ -99,14 +93,27 @@ export const MockInterview: React.FC = () => {
   );
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [currentAnswer, setCurrentAnswer] = useState("");
   const [timeRemaining, setTimeRemaining] = useState(0);
+  const [currentAnswer, setCurrentAnswer] = useState("");
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("general");
+
+  // ── Interview Mode ──
+  type InterviewMode = "learning" | "realistic" | "stress" | "behavioral" | "technical_deep" | "custom_mode";
+  const interviewModes: { id: InterviewMode; label: string; icon: string; desc: string; color: string }[] = [
+    { id: "learning", label: "Learning Coach", icon: "📚", desc: "Guided practice with real-time tips, hints & teaching moments", color: "from-blue-500 to-cyan-500" },
+    { id: "realistic", label: "Real Interview", icon: "🎯", desc: "Simulates an actual interview — no hints, realistic pacing", color: "from-indigo-500 to-purple-500" },
+    { id: "stress", label: "Stress Test", icon: "🔥", desc: "Rapid-fire, high-pressure — tests how you perform under stress", color: "from-red-500 to-orange-500" },
+    { id: "behavioral", label: "Behavioral Deep-Dive", icon: "🧠", desc: "STAR-focused — probes your stories, leadership & teamwork", color: "from-emerald-500 to-teal-500" },
+    { id: "technical_deep", label: "Technical Grilling", icon: "⚙️", desc: "Deep system design & coding questions with follow-ups", color: "from-violet-500 to-fuchsia-500" },
+    { id: "custom_mode", label: "Custom", icon: "✏️", desc: "Define your own interviewer style and behavior", color: "from-gray-500 to-slate-500" },
+  ];
+  const [interviewMode, setInterviewMode] = useState<InterviewMode>("learning");
+  const [customModePrompt, setCustomModePrompt] = useState("");
+  const [isAIGenerated, setIsAIGenerated] = useState(false);
   const [activeTab, setActiveTab] = useState<"templates" | "custom" | "resume" | "coding">(
     (tabParam === "custom" || tabParam === "resume" || tabParam === "coding") ? tabParam : "templates"
   );
-  
+
   // Update active tab when URL parameter changes
   useEffect(() => {
     if (tabParam === "custom" || tabParam === "resume" || tabParam === "coding") {
@@ -130,9 +137,8 @@ export const MockInterview: React.FC = () => {
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
 
   // Resume-based interview configuration
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [resumeText, setResumeText] = useState("");
-  const [parsedResumeData, setParsedResumeData] = useState<any>(null);
+  const [parsedResumeData, setParsedResumeData] = useState<unknown>(null);
   const [isParsingResume, setIsParsingResume] = useState(false);
   const [resumeDifficulty, setResumeDifficulty] = useState<
     "easy" | "medium" | "hard"
@@ -153,9 +159,9 @@ export const MockInterview: React.FC = () => {
   const [showCameraPreview, setShowCameraPreview] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string>("");
-  const [isVideoReady, setIsVideoReady] = useState(false);
   const [isCameraLoading, setIsCameraLoading] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [, setIsVideoReady] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   // Callback ref to ensure video element is always tracked
@@ -173,8 +179,6 @@ export const MockInterview: React.FC = () => {
   // Face detection state
   const [enableFaceDetection, setEnableFaceDetection] = useState(true);
   const [detectedFaces, setDetectedFaces] = useState<DetectedFace[]>([]);
-  const [eyeContactHistory, setEyeContactHistory] = useState<boolean[]>([]);
-  const [showFaceDetectionStats, setShowFaceDetectionStats] = useState(false);
 
   // Feedback state
   const [showFeedback, setShowFeedback] = useState(false);
@@ -196,8 +200,9 @@ export const MockInterview: React.FC = () => {
         );
       }
     },
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     onEyeContactChange: (hasEyeContact: boolean) => {
-      setEyeContactHistory((prev) => [...prev.slice(-99), hasEyeContact]); // Keep last 100 readings
+      // Keep last 100 readings
     },
     eyeContactThreshold: {
       yaw: 15, // degrees
@@ -208,7 +213,6 @@ export const MockInterview: React.FC = () => {
   // Reset to templates view when component mounts or tab is clicked
   useEffect(() => {
     setActiveTab("templates");
-    setSelectedTemplate("general");
     setIsInterviewStarted(false);
     setActiveSession(null);
     setShowJAMSession(false);
@@ -390,7 +394,7 @@ export const MockInterview: React.FC = () => {
       console.log("Camera preview closed, stopping camera stream");
       stopCamera();
     }
-  }, [showCameraPreview]);
+  }, [showCameraPreview, isCameraActive]);
 
   // Ensure video element is available when component mounts
   useEffect(() => {
@@ -421,6 +425,222 @@ export const MockInterview: React.FC = () => {
     checkVideoElement();
   }, []);
 
+  // State to store real AI feedback scores
+  const [realAIScores, setRealAIScores] = useState<{
+    overall: number;
+    technical: number;
+    communication: number;
+    behavioral: number;
+  } | null>(null);
+
+  // Function to get actual performance scores from AI feedback or provide transparent fallback
+  const getActualPerformanceScore = useCallback((
+    scoreType: "overall" | "technical" | "communication" | "behavioral"
+  ): number => {
+    if (realAIScores) {
+      console.log(
+        `✅ Using real AI score for ${scoreType}:`,
+        realAIScores[scoreType]
+      );
+      return realAIScores[scoreType];
+    }
+    console.warn(
+      `⚠️ Using fallback score for ${scoreType} - real AI feedback analysis not available`
+    );
+    return 10;
+  }, [realAIScores]);
+
+  // Generate speech analysis from real data or provide minimal fallback
+  const generateMockSpeechAnalysis = useCallback(() => {
+    return {
+      fillerWords: { count: 0, words: [] as string[], percentage: 0, timestamps: [] as { word: string; time: number }[] },
+      paceAnalysis: { wordsPerMinute: 0, averagePause: 0, paceRating: "optimal" as const, paceScore: 0 },
+      confidenceScore: { overall: 0, volumeVariation: 0, voiceTremor: 0, pausePattern: 0, factors: [] as string[] },
+      pronunciationAssessment: { clarity: 0, articulation: 0, fluency: 0, overallScore: 0, issues: [] as string[] },
+      overallMetrics: { totalWords: 0, totalDuration: 0, averageVolume: 0, silencePercentage: 0 },
+    };
+  }, []);
+
+  const generateMockBodyLanguageAnalysis = useCallback(() => {
+    return {
+      posture: { score: 0, alignment: "fair" as const, issues: [] as string[], recommendations: [] as string[] },
+      facialExpressions: { confidence: 0, engagement: 0, nervousness: 0, expressions: [] as { emotion: string; confidence: number; timestamp: number }[] },
+      eyeContact: { percentage: 0, consistency: 0, score: 0, patterns: [] as string[] },
+      gestures: { frequency: 0, appropriateness: 0, variety: 0, score: 0, observations: [] as string[] },
+      overallBodyLanguage: { score: 0, strengths: [] as string[], improvements: [] as string[], professionalismScore: 0 },
+    };
+  }, []);
+
+  const generateStrengths = useCallback((): string[] => {
+    return [
+      "Completed interview session",
+      "Engaged with interview questions",
+      "Maintained professional communication",
+    ];
+  }, []);
+
+  const generateWeaknesses = useCallback((): string[] => {
+    return [
+      "Enable speech analysis for detailed feedback",
+      "Enable video analysis for body language insights",
+    ];
+  }, []);
+
+  const generateRecommendations = useCallback((): string[] => {
+    return [
+      "Complete more interviews to build performance history",
+      "Enable microphone access for speech analysis",
+      "Enable camera access for body language analysis",
+      "Practice behavioral questions using the STAR method",
+    ];
+  }, []);
+
+  const saveInterviewPerformanceData = useCallback(async (session?: InterviewSession) => {
+    const sessionToUse = session || activeSession;
+
+    console.log("🔍 saveInterviewPerformanceData called", {
+      hasActiveSession: !!activeSession,
+      hasSessionParam: !!session,
+      hasSessionToUse: !!sessionToUse,
+      messagesLength: messages.length,
+    });
+
+    if (!sessionToUse) {
+      console.log("❌ Early return: No session available");
+      return;
+    }
+
+    if (messages.length === 0) {
+      console.warn(
+        "⚠️ No messages available - this might be a real score update"
+      );
+    }
+
+    try {
+      const duration = (Date.now() - sessionToUse.startTime.getTime()) / 1000;
+
+      const sessionQuestions = (sessionToUse.questions || []).map(
+        (q, index) => ({
+          id: q.id || `q_${index}`,
+          question: q.question || "Question not available",
+          category: q.category || "general",
+          timeLimit: q.timeLimit || 120,
+          hints: q.hints || [],
+          askedAt: new Date(
+            sessionToUse.startTime.getTime() + index * 180000
+          ).toISOString(),
+          answeredAt: new Date(
+            sessionToUse.startTime.getTime() + (index + 1) * 180000
+          ).toISOString(),
+        })
+      );
+
+      const performanceData: InterviewPerformanceData = {
+        id: `interview_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        role:
+          sessionToUse.type === "custom"
+            ? customRole || "Custom Role"
+            : sessionToUse.type === "resume"
+              ? "Resume-Based Role"
+              : sessionToUse.type,
+        difficulty: sessionToUse.difficulty || "medium",
+        duration: duration || 0,
+
+        overallScore: getActualPerformanceScore("overall"),
+        technicalScore: getActualPerformanceScore("technical"),
+        communicationScore: getActualPerformanceScore("communication"),
+        behavioralScore: getActualPerformanceScore("behavioral"),
+
+        questionsAnswered: sessionToUse.currentQuestionIndex + 1,
+        questionsCorrect: Math.floor(
+          (sessionToUse.currentQuestionIndex + 1) * 0.7
+        ),
+        averageResponseTime: duration / (sessionToUse.currentQuestionIndex + 1),
+
+        detailedMetrics: {
+          confidence: getActualPerformanceScore("overall"),
+          clarity: getActualPerformanceScore("communication"),
+          professionalism: getActualPerformanceScore("behavioral"),
+          engagement: getActualPerformanceScore("behavioral"),
+          adaptability: getActualPerformanceScore("overall"),
+        },
+
+        speechAnalysis: generateMockSpeechAnalysis(),
+        bodyLanguageAnalysis: generateMockBodyLanguageAnalysis(),
+
+        strengths: generateStrengths(),
+        weaknesses: generateWeaknesses(),
+        recommendations: generateRecommendations(),
+
+        interviewSession: {
+          questions: sessionQuestions || [],
+          messages: (messages || []).map((msg) => ({
+            role: msg.role || "user",
+            content: msg.content || "",
+            timestamp: new Date().toISOString(),
+          })),
+          sessionType: sessionToUse.type || "general",
+          interviewType:
+            sessionToUse.type === "custom"
+              ? customRole || "Custom Role"
+              : sessionToUse.type || "general",
+        },
+      };
+
+      // Validate data before saving
+      const validateData = (obj: Record<string, unknown>, path = ""): void => {
+        for (const [key, value] of Object.entries(obj)) {
+          const currentPath = path ? `${path}.${key}` : key;
+          if (value === undefined) {
+            console.error(`❌ Undefined value found at ${currentPath}`);
+            throw new Error(`Undefined value at ${currentPath}`);
+          }
+          if (
+            value !== null &&
+            typeof value === "object" &&
+            !Array.isArray(value)
+          ) {
+            validateData(value as Record<string, unknown>, currentPath);
+          }
+          if (Array.isArray(value)) {
+            value.forEach((item, index) => {
+              if (item !== null && typeof item === "object") {
+                validateData(item as Record<string, unknown>, `${currentPath}[${index}]`);
+              }
+            });
+          }
+        }
+      };
+
+      try {
+        validateData(performanceData as unknown as Record<string, unknown>);
+        console.log("✅ Data validation passed");
+      } catch (error) {
+        console.error("❌ Data validation failed:", error);
+        throw error;
+      }
+
+      console.log("💾 Saving performance data:", performanceData);
+
+      performanceAnalytics.current.savePerformanceData(performanceData);
+      analyticsStorage.savePerformanceData(performanceData);
+
+      const cloudSaveResult = await unifiedAnalyticsStorage.savePerformanceData(
+        performanceData
+      );
+      console.log("☁️ Cloud save result:", cloudSaveResult);
+
+      console.log("✅ Performance data saved to analytics:", {
+        id: performanceData.id,
+        overallScore: performanceData.overallScore,
+        timestamp: performanceData.timestamp,
+      });
+    } catch (error) {
+      console.error("Error saving performance data:", error);
+    }
+  }, [activeSession, messages, customRole, getActualPerformanceScore, generateMockSpeechAnalysis, generateMockBodyLanguageAnalysis, generateStrengths, generateWeaknesses, generateRecommendations]);
+
   useEffect(() => {
     const onCallStart = () => {
       console.log("Call started");
@@ -443,19 +663,20 @@ export const MockInterview: React.FC = () => {
         sessionForSaving: !!sessionForSaving,
       });
 
-      await saveInterviewPerformanceData(sessionForSaving);
+      await saveInterviewPerformanceData(sessionForSaving ?? undefined);
       console.log("✅ saveInterviewPerformanceData completed");
 
       // Clear the captured session
       setSessionToSave(null);
     };
 
-    const onMessage = (message: any) => {
+    const onMessage = (message: unknown) => {
       console.log("Message received:", message);
-      if (message.type === "transcript" && message.transcriptType === "final") {
-        const newMessage = {
-          role: message.role || "user",
-          content: message.transcript,
+      const msg = message as Record<string, unknown>;
+      if (msg.type === "transcript" && msg.transcriptType === "final") {
+        const newMessage: SavedMessage = {
+          role: (msg.role as SavedMessage["role"]) || "user",
+          content: msg.transcript as string,
         };
         setMessages((prev) => [...prev, newMessage]);
       }
@@ -473,10 +694,10 @@ export const MockInterview: React.FC = () => {
 
     const onError = (error: Error) => {
       console.error("VAPI Error:", error);
-      
+
       // Provide more helpful error messages based on error type
       let errorMessage = error.message;
-      
+
       if (error.message.includes("ICE") || error.message.includes("connection") || error.message.includes("disconnected")) {
         errorMessage = "Connection failed. This may be due to network or firewall restrictions. Please check your internet connection and try again. If the issue persists, try using a different network or disabling VPN/firewall.";
       } else if (error.message.includes("permission") || error.message.includes("microphone")) {
@@ -484,7 +705,7 @@ export const MockInterview: React.FC = () => {
       } else if (error.message.includes("timeout")) {
         errorMessage = "Connection timeout. Please check your internet connection and try again.";
       }
-      
+
       setError(errorMessage);
       setCallStatus(CallStatus.INACTIVE);
       setIsRecording(false);
@@ -507,21 +728,25 @@ export const MockInterview: React.FC = () => {
       vapi.off("speech-end", onSpeechEnd);
       vapi.off("error", onError);
     };
-  }, []);
+  }, [activeSession, saveInterviewPerformanceData, sessionToSave]);
+
+  // ═══════════════════════════════════════════════════════════
+  // ENTERPRISE-GRADE INTERVIEW TEMPLATES & QUESTION BANKS
+  // ═══════════════════════════════════════════════════════════
 
   const interviewTemplates = [
     {
       id: "general",
       name: "General Interview",
-      description: "Mix of behavioral and general questions",
+      description: "Culture fit, motivation & career-story questions",
       duration: 30,
       questionCount: 10,
       difficulty: "medium" as const,
     },
     {
       id: "behavioral",
-      name: "Behavioral Focus",
-      description: "STAR method practice with situational questions",
+      name: "Behavioral (STAR)",
+      description: "Leadership, conflict, failure & growth deep-dives",
       duration: 45,
       questionCount: 12,
       difficulty: "medium" as const,
@@ -529,15 +754,15 @@ export const MockInterview: React.FC = () => {
     {
       id: "technical",
       name: "Technical Interview",
-      description: "Role-specific technical questions",
+      description: "Architecture, coding concepts & problem-solving",
       duration: 60,
-      questionCount: 15,
+      questionCount: 12,
       difficulty: "hard" as const,
     },
     {
       id: "quick",
       name: "Quick Practice",
-      description: "5-minute rapid fire questions",
+      description: "5-minute rapid warm-up with punchy questions",
       duration: 5,
       questionCount: 5,
       difficulty: "easy" as const,
@@ -545,483 +770,199 @@ export const MockInterview: React.FC = () => {
     {
       id: "executive",
       name: "Leadership Interview",
-      description: "Senior position and leadership focused",
+      description: "VP-level strategy, org design & stakeholder management",
       duration: 45,
       questionCount: 10,
       difficulty: "hard" as const,
     },
     {
+      id: "system_design",
+      name: "System Design",
+      description: "Distributed systems, scalability & architecture trade-offs",
+      duration: 60,
+      questionCount: 8,
+      difficulty: "hard" as const,
+    },
+    {
+      id: "case_study",
+      name: "Case Study / Product",
+      description: "Product sense, market analysis & go-to-market strategy",
+      duration: 45,
+      questionCount: 8,
+      difficulty: "medium" as const,
+    },
+    {
       id: "jam",
       name: "JAM Session",
-      description: "Just A Minute practice with random topics",
+      description: "Just A Minute — random topic impromptu speaking",
       duration: 2,
       questionCount: 1,
       difficulty: "medium" as const,
     },
   ];
 
-  // Different question sets for each interview type
-  const questionSets = {
+  // ── ENTERPRISE QUESTION POOLS ──────────────────────────────
+  // Each pool is ordered: Easy → Medium → Hard within the array.
+  // The shuffler + AI generation layer handles final ordering.
+
+  const questionSets: Record<string, { id: string; question: string; category: string; timeLimit: number; hints: string[] }[]> = {
     general: [
-      {
-        id: "gen-2",
-        question: "Why are you interested in this position?",
-        category: "general",
-        timeLimit: 90,
-        hints: ["Research the company", "Be specific", "Show enthusiasm"],
-      },
-      {
-        id: "gen-3",
-        question: "What are your greatest strengths?",
-        category: "general",
-        timeLimit: 120,
-        hints: [
-          "Give specific examples",
-          "Relate to the role",
-          "Show confidence",
-        ],
-      },
-      {
-        id: "gen-4",
-        question: "Where do you see yourself in 5 years?",
-        category: "general",
-        timeLimit: 90,
-        hints: ["Be realistic", "Show ambition", "Align with company growth"],
-      },
-      {
-        id: "gen-5",
-        question: "What are your salary expectations?",
-        category: "general",
-        timeLimit: 60,
-        hints: ["Research market rates", "Be flexible", "Focus on value"],
-      },
-      {
-        id: "gen-6",
-        question: "Why should we hire you?",
-        category: "general",
-        timeLimit: 120,
-        hints: [
-          "Highlight unique skills",
-          "Show enthusiasm",
-          "Connect to company needs",
-        ],
-      },
-      {
-        id: "gen-7",
-        question: "What do you know about our company?",
-        category: "general",
-        timeLimit: 90,
-        hints: [
-          "Do your research",
-          "Show genuine interest",
-          "Mention recent news",
-        ],
-      },
-      {
-        id: "gen-8",
-        question: "Do you have any questions for us?",
-        category: "general",
-        timeLimit: 60,
-        hints: [
-          "Ask thoughtful questions",
-          "Show engagement",
-          "Learn about the role",
-        ],
-      },
-      {
-        id: "gen-9",
-        question: "What motivates you?",
-        category: "general",
-        timeLimit: 90,
-        hints: ["Be authentic", "Connect to work", "Show passion"],
-      },
-      {
-        id: "gen-10",
-        question: "How do you handle stress and pressure?",
-        category: "general",
-        timeLimit: 120,
-        hints: [
-          "Give specific examples",
-          "Show resilience",
-          "Mention coping strategies",
-        ],
-      },
+      // ── Easy ──
+      { id: "gen-1", question: "Walk me through your career journey and what led you to apply here.", category: "general", timeLimit: 120, hints: ["Structure chronologically", "Highlight pivots with reasons", "End with why THIS role"] },
+      { id: "gen-2", question: "What specifically about our company or product excites you, and how does it align with your career goals?", category: "general", timeLimit: 90, hints: ["Research the company beforehand", "Name specific products or initiatives", "Connect to your personal mission"] },
+      { id: "gen-3", question: "Describe a professional accomplishment you're most proud of and quantify its impact.", category: "general", timeLimit: 120, hints: ["Use numbers/percentages", "Explain the challenge", "Show ownership"] },
+      // ── Medium ──
+      { id: "gen-4", question: "If I called your last manager right now, what would they say is your biggest strength and one area you need to develop?", category: "general", timeLimit: 120, hints: ["Be honest", "Show self-awareness", "Mention actions taken on the development area"] },
+      { id: "gen-5", question: "How do you evaluate whether a new opportunity is the right career move for you?", category: "general", timeLimit: 90, hints: ["Show a framework", "Balance growth vs stability", "Mention learning opportunities"] },
+      { id: "gen-6", question: "Tell me about a time you had to sell an unpopular idea to your team. What was the outcome?", category: "general", timeLimit: 150, hints: ["STAR method", "Show persuasion skills", "Acknowledge resistance"] },
+      { id: "gen-7", question: "What does your ideal work environment look like, and how do you adapt when reality differs?", category: "general", timeLimit: 90, hints: ["Be authentic", "Show flexibility", "Give a real example of adapting"] },
+      // ── Hard ──
+      { id: "gen-8", question: "If you were to start in this role tomorrow, what would your 30-60-90 day plan look like?", category: "general", timeLimit: 180, hints: ["30 days: learn & listen", "60 days: quick wins", "90 days: strategic initiatives"] },
+      { id: "gen-9", question: "We're growing fast. How do you handle ambiguity and make decisions when you only have 60% of the information you need?", category: "general", timeLimit: 150, hints: ["Show a decision framework", "Mention risk assessment", "Give a real example"] },
+      { id: "gen-10", question: "What would you do in your first week if you discovered a fundamental disagreement between your approach and your new team's established practices?", category: "general", timeLimit: 150, hints: ["Show diplomacy", "Listen first", "Propose data-driven evaluation"] },
     ],
+
     behavioral: [
-      {
-        id: "beh-1",
-        question: "Describe a challenging project you've worked on.",
-        category: "behavioral",
-        timeLimit: 180,
-        hints: ["Use STAR method", "Focus on your role", "Share the outcome"],
-      },
-      {
-        id: "beh-2",
-        question: "How do you handle tight deadlines?",
-        category: "behavioral",
-        timeLimit: 120,
-        hints: [
-          "Give specific examples",
-          "Show organization skills",
-          "Mention tools/methods",
-        ],
-      },
-      {
-        id: "beh-3",
-        question: "Tell me about a time you failed and what you learned.",
-        category: "behavioral",
-        timeLimit: 150,
-        hints: ["Be honest", "Focus on learning", "Show growth mindset"],
-      },
-      {
-        id: "beh-4",
-        question: "Describe a conflict you had with a colleague.",
-        category: "behavioral",
-        timeLimit: 150,
-        hints: [
-          "Stay professional",
-          "Show conflict resolution",
-          "Focus on outcome",
-        ],
-      },
-      {
-        id: "beh-5",
-        question: "Give an example of when you went above and beyond.",
-        category: "behavioral",
-        timeLimit: 120,
-        hints: ["Show initiative", "Be specific", "Highlight impact"],
-      },
-      {
-        id: "beh-6",
-        question: "How do you handle working with difficult people?",
-        category: "behavioral",
-        timeLimit: 120,
-        hints: [
-          "Show empathy",
-          "Focus on solutions",
-          "Maintain professionalism",
-        ],
-      },
-      {
-        id: "beh-7",
-        question: "Tell me about a time you had to learn something quickly.",
-        category: "behavioral",
-        timeLimit: 120,
-        hints: [
-          "Show adaptability",
-          "Mention learning strategies",
-          "Highlight success",
-        ],
-      },
-      {
-        id: "beh-8",
-        question:
-          "Describe a situation where you had to make a difficult decision.",
-        category: "behavioral",
-        timeLimit: 150,
-        hints: ["Show critical thinking", "Explain reasoning", "Share outcome"],
-      },
-      {
-        id: "beh-9",
-        question: "How do you prioritize your work?",
-        category: "behavioral",
-        timeLimit: 120,
-        hints: ["Show organization", "Mention tools/methods", "Give examples"],
-      },
-      {
-        id: "beh-10",
-        question: "Tell me about a time you had to adapt to change.",
-        category: "behavioral",
-        timeLimit: 120,
-        hints: [
-          "Show flexibility",
-          "Explain approach",
-          "Highlight positive outcome",
-        ],
-      },
-      {
-        id: "beh-11",
-        question: "Describe a time you had to work with limited resources.",
-        category: "behavioral",
-        timeLimit: 150,
-        hints: [
-          "Show creativity",
-          "Mention problem-solving",
-          "Highlight results",
-        ],
-      },
-      {
-        id: "beh-12",
-        question: "How do you handle receiving feedback?",
-        category: "behavioral",
-        timeLimit: 120,
-        hints: ["Show openness", "Mention growth", "Give examples"],
-      },
+      // ── Easy ──
+      { id: "beh-1", question: "Tell me about a time you received harsh feedback. Walk me through your reaction and what changed afterward.", category: "behavioral", timeLimit: 150, hints: ["STAR method", "Show emotional maturity", "Highlight concrete changes"] },
+      { id: "beh-2", question: "Describe a situation where you had to collaborate with someone whose working style was completely different from yours.", category: "behavioral", timeLimit: 150, hints: ["Show empathy", "Explain adaptation strategy", "Focus on the outcome"] },
+      { id: "beh-3", question: "Give me an example of when you went significantly above and beyond your job description. Why did you do it?", category: "behavioral", timeLimit: 120, hints: ["Show intrinsic motivation", "Quantify impact", "Explain what drove you"] },
+      // ── Medium ──
+      { id: "beh-4", question: "Tell me about a project that failed. What was your role, what went wrong, and what would you do differently with the knowledge you have now?", category: "behavioral", timeLimit: 180, hints: ["Own your part", "Analyze root causes", "Show retrospective thinking"] },
+      { id: "beh-5", question: "Describe a time you had to make a critical decision with incomplete data and tight time pressure. Walk me through your thought process.", category: "behavioral", timeLimit: 180, hints: ["Show decision framework", "Mention risk assessment", "Explain the outcome"] },
+      { id: "beh-6", question: "Tell me about a conflict with a senior stakeholder. How did you navigate the politics while maintaining your position?", category: "behavioral", timeLimit: 180, hints: ["Stay professional", "Show diplomacy", "Demonstrate influence without authority"] },
+      { id: "beh-7", question: "Describe a time you identified a significant problem that no one else had noticed. How did you bring it to attention and drive resolution?", category: "behavioral", timeLimit: 150, hints: ["Show initiative", "Explain your discovery process", "Highlight impact"] },
+      { id: "beh-8", question: "Give an example of when you had to rapidly learn a new domain or technology to deliver on a commitment. How did you approach it?", category: "behavioral", timeLimit: 150, hints: ["Show learning strategy", "Mention resources used", "Highlight speed-to-competence"] },
+      // ── Hard ──
+      { id: "beh-9", question: "Tell me about a time you had to fire or manage out an underperforming team member, or strongly advocate for it. How did you handle the human side?", category: "behavioral", timeLimit: 180, hints: ["Show empathy AND accountability", "Explain the process", "Discuss impact on the team"] },
+      { id: "beh-10", question: "Describe a situation where you had to balance two equally important priorities with zero additional resources. What trade-offs did you make and why?", category: "behavioral", timeLimit: 180, hints: ["Show prioritization framework", "Explain trade-off reasoning", "Quantify impact of the choice"] },
+      { id: "beh-11", question: "Give an example of when you took a significant professional risk. What was the calculus behind your decision, and how did it play out?", category: "behavioral", timeLimit: 180, hints: ["Show risk assessment", "Explain upside vs downside", "Be honest about the result"] },
+      { id: "beh-12", question: "Tell me about a time you had to build trust with a team or client who was initially skeptical or hostile toward you. What specific actions did you take?", category: "behavioral", timeLimit: 150, hints: ["Show patience and empathy", "Describe specific trust-building actions", "Measure the turnaround"] },
     ],
+
     technical: [
-      {
-        id: "tech-1",
-        question:
-          "Explain a complex technical concept to a non-technical person.",
-        category: "technical",
-        timeLimit: 120,
-        hints: ["Use analogies", "Avoid jargon", "Check understanding"],
-      },
-      {
-        id: "tech-2",
-        question: "How do you stay updated with the latest technology trends?",
-        category: "technical",
-        timeLimit: 90,
-        hints: ["Mention specific sources", "Show passion", "Give examples"],
-      },
-      {
-        id: "tech-3",
-        question: "Describe your development process from idea to deployment.",
-        category: "technical",
-        timeLimit: 150,
-        hints: [
-          "Show methodology",
-          "Mention tools",
-          "Highlight best practices",
-        ],
-      },
-      {
-        id: "tech-4",
-        question: "How do you approach debugging a complex issue?",
-        category: "technical",
-        timeLimit: 120,
-        hints: [
-          "Show systematic approach",
-          "Mention tools",
-          "Highlight problem-solving",
-        ],
-      },
-      {
-        id: "tech-5",
-        question: "Tell me about a challenging technical problem you solved.",
-        category: "technical",
-        timeLimit: 180,
-        hints: [
-          "Explain the problem",
-          "Show your approach",
-          "Highlight the solution",
-        ],
-      },
-      {
-        id: "tech-6",
-        question: "How do you ensure code quality in your projects?",
-        category: "technical",
-        timeLimit: 120,
-        hints: ["Mention testing", "Code review", "Best practices"],
-      },
-      {
-        id: "tech-7",
-        question: "Describe your experience with version control systems.",
-        category: "technical",
-        timeLimit: 120,
-        hints: [
-          "Mention specific tools",
-          "Show workflow",
-          "Highlight collaboration",
-        ],
-      },
-      {
-        id: "tech-8",
-        question: "How do you handle technical debt in your projects?",
-        category: "technical",
-        timeLimit: 120,
-        hints: ["Show awareness", "Mention strategies", "Highlight balance"],
-      },
-      {
-        id: "tech-9",
-        question:
-          "Tell me about a time you had to learn a new technology quickly.",
-        category: "technical",
-        timeLimit: 150,
-        hints: [
-          "Show learning ability",
-          "Mention resources",
-          "Highlight application",
-        ],
-      },
-      {
-        id: "tech-10",
-        question: "How do you approach system design problems?",
-        category: "technical",
-        timeLimit: 150,
-        hints: [
-          "Show methodology",
-          "Mention considerations",
-          "Highlight trade-offs",
-        ],
-      },
-      {
-        id: "tech-11",
-        question: "Describe your experience with cloud platforms.",
-        category: "technical",
-        timeLimit: 120,
-        hints: [
-          "Mention specific platforms",
-          "Show understanding",
-          "Highlight experience",
-        ],
-      },
-      {
-        id: "tech-12",
-        question: "How do you handle performance optimization?",
-        category: "technical",
-        timeLimit: 120,
-        hints: ["Show methodology", "Mention tools", "Highlight results"],
-      },
-      {
-        id: "tech-13",
-        question: "Tell me about your experience with databases.",
-        category: "technical",
-        timeLimit: 120,
-        hints: ["Mention types", "Show understanding", "Highlight experience"],
-      },
-      {
-        id: "tech-14",
-        question: "How do you approach security in your applications?",
-        category: "technical",
-        timeLimit: 120,
-        hints: [
-          "Show awareness",
-          "Mention practices",
-          "Highlight considerations",
-        ],
-      },
-      {
-        id: "tech-15",
-        question:
-          "Describe your experience with agile development methodologies.",
-        category: "technical",
-        timeLimit: 120,
-        hints: [
-          "Show understanding",
-          "Mention experience",
-          "Highlight benefits",
-        ],
-      },
+      // ── Easy ──
+      { id: "tech-1", question: "Explain the difference between SQL and NoSQL databases. When would you choose one over the other for a new project?", category: "technical", timeLimit: 120, hints: ["Cover CAP theorem", "Mention specific use cases", "Discuss trade-offs"] },
+      { id: "tech-2", question: "Walk me through what happens from the moment a user types a URL into their browser until they see the page. Be as detailed as you can.", category: "technical", timeLimit: 180, hints: ["DNS → TCP → TLS → HTTP → Server → Response → Render", "Mention caching layers", "Discuss CDN if applicable"] },
+      { id: "tech-3", question: "What's the difference between horizontal and vertical scaling? Give a real-world scenario where you'd pick each.", category: "technical", timeLimit: 120, hints: ["Cost vs complexity", "Stateless vs stateful", "Load balancer implications"] },
+      // ── Medium ──
+      { id: "tech-4", question: "You deploy a new feature and error rates spike 10x. Walk me through your incident response process, from detection to post-mortem.", category: "technical", timeLimit: 180, hints: ["Detection → Triage → Mitigation → Root cause → Post-mortem", "Mention monitoring tools", "Discuss rollback strategy"] },
+      { id: "tech-5", question: "Explain how you would implement a rate limiter for an API gateway. What algorithm would you choose and why?", category: "technical", timeLimit: 180, hints: ["Token bucket vs sliding window", "Distributed rate limiting challenges", "Edge cases: bursts, fairness"] },
+      { id: "tech-6", question: "How would you design the data model and API for a real-time collaborative editing feature (like Google Docs)?", category: "technical", timeLimit: 180, hints: ["OT vs CRDT", "Conflict resolution strategy", "WebSocket vs SSE"] },
+      { id: "tech-7", question: "Describe how you've implemented CI/CD pipelines in a previous project. What was your testing strategy?", category: "technical", timeLimit: 150, hints: ["Build → Test → Deploy stages", "Testing pyramid", "Rollback mechanisms"] },
+      { id: "tech-8", question: "Explain eventual consistency vs strong consistency. Describe a situation where you chose eventual consistency and how you handled the edge cases.", category: "technical", timeLimit: 150, hints: ["CAP theorem context", "Real-world trade-offs", "Compensation patterns"] },
+      // ── Hard ──
+      { id: "tech-9", question: "Your database is getting 50K reads/sec and writes are becoming a bottleneck. Walk me through your strategy to scale writes while maintaining data integrity.", category: "technical", timeLimit: 180, hints: ["Sharding strategies", "Write-ahead logging", "Conflict resolution", "Read replicas"] },
+      { id: "tech-10", question: "Design a system to detect and prevent fraudulent transactions in real-time for a payment platform processing 10K TPS.", category: "technical", timeLimit: 240, hints: ["ML pipeline + rules engine", "Latency requirements", "False positive management", "Feature engineering"] },
+      { id: "tech-11", question: "How would you migrate a monolithic application serving millions of users to microservices without downtime? What's your phased approach?", category: "technical", timeLimit: 240, hints: ["Strangler fig pattern", "API gateway", "Data ownership", "Monitoring during migration"] },
+      { id: "tech-12", question: "Explain how a garbage collector works in your language of choice. What are the trade-offs between different GC strategies?", category: "technical", timeLimit: 150, hints: ["Mark-and-sweep vs generational", "Stop-the-world pauses", "Tuning for latency vs throughput"] },
     ],
+
     quick: [
-      {
-        id: "quick-1",
-        question: "What's your biggest professional achievement?",
-        category: "quick",
-        timeLimit: 60,
-        hints: ["Be specific", "Show impact", "Keep it concise"],
-      },
-      {
-        id: "quick-2",
-        question: "Why are you looking for a new role?",
-        category: "quick",
-        timeLimit: 60,
-        hints: ["Stay positive", "Be honest", "Focus on growth"],
-      },
-      {
-        id: "quick-3",
-        question: "What's your preferred work environment?",
-        category: "quick",
-        timeLimit: 45,
-        hints: ["Be honest", "Show flexibility", "Connect to role"],
-      },
-      {
-        id: "quick-4",
-        question: "How do you handle criticism?",
-        category: "quick",
-        timeLimit: 45,
-        hints: ["Show openness", "Mention growth", "Stay positive"],
-      },
-      {
-        id: "quick-5",
-        question: "What's your biggest weakness?",
-        category: "quick",
-        timeLimit: 60,
-        hints: ["Be honest", "Show improvement", "Connect to growth"],
-      },
+      { id: "quick-1", question: "In 60 seconds, convince me to hire you for this role. Go.", category: "quick", timeLimit: 60, hints: ["Lead with impact", "Name your differentiator", "End with what excites you about the role"] },
+      { id: "quick-2", question: "What's the most impactful thing you shipped in the last 12 months? Give me the three-line version.", category: "quick", timeLimit: 60, hints: ["Problem → Action → Result", "Use numbers", "Be concise"] },
+      { id: "quick-3", question: "What's a controversial opinion you hold about your industry that most people would disagree with?", category: "quick", timeLimit: 60, hints: ["Be genuine", "Support with evidence", "Show independent thinking"] },
+      { id: "quick-4", question: "If you had unlimited resources and one year, what would you build and why?", category: "quick", timeLimit: 60, hints: ["Show vision", "Connect to real problems", "Demonstrate passion"] },
+      { id: "quick-5", question: "What's one skill you're actively working on improving right now, and how are you doing it?", category: "quick", timeLimit: 45, hints: ["Show growth mindset", "Be specific about method", "Mention measurable progress"] },
     ],
+
     executive: [
-      {
-        id: "exec-1",
-        question: "How do you define leadership?",
-        category: "executive",
-        timeLimit: 120,
-        hints: ["Show understanding", "Give examples", "Connect to experience"],
-      },
-      {
-        id: "exec-2",
-        question: "Describe your leadership style.",
-        category: "executive",
-        timeLimit: 120,
-        hints: ["Be authentic", "Give examples", "Show adaptability"],
-      },
-      {
-        id: "exec-3",
-        question: "How do you handle difficult team members?",
-        category: "executive",
-        timeLimit: 150,
-        hints: ["Show empathy", "Focus on solutions", "Highlight leadership"],
-      },
-      {
-        id: "exec-4",
-        question: "Tell me about a time you had to make an unpopular decision.",
-        category: "executive",
-        timeLimit: 150,
-        hints: ["Show reasoning", "Explain communication", "Highlight outcome"],
-      },
-      {
-        id: "exec-5",
-        question: "How do you build and maintain team morale?",
-        category: "executive",
-        timeLimit: 120,
-        hints: ["Show understanding", "Give examples", "Highlight results"],
-      },
-      {
-        id: "exec-6",
-        question: "Describe your strategic planning process.",
-        category: "executive",
-        timeLimit: 150,
-        hints: ["Show methodology", "Mention tools", "Highlight outcomes"],
-      },
-      {
-        id: "exec-7",
-        question: "How do you handle competing priorities?",
-        category: "executive",
-        timeLimit: 120,
-        hints: [
-          "Show methodology",
-          "Mention tools",
-          "Highlight decision-making",
-        ],
-      },
-      {
-        id: "exec-8",
-        question:
-          "Tell me about a time you had to manage change in your organization.",
-        category: "executive",
-        timeLimit: 180,
-        hints: ["Show leadership", "Explain approach", "Highlight results"],
-      },
-      {
-        id: "exec-9",
-        question: "How do you measure success in your role?",
-        category: "executive",
-        timeLimit: 120,
-        hints: ["Show metrics", "Mention KPIs", "Highlight impact"],
-      },
-      {
-        id: "exec-10",
-        question: "What's your vision for this role?",
-        category: "executive",
-        timeLimit: 120,
-        hints: [
-          "Show understanding",
-          "Be ambitious",
-          "Connect to company goals",
-        ],
-      },
+      // ── Easy ──
+      { id: "exec-1", question: "How do you build a high-performing team from scratch? Walk me through your hiring philosophy and first 90 days.", category: "executive", timeLimit: 180, hints: ["Hiring bar & values", "Onboarding structure", "Culture setting"] },
+      { id: "exec-2", question: "Describe your approach to setting and cascading OKRs across a multi-team organization.", category: "executive", timeLimit: 150, hints: ["Company → Team → Individual alignment", "Review cadence", "Course-correction triggers"] },
+      // ── Medium ──
+      { id: "exec-3", question: "Tell me about a time you had to shut down a project your team was emotionally invested in. How did you handle communication and morale?", category: "executive", timeLimit: 180, hints: ["Data-driven decision", "Empathetic communication", "Redirecting energy"] },
+      { id: "exec-4", question: "How do you handle a situation where two of your direct reports have a deep, unresolved conflict that's affecting team performance?", category: "executive", timeLimit: 180, hints: ["Mediation approach", "Root cause analysis", "Escalation criteria"] },
+      { id: "exec-5", question: "Describe a time you had to influence a C-level executive to change direction on a strategic initiative. What was your approach?", category: "executive", timeLimit: 180, hints: ["Stakeholder mapping", "Data + narrative", "Political awareness"] },
+      { id: "exec-6", question: "How do you balance innovation and operational excellence when your team is already stretched thin?", category: "executive", timeLimit: 150, hints: ["Innovation time allocation", "Tech debt strategy", "Prioritization framework"] },
+      // ── Hard ──
+      { id: "exec-7", question: "You inherit a team with low morale, missed deadlines, and a 40% attrition rate. What's your 90-day turnaround plan?", category: "executive", timeLimit: 240, hints: ["Listen first", "Quick wins for credibility", "Address root causes of attrition"] },
+      { id: "exec-8", question: "How would you evaluate and restructure an engineering organization that has grown from 50 to 500 people and is showing signs of dysfunction?", category: "executive", timeLimit: 240, hints: ["Org assessment framework", "Communication structure", "Team topology"] },
+      { id: "exec-9", question: "Describe your approach to managing up — specifically, how you keep your VP/CTO informed without burdening them with noise.", category: "executive", timeLimit: 150, hints: ["Signal-to-noise ratio", "Proactive updates", "Escalation criteria"] },
+      { id: "exec-10", question: "If the board asked you to cut 30% of your team's budget while maintaining output, how would you approach it?", category: "executive", timeLimit: 180, hints: ["Impact-based prioritization", "Automation opportunities", "Tough but fair decisions"] },
     ],
+
+    system_design: [
+      { id: "sd-1", question: "Design a URL shortener like bit.ly that handles 100M new URLs per month. Focus on the data model, API, and scaling strategy.", category: "system_design", timeLimit: 300, hints: ["Base62 encoding", "Read-heavy → caching layer", "Database sharding by hash", "Analytics pipeline"] },
+      { id: "sd-2", question: "Design a real-time chat system like Slack. How would you handle presence indicators, message delivery guarantees, and search?", category: "system_design", timeLimit: 300, hints: ["WebSocket connections", "Message queue for reliability", "Eventual consistency for presence", "Full-text search index"] },
+      { id: "sd-3", question: "Design a ride-sharing system like Uber. Focus on matching drivers to riders in real-time at scale.", category: "system_design", timeLimit: 300, hints: ["Geospatial indexing (QuadTree/S2)", "Location update frequency", "ETA estimation", "Supply-demand balancing"] },
+      { id: "sd-4", question: "Design a news feed system like Instagram or Twitter. How would you handle fan-out, ranking, and real-time updates?", category: "system_design", timeLimit: 300, hints: ["Push vs pull model", "Hybrid fan-out", "Ranking algorithm", "Cache invalidation"] },
+      { id: "sd-5", question: "Design a distributed key-value store like DynamoDB. Discuss consistency, partitioning, replication, and failure handling.", category: "system_design", timeLimit: 300, hints: ["Consistent hashing", "Quorum reads/writes", "Conflict resolution (vector clocks)", "Gossip protocol"] },
+      { id: "sd-6", question: "Design a video streaming platform like YouTube. How would you handle upload, transcoding, storage, and adaptive bitrate streaming?", category: "system_design", timeLimit: 300, hints: ["Upload pipeline", "Async transcoding", "CDN distribution", "HLS/DASH adaptive streaming"] },
+      { id: "sd-7", question: "Design a notification system that handles push notifications, email, SMS, and in-app alerts for 100M users with user preferences.", category: "system_design", timeLimit: 300, hints: ["Event-driven architecture", "Priority queue", "Rate limiting per user", "Delivery tracking"] },
+      { id: "sd-8", question: "Design a search autocomplete system like Google Search suggestions. How would you handle real-time ranking and personalization?", category: "system_design", timeLimit: 300, hints: ["Trie data structure", "Frequency-based ranking", "Prefix caching", "Personalization layer"] },
+    ],
+
+    case_study: [
+      { id: "case-1", question: "You're the PM for a food delivery app. Orders have dropped 20% in the last quarter while competitor orders are flat. Walk me through how you'd diagnose and fix this.", category: "case_study", timeLimit: 240, hints: ["Segment the funnel", "Check supply vs demand side", "Competitive analysis", "Hypothesis-driven approach"] },
+      { id: "case-2", question: "A B2B SaaS startup asks you to define their go-to-market strategy for entering the European market. What's your framework?", category: "case_study", timeLimit: 240, hints: ["Market sizing (TAM/SAM/SOM)", "Regulatory landscape (GDPR)", "Localization strategy", "Channel partnerships"] },
+      { id: "case-3", question: "Google wants to launch a new standalone product for small business accounting. How would you evaluate whether this is worth pursuing?", category: "case_study", timeLimit: 240, hints: ["Market size & growth", "Competitive moat analysis", "Build vs buy vs partner", "Success metrics"] },
+      { id: "case-4", question: "You're leading product for a fintech company. Regulators just introduced a new compliance requirement that will break your existing user flow. How do you handle this?", category: "case_study", timeLimit: 240, hints: ["Compliance timeline", "User impact assessment", "Phased rollout", "Communication strategy"] },
+      { id: "case-5", question: "An e-commerce platform's conversion rate dropped from 3.2% to 2.1% after a redesign. The design team insists the new design is better. How do you resolve this?", category: "case_study", timeLimit: 240, hints: ["Data analysis (segments, devices)", "A/B test setup", "Qualitative research", "Stakeholder management"] },
+      { id: "case-6", question: "You're launching a new AI feature in your product. How do you think about pricing: free, freemium, usage-based, or bundled? Walk me through your framework.", category: "case_study", timeLimit: 240, hints: ["Value-based pricing", "Competitive benchmarking", "Margin analysis", "Behavioral pricing psychology"] },
+      { id: "case-7", question: "A social media platform is experiencing a trust crisis due to misinformation. As VP of Product, what's your 6-month action plan?", category: "case_study", timeLimit: 240, hints: ["Content moderation strategy", "Transparency features", "User education", "Regulatory proactivity"] },
+      { id: "case-8", question: "Your company's DAU is growing but revenue per user is declining. Diagnose the potential causes and propose three initiatives to reverse the trend.", category: "case_study", timeLimit: 240, hints: ["Monetization funnel analysis", "User segment profiling", "Pricing optimization", "New revenue streams"] },
+    ],
+  };
+
+  // ── AI-Generated Adaptive Questions ───────────────────────
+  const generateAdaptiveQuestions = async (
+    templateType: string,
+    role: string,
+    difficulty: string,
+    count: number
+  ): Promise<{ id: string; question: string; category: string; timeLimit: number; hints: string[] }[] | null> => {
+    try {
+      const historyPrompt = questionHistoryManager.getAvoidancePrompt(templateType);
+
+      const prompt = `You are an expert interview question designer for top-tier companies like Google, Meta, Amazon, Stripe, and McKinsey.
+
+Generate ${count} unique, high-quality interview questions for the following parameters:
+- Role: ${role || "General professional"}
+- Interview Type: ${templateType}
+- Difficulty: ${difficulty}
+- Questions should progress from easier to harder.
+
+${historyPrompt}
+
+For each question, provide:
+1. A clear, specific question (not generic — make it feel like a real FAANG/top-company interview)
+2. A category tag
+3. A time limit in seconds (60-300 depending on complexity)
+4. Three coaching hints/frameworks the candidate should use
+
+Respond with valid JSON only — an array of objects:
+[
+  {
+    "id": "ai-1",
+    "question": "...specific question...",
+    "category": "${templateType}",
+    "timeLimit": 120,
+    "hints": ["hint1", "hint2", "hint3"]
+  }
+]
+
+Do NOT include any markdown, explanation, or text outside the JSON array.`;
+
+      const response = await aiService.generateResponse(prompt, "interview");
+      const cleaned = response.replace(/```json\n?|\n?```/g, "").trim();
+      const parsed = JSON.parse(cleaned);
+
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].question) {
+        // Re-assign IDs to be safe
+        return parsed.map((q: { question: string; category?: string; timeLimit?: number; hints?: string[] }, i: number) => ({
+          id: `ai-${templateType}-${i + 1}`,
+          question: q.question,
+          category: q.category || templateType,
+          timeLimit: q.timeLimit || 120,
+          hints: q.hints || ["Take your time", "Structure your answer", "Use specific examples"],
+        }));
+      }
+      return null; // fallback
+    } catch (err) {
+      console.warn("[AdaptiveQuestions] AI generation failed, using fallback:", err);
+      return null;
+    }
   };
 
   const startInterview = (templateId: string) => {
@@ -1034,38 +975,80 @@ export const MockInterview: React.FC = () => {
     const template = interviewTemplates.find((t) => t.id === templateId);
     if (!template) return;
 
-    // Get the appropriate question set for this template
-    const questionSet = questionSets[templateId as keyof typeof questionSets];
-    if (!questionSet) {
+    // ── INSTANT START: use fallback questions immediately ──
+    const pool = questionSets[templateId];
+    const fallbackQuestions = pool
+      ? questionHistoryManager.shuffleWithDeprioritization(pool, templateId).slice(0, template.questionCount)
+      : [];
+
+    if (fallbackQuestions.length === 0) {
       console.error(`No question set found for template: ${templateId}`);
       return;
     }
 
+    setIsAIGenerated(false);
+
     const session: InterviewSession = {
       id: Date.now().toString(),
       type:
-        templateId === "technical"
+        templateId === "technical" || templateId === "system_design"
           ? "technical"
           : templateId === "behavioral"
-          ? "behavioral"
-          : "mixed",
+            ? "behavioral"
+            : "mixed",
       difficulty: template.difficulty,
       duration: template.duration,
-      questions: questionSet.slice(0, template.questionCount),
+      questions: fallbackQuestions,
       currentQuestionIndex: 0,
       startTime: new Date(),
     };
 
+    // Record fallback questions in history
+    questionHistoryManager.recordInterview(
+      session.id,
+      templateId,
+      fallbackQuestions.map(q => q.question)
+    );
+
     setActiveSession(session);
     setTimeRemaining(session.questions[0].timeLimit);
     setCurrentAnswer("");
-    setIsInterviewStarted(false); // Start in preparation mode
+    setIsInterviewStarted(false);
 
     // Auto-start camera if enabled and not already active
     if (showCameraPreview && !isCameraActive) {
       console.log("Auto-starting camera for interview...");
       startCamera();
     }
+
+    // ── BACKGROUND: generate AI questions and swap them in silently ──
+    generateAdaptiveQuestions(
+      templateId,
+      customRole || template.name,
+      template.difficulty,
+      template.questionCount
+    ).then((aiQuestions) => {
+      if (aiQuestions && aiQuestions.length > 0) {
+        // Only swap if user hasn't started the interview yet
+        setActiveSession((prev) => {
+          if (!prev || prev.id !== session.id) return prev;
+          // Re-record with AI questions
+          questionHistoryManager.recordInterview(
+            prev.id,
+            templateId,
+            aiQuestions.map(q => q.question)
+          );
+          return {
+            ...prev,
+            questions: aiQuestions.slice(0, template.questionCount),
+          };
+        });
+        setIsAIGenerated(true);
+        console.log("✅ AI questions swapped in successfully");
+      }
+    }).catch(() => {
+      console.log("ℹ️ AI generation failed, keeping fallback questions");
+    });
   };
 
   const beginInterview = () => {
@@ -1319,7 +1302,7 @@ Return only the JSON array, no additional text.`;
 
       // Convert AI questions to our format
       const formattedQuestions: InterviewQuestion[] = aiQuestions.map(
-        (q: any, index: number) => ({
+        (q: Record<string, unknown>, index: number) => ({
           id: `ai-${index + 1}`,
           question: q.question,
           category: q.category || focusAreas[0],
@@ -1396,7 +1379,7 @@ Return only the JSON array, no additional text.`;
   };
 
   const generateResumeBasedQuestions = async (
-    resumeData: any,
+    resumeData: Record<string, unknown>,
     difficulty: string,
     count: number
   ): Promise<InterviewQuestion[]> => {
@@ -1459,7 +1442,7 @@ Return only the JSON array, no additional text.`;
 
       // Convert AI questions to our format
       const formattedQuestions: InterviewQuestion[] = aiQuestions.map(
-        (q: any, index: number) => ({
+        (q: Record<string, unknown>, index: number) => ({
           id: `resume-${index + 1}`,
           question: q.question,
           category: q.category || "general",
@@ -1574,14 +1557,173 @@ Total Questions: ${activeSession.questions.length}`;
           "1. Tell me about yourself\n2. Why are you interested in this role?\n3. What are your greatest strengths?\n4. Where do you see yourself in 5 years?\n5. Do you have any questions for us?";
       }
 
+      const currentUserInfo = realTimeAuth.getCurrentUser();
+      const userName = currentUserInfo?.username || "Candidate";
+
+      // Fetch user profile to get AI Tone preference
+      let aiTone = "balanced";
+      if (currentUserInfo?.id) {
+        try {
+          const profile = await ProfileService.getProfileByUserId(currentUserInfo.id);
+          if (profile?.aiTone) {
+            aiTone = profile.aiTone;
+          }
+        } catch (e) {
+          console.error("Failed to fetch profile for AI Tone in MockInterview", e);
+        }
+      }
+
+      let toneInstruction = `Be professional, yet warm, supportive, and welcoming:
+- Use official yet very friendly language.
+- Keep responses concise and to the point (like in a real voice conversation).
+- Avoid robotic phrasing—sound natural, empathetic, and conversational.
+- Show genuine interest in helping them succeed.`;
+
+      if (aiTone === "motivating") {
+        toneInstruction = `Be overwhelmingly positive, uplifting, and motivating:
+- Act as their biggest cheerleader.
+- Shower them with encouragement and praise for their efforts.
+- Keep responses concise but highly energetic and friendly.
+- Frame all feedback in the most positive light possible.`;
+      } else if (aiTone === "honest") {
+        toneInstruction = `Be direct, unvarnished, and completely honest:
+- Do not sugarcoat any feedback. If an answer was poor, say so directly.
+- Act as a strict, rigorous interviewer who expects excellence.
+- Keep responses concise and highly critical, focusing entirely on what needs improvement.
+- Maintain professionalism but do not prioritize warmth over accuracy.`;
+      } else if (aiTone === "academic") {
+        toneInstruction = `Be highly academic, formal, and analytical:
+- Focus intensely on the theoretical correctness and structural logic of their answers.
+- Speak with elevated, professional, and precise vocabulary.
+- Keep responses concise but rigorous.
+- Offer feedback rooted in industry standards and academic principles.`;
+      }
+
       console.log("Starting interview with questions:", formattedQuestions);
+      // ── Build mode-specific system prompt & firstMessage ──
+      const modePrompts: Record<string, { system: string; greeting: string }> = {
+        learning: {
+          system: `You are an expert educational interview coach named Sarah. Your ultimate goal is to help ${userName} LEARN, improve, and gain confidence.
+
+${interviewContext}
+
+Questions to cover:
+${formattedQuestions}
+
+Coaching Guidelines:
+- After each answer, give brief, constructive feedback (what they did well + one improvement).
+- If they struggle, offer hints and guide them to the answer instead of moving on.
+- Use encouragement: "Great start!", "I liked how you structured that."
+- Ask clarifying follow-ups to deepen their thinking.
+- Teach frameworks (STAR, CAR, etc.) when relevant.
+- Keep responses SHORT — 2-3 sentences max.
+
+${toneInstruction}`,
+          greeting: `Hello ${userName}! I'm Sarah, your interview coach today. This is a safe space to learn and improve — I'll give you real-time tips as we go. Let's start with your ${activeSession?.type || "general"} practice session!`,
+        },
+        realistic: {
+          system: `You are a professional interviewer named Sarah conducting a realistic interview for a ${activeSession?.type || "general"} role. Behave EXACTLY like a real interviewer at a top company.
+
+${interviewContext}
+
+Questions to cover:
+${formattedQuestions}
+
+Realistic Interview Rules:
+- Do NOT give feedback, hints, or coaching during the interview.
+- React naturally: nod acknowledgments like "I see", "Interesting", "Thank you for that."
+- Ask follow-up questions when answers are vague or surface-level.
+- Maintain professional but warm demeanor.
+- Time-box appropriately — if an answer runs long, politely move on.
+- After all questions, end with "Do you have any questions for me?"
+- Keep responses SHORT and natural — this is a real interview.
+
+${toneInstruction}`,
+          greeting: `Hello ${userName}, thank you for joining us today. I'm Sarah, and I'll be conducting your interview for the ${activeSession?.type || "general"} position. This should take about ${activeSession?.duration || 30} minutes. Shall we begin?`,
+        },
+        stress: {
+          system: `You are a demanding, fast-paced interviewer named Sarah. Your role is to stress-test ${userName} under pressure — rapid questions, tough follow-ups, and zero hand-holding.
+
+${interviewContext}
+
+Questions to cover:
+${formattedQuestions}
+
+Stress Test Rules:
+- Ask questions in rapid succession. Don't let long pauses sit.
+- Challenge vague answers immediately: "Can you be more specific?" "What exactly do you mean?"
+- Interrupt politely if they ramble: "Let me stop you there — can you get to the key point?"
+- Ask curveball follow-ups to test adaptability.
+- Maintain professional intensity — firm but not rude.
+- After the session, acknowledge their effort briefly.
+- Keep all responses under 2 sentences to maintain pace.
+
+${toneInstruction}`,
+          greeting: `Hi ${userName}. I'm Sarah. We're going to move fast today — I have ${activeSession?.questions.length || 5} questions and limited time. Ready? Let's go.`,
+        },
+        behavioral: {
+          system: `You are a behavioral interview specialist named Sarah with deep expertise in the STAR method, leadership assessment, and cultural fit evaluation.
+
+${interviewContext}
+
+Questions to cover:
+${formattedQuestions}
+
+Behavioral Interview Guidelines:
+- For every answer, probe for the full STAR structure: Situation, Task, Action, Result.
+- If they skip a component, ask: "What was the specific situation?" or "What measurable result did that produce?"
+- Look for leadership signals, conflict resolution, teamwork evidence.
+- Ask "Tell me about a time when..." follow-ups to go deeper.
+- Evaluate self-awareness: "What would you do differently now?"
+- Keep each exchange focused — don't let stories drift.
+- Keep your responses brief — 1-2 sentences to redirect or probe.
+
+${toneInstruction}`,
+          greeting: `Hello ${userName}! I'm Sarah. Today we'll focus on your experiences and stories — I want to really understand how you've handled real situations. I'll be asking for specific details, so take your time to think before answering. Let's start!`,
+        },
+        technical_deep: {
+          system: `You are a senior technical interviewer named Sarah at a FAANG-level company. Your role is to deeply evaluate ${userName}'s technical thinking, system design ability, and problem-solving approach.
+
+${interviewContext}
+
+Questions to cover:
+${formattedQuestions}
+
+Technical Interview Guidelines:
+- Start with the question, then progressively increase complexity with follow-ups.
+- Ask "Why?" and "What tradeoffs?" after every design decision.
+- Probe edge cases: "What happens if this fails?" "How does this scale?"
+- If they use a technology, ask them to explain HOW it works under the hood.
+- Test their ability to communicate technical concepts clearly.
+- Don't accept hand-wavy answers — push for specifics.
+- Keep your responses technical and concise — 2-3 sentences.
+
+${toneInstruction}`,
+          greeting: `Hi ${userName}, I'm Sarah. Today we'll dive deep into technical topics — I'll be asking follow-ups to understand your thought process, so think out loud. Let's begin with the first question.`,
+        },
+        custom_mode: {
+          system: `You are an interviewer named Sarah conducting a mock interview with ${userName}.
+
+${interviewContext}
+
+Questions to cover:
+${formattedQuestions}
+
+Custom Instructions from the candidate:
+${customModePrompt || "Conduct a standard, balanced mock interview with moderate feedback."}
+
+${toneInstruction}
+
+Keep your responses concise — 2-3 sentences maximum.`,
+          greeting: `Hello ${userName}! I'm Sarah, your interviewer today. Let's get started with your practice session!`,
+        },
+      };
+
+      const selectedMode = modePrompts[interviewMode] || modePrompts.learning;
+
       await vapi.start({
         name: "Interviewer",
-        firstMessage: `Hello! Thank you for taking the time to speak with me today. I'm excited to learn more about you and your experience. This is a ${
-          activeSession?.difficulty || "medium"
-        } level interview for a ${
-          activeSession?.type || "general"
-        } position. Let's begin!`,
+        firstMessage: selectedMode.greeting,
         transcriber: {
           provider: "deepgram" as const,
           model: "nova-2",
@@ -1602,42 +1744,7 @@ Total Questions: ${activeSession.questions.length}`;
           messages: [
             {
               role: "system" as const,
-              content: `You are a professional job interviewer conducting a real-time voice interview with a candidate. Your goal is to assess their qualifications, motivation, and fit for the role.
-
-${interviewContext}
-
-Interview Guidelines:
-Follow the structured question flow:
-${formattedQuestions}
-
-Engage naturally & react appropriately:
-- Listen actively to responses and acknowledge them before moving forward
-- Ask brief follow-up questions if a response is vague or requires more detail
-- Keep the conversation flowing smoothly while maintaining control
-- Adapt the difficulty and depth based on the candidate's responses
-
-Be professional, yet warm and welcoming:
-- Use official yet friendly language
-- Keep responses concise and to the point (like in a real voice interview)
-- Avoid robotic phrasing—sound natural and conversational
-- Show genuine interest in the candidate's responses
-
-Answer the candidate's questions professionally:
-- If asked about the role, company, or expectations, provide a clear and relevant answer
-- If unsure, redirect the candidate to HR for more details
-- Be helpful and informative while maintaining professional boundaries
-
-Conclude the interview properly:
-- Thank the candidate for their time
-- Inform them that the company will reach out soon with feedback
-- End the conversation on a polite and positive note
-
-Important:
-- Keep all your responses short and simple
-- Use official language, but be kind and welcoming
-- This is a voice conversation, so keep responses concise
-- Don't ramble for too long
-- Focus on the specific questions provided and adapt based on the candidate's responses`,
+              content: selectedMode.system,
             },
           ],
         },
@@ -1667,207 +1774,6 @@ Important:
     }
   };
 
-  const saveInterviewPerformanceData = async (session?: InterviewSession) => {
-    const sessionToUse = session || activeSession;
-
-    console.log("🔍 saveInterviewPerformanceData called", {
-      hasActiveSession: !!activeSession,
-      hasSessionParam: !!session,
-      hasSessionToUse: !!sessionToUse,
-      messagesLength: messages.length,
-      sessionToUse,
-      messages: messages.slice(0, 3), // Show first 3 messages for debugging
-    });
-
-    if (!sessionToUse) {
-      console.log("❌ Early return: No session available", {
-        hasSession: !!sessionToUse,
-        messagesLength: messages.length,
-      });
-      return;
-    }
-
-    // Allow saving even with empty messages for real score updates
-    if (messages.length === 0) {
-      console.warn(
-        "⚠️ No messages available - this might be a real score update",
-        {
-          hasSession: !!sessionToUse,
-          messagesLength: messages.length,
-          hasRealAIScores: !!realAIScores,
-        }
-      );
-    }
-
-    try {
-      // Calculate interview duration
-      const duration = (Date.now() - sessionToUse.startTime.getTime()) / 1000; // in seconds
-
-      // Convert session questions to InterviewQuestionData format
-      const sessionQuestions = (sessionToUse.questions || []).map(
-        (q, index) => ({
-          id: q.id || `q_${index}`,
-          question: q.question || "Question not available",
-          category: q.category || "general",
-          timeLimit: q.timeLimit || 120,
-          hints: q.hints || [],
-          askedAt: new Date(
-            sessionToUse.startTime.getTime() + index * 180000
-          ).toISOString(), // Estimate timing
-          answeredAt:
-            index <= sessionToUse.currentQuestionIndex
-              ? new Date(
-                  sessionToUse.startTime.getTime() + (index + 1) * 180000
-                ).toISOString()
-              : new Date(
-                  sessionToUse.startTime.getTime() + (index + 1) * 180000
-                ).toISOString(), // Always provide a timestamp
-        })
-      );
-
-      // Generate performance data based on available information
-      const performanceData: InterviewPerformanceData = {
-        id: `interview_${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        role:
-          sessionToUse.type === "custom"
-            ? customRole || "Custom Role"
-            : sessionToUse.type === "resume"
-            ? parsedResumeData?.sections?.summary?.split(" ").slice(0, 5).join(" ") || "Resume-Based Role"
-            : sessionToUse.type,
-        difficulty: sessionToUse.difficulty || "medium",
-        duration: duration || 0,
-
-        // Use real AI feedback scores if available, otherwise use minimal fallback
-        overallScore: getActualPerformanceScore("overall"),
-        technicalScore: getActualPerformanceScore("technical"),
-        communicationScore: getActualPerformanceScore("communication"),
-        behavioralScore: getActualPerformanceScore("behavioral"),
-
-        // Question performance
-        questionsAnswered: sessionToUse.currentQuestionIndex + 1,
-        questionsCorrect: Math.floor(
-          (sessionToUse.currentQuestionIndex + 1) * 0.7
-        ), // Estimate 70% correct
-        averageResponseTime: duration / (sessionToUse.currentQuestionIndex + 1),
-
-        // Detailed metrics (using real analysis or transparent fallback)
-        detailedMetrics: {
-          confidence: getActualPerformanceScore("overall"), // Use same fallback for consistency
-          clarity: getActualPerformanceScore("communication"),
-          professionalism: getActualPerformanceScore("behavioral"),
-          engagement: getActualPerformanceScore("behavioral"),
-          adaptability: getActualPerformanceScore("overall"),
-        },
-
-        // Mock speech and body language analysis (since we don't have real analysis)
-        speechAnalysis: generateMockSpeechAnalysis(),
-        bodyLanguageAnalysis: generateMockBodyLanguageAnalysis(),
-
-        // Generate insights based on conversation
-        strengths: generateStrengths(),
-        weaknesses: generateWeaknesses(),
-        recommendations: generateRecommendations(),
-
-        // NEW: Store actual interview session data
-        interviewSession: {
-          questions: sessionQuestions || [],
-          messages: (messages || []).map((msg) => ({
-            role: msg.role || "user",
-            content: msg.content || "",
-            timestamp: msg.timestamp || new Date().toISOString(),
-          })),
-          sessionType: sessionToUse.type || "general",
-          interviewType:
-            sessionToUse.type === "custom"
-              ? customRole || "Custom Role"
-              : sessionToUse.type || "general",
-        },
-      };
-
-      // Validate data before saving to prevent undefined values
-      const validateData = (obj: any, path = ""): void => {
-        for (const [key, value] of Object.entries(obj)) {
-          const currentPath = path ? `${path}.${key}` : key;
-          if (value === undefined) {
-            console.error(`❌ Undefined value found at ${currentPath}`);
-            throw new Error(`Undefined value at ${currentPath}`);
-          }
-          if (
-            value !== null &&
-            typeof value === "object" &&
-            !Array.isArray(value)
-          ) {
-            validateData(value, currentPath);
-          }
-          if (Array.isArray(value)) {
-            value.forEach((item, index) => {
-              if (item !== null && typeof item === "object") {
-                validateData(item, `${currentPath}[${index}]`);
-              }
-            });
-          }
-        }
-      };
-
-      try {
-        validateData(performanceData);
-        console.log("✅ Data validation passed - no undefined values found");
-      } catch (error) {
-        console.error("❌ Data validation failed:", error);
-        throw error;
-      }
-
-      console.log("💾 Saving performance data:", performanceData);
-
-      // Save to all analytics systems
-      performanceAnalytics.current.savePerformanceData(performanceData);
-      analyticsStorage.savePerformanceData(performanceData);
-
-      // Save to unified cloud storage for cross-device sync
-      const cloudSaveResult = await unifiedAnalyticsStorage.savePerformanceData(
-        performanceData
-      );
-      console.log("☁️ Cloud save result:", cloudSaveResult);
-
-      console.log("✅ Performance data saved to analytics:", {
-        id: performanceData.id,
-        overallScore: performanceData.overallScore,
-        timestamp: performanceData.timestamp,
-      });
-    } catch (error) {
-      console.error("Error saving performance data:", error);
-    }
-  };
-
-  // State to store real AI feedback scores
-  const [realAIScores, setRealAIScores] = useState<{
-    overall: number;
-    technical: number;
-    communication: number;
-    behavioral: number;
-  } | null>(null);
-
-  // Function to get actual performance scores from AI feedback or provide transparent fallback
-  const getActualPerformanceScore = (
-    scoreType: "overall" | "technical" | "communication" | "behavioral"
-  ): number => {
-    // Use real AI scores if available
-    if (realAIScores) {
-      console.log(
-        `✅ Using real AI score for ${scoreType}:`,
-        realAIScores[scoreType]
-      );
-      return realAIScores[scoreType];
-    }
-
-    // Fallback: return minimal scores to indicate no real analysis was performed
-    console.warn(
-      `⚠️ Using fallback score for ${scoreType} - real AI feedback analysis not available`
-    );
-    return 10; // Minimal score to indicate no real analysis
-  };
-
   // Callback to receive real AI scores from feedback component
   const handleAIScoresAnalyzed = (scores: {
     overall: number;
@@ -1878,10 +1784,9 @@ Important:
     console.log("📊 Received real AI scores:", scores);
     setRealAIScores(scores);
 
-    // Trigger analytics save with real scores (this will update the existing entry)
+    // Trigger analytics save with real scores
     setTimeout(() => {
       console.log("🔄 Updating analytics with real AI scores...");
-      // Use sessionToSave if activeSession is null (interview ended)
       const sessionForUpdate = activeSession || sessionToSave;
       if (sessionForUpdate) {
         console.log(
@@ -1890,108 +1795,24 @@ Important:
         );
         saveInterviewPerformanceData(sessionForUpdate);
 
-        // Clear saved session after AI analysis is complete
         if (sessionForUpdate === sessionToSave) {
           setTimeout(() => {
             console.log("🧹 Clearing saved session after AI analysis");
             setSessionToSave(null);
-          }, 2000); // Clear after a delay to ensure save is complete
+          }, 2000);
         }
       } else {
         console.warn("⚠️ No session available for real score update");
       }
-    }, 1000); // Small delay to ensure scores are set
+    }, 1000);
   };
 
-  // Removed old scoring functions that generated inflated dummy scores
-  // All scoring now uses getActualPerformanceScore() for transparency
-
-  // All old scoring functions removed - now using getActualPerformanceScore() for transparency
-
-  // Generate speech analysis from real data or provide minimal fallback
-  const generateMockSpeechAnalysis = () => {
-    console.warn(
-      "⚠️ Using fallback speech analysis - real speech analysis not available"
-    );
-
-    return {
-      wordsPerMinute: 0, // No real data available
-      fillerWordCount: 0,
-      pauseCount: 0,
-      averagePauseLength: 0,
-      volumeVariation: 0,
-      clarityScore: 0, // Indicate no real analysis
-      confidenceScore: 0,
-      emotionalTone: "unknown", // Clear indication of no real data
-      keyPhrases: [], // Empty array for no real data
-      isFallbackData: true, // Mark as fallback data, not simulated
-      analysisAvailable: false, // Explicitly indicate no real analysis performed
-    };
-  };
-
-  const generateMockBodyLanguageAnalysis = () => {
-    console.warn(
-      "⚠️ Using fallback body language analysis - real video analysis not available"
-    );
-
-    return {
-      eyeContactPercentage: 0, // No real data available
-      postureScore: 0,
-      gestureFrequency: 0,
-      facialExpressionScore: 0,
-      overallBodyLanguageScore: 0,
-      confidenceIndicators: [], // Empty for no real data
-      nervousBehaviors: [],
-      engagementLevel: 0,
-      isFallbackData: true, // Mark as fallback data, not simulated
-      analysisAvailable: false, // Explicitly indicate no real analysis performed
-    };
-  };
-
-  const generateStrengths = (): string[] => {
-    // Return generic strengths since we don't have real analysis data
-    // In a real implementation, this would be based on actual performance metrics
-    console.warn(
-      "⚠️ Using generic strengths - real performance analysis not available"
-    );
-
-    return [
-      "Completed interview session",
-      "Engaged with interview questions",
-      "Maintained professional communication",
-    ];
-  };
-
-  const generateWeaknesses = (): string[] => {
-    // Return generic improvement areas since we don't have real analysis data
-    console.warn(
-      "⚠️ Using generic weaknesses - real performance analysis not available"
-    );
-
-    return [
-      "Enable speech analysis for detailed feedback",
-      "Enable video analysis for body language insights",
-    ];
-  };
-
-  const generateRecommendations = (): string[] => {
-    // Return actionable recommendations
-    console.warn(
-      "⚠️ Using generic recommendations - real performance analysis not available"
-    );
-
-    return [
-      "Complete more interviews to build performance history",
-      "Enable microphone access for speech analysis",
-      "Enable camera access for body language analysis",
-      "Practice behavioral questions using the STAR method",
-    ];
-  };
-
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handlePauseResume = () => {
     setIsPaused(!isPaused);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleNextQuestion = async () => {
     if (!activeSession) return;
 
@@ -2015,7 +1836,7 @@ Important:
       setCurrentAnswer("");
       setTimeRemaining(0);
       handleDisconnect();
-      
+
       // Automatically show feedback popup after a short delay
       setTimeout(() => {
         setShowFeedback(true);
@@ -2046,7 +1867,7 @@ Important:
     setTimeRemaining(0);
     handleDisconnect();
     stopCamera();
-    
+
     // Automatically show feedback popup after a short delay
     setTimeout(() => {
       setShowFeedback(true);
@@ -2194,13 +2015,12 @@ Important:
                 <button
                   onClick={isCameraActive ? stopCamera : startCamera}
                   disabled={isCameraLoading}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-300 ${
-                    isCameraLoading
-                      ? "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 cursor-not-allowed"
-                      : isCameraActive
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-300 ${isCameraLoading
+                    ? "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 cursor-not-allowed"
+                    : isCameraActive
                       ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50"
                       : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50"
-                  }`}
+                    }`}
                 >
                   {isCameraLoading ? (
                     <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
@@ -2213,8 +2033,8 @@ Important:
                     {isCameraLoading
                       ? "Starting..."
                       : isCameraActive
-                      ? "Stop Camera"
-                      : "Start Camera"}
+                        ? "Stop Camera"
+                        : "Start Camera"}
                   </span>
                 </button>
 
@@ -2222,11 +2042,10 @@ Important:
                 {isCameraActive && (
                   <button
                     onClick={() => setEnableFaceDetection(!enableFaceDetection)}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-300 ${
-                      enableFaceDetection
-                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/50"
-                        : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-600"
-                    }`}
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-300 ${enableFaceDetection
+                      ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/50"
+                      : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-600"
+                      }`}
                   >
                     <Target className="w-4 h-4" />
                     <span className="text-sm font-medium">
@@ -2333,9 +2152,8 @@ Important:
                             <Target className="w-3 h-3 text-white" />
                             <span className="text-white text-sm font-medium">
                               {faceDetection.hasActiveFaces
-                                ? `${faceDetection.faceCount} face${
-                                    faceDetection.faceCount !== 1 ? "s" : ""
-                                  } detected`
+                                ? `${faceDetection.faceCount} face${faceDetection.faceCount !== 1 ? "s" : ""
+                                } detected`
                                 : "Scanning..."}
                             </span>
                             {faceDetection.eyeContactDetected && (
@@ -2358,6 +2176,17 @@ Important:
                       You're about to begin a {activeSession.type} interview
                       with {activeSession.questions.length} questions.
                     </p>
+
+                    {/* AI-Generated Badge */}
+                    <div className="flex justify-center">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${isAIGenerated
+                        ? "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-700"
+                        : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-slate-600"
+                        }`}>
+                        {isAIGenerated ? <Sparkles className="w-3 h-3" /> : <Cpu className="w-3 h-3" />}
+                        {isAIGenerated ? "AI-Generated — Tailored to your role" : "Curated Question Pool"}
+                      </span>
+                    </div>
 
                     <div className="grid grid-cols-3 gap-4 max-w-md mx-auto">
                       <div className="text-center">
@@ -2403,12 +2232,54 @@ Important:
                       />
                     )}
 
+                    {/* ── Interview Mode Selector ── */}
+                    <div className="mb-6">
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wide">Interview Style</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {interviewModes.map((mode) => (
+                          <button
+                            key={mode.id}
+                            onClick={() => setInterviewMode(mode.id)}
+                            className={`relative text-left p-3 rounded-xl border-2 transition-all duration-300 ${interviewMode === mode.id
+                              ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 shadow-md"
+                              : "border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500 hover:bg-gray-50 dark:hover:bg-slate-700"
+                              }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-lg">{mode.icon}</span>
+                              <span className={`text-xs font-bold ${interviewMode === mode.id ? "text-indigo-700 dark:text-indigo-300" : "text-gray-800 dark:text-gray-200"
+                                }`}>{mode.label}</span>
+                            </div>
+                            <p className="text-[10px] leading-tight text-gray-500 dark:text-gray-400 line-clamp-2">{mode.desc}</p>
+                            {interviewMode === mode.id && (
+                              <div className="absolute top-2 right-2 w-4 h-4 bg-indigo-500 rounded-full flex items-center justify-center">
+                                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Custom mode text input */}
+                      {interviewMode === "custom_mode" && (
+                        <div className="mt-3">
+                          <textarea
+                            value={customModePrompt}
+                            onChange={(e) => setCustomModePrompt(e.target.value)}
+                            placeholder="Describe how you want the interviewer to behave... e.g. 'Act like a startup CTO who values speed over perfection'"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                            rows={3}
+                          />
+                        </div>
+                      )}
+                    </div>
+
                     <div className="space-y-4">
                       <button
                         onClick={beginInterview}
-                        className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl text-lg font-semibold"
+                        className={`w-full px-8 py-4 bg-gradient-to-r ${interviewModes.find(m => m.id === interviewMode)?.color || "from-blue-600 to-purple-600"} text-white rounded-xl hover:opacity-90 transition-all duration-300 shadow-lg hover:shadow-xl text-lg font-semibold`}
                       >
-                        Start Interview
+                        Start {interviewModes.find(m => m.id === interviewMode)?.label || "Interview"}
                       </button>
 
                       <div className="bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl p-4">
@@ -2479,13 +2350,12 @@ Important:
               <button
                 onClick={isCameraActive ? stopCamera : startCamera}
                 disabled={isCameraLoading}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-300 ${
-                  isCameraLoading
-                    ? "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 cursor-not-allowed"
-                    : isCameraActive
+                className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-300 ${isCameraLoading
+                  ? "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 cursor-not-allowed"
+                  : isCameraActive
                     ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/50"
                     : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50"
-                }`}
+                  }`}
               >
                 {isCameraLoading ? (
                   <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
@@ -2498,8 +2368,8 @@ Important:
                   {isCameraLoading
                     ? "Starting..."
                     : isCameraActive
-                    ? "Stop Camera"
-                    : "Start Camera"}
+                      ? "Stop Camera"
+                      : "Start Camera"}
                 </span>
               </button>
 
@@ -2670,9 +2540,8 @@ Important:
                             <Target className="w-3 h-3 text-white flex-shrink-0" />
                             <span className="text-white text-xs sm:text-sm font-medium whitespace-nowrap" style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}>
                               {faceDetection.hasActiveFaces
-                                ? `${faceDetection.faceCount} face${
-                                    faceDetection.faceCount !== 1 ? "s" : ""
-                                  } detected`
+                                ? `${faceDetection.faceCount} face${faceDetection.faceCount !== 1 ? "s" : ""
+                                } detected`
                                 : "Scanning..."}
                             </span>
                             {faceDetection.eyeContactDetected && (
@@ -2726,14 +2595,14 @@ Important:
                       {isCameraLoading
                         ? "Starting Camera..."
                         : cameraError
-                        ? "Camera Error"
-                        : "Camera Preview"}
+                          ? "Camera Error"
+                          : "Camera Preview"}
                     </p>
                     <p className="text-gray-400 text-sm mb-4">
                       {isCameraLoading
                         ? "Please wait while we access your camera"
                         : cameraError ||
-                          "Your video will appear here during the interview"}
+                        "Your video will appear here during the interview"}
                     </p>
 
                     {cameraError && (
@@ -2746,11 +2615,10 @@ Important:
                       <button
                         onClick={startCamera}
                         disabled={isCameraLoading}
-                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                          isCameraLoading
-                            ? "bg-gray-600 cursor-not-allowed"
-                            : "bg-blue-600 hover:bg-blue-700"
-                        } text-white`}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${isCameraLoading
+                          ? "bg-gray-600 cursor-not-allowed"
+                          : "bg-blue-600 hover:bg-blue-700"
+                          } text-white`}
                       >
                         {isCameraLoading ? (
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -2856,18 +2724,16 @@ Important:
                     {messages.slice(-5).map((message, index) => (
                       <div
                         key={index}
-                        className={`flex ${
-                          message.role === "user"
-                            ? "justify-end"
-                            : "justify-start"
-                        }`}
+                        className={`flex ${message.role === "user"
+                          ? "justify-end"
+                          : "justify-start"
+                          }`}
                       >
                         <div
-                          className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                            message.role === "user"
-                              ? "bg-blue-600 text-white"
-                              : "bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200"
-                          }`}
+                          className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.role === "user"
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200"
+                            }`}
                         >
                           <div className="flex items-center space-x-2 mb-1">
                             <span className="text-xs font-medium opacity-80">
@@ -3012,11 +2878,10 @@ Important:
             </div>
             <button
               onClick={() => setShowCameraPreview(!showCameraPreview)}
-              className={`btn-touch flex items-center gap-2 sm:gap-3 px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-xl flex-shrink-0 ${
-                showCameraPreview
-                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/25"
-                  : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500"
-              }`}
+              className={`btn-touch flex items-center gap-2 sm:gap-3 px-4 py-2 sm:px-6 sm:py-3 rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-xl flex-shrink-0 ${showCameraPreview
+                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/25"
+                : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500"
+                }`}
             >
               {showCameraPreview ? (
                 <>
@@ -3053,11 +2918,10 @@ Important:
               </div>
               <button
                 onClick={() => setEnableFaceDetection(!enableFaceDetection)}
-                className={`flex items-center space-x-3 px-6 py-3 rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 ${
-                  enableFaceDetection
-                    ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-green-500/25"
-                    : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-slate-600 hover:border-green-300 dark:hover:border-green-500"
-                }`}
+                className={`flex items-center space-x-3 px-6 py-3 rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 ${enableFaceDetection
+                  ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-green-500/25"
+                  : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-slate-600 hover:border-green-300 dark:hover:border-green-500"
+                  }`}
               >
                 {enableFaceDetection ? (
                   <>
@@ -3112,11 +2976,10 @@ Important:
             <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
               <button
                 onClick={() => setActiveTab("templates")}
-                className={`flex-shrink-0 py-2 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
-                  activeTab === "templates"
-                    ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg border-2 border-blue-200 dark:border-blue-600"
-                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-slate-700/50"
-                }`}
+                className={`flex-shrink-0 py-2 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === "templates"
+                  ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg border-2 border-blue-200 dark:border-blue-600"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-slate-700/50"
+                  }`}
                 style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}
               >
                 <div className="flex items-center justify-center gap-1 sm:gap-2">
@@ -3127,11 +2990,10 @@ Important:
               </button>
               <button
                 onClick={() => setActiveTab("custom")}
-                className={`flex-shrink-0 py-2 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
-                  activeTab === "custom"
-                    ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg border-2 border-purple-200 dark:border-purple-600"
-                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-slate-700/50"
-                }`}
+                className={`flex-shrink-0 py-2 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === "custom"
+                  ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg border-2 border-purple-200 dark:border-purple-600"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-slate-700/50"
+                  }`}
                 style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}
               >
                 <div className="flex items-center justify-center gap-1 sm:gap-2">
@@ -3141,11 +3003,10 @@ Important:
               </button>
               <button
                 onClick={() => setActiveTab("resume")}
-                className={`flex-shrink-0 py-2 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
-                  activeTab === "resume"
-                    ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg border-2 border-green-200 dark:border-green-600"
-                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-slate-700/50"
-                }`}
+                className={`flex-shrink-0 py-2 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === "resume"
+                  ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg border-2 border-green-200 dark:border-green-600"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-slate-700/50"
+                  }`}
                 style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}
               >
                 <div className="flex items-center justify-center gap-1 sm:gap-2">
@@ -3156,11 +3017,10 @@ Important:
               </button>
               <button
                 onClick={() => setActiveTab("coding")}
-                className={`flex-shrink-0 py-2 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
-                  activeTab === "coding"
-                    ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg border-2 border-orange-200 dark:border-orange-600"
-                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-slate-700/50"
-                }`}
+                className={`flex-shrink-0 py-2 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === "coding"
+                  ? "bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 shadow-lg border-2 border-orange-200 dark:border-orange-600"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-slate-700/50"
+                  }`}
                 style={{ fontSize: 'clamp(0.75rem, 2.5vw, 0.875rem)' }}
               >
                 <div className="flex items-center justify-center gap-1 sm:gap-2">
@@ -3189,19 +3049,18 @@ Important:
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-3">
                       <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                          template.id === "general"
-                            ? "bg-gradient-to-br from-blue-500 to-blue-600"
-                            : template.id === "behavioral"
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center ${template.id === "general"
+                          ? "bg-gradient-to-br from-blue-500 to-blue-600"
+                          : template.id === "behavioral"
                             ? "bg-gradient-to-br from-green-500 to-green-600"
                             : template.id === "technical"
-                            ? "bg-gradient-to-br from-purple-500 to-purple-600"
-                            : template.id === "quick"
-                            ? "bg-gradient-to-br from-orange-500 to-orange-600"
-                            : template.id === "jam"
-                            ? "bg-gradient-to-br from-pink-500 to-rose-600"
-                            : "bg-gradient-to-br from-indigo-500 to-indigo-600"
-                        }`}
+                              ? "bg-gradient-to-br from-purple-500 to-purple-600"
+                              : template.id === "quick"
+                                ? "bg-gradient-to-br from-orange-500 to-orange-600"
+                                : template.id === "jam"
+                                  ? "bg-gradient-to-br from-pink-500 to-rose-600"
+                                  : "bg-gradient-to-br from-indigo-500 to-indigo-600"
+                          }`}
                       >
                         {template.id === "jam" ? (
                           <MessageSquare className="w-5 h-5 text-white" />
@@ -3214,13 +3073,12 @@ Important:
                       </h4>
                     </div>
                     <span
-                      className={`text-xs px-3 py-1 rounded-full font-semibold ${
-                        template.difficulty === "easy"
-                          ? "text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30"
-                          : template.difficulty === "medium"
+                      className={`text-xs px-3 py-1 rounded-full font-semibold ${template.difficulty === "easy"
+                        ? "text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30"
+                        : template.difficulty === "medium"
                           ? "text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-900/30"
                           : "text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30"
-                      }`}
+                        }`}
                     >
                       {template.difficulty}
                     </span>
@@ -3570,15 +3428,15 @@ Important:
                       {customRole || "your target position"}.
                       {customTechTags.filter((tag) => tag.trim()).length >
                         0 && (
-                        <span className="block mt-3 p-3 bg-white/50 rounded-lg border border-blue-200">
-                          <strong className="text-blue-800 dark:text-blue-200">
-                            Technology focus:
-                          </strong>{" "}
-                          {customTechTags
-                            .filter((tag) => tag.trim())
-                            .join(", ")}
-                        </span>
-                      )}
+                          <span className="block mt-3 p-3 bg-white/50 rounded-lg border border-blue-200">
+                            <strong className="text-blue-800 dark:text-blue-200">
+                              Technology focus:
+                            </strong>{" "}
+                            {customTechTags
+                              .filter((tag) => tag.trim())
+                              .join(", ")}
+                          </span>
+                        )}
                     </p>
                   </div>
                 </div>
@@ -3589,11 +3447,10 @@ Important:
                 <button
                   onClick={createCustomInterview}
                   disabled={!customRole.trim() || isGeneratingQuestions}
-                  className={`w-full py-4 px-8 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 ${
-                    customRole.trim() && !isGeneratingQuestions
-                      ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-2xl hover:shadow-blue-500/25 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed shadow-lg"
-                  }`}
+                  className={`w-full py-4 px-8 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 ${customRole.trim() && !isGeneratingQuestions
+                    ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-2xl hover:shadow-blue-500/25 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed shadow-lg"
+                    }`}
                 >
                   {isGeneratingQuestions ? (
                     <div className="flex items-center justify-center space-x-3">
@@ -3853,11 +3710,10 @@ Important:
                     <button
                       onClick={createResumeInterview}
                       disabled={!parsedResumeData || isGeneratingResumeQuestions}
-                      className={`w-full py-4 px-8 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 ${
-                        parsedResumeData && !isGeneratingResumeQuestions
-                          ? "bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white shadow-2xl hover:shadow-green-500/25 hover:from-green-700 hover:via-emerald-700 hover:to-teal-700"
-                          : "bg-gray-300 text-gray-500 cursor-not-allowed shadow-lg"
-                      }`}
+                      className={`w-full py-4 px-8 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 ${parsedResumeData && !isGeneratingResumeQuestions
+                        ? "bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white shadow-2xl hover:shadow-green-500/25 hover:from-green-700 hover:via-emerald-700 hover:to-teal-700"
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed shadow-lg"
+                        }`}
                     >
                       {isGeneratingResumeQuestions ? (
                         <div className="flex items-center justify-center space-x-3">
@@ -4043,10 +3899,10 @@ Important:
             feedbackSession?.type === "custom"
               ? customRole
               : feedbackSession?.type === "resume" || (activeSession as InterviewSession | null)?.type === "resume"
-              ? parsedResumeData?.sections?.summary?.split(" ").slice(0, 5).join(" ") || "Resume-Based Role"
-              : feedbackSession?.type || (activeSession as InterviewSession | null)?.type === "custom"
-              ? customRole
-              : (activeSession as InterviewSession | null)?.type || "general"
+                ? parsedResumeData?.sections?.summary?.split(" ").slice(0, 5).join(" ") || "Resume-Based Role"
+                : feedbackSession?.type || (activeSession as InterviewSession | null)?.type === "custom"
+                  ? customRole
+                  : (activeSession as InterviewSession | null)?.type || "general"
           }
           performanceData={null}
           onClose={() => {

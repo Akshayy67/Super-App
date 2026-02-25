@@ -1,4 +1,7 @@
 // AI service for Google Gemini API
+import { realTimeAuth } from "./realTimeAuth";
+import { ProfileService } from "../services/profileService";
+
 const API_KEY = import.meta.env.VITE_GOOGLE_AI_API_KEY || "";
 
 // Debug: Log the API key being used with more details
@@ -301,9 +304,8 @@ export const aiService = {
         }
         return {
           success: false,
-          error: `Image generation failed (${response.status}): ${
-            result.error?.message || response.statusText
-          }`,
+          error: `Image generation failed (${response.status}): ${result.error?.message || response.statusText
+            }`,
         };
       }
 
@@ -386,9 +388,8 @@ export const aiService = {
         }
         return {
           success: false,
-          error: `Image analysis failed (${response.status}): ${
-            result.error?.message || response.statusText
-          }`,
+          error: `Image analysis failed (${response.status}): ${result.error?.message || response.statusText
+            }`,
         };
       }
 
@@ -477,6 +478,31 @@ export const aiService = {
           requestPrompt = `File context: ${context}\n\n${requestPrompt}`;
         }
 
+        // --- INJECT GLOBAL AI TONE ---
+        const currentUserInfo = realTimeAuth.getCurrentUser();
+        if (currentUserInfo?.id) {
+          try {
+            const profile = await ProfileService.getProfileByUserId(currentUserInfo.id);
+            if (profile?.aiTone) {
+              let toneContext = "";
+              if (profile.aiTone === "motivating") {
+                toneContext = `[SYSTEM INSTRUCTION: Please adopt an overwhelmingly positive, motivating, and encouraging tone. Act as a supportive coach.]`;
+              } else if (profile.aiTone === "honest") {
+                toneContext = `[SYSTEM INSTRUCTION: Please be completely direct, honest, and unvarnished in your response. Do not sugarcoat anything.]`;
+              } else if (profile.aiTone === "academic") {
+                toneContext = `[SYSTEM INSTRUCTION: Please adopt a highly rigorous, formal, and academic tone. Use professional logic and vocabulary.]`;
+              } else {
+                toneContext = `[SYSTEM INSTRUCTION: Please maintain a balanced, helpful, and professional tone.]`;
+              }
+              // Prepend tone context to the request prompt
+              requestPrompt = `${toneContext}\n\n${requestPrompt}`;
+            }
+          } catch (e) {
+            console.error("Failed to fetch profile for AI Tone in aiService", e);
+          }
+        }
+        // -----------------------------
+
         // Use retry logic with rate limiting for the API call
         const result = await retryRequest(async () => {
           console.log("🤖 Making Gemini API request...");
@@ -517,13 +543,13 @@ export const aiService = {
               const errorMessage = apiResult.error?.message || response.statusText;
               const errorCode = apiResult.error?.code || apiResult.error?.status || "UNKNOWN";
               const errorDetails = apiResult.error?.details || [];
-              
+
               // Check for suspended consumer
-              const isSuspended = errorDetails?.some((detail: any) => 
-                detail["@type"]?.includes("ErrorInfo") && 
+              const isSuspended = errorDetails?.some((detail: any) =>
+                detail["@type"]?.includes("ErrorInfo") &&
                 detail.reason === "CONSUMER_SUSPENDED"
               ) || errorMessage?.toLowerCase().includes("suspended");
-              
+
               // Log comprehensive error details
               console.error("🔴 403 Forbidden Error Details:", {
                 status: response.status,
@@ -535,20 +561,20 @@ export const aiService = {
                 apiKeyPrefix: API_KEY ? `${API_KEY.substring(0, 10)}...` : "NOT SET",
                 errorDetails: errorDetails,
               });
-              
+
               // Log the full error message as a string for easier reading
               console.error("📋 Full Error Response:", JSON.stringify(apiResult, null, 2));
-              
+
               // Handle suspended API key specifically - show generic message to users
               if (isSuspended) {
                 console.error("⚠️ SECURITY WARNING: API key has been suspended. It may be exposed publicly!");
-                
+
                 return {
                   success: false,
                   error: "Service temporarily unavailable. Please try again later.",
                 };
               }
-              
+
               // Provide generic error message for all 403 errors
               return {
                 success: false,
@@ -571,9 +597,8 @@ export const aiService = {
 
             return {
               success: false,
-              error: `API Error (${response.status}): ${
-                apiResult.error?.message || response.statusText
-              }`,
+              error: `API Error (${response.status}): ${apiResult.error?.message || response.statusText
+                }`,
             };
           }
 
@@ -627,9 +652,8 @@ export const aiService = {
   },
 
   async explainConcept(concept: string, context?: string): Promise<AIResponse> {
-    const prompt = `Explain the concept "${concept}" in simple, clear terms. ${
-      context ? `Use this context: ${context}` : ""
-    }`;
+    const prompt = `Explain the concept "${concept}" in simple, clear terms. ${context ? `Use this context: ${context}` : ""
+      }`;
     return this.generateResponse(prompt);
   },
 };

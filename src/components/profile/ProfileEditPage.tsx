@@ -10,13 +10,13 @@ export const ProfileEditPage: React.FC = () => {
   const navigate = useNavigate();
   const user = realTimeAuth.getCurrentUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   const [profile, setProfile] = useState<Partial<UserProfile>>({
     username: "",
     email: user?.email || "",
@@ -26,7 +26,7 @@ export const ProfileEditPage: React.FC = () => {
     website: "",
     photoURL: "",
   });
-  
+
   // Gamification data
   const [gamificationData, setGamificationData] = useState<any>(null);
   const [socialLinks, setSocialLinks] = useState({
@@ -39,7 +39,7 @@ export const ProfileEditPage: React.FC = () => {
     loadProfile();
     loadGamificationData();
   }, []);
-  
+
   const loadGamificationData = async () => {
     if (!user?.id) {
       console.log("No user ID available for gamification");
@@ -65,7 +65,7 @@ export const ProfileEditPage: React.FC = () => {
     try {
       setLoading(true);
       const existingProfile = await ProfileService.getProfileByUserId(user.id);
-      
+
       if (existingProfile) {
         setProfile(existingProfile);
       } else {
@@ -97,7 +97,7 @@ export const ProfileEditPage: React.FC = () => {
     try {
       setUploadingPhoto(true);
       setError(null);
-      
+
       const photoURL = await ProfileService.uploadProfilePhoto(user.id, file);
       setProfile((prev) => ({ ...prev, photoURL }));
       setSuccess("Photo uploaded successfully!");
@@ -118,7 +118,7 @@ export const ProfileEditPage: React.FC = () => {
     try {
       setUploadingPhoto(true);
       setError(null);
-      
+
       await ProfileService.deleteProfilePhoto(user.id);
       setProfile((prev) => ({ ...prev, photoURL: undefined }));
       setSuccess("Photo deleted successfully!");
@@ -146,7 +146,7 @@ export const ProfileEditPage: React.FC = () => {
 
     // Skip strict validation for akshayjuluri6704@gmail.com
     const isSpecialUser = user.email?.toLowerCase() === "akshayjuluri6704@gmail.com";
-    
+
     if (!isSpecialUser && !/^[a-zA-Z0-9_-]+$/.test(profile.username)) {
       setError("Username can only contain letters, numbers, underscores, and hyphens");
       return;
@@ -176,11 +176,12 @@ export const ProfileEditPage: React.FC = () => {
         bio: profile.bio || undefined,
         location: profile.location || undefined,
         website: profile.website || undefined,
+        aiTone: profile.aiTone || undefined,
       });
 
       setProfile(updatedProfile);
       setSuccess("Profile updated successfully!");
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000);
     } catch (error: any) {
@@ -244,7 +245,7 @@ export const ProfileEditPage: React.FC = () => {
           <div className="mb-6 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl p-6 text-white shadow-lg">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-2xl font-bold">{LEVELS[gamificationData.level]?.name || 'Novice'}</h2>
+                <h2 className="text-2xl font-bold">{LEVELS[gamificationData.level as keyof typeof LEVELS]?.name || 'Novice'}</h2>
                 <p className="text-white/80">Level {gamificationData.level}</p>
               </div>
               <div className="text-right">
@@ -255,7 +256,7 @@ export const ProfileEditPage: React.FC = () => {
                 <p className="text-white/80 text-sm">XP Points</p>
               </div>
             </div>
-            
+
             {/* XP Progress Bar */}
             <div className="mb-4">
               <div className="flex justify-between text-sm mb-1">
@@ -263,7 +264,7 @@ export const ProfileEditPage: React.FC = () => {
                 <span>{gamificationData.xp} / {gamificationData.nextLevelXP || 0} XP</span>
               </div>
               <div className="w-full bg-white/20 rounded-full h-3 overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-yellow-400 transition-all duration-500"
                   style={{ width: `${((gamificationData.xp / (gamificationData.nextLevelXP || 1)) * 100).toFixed(1)}%` }}
                 />
@@ -435,6 +436,27 @@ export const ProfileEditPage: React.FC = () => {
                 placeholder="https://yourwebsite.com"
                 className="w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               />
+            </div>
+
+            {/* AI Tone Setting */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <Zap className="w-4 h-4" />
+                Global AI Tone
+              </label>
+              <select
+                value={profile.aiTone || "balanced"}
+                onChange={(e) => handleInputChange("aiTone", e.target.value as any)}
+                className="w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg px-4 py-2 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              >
+                <option value="balanced">Balanced (Default)</option>
+                <option value="motivating">Motivating & Uplifting</option>
+                <option value="honest">Honest & Direct</option>
+                <option value="academic">Academic & Professional</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Choose the personality the AI should adopt across the app (Mock Interviews, Flashcards, etc.)
+              </p>
             </div>
           </div>
 

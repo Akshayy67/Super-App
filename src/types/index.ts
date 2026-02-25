@@ -87,6 +87,7 @@ export interface UserProfile {
   bio?: string;
   location?: string;
   website?: string;
+  aiTone?: 'balanced' | 'motivating' | 'honest' | 'academic';
   createdAt: string;
   updatedAt: string;
 }

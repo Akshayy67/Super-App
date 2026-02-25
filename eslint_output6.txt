@@ -1,0 +1,6 @@
+
+C:\Users\Akshay\OneDrive\Desktop\newProject\SuperApp\src\components\InterviewPrep\MockInterview.tsx
+  1685:9  warning  The 'saveInterviewPerformanceData' function makes the dependencies of useEffect Hook (at line 495) change on every render. To fix this, wrap the definition of 'saveInterviewPerformanceData' in its own useCallback() Hook  react-hooks/exhaustive-deps
+
+Γ£û 1 problem (0 errors, 1 warning)
+

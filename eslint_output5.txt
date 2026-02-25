@@ -1,0 +1,8 @@
+
+C:\Users\Akshay\OneDrive\Desktop\newProject\SuperApp\src\components\InterviewPrep\MockInterview.tsx
+   184:26  error    'hasEyeContact' is defined but never used                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+  1383:32  error    Unexpected any. Specify a different type                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  1684:9   warning  The 'saveInterviewPerformanceData' function makes the dependencies of useEffect Hook (at line 494) change on every render. To fix this, wrap the definition of 'saveInterviewPerformanceData' in its own useCallback() Hook  react-hooks/exhaustive-deps
+
+Γ£û 3 problems (2 errors, 1 warning)
+
