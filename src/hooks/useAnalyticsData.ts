@@ -3,6 +3,15 @@ import { InterviewPerformanceData } from "../utils/performanceAnalytics";
 import { unifiedAnalyticsStorage } from "../utils/unifiedAnalyticsStorage";
 import { analyticsStorage } from "../utils/analyticsStorage";
 
+/* ── Custom event for same-tab data updates ── */
+export const ANALYTICS_DATA_UPDATED_EVENT = "superapp:analytics-data-updated";
+
+/** Fire this after saving performance data to immediately update all analytics hooks */
+export function notifyAnalyticsDataUpdated(): void {
+  window.dispatchEvent(new CustomEvent(ANALYTICS_DATA_UPDATED_EVENT));
+  console.log("📊 Analytics data update event dispatched");
+}
+
 interface AnalyticsDataState {
   performanceHistory: InterviewPerformanceData[];
   currentPerformance: InterviewPerformanceData | null;
@@ -145,6 +154,23 @@ export const useAnalyticsData = (): AnalyticsDataHook => {
 
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
+  }, [loadData]);
+
+  // Listen for same-tab data update events (immediate refresh)
+  useEffect(() => {
+    const handleDataUpdate = () => {
+      console.log("📊 Same-tab data update detected, refreshing immediately...");
+      loadData();
+    };
+
+    // Listen for both the analytics-specific event and roadmap update events
+    window.addEventListener(ANALYTICS_DATA_UPDATED_EVENT, handleDataUpdate);
+    window.addEventListener("superapp:roadmap-update", handleDataUpdate);
+
+    return () => {
+      window.removeEventListener(ANALYTICS_DATA_UPDATED_EVENT, handleDataUpdate);
+      window.removeEventListener("superapp:roadmap-update", handleDataUpdate);
+    };
   }, [loadData]);
 
   return {

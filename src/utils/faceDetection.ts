@@ -7,7 +7,7 @@
 declare global {
   interface Window {
     FaceDetector?: {
-      new (options?: {
+      new(options?: {
         maxDetectedFaces?: number;
         fastMode?: boolean;
       }): FaceDetector;
@@ -33,6 +33,7 @@ interface FaceDetectionResult {
   faces: DetectedFace[];
   eyeContactDetected: boolean;
   confidence: number;
+  eyeContactConfidence: number;
 }
 
 interface DetectedFace {
@@ -66,11 +67,11 @@ class FaceDetectionService {
   private lastProcessTime: number = 0;
   private processInterval: number = 150; // Process every 150ms for better performance
 
-  // Eye contact detection settings - Very forgiving for practical use
+  // Eye contact detection settings - Calibrated for accuracy
   private eyeContactSettings: EyeContactSettings = {
-    yawThreshold: 40, // degrees - very forgiving for left-right movement
-    pitchThreshold: 35, // degrees - very forgiving for up-down movement
-    confidenceThreshold: 0.5, // Lower confidence threshold
+    yawThreshold: 20, // degrees - moderate tolerance for left-right
+    pitchThreshold: 18, // degrees - moderate tolerance for up-down
+    confidenceThreshold: 0.5, // Minimum weighted score to count as eye contact
   };
 
   // Face detection using browser APIs
@@ -144,12 +145,12 @@ class FaceDetectionService {
    */
   async processFrame(video: HTMLVideoElement): Promise<FaceDetectionResult> {
     if (!this.isInitialized || this.isProcessing) {
-      return { faces: [], eyeContactDetected: false, confidence: 0 };
+      return { faces: [], eyeContactDetected: false, confidence: 0, eyeContactConfidence: 0 };
     }
 
     const now = Date.now();
     if (now - this.lastProcessTime < this.processInterval) {
-      return { faces: [], eyeContactDetected: false, confidence: 0 };
+      return { faces: [], eyeContactDetected: false, confidence: 0, eyeContactConfidence: 0 };
     }
 
     this.isProcessing = true;
@@ -175,22 +176,18 @@ class FaceDetectionService {
       const faces = await this.detectFaces(imageData, video);
 
       // Analyze eye contact for each face
+      const eyeContactResults: { isEyeContact: boolean; confidenceScore: number }[] = [];
       const processedFaces = faces.map((face) => {
-        const eyeContact = this.analyzeEyeContact(
+        const ecResult = this.analyzeEyeContact(
           face.headPose,
           face.boundingBox,
           this.canvas.width,
           this.canvas.height
         );
-        console.log(`👁️ Eye Contact Analysis:`, {
-          headPose: face.headPose,
-          boundingBox: face.boundingBox,
-          eyeContact,
-          thresholds: this.eyeContactSettings,
-        });
+        eyeContactResults.push(ecResult);
         return {
           ...face,
-          eyeContact,
+          eyeContact: ecResult.isEyeContact,
         };
       });
 
@@ -200,15 +197,20 @@ class FaceDetectionService {
         processedFaces.length > 0
           ? Math.max(...processedFaces.map((f) => f.confidence))
           : 0;
+      const eyeContactConfidence =
+        eyeContactResults.length > 0
+          ? Math.max(...eyeContactResults.map((r) => r.confidenceScore))
+          : 0;
 
       return {
         faces: processedFaces,
         eyeContactDetected,
         confidence,
+        eyeContactConfidence,
       };
     } catch (error) {
       console.error("Error processing frame:", error);
-      return { faces: [], eyeContactDetected: false, confidence: 0 };
+      return { faces: [], eyeContactDetected: false, confidence: 0, eyeContactConfidence: 0 };
     } finally {
       this.isProcessing = false;
     }
@@ -470,7 +472,8 @@ class FaceDetectionService {
   }
 
   /**
-   * Analyze eye contact based on head pose
+   * Analyze eye contact using weighted confidence scoring.
+   * Returns both a boolean and a continuous confidence score (0-1).
    */
   private analyzeEyeContact(
     headPose: {
@@ -481,71 +484,60 @@ class FaceDetectionService {
     boundingBox: { x: number; y: number; width: number; height: number },
     frameWidth: number,
     frameHeight: number
-  ): boolean {
+  ): { isEyeContact: boolean; confidenceScore: number } {
     const { yaw, pitch } = headPose;
-    const { yawThreshold, pitchThreshold } = this.eyeContactSettings;
+    const { yawThreshold, pitchThreshold, confidenceThreshold } = this.eyeContactSettings;
 
-    // Primary method: Head pose analysis
-    const headPoseEyeContact =
-      Math.abs(yaw) <= yawThreshold && Math.abs(pitch) <= pitchThreshold;
+    // ── Primary: Head pose score (weight 0.60) ──
+    // Score falls off smoothly as yaw/pitch exceed thresholds
+    const yawScore = Math.max(0, 1 - Math.abs(yaw) / (yawThreshold * 1.5));
+    const pitchScore = Math.max(0, 1 - Math.abs(pitch) / (pitchThreshold * 1.5));
+    const headPoseScore = yawScore * pitchScore; // 0-1, product penalises if either axis is off
 
-    // Fallback method: Position-based analysis
-    // Face should be reasonably centered for good eye contact
+    // ── Secondary: Position-based score (weight 0.30) ──
     const faceCenter = {
       x: boundingBox.x + boundingBox.width / 2,
       y: boundingBox.y + boundingBox.height / 2,
     };
-
     const frameCenterX = frameWidth / 2;
     const frameCenterY = frameHeight / 2;
-
-    // Calculate how far the face is from center (as percentage of frame)
     const horizontalOffset = Math.abs(faceCenter.x - frameCenterX) / frameWidth;
     const verticalOffset = Math.abs(faceCenter.y - frameCenterY) / frameHeight;
+    // Score drops off when face moves away from center; max offset ~0.35
+    const positionScore = Math.max(0, 1 - (horizontalOffset / 0.35)) *
+      Math.max(0, 1 - (verticalOffset / 0.30));
 
-    // Much more forgiving position-based detection - face should be roughly in frame
-    const positionEyeContact =
-      horizontalOffset <= 0.45 && verticalOffset <= 0.4;
-
-    // Basic presence detection - if face is detected and reasonably sized, give some credit
+    // ── Tertiary: Face presence bonus (weight 0.10) ──
     const faceArea = boundingBox.width * boundingBox.height;
     const frameArea = frameWidth * frameHeight;
     const faceAreaRatio = faceArea / frameArea;
-    const basicPresenceEyeContact =
-      faceAreaRatio >= 0.02 && faceAreaRatio <= 0.5; // Face takes 2-50% of frame
+    // Best when face is 5-30% of frame (typical webcam)
+    const presenceScore =
+      faceAreaRatio >= 0.03 && faceAreaRatio <= 0.45
+        ? Math.min(1, faceAreaRatio / 0.05) // ramp up from 3-5%
+        : 0;
 
-    // Use multiple methods - any one can trigger eye contact
-    const isEyeContact =
-      headPoseEyeContact || positionEyeContact || basicPresenceEyeContact;
+    // ── Weighted combination ──
+    const confidenceScore =
+      headPoseScore * 0.60 +
+      positionScore * 0.30 +
+      presenceScore * 0.10;
 
-    console.log(`👁️ Eye Contact Check:`, {
-      headPose: { yaw: yaw.toFixed(1), pitch: pitch.toFixed(1) },
-      thresholds: { yawThreshold, pitchThreshold },
-      headPoseResult: {
-        yawOK: Math.abs(yaw) <= yawThreshold,
-        pitchOK: Math.abs(pitch) <= pitchThreshold,
-        headPoseEyeContact,
-      },
-      position: {
-        horizontalOffset: (horizontalOffset * 100).toFixed(1) + "%",
-        verticalOffset: (verticalOffset * 100).toFixed(1) + "%",
-        positionEyeContact,
-      },
-      presence: {
-        faceAreaRatio: (faceAreaRatio * 100).toFixed(1) + "%",
-        basicPresenceEyeContact,
-      },
-      finalResult: isEyeContact,
-      triggeredBy: headPoseEyeContact
-        ? "headPose"
-        : positionEyeContact
-        ? "position"
-        : basicPresenceEyeContact
-        ? "presence"
-        : "none",
-    });
+    const isEyeContact = confidenceScore >= confidenceThreshold;
 
-    return isEyeContact;
+    // Reduced logging — only log periodically or on state change
+    if (Math.random() < 0.05) { // ~5% of frames for debug
+      console.log(`👁️ Eye Contact:`, {
+        yaw: yaw.toFixed(1), pitch: pitch.toFixed(1),
+        headPoseScore: headPoseScore.toFixed(2),
+        positionScore: positionScore.toFixed(2),
+        presenceScore: presenceScore.toFixed(2),
+        confidence: confidenceScore.toFixed(2),
+        result: isEyeContact,
+      });
+    }
+
+    return { isEyeContact, confidenceScore };
   }
 
   /**

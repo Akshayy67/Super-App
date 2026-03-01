@@ -184,6 +184,7 @@ export const MockInterview: React.FC = () => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackMessages, setFeedbackMessages] = useState<SavedMessage[]>([]);
   const [feedbackSession, setFeedbackSession] = useState<InterviewSession | null>(null);
+  const [feedbackPerformanceData, setFeedbackPerformanceData] = useState<InterviewPerformanceData | null>(null);
 
   // Performance analytics
   const performanceAnalytics = useRef(new PerformanceAnalytics());
@@ -462,14 +463,47 @@ export const MockInterview: React.FC = () => {
   }, []);
 
   const generateMockBodyLanguageAnalysis = useCallback(() => {
+    // Use real face detection data when available
+    const ecPercentage = faceDetection.stats?.eyeContactPercentage ?? 0;
+    const ecConfidence = faceDetection.stats?.averageEyeContactConfidence ?? 0;
+
+    // Calculate consistency from the rolling history (0-100)
+    const history = faceDetection.stats?.recentEyeContactHistory ?? [];
+    let consistency = 0;
+    if (history.length > 5) {
+      // Count state transitions (true→false or false→true) — fewer transitions = more consistent
+      let transitions = 0;
+      for (let i = 1; i < history.length; i++) {
+        if (history[i] !== history[i - 1]) transitions++;
+      }
+      const maxTransitions = history.length - 1;
+      consistency = Math.round((1 - transitions / maxTransitions) * 100);
+    }
+
+    // Derive eye contact score (0-100) from percentage and consistency
+    const ecScore = Math.round(ecPercentage * 0.7 + consistency * 0.3);
+
+    // Build patterns list
+    const patterns: string[] = [];
+    if (ecPercentage >= 70) patterns.push("Good sustained eye contact");
+    else if (ecPercentage >= 40) patterns.push("Moderate eye contact — room for improvement");
+    else if (ecPercentage > 0) patterns.push("Inconsistent eye contact — practice looking at the camera");
+    if (consistency < 40 && history.length > 10) patterns.push("Frequent gaze shifts detected");
+    if (ecConfidence > 0.7) patterns.push("Strong forward-facing posture");
+
     return {
       posture: { score: 0, alignment: "fair" as const, issues: [] as string[], recommendations: [] as string[] },
       facialExpressions: { confidence: 0, engagement: 0, nervousness: 0, expressions: [] as { emotion: string; confidence: number; timestamp: number }[] },
-      eyeContact: { percentage: 0, consistency: 0, score: 0, patterns: [] as string[] },
+      eyeContact: {
+        percentage: Math.round(ecPercentage),
+        consistency,
+        score: ecScore,
+        patterns,
+      },
       gestures: { frequency: 0, appropriateness: 0, variety: 0, score: 0, observations: [] as string[] },
-      overallBodyLanguage: { score: 0, strengths: [] as string[], improvements: [] as string[], professionalismScore: 0 },
+      overallBodyLanguage: { score: ecScore > 0 ? ecScore : 0, strengths: patterns.filter(p => p.startsWith("Good") || p.startsWith("Strong")), improvements: patterns.filter(p => p.includes("practice") || p.includes("shifts")), professionalismScore: 0 },
     };
-  }, []);
+  }, [faceDetection.stats]);
 
   const generateStrengths = useCallback((): string[] => {
     return [
@@ -636,6 +670,10 @@ export const MockInterview: React.FC = () => {
         overallScore: performanceData.overallScore,
         timestamp: performanceData.timestamp,
       });
+
+      // Notify all analytics hooks to refresh immediately
+      const { notifyAnalyticsDataUpdated } = await import("../../hooks/useAnalyticsData");
+      notifyAnalyticsDataUpdated();
     } catch (error) {
       console.error("Error saving performance data:", error);
     }
@@ -1775,7 +1813,7 @@ Keep your responses concise — 2-3 sentences maximum.`,
   };
 
   // Callback to receive real AI scores from feedback component
-  const handleAIScoresAnalyzed = (scores: {
+  const handleAIScoresAnalyzed = async (scores: {
     overall: number;
     technical: number;
     communication: number;
@@ -1784,27 +1822,58 @@ Keep your responses concise — 2-3 sentences maximum.`,
     console.log("📊 Received real AI scores:", scores);
     setRealAIScores(scores);
 
-    // Trigger analytics save with real scores
-    setTimeout(() => {
-      console.log("🔄 Updating analytics with real AI scores...");
-      const sessionForUpdate = activeSession || sessionToSave;
-      if (sessionForUpdate) {
-        console.log(
-          "✅ Using session for AI score update:",
-          sessionForUpdate.id
-        );
-        saveInterviewPerformanceData(sessionForUpdate);
+    // Directly update the most recent performance record in storage with real scores
+    // Don't re-call saveInterviewPerformanceData (creates duplicates + stale closure)
+    try {
+      const { notifyAnalyticsDataUpdated } = await import("../../hooks/useAnalyticsData");
+      const history = await unifiedAnalyticsStorage.getPerformanceHistory();
 
-        if (sessionForUpdate === sessionToSave) {
-          setTimeout(() => {
-            console.log("🧹 Clearing saved session after AI analysis");
-            setSessionToSave(null);
-          }, 2000);
-        }
-      } else {
-        console.warn("⚠️ No session available for real score update");
+      if (history.length === 0) {
+        console.warn("⚠️ No performance records found to update with AI scores");
+        return;
       }
-    }, 1000);
+
+      // Find the most recent interview record (first item, sorted by recency)
+      const latestRecord = history[0];
+      console.log("🔍 Updating record:", latestRecord.id, "with real AI scores");
+
+      // Patch the record with real AI scores
+      const updatedRecord: InterviewPerformanceData = {
+        ...latestRecord,
+        overallScore: scores.overall,
+        technicalScore: scores.technical,
+        communicationScore: scores.communication,
+        behavioralScore: scores.behavioral,
+        detailedMetrics: {
+          ...latestRecord.detailedMetrics,
+          confidence: scores.overall,
+          clarity: scores.communication,
+          professionalism: scores.behavioral,
+          engagement: scores.behavioral,
+          adaptability: scores.overall,
+        },
+      };
+
+      // Replace the record: update the entire history with the patched entry
+      const updatedHistory = history.map((record) =>
+        record.id === latestRecord.id ? updatedRecord : record
+      );
+
+      // Save the updated history back to storage
+      await unifiedAnalyticsStorage.savePerformanceHistory(updatedHistory);
+      console.log("✅ Performance record updated with real AI scores:", {
+        id: updatedRecord.id,
+        overall: updatedRecord.overallScore,
+        technical: updatedRecord.technicalScore,
+        communication: updatedRecord.communicationScore,
+        behavioral: updatedRecord.behavioralScore,
+      });
+
+      // Notify all analytics hooks to refresh with the real scores
+      notifyAnalyticsDataUpdated();
+    } catch (error) {
+      console.error("❌ Failed to update performance record with AI scores:", error);
+    }
   };
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -3904,12 +3973,13 @@ Keep your responses concise — 2-3 sentences maximum.`,
                   ? customRole
                   : (activeSession as InterviewSession | null)?.type || "general"
           }
-          performanceData={null}
+          performanceData={feedbackPerformanceData}
           onClose={() => {
             setShowFeedback(false);
             // Clear feedback data after closing
             setFeedbackMessages([]);
             setFeedbackSession(null);
+            setFeedbackPerformanceData(null);
           }}
           onScoresAnalyzed={handleAIScoresAnalyzed}
         />

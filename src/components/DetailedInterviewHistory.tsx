@@ -39,7 +39,7 @@ export const DetailedInterviewHistory: React.FC<
 > = ({ onClose }) => {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark";
-  
+
   const [interviews, setInterviews] = useState<InterviewPerformanceData[]>([]);
   const [detailedSessions, setDetailedSessions] = useState<
     DetailedInterviewSession[]
@@ -63,9 +63,13 @@ export const DetailedInterviewHistory: React.FC<
       const data = await unifiedAnalyticsStorage.getPerformanceHistory();
       setInterviews(data);
 
-      // Convert to detailed format (for now, using basic conversion)
+      // Convert to detailed format using actual interview session data
       const detailed = data.map((interview) =>
-        DetailedInterviewAnalyzer.convertToDetailedFormat(interview, [], [])
+        DetailedInterviewAnalyzer.convertToDetailedFormat(
+          interview,
+          interview.interviewSession?.messages || [],
+          interview.interviewSession?.questions || []
+        )
       );
       setDetailedSessions(detailed);
     } catch (error) {

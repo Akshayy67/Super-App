@@ -4,7 +4,7 @@
  */
 import { unifiedAnalyticsStorage } from "./unifiedAnalyticsStorage";
 
-const CLEAR_FLAG = "data_cleared_v3";
+const CLEAR_FLAG = "data_cleared_v4";
 
 // Clear all localStorage items related to interviews
 const clearLocalStorage = () => {

@@ -7,11 +7,11 @@ export interface QuestionResponse {
   questionId: string;
   question: string;
   category:
-    | "technical"
-    | "behavioral"
-    | "situational"
-    | "general"
-    | "communication";
+  | "technical"
+  | "behavioral"
+  | "situational"
+  | "general"
+  | "communication";
   difficulty: "easy" | "medium" | "hard";
   timeLimit: number;
 
@@ -155,22 +155,29 @@ export class DetailedInterviewAnalyzer {
     messages: any[],
     questions: any[]
   ): DetailedInterviewSession {
+    // Use passed parameters first, fall back to basicData.interviewSession
+    const effectiveMessages =
+      messages.length > 0
+        ? messages
+        : basicData.interviewSession?.messages || [];
+    const effectiveQuestions =
+      questions.length > 0
+        ? questions
+        : basicData.interviewSession?.questions || [];
+
     console.log("🔍 Converting interview data to detailed format:", {
       hasInterviewSession: !!basicData.interviewSession,
-      questionsCount: basicData.interviewSession?.questions?.length || 0,
-      messagesCount: basicData.interviewSession?.messages?.length || 0,
+      questionsCount: effectiveQuestions.length,
+      messagesCount: effectiveMessages.length,
     });
 
     // Extract actual question-response pairs if available
     let questionResponses: QuestionResponse[] = [];
 
-    if (
-      basicData.interviewSession?.questions &&
-      basicData.interviewSession?.messages
-    ) {
+    if (effectiveQuestions.length > 0 && effectiveMessages.length > 0) {
       questionResponses = this.extractQuestionResponsePairs(
-        basicData.interviewSession.questions,
-        basicData.interviewSession.messages,
+        effectiveQuestions,
+        effectiveMessages,
         basicData
       );
     }
@@ -206,7 +213,124 @@ export class DetailedInterviewAnalyzer {
   }
 
   /**
-   * Extract question-response pairs from interview session data
+   * Normalize text for fuzzy matching (lowercase, collapse whitespace, trim)
+   */
+  private static normalizeText(text: string): string {
+    return text.toLowerCase().replace(/\s+/g, " ").trim();
+  }
+
+  /**
+   * Check if an assistant message contains a given question text (fuzzy match).
+   * Uses normalized substring matching.
+   */
+  private static messageContainsQuestion(
+    messageContent: string,
+    questionText: string
+  ): boolean {
+    const normMsg = this.normalizeText(messageContent);
+    const normQ = this.normalizeText(questionText);
+
+    // Direct substring match
+    if (normMsg.includes(normQ)) return true;
+
+    // Try matching a significant portion (first 60 chars) for long questions
+    // that might be slightly rephrased by the AI
+    if (normQ.length > 40) {
+      const prefix = normQ.slice(0, 60);
+      if (normMsg.includes(prefix)) return true;
+    }
+
+    // Word-overlap check: if ≥ 70% of question words appear in the message
+    const qWords = normQ.split(" ").filter((w) => w.length > 3);
+    if (qWords.length > 0) {
+      const matchCount = qWords.filter((w) => normMsg.includes(w)).length;
+      if (matchCount / qWords.length >= 0.7) return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Derive a per-question score from the actual answer content,
+   * using the overall session scores as a baseline but varying by answer quality.
+   */
+  private static derivePerQuestionScore(
+    userResponse: string,
+    baseScore: number,
+    questionText: string
+  ): {
+    score: number;
+    convertedScore: number;
+    relevance: number;
+    completeness: number;
+    clarity: number;
+    confidence: number;
+  } {
+    const words = userResponse.trim().split(/\s+/);
+    const wordCount = words.length;
+
+    // Depth indicators: sentences, specific keywords, examples
+    const sentenceCount = (userResponse.match(/[.!?]+/g) || []).length;
+    const hasExamples =
+      /for example|for instance|such as|like when|in my experience/i.test(
+        userResponse
+      );
+    const hasStructure = /first|second|third|additionally|moreover|however/i.test(
+      userResponse
+    );
+    const hasMetrics = /\d+%|\d+ percent|increased|decreased|improved|reduced/i.test(
+      userResponse
+    );
+
+    // Question word overlap → relevance
+    const qWords = questionText
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length > 3);
+    const answerLower = userResponse.toLowerCase();
+    const relevantWordHits = qWords.filter((w) => answerLower.includes(w)).length;
+    const relevanceRatio = qWords.length > 0 ? relevantWordHits / qWords.length : 0.5;
+
+    // Scale factor: -2 to +2 from base score, based on quality
+    let qualityDelta = 0;
+    if (wordCount < 10) qualityDelta -= 2;
+    else if (wordCount < 30) qualityDelta -= 1;
+    else if (wordCount > 100) qualityDelta += 1;
+    if (hasExamples) qualityDelta += 0.5;
+    if (hasStructure) qualityDelta += 0.5;
+    if (hasMetrics) qualityDelta += 0.5;
+    if (sentenceCount >= 3) qualityDelta += 0.5;
+
+    const base10 = Math.round(baseScore / 10); // convert 0-100 to 1-10 scale
+    const raw = Math.max(1, Math.min(10, base10 + qualityDelta));
+    const score = Math.round(raw * 10) / 10;
+    const convertedScore = Math.round(score * 10);
+
+    const relevance = Math.max(1, Math.min(10, Math.round(relevanceRatio * 10 + qualityDelta * 0.5)));
+    const completeness = Math.max(
+      1,
+      Math.min(10, Math.round(base10 + (sentenceCount >= 3 ? 1 : -1) + (wordCount > 50 ? 1 : 0)))
+    );
+    const clarity = Math.max(
+      1,
+      Math.min(10, Math.round(base10 + (hasStructure ? 1 : 0) + (wordCount < 15 ? -1 : 0)))
+    );
+    const confidence = Math.max(
+      1,
+      Math.min(10, Math.round(base10 + (hasExamples ? 1 : 0) + (hasMetrics ? 1 : -0.5)))
+    );
+
+    return { score, convertedScore, relevance, completeness, clarity, confidence };
+  }
+
+  /**
+   * Extract question-response pairs from interview session data.
+   *
+   * Uses content-based matching: for each question in the questions list,
+   * finds the assistant message that contains the question text, then collects
+   * ALL user messages between that point and the next question as the full answer.
+   * This ensures multi-turn exchanges (follow-ups, clarifications) within one
+   * question are properly grouped.
    */
   static extractQuestionResponsePairs(
     questions: any[],
@@ -218,104 +342,266 @@ export class DetailedInterviewAnalyzer {
       messagesCount: messages.length,
     });
 
+    if (questions.length === 0 || messages.length === 0) {
+      console.log("⚠️ No questions or messages to extract pairs from");
+      return [];
+    }
+
     const questionResponses: QuestionResponse[] = [];
 
-    // Group messages by question-answer pairs
-    // Typically: assistant asks question, user responds
-    let currentQuestionIndex = 0;
+    // Step 1: For each question, find the assistant message index that contains it
+    const questionMessageMap: { questionIdx: number; messageIdx: number }[] = [];
 
-    for (
-      let i = 0;
-      i < messages.length && currentQuestionIndex < questions.length;
-      i++
-    ) {
-      const message = messages[i];
+    for (let qi = 0; qi < questions.length; qi++) {
+      const questionText = questions[qi].question || "";
+      let bestMsgIdx = -1;
 
-      // Look for assistant messages that contain questions
-      if (
-        message.role === "assistant" &&
-        currentQuestionIndex < questions.length
-      ) {
-        const question = questions[currentQuestionIndex];
-
-        // Find the corresponding user response
-        let userResponse = "";
-        let responseTime = 120; // default
-
-        // Look for the next user message
-        for (let j = i + 1; j < messages.length; j++) {
-          if (messages[j].role === "user") {
-            userResponse = messages[j].content;
+      // Search messages for one that contains this question
+      for (let mi = 0; mi < messages.length; mi++) {
+        if (
+          messages[mi].role === "assistant" &&
+          this.messageContainsQuestion(messages[mi].content || "", questionText)
+        ) {
+          // Ensure we haven't already mapped a different question to this message
+          const alreadyUsed = questionMessageMap.some(
+            (m) => m.messageIdx === mi
+          );
+          if (!alreadyUsed) {
+            bestMsgIdx = mi;
             break;
           }
         }
-
-        // Create question-response pair
-        const questionResponse: QuestionResponse = {
-          id: `qr-${performanceData.id}-${currentQuestionIndex}`,
-          questionId: question.id,
-          question: question.question,
-          category: question.category as any,
-          difficulty: "medium" as const,
-          timeLimit: question.timeLimit || 120,
-
-          userResponse: userResponse || "No response recorded",
-          responseTime: responseTime,
-          responseStartTime: question.askedAt || new Date().toISOString(),
-          responseEndTime: question.answeredAt || new Date().toISOString(),
-
-          aiAnalysis: {
-            score: Math.round(performanceData.overallScore / 10), // Convert to 1-10 scale
-            convertedScore: performanceData.overallScore,
-            strengths: performanceData.strengths?.slice(0, 2) || [
-              "Clear communication",
-            ],
-            weaknesses: performanceData.weaknesses?.slice(0, 2) || [
-              "Could be more specific",
-            ],
-            improvements: performanceData.recommendations?.slice(0, 2) || [
-              "Practice more examples",
-            ],
-            keyPoints: ["Relevant experience mentioned", "Good structure"],
-            relevance: Math.round(performanceData.overallScore / 10),
-            completeness: Math.round(performanceData.communicationScore / 10),
-            clarity: Math.round(performanceData.communicationScore / 10),
-            confidence: Math.round(
-              performanceData.detailedMetrics?.confidence / 10 ||
-                performanceData.overallScore / 10
-            ),
-          },
-
-          responseMetrics: {
-            wordCount: userResponse.split(" ").length,
-            speakingTime: responseTime * 0.8,
-            pauseCount: Math.floor(Math.random() * 5) + 2,
-            fillerWordCount: Math.floor(userResponse.split(" ").length * 0.05),
-            averagePauseLength: 1.5,
-            speakingPace: Math.round(
-              (userResponse.split(" ").length / responseTime) * 60
-            ),
-            volumeConsistency: 0.8,
-            eyeContactDuration: 70,
-            gestureCount: 8,
-          },
-
-          followUpQuestions: [
-            "Can you provide more specific examples?",
-            "How did you measure success in this situation?",
-            "What would you do differently next time?",
-          ],
-        };
-
-        questionResponses.push(questionResponse);
-        currentQuestionIndex++;
       }
+
+      if (bestMsgIdx !== -1) {
+        questionMessageMap.push({ questionIdx: qi, messageIdx: bestMsgIdx });
+      }
+    }
+
+    // Sort by message index so we process in conversation order
+    questionMessageMap.sort((a, b) => a.messageIdx - b.messageIdx);
+
+    console.log(
+      `📋 Matched ${questionMessageMap.length}/${questions.length} questions to assistant messages`
+    );
+
+    // If content-based matching found nothing, fall back to sequential order
+    if (questionMessageMap.length === 0) {
+      console.log("⚠️ Content-based matching failed, falling back to sequential");
+      let currentQuestionIndex = 0;
+      for (let i = 0; i < messages.length && currentQuestionIndex < questions.length; i++) {
+        if (messages[i].role === "assistant") {
+          questionMessageMap.push({
+            questionIdx: currentQuestionIndex,
+            messageIdx: i,
+          });
+          currentQuestionIndex++;
+        }
+      }
+      questionMessageMap.sort((a, b) => a.messageIdx - b.messageIdx);
+    }
+
+    // Step 2: For each matched question, collect all user messages until the next question
+    for (let k = 0; k < questionMessageMap.length; k++) {
+      const { questionIdx, messageIdx } = questionMessageMap[k];
+      const question = questions[questionIdx];
+
+      // Determine the boundary: next question's assistant message index, or end of messages
+      const nextBoundary =
+        k + 1 < questionMessageMap.length
+          ? questionMessageMap[k + 1].messageIdx
+          : messages.length;
+
+      // Collect ALL user messages between this question and the next
+      const userResponses: string[] = [];
+      for (let mi = messageIdx + 1; mi < nextBoundary; mi++) {
+        if (messages[mi].role === "user" && messages[mi].content?.trim()) {
+          userResponses.push(messages[mi].content.trim());
+        }
+      }
+
+      const fullResponse = userResponses.join("\n\n");
+      const wordCount = fullResponse ? fullResponse.split(/\s+/).length : 0;
+
+      // Calculate per-question scores based on actual answer quality
+      const scores = this.derivePerQuestionScore(
+        fullResponse,
+        performanceData.overallScore || 50,
+        question.question || ""
+      );
+
+      // Estimate response time from timestamps if available, else use word-based estimate
+      let responseTime = 120;
+      if (question.askedAt && question.answeredAt) {
+        const asked = new Date(question.askedAt).getTime();
+        const answered = new Date(question.answeredAt).getTime();
+        if (answered > asked) {
+          responseTime = Math.round((answered - asked) / 1000);
+        }
+      } else if (wordCount > 0) {
+        // Estimate: ~130 words per minute speaking pace
+        responseTime = Math.max(10, Math.round((wordCount / 130) * 60));
+      }
+
+      const questionResponse: QuestionResponse = {
+        id: `qr-${performanceData.id}-${questionIdx}`,
+        questionId: question.id || `q_${questionIdx}`,
+        question: question.question || "Question not available",
+        category: (question.category as any) || "general",
+        difficulty: "medium" as const,
+        timeLimit: question.timeLimit || 120,
+
+        userResponse: fullResponse || "No response recorded",
+        responseTime,
+        responseStartTime: question.askedAt || new Date().toISOString(),
+        responseEndTime: question.answeredAt || new Date().toISOString(),
+
+        aiAnalysis: {
+          score: scores.score,
+          convertedScore: scores.convertedScore,
+          strengths: this.deriveStrengths(fullResponse, performanceData),
+          weaknesses: this.deriveWeaknesses(fullResponse, performanceData),
+          improvements: this.deriveImprovements(fullResponse, performanceData),
+          keyPoints: this.extractKeyPoints(fullResponse),
+          relevance: scores.relevance,
+          completeness: scores.completeness,
+          clarity: scores.clarity,
+          confidence: scores.confidence,
+        },
+
+        responseMetrics: {
+          wordCount,
+          speakingTime: responseTime * 0.8,
+          pauseCount: Math.max(1, Math.floor(wordCount / 25)),
+          fillerWordCount: this.countFillerWords(fullResponse),
+          averagePauseLength: 1.5,
+          speakingPace:
+            responseTime > 0 ? Math.round((wordCount / responseTime) * 60) : 0,
+          volumeConsistency: 0.8,
+          eyeContactDuration: 70,
+          gestureCount: 8,
+        },
+
+        followUpQuestions: [
+          "Can you provide more specific examples?",
+          "How did you measure success in this situation?",
+          "What would you do differently next time?",
+        ],
+      };
+
+      questionResponses.push(questionResponse);
     }
 
     console.log(
       `✅ Extracted ${questionResponses.length} question-response pairs`
     );
     return questionResponses;
+  }
+
+  /**
+   * Derive per-question strengths from the actual answer text
+   */
+  private static deriveStrengths(
+    response: string,
+    performanceData: any
+  ): string[] {
+    const strengths: string[] = [];
+    if (!response || response === "No response recorded") {
+      return performanceData.strengths?.slice(0, 2) || ["Attempted the question"];
+    }
+
+    const words = response.split(/\s+/).length;
+    if (words > 50) strengths.push("Provided a detailed response");
+    if (/for example|for instance|such as/i.test(response))
+      strengths.push("Included concrete examples");
+    if (/first|second|third|additionally/i.test(response))
+      strengths.push("Well-structured answer");
+    if (/\d+%|\d+ percent|increased|decreased/i.test(response))
+      strengths.push("Used quantifiable metrics");
+    if (/team|collaborated|together/i.test(response))
+      strengths.push("Demonstrated teamwork awareness");
+
+    if (strengths.length === 0) strengths.push("Addressed the question directly");
+    return strengths.slice(0, 3);
+  }
+
+  /**
+   * Derive per-question weaknesses from the actual answer text
+   */
+  private static deriveWeaknesses(
+    response: string,
+    performanceData: any
+  ): string[] {
+    const weaknesses: string[] = [];
+    if (!response || response === "No response recorded") {
+      return ["No response provided"];
+    }
+
+    const words = response.split(/\s+/).length;
+    if (words < 20) weaknesses.push("Response was quite brief");
+    if (!/for example|for instance|such as/i.test(response))
+      weaknesses.push("Could include more specific examples");
+    if (!/first|second|third|additionally|however/i.test(response))
+      weaknesses.push("Could improve answer structure");
+    if (!/\d+%|\d+ percent|increased|decreased/i.test(response))
+      weaknesses.push("Add quantifiable results for more impact");
+
+    if (weaknesses.length === 0)
+      return performanceData.weaknesses?.slice(0, 2) || ["Room for deeper analysis"];
+    return weaknesses.slice(0, 3);
+  }
+
+  /**
+   * Derive per-question improvements from the actual answer text
+   */
+  private static deriveImprovements(
+    response: string,
+    _performanceData: any
+  ): string[] {
+    const improvements: string[] = [];
+    if (!response || response === "No response recorded") {
+      return ["Practice answering this type of question"];
+    }
+
+    const words = response.split(/\s+/).length;
+    if (words < 30) improvements.push("Expand your answer with more detail");
+    if (!/STAR|situation|task|action|result/i.test(response))
+      improvements.push("Try using the STAR method for structured responses");
+    if (!/because|reason|led to/i.test(response))
+      improvements.push("Explain the reasoning behind your decisions");
+
+    if (improvements.length === 0) improvements.push("Continue practicing to refine your delivery");
+    return improvements.slice(0, 3);
+  }
+
+  /**
+   * Extract key talking points from the response
+   */
+  private static extractKeyPoints(response: string): string[] {
+    if (!response || response === "No response recorded") return [];
+
+    const points: string[] = [];
+    const sentences = response.split(/[.!?]+/).filter((s) => s.trim().length > 10);
+
+    // Take first 2-3 meaningful sentences as key points
+    for (const sentence of sentences.slice(0, 3)) {
+      const trimmed = sentence.trim();
+      if (trimmed.length > 15 && trimmed.length < 150) {
+        points.push(trimmed);
+      }
+    }
+
+    return points.length > 0 ? points : ["Response provided"];
+  }
+
+  /**
+   * Count filler words in a response
+   */
+  private static countFillerWords(response: string): number {
+    if (!response) return 0;
+    const fillers = /\b(um|uh|like|you know|basically|actually|literally|so yeah|I mean)\b/gi;
+    const matches = response.match(fillers);
+    return matches ? matches.length : 0;
   }
 
   /**

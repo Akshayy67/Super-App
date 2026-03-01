@@ -20,6 +20,8 @@ import {
 import { aiService } from "../../utils/aiService";
 import { InterviewPerformanceData } from "../../utils/performanceAnalytics";
 import { aspectScoresManager } from "../../utils/interviewAspectScores";
+import { triggerRoadmapUpdate } from "../../utils/growthEngine";
+import { unifiedAnalyticsStorage } from "../../utils/unifiedAnalyticsStorage";
 import "./InterviewFeedback.css";
 
 interface FeedbackSection {
@@ -395,6 +397,14 @@ export const InterviewFeedback: React.FC<InterviewFeedbackProps> = ({
         console.log("📊 Passing real AI scores to analytics:", realScores);
         onScoresAnalyzed(realScores);
       }
+
+      // Trigger roadmap auto-update after feedback is complete
+      try {
+        const currentHistory = await unifiedAnalyticsStorage.getPerformanceHistory();
+        triggerRoadmapUpdate(currentHistory.length);
+      } catch (e) {
+        console.warn("Could not trigger roadmap update:", e);
+      }
     } catch (error) {
       console.error("Error analyzing interview:", error);
       // Fallback feedback
@@ -506,6 +516,16 @@ export const InterviewFeedback: React.FC<InterviewFeedbackProps> = ({
     setOverallScore(performanceData.overallScore);
     setAnalysisComplete(true);
     setIsAnalyzing(false);
+
+    // Trigger roadmap auto-update for ML-based path too
+    (async () => {
+      try {
+        const currentHistory = await unifiedAnalyticsStorage.getPerformanceHistory();
+        triggerRoadmapUpdate(currentHistory.length);
+      } catch (e) {
+        console.warn("Could not trigger roadmap update:", e);
+      }
+    })();
   };
 
   const analyzeCommunication = async (

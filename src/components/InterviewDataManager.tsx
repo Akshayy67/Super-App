@@ -35,7 +35,7 @@ export const InterviewDataManager: React.FC<InterviewDataManagerProps> = ({
 }) => {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark";
-  
+
   const [interviews, setInterviews] = useState<InterviewPerformanceData[]>([]);
   const [selectedInterviews, setSelectedInterviews] = useState<Set<string>>(
     new Set()
@@ -51,7 +51,7 @@ export const InterviewDataManager: React.FC<InterviewDataManagerProps> = ({
   // Load interview data
   useEffect(() => {
     loadInterviews();
-    
+
     // Show persisted logs on mount (if any)
     const logs = sessionStorage.getItem('deletion_logs');
     if (logs) {
@@ -91,7 +91,7 @@ export const InterviewDataManager: React.FC<InterviewDataManagerProps> = ({
     const timestamp = new Date().toISOString();
     const logEntry = `[${timestamp}] ${message}`;
     console.log(logEntry, data || '');
-    
+
     // Store in sessionStorage so logs persist after refresh
     const existingLogs = sessionStorage.getItem('deletion_logs') || '[]';
     const logs = JSON.parse(existingLogs);
@@ -107,14 +107,14 @@ export const InterviewDataManager: React.FC<InterviewDataManagerProps> = ({
       e.preventDefault();
       e.stopPropagation();
     }
-    
+
     setIsLoading(true);
     logAndPersist(`🗑️ Starting deletion of interviews...`, {
       deleteTarget,
       singleDeleteId,
       selectedCount: selectedInterviews.size
     });
-    
+
     try {
       const interviewsToDelete =
         deleteTarget === "single"
@@ -155,10 +155,10 @@ export const InterviewDataManager: React.FC<InterviewDataManagerProps> = ({
       });
 
       const deleteResults = await Promise.all(deletePromises);
-      
+
       // Check for failures
       const failures = deleteResults.filter((result) => !result.success);
-      
+
       if (failures.length > 0) {
         logAndPersist(
           `❌ Failed to delete ${failures.length} interview(s):`,
@@ -171,68 +171,51 @@ export const InterviewDataManager: React.FC<InterviewDataManagerProps> = ({
       logAndPersist(`⏳ Waiting ${waitTime}ms for cloud deletions to complete...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
 
-      // Update local state immediately to remove deleted interviews from UI (optimistic update)
+      // Optimistic UI update — remove deleted interviews immediately
       const remainingInterviews = interviews.filter(
         (interview) =>
           !interviewsToDelete.some((deleted) => deleted.id === interview.id)
       );
-      
-      // Update state immediately so UI reflects deletion right away
+
       setInterviews(remainingInterviews);
       setRecentlyDeleted((prev) => [...prev, ...deletedItems]);
       setSelectedInterviews(new Set());
-      logAndPersist(`✅ Updated UI state immediately: ${remainingInterviews.length} interviews remaining`);
+      logAndPersist(`✅ UI updated: ${remainingInterviews.length} interviews remaining`);
 
-      // Then reload data from storage to ensure consistency (especially after cloud deletion)
-      // Use a small delay to avoid race conditions with the analytics hook
-      await new Promise(resolve => setTimeout(resolve, 500));
-      logAndPersist("🔄 Reloading data from storage to verify deletion...");
-      const reloadedData = await unifiedAnalyticsStorage.getPerformanceHistory();
-      
-      // Only update if the count matches (to avoid overwriting with stale data)
-      if (reloadedData.length === remainingInterviews.length || reloadedData.length < interviews.length) {
-        setInterviews(reloadedData);
-        logAndPersist(`✅ Data reloaded and verified: ${reloadedData.length} interviews in storage`);
-      } else {
-        logAndPersist(`⚠️ Reloaded data count (${reloadedData.length}) doesn't match expected (${remainingInterviews.length}), keeping current state`);
-      }
+      // Notify parent component immediately
+      onDataChange?.();
 
-      // Trigger a storage event to notify other components (like analytics hook)
-      // This ensures the analytics dashboard picks up the deletion immediately
+      // Trigger storage event so other components (analytics dashboard) update
       try {
         window.dispatchEvent(new StorageEvent('storage', {
           key: 'interview_performance_history',
-          newValue: JSON.stringify(reloadedData),
+          newValue: JSON.stringify(remainingInterviews),
           oldValue: JSON.stringify(interviews),
           storageArea: localStorage,
         }));
-        logAndPersist("📡 Storage event dispatched to notify other components");
       } catch (error) {
         console.warn("Failed to dispatch storage event:", error);
       }
 
-      // Notify parent component after a short delay to allow state to settle
-      setTimeout(() => {
-        onDataChange?.();
-      }, 300);
-      
-      // Also reload interviews in this component to ensure UI is in sync
+      // Single reload after cloud ops have time to settle
+      // Deletion tracking in unifiedAnalyticsStorage guarantees deleted IDs
+      // are filtered out even if they still exist in Firestore
       setTimeout(() => {
         loadInterviews();
-      }, 500);
+      }, 2000);
 
       const successCount = deleteResults.filter((result) => result.success).length;
 
       logAndPersist(
         `✅ Successfully deleted ${successCount}/${interviewsToDelete.length} interview(s)`
       );
-      
+
       if (failures.length > 0) {
         logAndPersist(
           `⚠️ ${failures.length} deletion(s) may not have completed. Check logs for details.`
         );
       }
-      
+
       // Show logs in console even if page refreshes
       const logs = sessionStorage.getItem('deletion_logs');
       if (logs) {
@@ -306,9 +289,8 @@ export const InterviewDataManager: React.FC<InterviewDataManagerProps> = ({
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `interview-data-${
-      new Date().toISOString().split("T")[0]
-    }.json`;
+    link.download = `interview-data-${new Date().toISOString().split("T")[0]
+      }.json`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -422,11 +404,10 @@ export const InterviewDataManager: React.FC<InterviewDataManagerProps> = ({
           interviews.map((interview) => (
             <div
               key={interview.id}
-              className={`border rounded-lg p-6 transition-all hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/20 ${
-                selectedInterviews.has(interview.id)
+              className={`border rounded-lg p-6 transition-all hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/20 ${selectedInterviews.has(interview.id)
                   ? "border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/30"
                   : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
-              }`}
+                }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">

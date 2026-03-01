@@ -6,6 +6,7 @@ import {
 import { InterviewPerformanceData } from "../../utils/performanceAnalytics";
 import { useAnalyticsData } from "../../hooks/useAnalyticsData";
 import { VisualAnalyticsDashboard } from "../dashboards/VisualAnalyticsDashboard";
+import { EnterpriseAnalyticsDashboard } from "../dashboards/EnterpriseAnalyticsDashboard";
 import { LoadingGlobe } from "../ui/LoadingGlobe";
 
 interface EnhancedAnalyticsIntegrationProps {
@@ -117,6 +118,12 @@ export const EnhancedAnalyticsIntegration: React.FC<
           </div>
         </div>
 
+
+        {/* Enterprise AI Analytics Dashboard — placed above existing tabs */}
+        <EnterpriseAnalyticsDashboard
+          performanceHistory={performanceHistory}
+          currentPerformance={currentPerformance}
+        />
 
         {/* Display VisualAnalyticsDashboard with its own internal tabs */}
         <VisualAnalyticsDashboard

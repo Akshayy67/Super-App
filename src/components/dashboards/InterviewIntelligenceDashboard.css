@@ -1,0 +1,696 @@
+/* ======================================================
+   Interview Intelligence Dashboard — Enterprise Styles
+   ====================================================== */
+
+/* ---------- Root variables ---------- */
+.iid-root {
+    --iid-accent-start: #6366f1;
+    --iid-accent-end: #8b5cf6;
+    --iid-success: #10b981;
+    --iid-warning: #f59e0b;
+    --iid-danger: #ef4444;
+    --iid-glass-bg: rgba(255, 255, 255, 0.65);
+    --iid-glass-border: rgba(255, 255, 255, 0.35);
+    --iid-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    --iid-radius: 16px;
+    --iid-radius-sm: 10px;
+    --iid-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.iid-root.iid-dark {
+    --iid-glass-bg: rgba(30, 30, 45, 0.65);
+    --iid-glass-border: rgba(255, 255, 255, 0.08);
+    --iid-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- Fade-in animation ---------- */
+@keyframes iidFadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes iidPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+}
+
+@keyframes iidShimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.iid-animate-in {
+    animation: iidFadeUp 0.5s ease-out both;
+}
+
+.iid-animate-in:nth-child(2) {
+    animation-delay: 0.08s;
+}
+
+.iid-animate-in:nth-child(3) {
+    animation-delay: 0.16s;
+}
+
+.iid-animate-in:nth-child(4) {
+    animation-delay: 0.24s;
+}
+
+.iid-animate-in:nth-child(5) {
+    animation-delay: 0.32s;
+}
+
+/* ---------- Glass card ---------- */
+.iid-glass {
+    background: var(--iid-glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--iid-glass-border);
+    border-radius: var(--iid-radius);
+    box-shadow: var(--iid-glass-shadow);
+    transition: transform var(--iid-transition), box-shadow var(--iid-transition);
+}
+
+.iid-glass:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(99, 102, 241, 0.12);
+}
+
+.iid-dark .iid-glass:hover {
+    box-shadow: 0 12px 40px rgba(139, 92, 246, 0.18);
+}
+
+/* ---------- KPI Hero Cards ---------- */
+.iid-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+@media (max-width: 1024px) {
+    .iid-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 560px) {
+    .iid-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.iid-kpi-card {
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.iid-kpi-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: var(--iid-radius);
+    background: linear-gradient(135deg,
+            var(--iid-accent-start) 0%,
+            var(--iid-accent-end) 100%);
+    opacity: 0.06;
+    transition: opacity var(--iid-transition);
+    pointer-events: none;
+}
+
+.iid-kpi-card:hover::before {
+    opacity: 0.12;
+}
+
+.iid-kpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--iid-accent-start), var(--iid-accent-end));
+    color: #fff;
+    margin-bottom: 16px;
+    flex-shrink: 0;
+}
+
+.iid-kpi-value {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--iid-accent-start), var(--iid-accent-end));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.iid-dark .iid-kpi-value {
+    background: linear-gradient(135deg, #818cf8, #c4b5fd);
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+.iid-kpi-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 6px;
+}
+
+.iid-kpi-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 999px;
+    margin-top: 10px;
+}
+
+.iid-trend-up {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+}
+
+.iid-dark .iid-trend-up {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+}
+
+.iid-trend-down {
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+}
+
+.iid-dark .iid-trend-down {
+    background: rgba(239, 68, 68, 0.18);
+    color: #f87171;
+}
+
+.iid-trend-stable {
+    background: rgba(107, 114, 128, 0.12);
+    color: #6b7280;
+}
+
+.iid-dark .iid-trend-stable {
+    background: rgba(156, 163, 175, 0.15);
+    color: #9ca3af;
+}
+
+/* ---------- Section headers ---------- */
+.iid-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.iid-section-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.iid-section-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--iid-accent-start), var(--iid-accent-end));
+    color: #fff;
+}
+
+/* ---------- Heatmap Grid ---------- */
+.iid-heatmap-grid {
+    display: grid;
+    grid-template-columns: 120px repeat(3, 1fr);
+    gap: 6px;
+}
+
+@media (max-width: 560px) {
+    .iid-heatmap-grid {
+        grid-template-columns: 80px repeat(3, 1fr);
+    }
+}
+
+.iid-heatmap-header {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 8px 4px;
+    text-align: center;
+}
+
+.iid-heatmap-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 12px 8px;
+    display: flex;
+    align-items: center;
+}
+
+.iid-heatmap-cell {
+    border-radius: var(--iid-radius-sm);
+    padding: 14px 8px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.92rem;
+    position: relative;
+    transition: transform var(--iid-transition), box-shadow var(--iid-transition);
+    cursor: default;
+}
+
+.iid-heatmap-cell:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    z-index: 2;
+}
+
+.iid-heat-excellent {
+    background: rgba(16, 185, 129, 0.22);
+    color: #059669;
+}
+
+.iid-heat-good {
+    background: rgba(52, 211, 153, 0.18);
+    color: #047857;
+}
+
+.iid-heat-average {
+    background: rgba(245, 158, 11, 0.18);
+    color: #b45309;
+}
+
+.iid-heat-poor {
+    background: rgba(239, 68, 68, 0.18);
+    color: #dc2626;
+}
+
+.iid-heat-none {
+    background: rgba(156, 163, 175, 0.10);
+    color: #9ca3af;
+}
+
+.iid-dark .iid-heat-excellent {
+    background: rgba(16, 185, 129, 0.25);
+    color: #34d399;
+}
+
+.iid-dark .iid-heat-good {
+    background: rgba(52, 211, 153, 0.20);
+    color: #6ee7b7;
+}
+
+.iid-dark .iid-heat-average {
+    background: rgba(245, 158, 11, 0.22);
+    color: #fbbf24;
+}
+
+.iid-dark .iid-heat-poor {
+    background: rgba(239, 68, 68, 0.22);
+    color: #f87171;
+}
+
+.iid-dark .iid-heat-none {
+    background: rgba(75, 85, 99, 0.25);
+    color: #6b7280;
+}
+
+.iid-heatmap-sub {
+    font-size: 0.65rem;
+    font-weight: 500;
+    opacity: 0.7;
+    display: block;
+    margin-top: 2px;
+}
+
+/* ---------- Benchmark bars ---------- */
+.iid-benchmark-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 0;
+}
+
+.iid-benchmark-label {
+    width: 120px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+    .iid-benchmark-label {
+        width: 80px;
+        font-size: 0.75rem;
+    }
+}
+
+.iid-benchmark-bars {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.iid-benchmark-bar-track {
+    height: 14px;
+    border-radius: 7px;
+    overflow: hidden;
+    position: relative;
+}
+
+.iid-benchmark-bar-fill {
+    height: 100%;
+    border-radius: 7px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.iid-bar-user {
+    background: linear-gradient(90deg, var(--iid-accent-start), var(--iid-accent-end));
+}
+
+.iid-bar-industry {
+    background: rgba(156, 163, 175, 0.35);
+}
+
+.iid-dark .iid-bar-industry {
+    background: rgba(156, 163, 175, 0.25);
+}
+
+.iid-benchmark-score {
+    font-size: 0.72rem;
+    font-weight: 700;
+    min-width: 32px;
+    text-align: right;
+}
+
+/* ---------- AI Session Plan ---------- */
+.iid-plan-card {
+    padding: 24px;
+}
+
+.iid-plan-step {
+    display: flex;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--iid-glass-border);
+}
+
+.iid-plan-step:last-child {
+    border-bottom: none;
+}
+
+.iid-plan-number {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.82rem;
+    background: linear-gradient(135deg, var(--iid-accent-start), var(--iid-accent-end));
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.iid-plan-content {
+    flex: 1;
+}
+
+.iid-plan-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.iid-plan-desc {
+    font-size: 0.82rem;
+    opacity: 0.75;
+    line-height: 1.5;
+}
+
+/* ---------- Export button ---------- */
+.iid-export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--iid-accent-start), var(--iid-accent-end));
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+    transition: transform var(--iid-transition), box-shadow var(--iid-transition);
+}
+
+.iid-export-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(99, 102, 241, 0.45);
+}
+
+.iid-export-btn:active {
+    transform: translateY(0);
+}
+
+/* ---------- Generate plan button ---------- */
+.iid-generate-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    border: 2px solid var(--iid-accent-start);
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    background: transparent;
+    color: var(--iid-accent-start);
+    transition: all var(--iid-transition);
+}
+
+.iid-dark .iid-generate-btn {
+    border-color: #818cf8;
+    color: #818cf8;
+}
+
+.iid-generate-btn:hover {
+    background: linear-gradient(135deg, var(--iid-accent-start), var(--iid-accent-end));
+    color: #fff;
+    border-color: transparent;
+}
+
+.iid-generate-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.iid-generating {
+    animation: iidPulse 1.5s infinite;
+}
+
+/* ---------- Sections wrapper ---------- */
+.iid-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-top: 24px;
+}
+
+.iid-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+@media (max-width: 768px) {
+    .iid-two-col {
+        grid-template-columns: 1fr;
+    }
+}
+
+.iid-section-content {
+    padding: 24px;
+}
+
+/* ---------- Dashboard banner ---------- */
+.iid-banner {
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.iid-banner::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,
+            rgba(99, 102, 241, 0.12),
+            rgba(139, 92, 246, 0.08));
+    pointer-events: none;
+}
+
+.iid-dark .iid-banner::before {
+    background: linear-gradient(135deg,
+            rgba(99, 102, 241, 0.15),
+            rgba(139, 92, 246, 0.10));
+}
+
+.iid-banner-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.iid-banner-subtitle {
+    font-size: 0.88rem;
+    opacity: 0.7;
+}
+
+/* ---------- Divider ---------- */
+.iid-divider {
+    height: 1px;
+    background: linear-gradient(90deg,
+            transparent,
+            var(--iid-glass-border),
+            transparent);
+    margin: 8px 0;
+}
+
+/* ---------- Legend ---------- */
+.iid-legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.iid-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.iid-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+}
+
+/* ---------- Recharts overrides ---------- */
+.iid-root .recharts-cartesian-grid-horizontal line,
+.iid-root .recharts-cartesian-grid-vertical line {
+    stroke-opacity: 0.08;
+}
+
+.iid-dark .recharts-cartesian-grid-horizontal line,
+.iid-dark .recharts-cartesian-grid-vertical line {
+    stroke: #4b5563;
+    stroke-opacity: 0.15;
+}
+
+/* ---------- Export footer ---------- */
+.iid-export-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 20px 0 0;
+}
+
+.iid-export-note {
+    font-size: 0.78rem;
+    opacity: 0.6;
+    max-width: 400px;
+}
+
+/* ---------- Collapsible ---------- */
+.iid-collapse-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0;
+    color: inherit;
+    text-align: left;
+}
+
+.iid-collapse-body {
+    overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
+}
+
+.iid-collapse-body.iid-open {
+    max-height: 2000px;
+    opacity: 1;
+}
+
+.iid-collapse-body.iid-closed {
+    max-height: 0;
+    opacity: 0;
+}
+
+/* ---------- Benchmark legend inline ---------- */
+.iid-bench-legend {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 12px;
+}
+
+.iid-bench-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.iid-bench-legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}

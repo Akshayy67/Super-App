@@ -21,9 +21,11 @@ interface FaceDetectionStats {
   eyeContactFrames: number;
   eyeContactPercentage: number;
   averageConfidence: number;
+  averageEyeContactConfidence: number;
   currentFaces: DetectedFace[];
   isEyeContactActive: boolean;
-  recentEyeContactHistory: boolean[]; // Rolling window for smoother percentage
+  recentEyeContactHistory: boolean[];
+  recentEyeContactConfidences: number[];
 }
 
 export const useFaceDetection = (options: UseFaceDetectionOptions) => {
@@ -42,15 +44,18 @@ export const useFaceDetection = (options: UseFaceDetectionOptions) => {
     faces: [],
     eyeContactDetected: false,
     confidence: 0,
+    eyeContactConfidence: 0,
   });
   const [stats, setStats] = useState<FaceDetectionStats>({
     totalFramesProcessed: 0,
     eyeContactFrames: 0,
     eyeContactPercentage: 0,
     averageConfidence: 0,
+    averageEyeContactConfidence: 0,
     currentFaces: [],
     isEyeContactActive: false,
     recentEyeContactHistory: [],
+    recentEyeContactConfidences: [],
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -135,6 +140,13 @@ export const useFaceDetection = (options: UseFaceDetectionOptions) => {
             ? (recentEyeContactCount / newHistory.length) * 100
             : 0;
 
+        // Update rolling eye contact confidence window
+        const currentConfidences = prevStats.recentEyeContactConfidences || [];
+        const newConfidences = [...currentConfidences, result.eyeContactConfidence || 0];
+        if (newConfidences.length > maxHistoryLength) {
+          newConfidences.shift();
+        }
+
         const newStats = {
           ...prevStats,
           totalFramesProcessed: prevStats.totalFramesProcessed + 1,
@@ -143,7 +155,12 @@ export const useFaceDetection = (options: UseFaceDetectionOptions) => {
           currentFaces: result.faces,
           isEyeContactActive: result.eyeContactDetected,
           recentEyeContactHistory: newHistory,
-          eyeContactPercentage: rollingPercentage, // Use rolling window percentage
+          recentEyeContactConfidences: newConfidences,
+          eyeContactPercentage: rollingPercentage,
+          averageEyeContactConfidence:
+            newConfidences.length > 0
+              ? newConfidences.reduce((a, b) => a + b, 0) / newConfidences.length
+              : 0,
         };
 
         // Calculate average confidence
@@ -239,9 +256,11 @@ export const useFaceDetection = (options: UseFaceDetectionOptions) => {
       eyeContactFrames: 0,
       eyeContactPercentage: 0,
       averageConfidence: 0,
+      averageEyeContactConfidence: 0,
       currentFaces: [],
       isEyeContactActive: false,
       recentEyeContactHistory: [],
+      recentEyeContactConfidences: [],
     });
   }, []);
 
